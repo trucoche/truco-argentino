@@ -123,37 +123,56 @@ _cleanupPreviousRound() {
 }
 
 _dealCards() {
-    this._allCreatedCards = []; // ← resetear antes de crear
+    this._allCreatedCards = [];
 
     const playerData   = this.deckManager.dealCards(3);
     const opponentData = this.deckManager.dealCards(3);
 
+    // Crear todas las cartas en el centro primero
     this.playerCards = playerData.map((data, i) => {
-        const pos  = this.positions.playerHand[i];
-        const card = this.cardManager.createCard(pos.x, pos.y, data.key, data);
-        if (card) card.setDepth(10 + i);
+        const card = this.cardManager.createCard(400, 300, data.key, data);
+        if (card) {
+            card.setDepth(10 + i);
+            card.setAlpha(0);
+        }
         return card;
     }).filter(Boolean);
 
     this.opponentCards = opponentData.map((data, i) => {
-        const pos  = this.positions.opponentHand[i];
-        const card = this.cardManager.createOpponentCard(pos.x, pos.y, data);
+        const card = this.cardManager.createOpponentCard(400, 300, data);
         if (card) {
             card.setDepth(10 + i);
-            card.setDisplaySize(100, 150); // ← forzar tamaño
+            card.setAlpha(0);
+            card.setDisplaySize(100, 150);
         }
         return card;
     }).filter(Boolean);
 
     this._allCreatedCards = [...this.playerCards, ...this.opponentCards];
-    
-    for (let i = 0; i < 6; i++) {
-        this.scene.time.delayedCall(i * 150, () => {
-            try {
-                this.scene.sound.play('repartir', { volume: 0.6 });
-            } catch(e) {}
+
+    // Animar cada carta volando a su posición final
+    const allCards = [
+        ...this.playerCards.map((card, i) => ({ card, pos: this.positions.playerHand[i] })),
+        ...this.opponentCards.map((card, i) => ({ card, pos: this.positions.opponentHand[i] }))
+    ];
+
+    allCards.forEach(({ card, pos }, i) => {
+        this.scene.time.delayedCall(i * 120, () => {
+            if (!card.scene) return;
+
+            // Sonido de reparto
+            try { this.scene.sound.play('repartir', { volume: 0.5 }); } catch(e) {}
+
+            card.setAlpha(1);
+            this.scene.tweens.add({
+                targets:  card,
+                x:        pos.x,
+                y:        pos.y,
+                duration: 350,
+                ease:     'Power2.easeOut'
+            });
         });
-    }
+    });
 }
 
 _cleanupPreviousRound() {

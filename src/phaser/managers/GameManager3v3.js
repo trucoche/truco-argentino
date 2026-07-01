@@ -88,24 +88,25 @@ export default class GameManager3v3 {
 
 _dealCards() {
     const pos = this.scene.cardPositions;
+    this._allCards = [];
 
     TURN_ORDER.forEach(who => {
         const data    = this.deckManager.dealCards(3);
-        const isSide  = who === 'opponent1' || who === 'opponent3';
-        const isTop   = who === 'teammate1' || who === 'teammate2' || who === 'opponent2';
-        
-        let w = 85, h = 128;
-        if (isSide) { w = 55; h = 82; }
-        else if (isTop) { w = 62; h = 93; }
+        const isSide  = who === 'opponent1' || who === 'opponent2';
+        const w = isSide ? 70 : 85;
+        const h = isSide ? 105 : 128;
 
         this.cards[who] = data.map((d, i) => {
-            const p    = pos[who][i];
-            const card = who === 'player'
-                ? this.cardManager.createCard(p.x, p.y, d.key, d)
-                : this.cardManager.createOpponentCard(p.x, p.y, d);
+            const targetPos = pos[who][i];
+            const isHuman   = who === 'player';
+            const card = isHuman
+                ? this.cardManager.createCard(400, 300, d.key, d)
+                : this.cardManager.createOpponentCard(400, 300, d);
+
             if (card) {
                 card.setDepth(10 + i);
                 card.setDisplaySize(w, h);
+                card.setAlpha(0);
                 if (isSide) card.setAngle(90);
             }
             return card;
@@ -113,13 +114,26 @@ _dealCards() {
     });
 
     this._allCards = TURN_ORDER.flatMap(who => this.cards[who]);
-    for (let i = 0; i < 6; i++) {
-    this.scene.time.delayedCall(i * 150, () => {
-        try {
-            this.scene.sound.play('repartir', { volume: 0.6 });
-        } catch(e) {}
+
+    // Animar todas las cartas desde el centro a su posición
+    const allAnimations = TURN_ORDER.flatMap(who =>
+        this.cards[who].map((card, i) => ({ card, pos: pos[who][i] }))
+    );
+
+    allAnimations.forEach(({ card, pos: targetPos }, i) => {
+        this.scene.time.delayedCall(i * 100, () => {
+            if (!card.scene) return;
+            try { this.scene.sound.play('repartir', { volume: 0.5 }); } catch(e) {}
+            card.setAlpha(1);
+            this.scene.tweens.add({
+                targets:  card,
+                x:        targetPos.x,
+                y:        targetPos.y,
+                duration: 350,
+                ease:     'Power2.easeOut'
+            });
+        });
     });
-}
 }
 
   /* ==========================================

@@ -244,6 +244,7 @@ iniciarPartida(puntosParaGanar) {
 
         return boton;
     }
+
     crearBotonMusica() {
     this.musicEnabled = this.musicEnabled !== false; // default true
     const icon = this.musicEnabled ? '🔊' : '🔇';
@@ -264,5 +265,68 @@ iniciarPartida(puntosParaGanar) {
     });
 
     this.persistentObjects.push(this.musicButton);
+    this.crearBotonAyuda();
 }
+
+crearBotonAyuda() {
+    this.ayudaButton = this.add.text(30, 20, '?', {
+        font: 'bold 28px Arial',
+        fill: '#ffffff',
+        backgroundColor: '#1565C0',
+        padding: { x: 10, y: 4 }
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+    this.ayudaButton.on('pointerdown', () => {
+        this.sound.play('click-sound');
+        this.mostrarPantallaAyuda();
+    });
+
+    this.persistentObjects.push(this.ayudaButton);
+}
+
+mostrarPantallaAyuda() {
+    this.limpiarPantalla();
+
+    // Fondo semitransparente
+    this.add.rectangle(400, 300, 740, 500, 0x000000, 0.82)
+        .setStrokeStyle(2, 0xffd700, 0.8);
+
+    // Título
+    this.add.text(400, 75, '📖 Reglas del Truco', {
+        font: 'bold 26px Arial',
+        fill: '#FFD700'
+    }).setOrigin(0.5);
+
+    const reglas = [
+        '🃏 CARTAS Y VALORES',
+        '  Orden de fuerza: 1E > 1B > 7E > 7O > 3 > 2 > 1 > 12 > 11 > 10 > 7 > 6 > 5 > 4',
+        '  Figuras (10, 11, 12) valen 0 en el envido.',
+        '',
+        '🎯 OBJETIVO',
+        '  Llegar a 15 o 30 puntos antes que el rival.',
+        '',
+        '🤝 ENVIDO  (se canta antes de jugar la primera carta)',
+        '  Envido = 2pts  ·  Real Envido = 3pts  ·  Falta Envido = lo que le falta al líder.',
+        '  Si no quieren: +1 punto al que cantó.',
+        '  Puntos: las dos cartas del mismo palo suman sus valores + 20.',
+        '',
+        '⚔️ TRUCO  (se canta en cualquier momento)',
+        '  Truco = 2pts  ·  Retruco = 3pts  ·  Vale Cuatro = 4pts.',
+        '  Si no quieren: +1 punto (o +2 si ya era Retruco).',
+        '  Gana la ronda quien gane 2 de 3 manos.',
+        '  Empate en mano: gana el jugador que es "mano" (el primero en jugar).',
+    ].join('\n');
+
+    this.add.text(55, 105, reglas, {
+        font: '13px Arial',
+        fill: '#ffffff',
+        lineSpacing: 5,
+        wordWrap: { width: 690 }
+    });
+
+    this.crearBoton(400, 490, 'Volver', () => {
+        this.mostrarPantallaSeleccionModo();
+    });
+}
+
 }
