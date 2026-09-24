@@ -1,0 +1,78 @@
+/* Centésimo cuadragésimo quinto pase — Chat Global, primera versión.
+   Único archivo CSS "real" de esta pantalla (el resto de los estilos van
+   en JS inline, como en el resto del proyecto) porque el panel de
+   "usuarios en línea" necesita comportarse distinto según el ancho real
+   de pantalla: columna fija al lado del chat en desktop, o un drawer que
+   se desliza desde la derecha en mobile — eso no se puede lograr solo con
+   flex/wrap, hace falta una media query real (mismo criterio que ya usa
+   app-shell.css para el nav). El corte de 900px es el mismo que ya usa el
+   resto de la app (nav de escritorio vs. barra inferior mobile). */
+
+.cg-boton-usuarios {
+  display: none;
+}
+
+.cg-overlay {
+  display: none;
+}
+
+/* Pase 196: mismo criterio que .cg-boton-usuarios — el cartel de "tenés
+   una solicitud de amistad pendiente" solo hace falta en mobile, donde el
+   panel de solicitudes vive detrás del drawer de "Jugadores en línea"
+   (ver comentario grande arriba). En desktop el drawer ya es una columna
+   siempre visible, así que el cartel sería redundante con el panel que ya
+   se ve ahí. */
+.cg-banner-solicitudes {
+  display: none;
+}
+
+@media (max-width: 899px) {
+  .cg-boton-usuarios {
+    display: inline-flex;
+  }
+
+  .cg-banner-solicitudes {
+    display: block;
+  }
+
+  .cg-sidebar {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(86vw, 320px);
+    transform: translateX(100%);
+    transition: transform 0.25s ease;
+    z-index: 2001;
+    box-shadow: -10px 0 28px rgba(0, 0, 0, 0.4);
+  }
+
+  .cg-sidebar.cg-sidebar-abierta {
+    transform: translateX(0);
+  }
+
+  .cg-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(20, 20, 15, 0.55);
+    z-index: 2000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+  }
+
+  .cg-overlay.cg-overlay-visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+@media (min-width: 900px) {
+  .cg-sidebar {
+    position: static;
+    transform: none;
+    width: 260px;
+    flex-shrink: 0;
+  }
+}

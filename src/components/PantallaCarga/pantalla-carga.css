@@ -1,0 +1,15 @@
+/* Centésimo cuadragésimo sexto pase — animación de la barra de carga
+   indeterminada (ver PantallaCarga.js). Como no hay un % de progreso real
+   para estos estados ("cargando perfil", "cargando ranking", etc.), en
+   vez de simular uno falso se anima un segmento más corto que recorre la
+   barra en loop — mismo lenguaje visual que un loader indeterminado de
+   Material/web. Único trozo de la pantalla que necesita CSS real (el
+   resto es JS inline, como en el resto del proyecto). */
+@keyframes pc-desliza {
+  0% { transform: translateX(-84px); }
+  100% { transform: translateX(220px); }
+}
+
+.pc-barra-relleno {
+  animation: pc-desliza 1.1s ease-in-out infinite;
+}

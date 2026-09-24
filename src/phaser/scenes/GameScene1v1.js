@@ -33,7 +33,7 @@ export default class GameScene1v1 extends Phaser.Scene {
         this.load.image(`${valor}_${palo}`, `assets/images/juego/cartas/${valor}_${palo}.jpg`);
       });
     });
-    this.load.image('cardBack', 'assets/images/juego/cartas/back.jpg');
+    this.load.image('cardBack', 'assets/images/juego/cartas/back.PNG');
     this.load.image('mesa',     'assets/images/juego/mesa.png');
     this.load.on('loaderror', (file) => console.error('Error cargando:', file.key));
     this.load.audio('background',  'assets/sounds/background.ogg');

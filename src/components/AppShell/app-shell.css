@@ -1,0 +1,692 @@
+/* ============================================================
+   TrucoChe — App Shell
+   Mobile-first: header arriba + navegación ABAJO (fija) por default.
+   En pantallas anchas (>= 900px), la navegación pasa a vivir DENTRO
+   del header, como fila horizontal (no sidebar), y el contenido usa
+   todo el ancho disponible debajo.
+   ============================================================ */
+
+:root {
+  --ts-verde: #2D9B4F;
+  --ts-verde-oscuro: #1f7a3c;
+  --ts-crimson: #E8483A;
+  --ts-crimson-oscuro: #c2352a;
+  --ts-dorado: #FFB627;
+  --ts-dorado-claro: #FFD668;
+  --ts-dorado-oscuro: #C9860E;
+  --ts-celeste: #4FB3E8;
+  --ts-crema: #FFF8ED;
+  --ts-chocolate: #4A2C2A;
+}
+
+* { box-sizing: border-box; }
+
+/* Quincuagésimo pase — punto 3 del feedback de diseño ("Color y
+   contraste"/fondo general): el fondo con imagen que antes ponía Lobby.js
+   (fondoLobby) vivía adentro de .ts-content-inner, que en pantallas anchas
+   se achica a un máximo de 1100/460px — por eso se veía "partido en dos":
+   un rectángulo con la imagen adentro y el verde plano de acá afuera. Se
+   sube el fondo un nivel, a .ts-shell (que sí cubre TODA la pantalla,
+   siempre), para que sea una sola imagen continua — y de paso queda
+   disponible en Torneos/Ranking/Historial/Config, no solo en Salas.
+   Quincuagésimo primer pase: la imagen en sí (background-image con url())
+   se sacó de este archivo CSS y se puso como estilo inline en AppShell.js
+   — webpack/css-loader intenta resolver cualquier url() de un .css como
+   módulo del bundle (falla con "Module not found" si no existe como
+   import), mientras que un url() dentro de un style de React nunca pasa
+   por ese resolver, se interpreta tal cual en el navegador (mismo criterio
+   que ya usa el resto del proyecto para imágenes de fondo). Acá solo
+   queda un color de fondo llano, de respaldo. */
+.ts-shell {
+  min-height: 100vh;
+  background-color: var(--ts-verde-oscuro);
+  font-family: 'Nunito', sans-serif;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------- HEADER ---------- */
+.ts-header-inner {
+  width: 100%;
+  /* Pase siguiente: 1300→1400px. Medido con un harness de Playwright: la
+     fila completa (tarjeta de perfil + los 6 ítems del nav con ícono+
+     texto + los 2 botones circulares) necesita ~1349px reales para entrar
+     sin recortar ningún texto — con el tope viejo (1300) el nav de
+     escritorio SIEMPRE quedaba forzado a truncar, en cualquier ancho,
+     por más ancho que fuera el monitor. Ver el comentario grande en
+     `.ts-nav-item`/`.ts-nav-label` (min-width:900px) para el resto del
+     diagnóstico. */
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Octogésimo noveno pase: padding vertical achicado (10→6px) para poder
+   agrandar la tarjeta de perfil SIN agrandar el header en sí — el usuario
+   notó que el header viene creciendo pase tras pase y pidió frenar eso,
+   usando en cambio el margen que ya sobraba arriba/abajo de la tarjeta.
+   Nonagésimo pase: se agotó casi todo ese margen (6→4px) — a partir de
+   acá, agrandar más la tarjeta ya implica agrandar el header también. */
+.ts-header {
+  background: var(--ts-crema);
+  border-bottom: 4px solid var(--ts-chocolate);
+  padding: 4px 14px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+/* Octogésimo séptimo pase: reemplazada por la tarjeta de perfil nueva
+   (`.ts-tarjeta-perfil*`, ver más abajo) — se deja `.ts-coin` sin tocar
+   más abajo porque un comentario de la sección del slider todavía la
+   referencia como ejemplo de degradé, aunque tampoco tenía uso en JSX. */
+
+/* Octogésimo octavo pase: agrandada bastante (64→96px, +50%) a pedido del
+   usuario ("está muy chico ahora").
+   Octogésimo noveno pase: otro agrandado (96→104px), esta vez financiado
+   achicando el padding vertical de `.ts-header` en la misma medida — el
+   header en sí no crece ni un pixel (116px antes y después: 96+20 vs.
+   104+12).
+   Nonagésimo pase: otro agrandado más (104→128px, "agrandar mas ese
+   panel") — esta vez el padding del header ya no alcanza para absorber
+   todo el crecimiento (solo 4px de sobra), así que el header también
+   crece un poco (116→136px). */
+/* Pase siguiente: BUG REAL encontrado y arreglado — el usuario mandó una
+   captura desde un celular real mostrando una franja blanca enorme al
+   costado del juego, con scroll horizontal visible, y sospechó de "lo
+   largo de la fila de elementos en el header". Confirmado con un harness
+   de Playwright (mismo método ya usado para el fix del canvas de Phaser
+   en GameOnlinePhaser.js): en CUALQUIER teléfono real (320 a 414px de
+   ancho — prácticamente el 100% del parque de celulares actuales), la
+   fila del header (esta tarjeta a `height:128px` fijo + el botón de bono
+   + el de logout, los tres `flex-shrink:0`) necesita ~426-440px de ancho
+   real y no se achica — al no entrar en la pantalla, la PÁGINA ENTERA
+   se vuelve horizontalmente scrolleable (el clásico "min-width:auto de
+   flexbox anidado"), dejando ese hueco en blanco (el fondo por defecto
+   del documento, detrás de donde `.ts-header` ya no llega a pintar) y la
+   barra de scroll que se ve en la captura.
+   Fix: el alto de la tarjeta pasa a ser fluido — `clamp()` con una
+   fórmula atada al ancho real disponible (mismo criterio que ya usa
+   `GameOnlinePhaser.js`/`gameConfigOnline.js` para el canvas, en vez de
+   adivinar un breakpoint fijo). La cuenta reserva el peor caso (bono Y
+   logout visibles a la vez, 62px cada uno, 2 gaps de 12px y el padding
+   real del header, 14px por lado = 176px en total) y calcula el alto
+   máximo de la tarjeta (proporción 491/226 = 2.172) que deja exactamente
+   ese resto libre — así la fila nunca pide más ancho del que el
+   viewport realmente tiene, en vez de recortar el alto después y romper
+   la proporción. Los topes (88px min / 128px max, este último el mismo
+   valor "grande" ya confirmado en pantallas anchas) se mantienen. Ver
+   también `.ts-icon-btn` un poco más abajo (los botones circulares se
+   achican un poco en celulares muy angostos, acompañando esta cuenta). */
+.ts-tarjeta-perfil {
+  position: relative;
+  height: clamp(88px, calc((100vw - 176px) / 2.172), 128px);
+  aspect-ratio: 491 / 226;
+  flex-shrink: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.ts-tarjeta-perfil-fondo {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: fill;
+  pointer-events: none;
+  user-select: none;
+}
+/* Octogésimo octavo pase: nudge horizontal muy leve (3.05%→4.8%) — el
+   usuario pidió correr la foto "muy pero muy poquitito" hacia la derecha
+   dentro del círculo, no está bien centrada en el arte. */
+.ts-tarjeta-perfil-avatar {
+  position: absolute;
+  left: 4.8%; top: 8.85%; width: 30.55%; height: 66.37%;
+  border-radius: 50%;
+  overflow: hidden;
+  pointer-events: none;
+}
+.ts-tarjeta-perfil-avatar img {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+}
+/* Nonagésimo pase: letra más grande (12→15px, acompañando el +23% de la
+   tarjeta) y color aclarado — el usuario reportó que el marrón chocolate
+   no se lee bien contra el fondo de madera (la veta tiene zonas más
+   claras y más oscuras, así que un color plano nunca contrasta parejo en
+   toda la tablita). Pasa a crema con un contorno duro de 4 sombras
+   direccionales (mismo truco ya usado en otras partes del proyecto para
+   texto claro sobre fondos de textura variable) — el contorno oscuro
+   asegura legibilidad sin importar en qué parte de la veta caiga cada
+   letra. */
+.ts-tarjeta-perfil-nombre {
+  position: absolute;
+  left: 40.7%; top: 15.5%; width: 48.9%; height: 26.5%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Fredoka', sans-serif; font-weight: 600; font-size: 15px;
+  line-height: 1.1;
+  color: var(--ts-crema);
+  text-shadow:
+    -1.5px -1.5px 0 var(--ts-chocolate),
+    1.5px -1.5px 0 var(--ts-chocolate),
+    -1.5px 1.5px 0 var(--ts-chocolate),
+    1.5px 1.5px 0 var(--ts-chocolate);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  padding: 0 6px;
+  pointer-events: none;
+}
+.ts-tarjeta-perfil-saldo {
+  position: absolute;
+  left: 58.7%; top: 64.2%; width: 25.5%; height: 22.1%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 15px;
+  color: #FFE7B3;
+  pointer-events: none;
+}
+/* Nonagésimo primer pase: el hotspot único de "+" (que hacía lo mismo que
+   tocar el resto de la tarjeta, ir al perfil) se separa en DOS zonas de
+   click ahora que existe la Tienda de monedas. `.ts-tarjeta-perfil-zona-
+   perfil` cubre TODA la tarjeta como fallback — sigue yendo al perfil.
+   Encima, `.ts-tarjeta-perfil-zona-moneda` (z-index más alto) tapa solo
+   el cuadrante inferior derecho donde viven el medallón de la moneda, el
+   saldo y el botón "+" — ahí gana ella por estar arriba, y lleva a la
+   Tienda en vez de al perfil. El límite (top:42%) coincide justo con el
+   borde inferior de la tablita del nombre (15.5%+26.5%), así que no hay
+   superposición con esa zona. */
+.ts-tarjeta-perfil-zona-perfil {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: none; border: none; padding: 0; margin: 0; cursor: pointer;
+}
+.ts-tarjeta-perfil-zona-moneda {
+  position: absolute;
+  left: 38%; top: 42%; width: 62%; height: 58%;
+  z-index: 2;
+  background: none; border: none; padding: 0; margin: 0; cursor: pointer;
+}
+.ts-tarjeta-perfil-zona-moneda:active { transform: scale(0.96); }
+
+.ts-coin {
+  width: 15px; height: 15px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, var(--ts-dorado-claro), var(--ts-dorado) 60%, var(--ts-dorado-oscuro) 100%);
+  border: 1.5px solid var(--ts-chocolate);
+  display: inline-block;
+}
+
+/* Octogésimo séptimo pase: agrandado de 44 a 50px a pedido del usuario
+   (aplica a bono diario + logout, únicos dos usos de esta clase).
+   Octogésimo octavo pase: "quedan mu[y] chicos" — otro salto, 50→62px
+   (radio 13→15 para mantener la proporción). */
+.ts-icon-btn {
+  width: 62px; height: 62px; border-radius: 15px;
+  border: 2.5px solid var(--ts-chocolate);
+  background: var(--ts-celeste);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px; cursor: pointer; flex-shrink: 0;
+  box-shadow: 0 3px 0 var(--ts-chocolate);
+}
+.ts-icon-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--ts-chocolate); }
+
+/* Pase siguiente: acompaña el fix de `.ts-tarjeta-perfil` de arriba —
+   en celulares angostos (≤400px, ej. la mayoría de los Android chicos
+   y el iPhone SE/13/14 estándar) estos dos botones bajan de 62 a 56px.
+   La fórmula de `.ts-tarjeta-perfil` ya reserva el caso conservador
+   (62px) en TODOS los anchos, así que achicarlos acá solo deja más
+   margen de sobra, nunca desajusta la cuenta. Sin este paso, la tarjeta
+   sola no alcanza a compensar del todo en los celulares más angostos
+   (~320-360px) — con los botones también un poco más chicos ahí, la
+   fila entera vuelve a entrar sin necesidad de scroll horizontal. */
+@media (max-width: 400px) {
+  .ts-icon-btn { width: 56px; height: 56px; border-radius: 14px; }
+}
+/* Octogésimo séptimo pase: el usuario pidió volver a poner el recuadro
+   detrás de la puerta (sacado en el octogésimo quinto pase — "mala
+   decisión") pero con otro color, ya que antes era rojizo (`#f0a0a0`).
+   En vez de reintroducir un color nuevo, se deja caer al fondo celeste
+   default de `.ts-icon-btn` (el mismo que ya usa el resto de los íconos
+   "neutros" del header) — la puerta en sí es de madera, así que un fondo
+   celeste neutro no compite con ningún otro botón cercano ni evoca
+   "peligro" como el rojo viejo. Sin override de color: esta clase queda
+   solo como hook para el tamaño específico del ícono (ver AppShell.js). */
+.ts-icon-logout:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--ts-chocolate); }
+
+/* Octogésimo séptimo pase: el botón de bono diario, cuando está
+   disponible, tenía fondo dorado (#FFB627) — el mismo tono que el regalo
+   dibujado adentro, así que el ícono se camuflaba contra su propio fondo
+   (reportado por el usuario). Se cambia a crimson (`--ts-crimson`, ya
+   usado en el resto de la paleta) — contrasta bien contra el amarillo del
+   regalo y además lee como "reclamar ahora" (urgencia), un rol de color
+   más apropiado para un CTA que el dorado neutro que ya usa "Truco"/CTAs
+   principales en otras partes de la app.
+   Nota de bug encontrado de paso: estas 3 reglas vivían adentro de
+   `@media (min-width:900px)` — en mobile (probablemente donde el usuario
+   viene probando esto) el botón de bono NUNCA mostraba el fondo dorado
+   viejo ni el atenuado de "ya reclamado", quedaba siempre con el celeste
+   default de `.ts-icon-btn` sin importar el estado. Se sacan del media
+   query para que el color y el pulso apliquen en cualquier ancho. */
+.ts-icon-bonus-activo {
+  background: var(--ts-crimson);
+  border-color: var(--ts-chocolate);
+  animation: pulso-bonus 1.2s ease-in-out infinite;
+  cursor: pointer;
+}
+
+/* Centésimo tercer pase: se saca `.ts-icon-bonus-inactivo` — el botón de
+   bono ya no se muestra atenuado cuando no hay bono disponible, desaparece
+   del todo (ver AppShell.js), así que ese estado visual quedó sin uso. */
+
+@keyframes pulso-bonus {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.12); }
+}
+
+/* ---------- BANNER PROMO ---------- */
+/* Pase siguiente (plaqueta de trofeo): el usuario mandó un PNG ilustrado
+   (plaqueta de madera con trofeo dorado a la izquierda, espacio en blanco
+   a la derecha para el texto) para reemplazar el fondo plano dorado de
+   este banner. La imagen es 300x100 (proporción 3:1, trofeo + marco en el
+   tercio izquierdo, madera lisa el resto) — en vez de estirarla a una
+   franja angosta de ancho completo (lo que aplastaría el trofeo hasta
+   verse una línea), el banner pasa a respetar esa proporción real
+   (`aspect-ratio: 3/1`), centrado y con un ancho máximo, para que se vea
+   como la plaqueta que es. El texto se acomoda con padding-left grande
+   para caer siempre en la zona de madera lisa (a la derecha del trofeo),
+   sea cual sea el ancho final (al no deformarse la imagen, ese porcentaje
+   siempre cae en el mismo lugar relativo del dibujo).
+   Bug real (build roto) encontrado después de entregar esto: la imagen
+   de fondo NO puede ir acá como url() — ver AppShell.js, donde se puso
+   como style inline en su lugar (mismo problema y mismo fix que ya
+   documenta el comentario grande de más arriba en este archivo, .ts-shell,
+   quincuagésimo primer pase — se pasó por alto al escribir este banner).
+   Sin confirmación visual todavía — primera versión a probar en vivo. */
+.ts-banner {
+  position: relative; /* pase siguiente: ancla el %left/right de .ts-banner-texto a ESTE ancho, no al de la fila que lo contiene — ver comentario grande en .ts-banner-texto más abajo */
+  margin: 10px auto 0;
+  width: 100%;
+  /* Pase siguiente: 420→340 — el usuario sintió que la plaqueta había
+     quedado muy grande en mobile. */
+  max-width: 340px;
+  aspect-ratio: 3 / 1;
+  background: none;
+  border: none;
+  border-radius: 14px;
+  padding: 0;
+  cursor: pointer;
+  /* Pase siguiente: el usuario pidió el mismo "latido" (pulso de escala
+     sutil) que ya tenía el nativo en `bannerWrap` — ahí es un Animated.View
+     que envuelve TODO el botón (imagen + texto) y lo escala junto,
+     1 → 1.015, en un loop de 1800ms. Se aplica acá sobre `.ts-banner` (el
+     <button> que envuelve a `.ts-banner-bg` y `.ts-banner-texto`) para
+     lograr el mismo efecto: al escalar el contenedor, sus hijos absolutos
+     escalan con él como una sola pieza. No pisa el `transform: translate()`
+     propio de `.ts-banner-texto` (ver más abajo) — cada elemento tiene su
+     transform independiente; el de este botón envuelve al de sus hijos, no
+     lo reemplaza. */
+  animation: latido-banner-torneo 1.8s ease-in-out infinite;
+}
+
+@keyframes latido-banner-torneo {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.015); }
+}
+
+/* Pase siguiente — bug real encontrado: antes la imagen de fondo Y el
+   `box-shadow` (sombra/glow) vivían los dos directo en `.ts-banner` (el
+   <button>). `box-shadow` sigue la forma de la CAJA del elemento — un
+   simple rectángulo redondeado — pero `banner-torneo.png` es una
+   plaqueta con esquinas CÓNCAVAS/recortadas (no un rectángulo redondeado
+   común) con bastante margen transparente en cada esquina. Contra el
+   verde del lobby, esa sombra rectangular asomaba por esos recortes como
+   un rectángulo que no coincide con el dibujo real (lo que el usuario
+   reportó como "el rectángulo con sombra verde que desencaja con la
+   imagen"). Este `<div>` aparte (ver el JSX en Lobby.js) tiene la imagen
+   Y usa `filter: drop-shadow(...)` en vez de `box-shadow` — a diferencia
+   de box-shadow, drop-shadow sigue el canal alfa REAL del contenido (el
+   contorno recortado de la plaqueta), así que la sombra/glow ahora abraza
+   la forma real de la imagen en vez de un rectángulo genérico. Vivir en
+   un div aparte del texto (`.ts-banner-texto`, más abajo) también evita
+   que el filtro duplique su efecto sobre las letras. */
+.ts-banner-bg {
+  position: absolute;
+  inset: 0;
+  border-radius: 14px;
+  /* El usuario pidió que el efecto luminoso se mantenga (solo quería que
+     se saque el rectángulo que no coincidía con la imagen) — se restaura
+     el glow ámbar pulsante, ahora vía drop-shadow. Se pueden encadenar
+     varios drop-shadow en el mismo filter: uno fijo (la sombra "placa
+     levantada", angosta y hacia abajo) + uno animado (el glow). */
+  filter: drop-shadow(0 4px 1px rgba(0,0,0,0.25)) drop-shadow(0 0 0 rgba(255,182,39,0));
+  animation: pulso-banner-torneo 2.2s ease-in-out infinite;
+}
+
+@keyframes pulso-banner-torneo {
+  0%, 100% { filter: drop-shadow(0 4px 1px rgba(0,0,0,0.25)) drop-shadow(0 0 0 rgba(255,182,39,0)); }
+  50%      { filter: drop-shadow(0 4px 1px rgba(0,0,0,0.25)) drop-shadow(0 0 10px rgba(255,182,39,0.85)); }
+}
+
+/* Pase siguiente — bug real encontrado: el texto vivía directo adentro del
+   <button> `.ts-banner`, posicionado con `padding: 0 6% 0 39%` (porcentaje).
+   El padding-left/right en porcentaje se calcula por spec contra el ancho
+   del CONTENEDOR (el padre), no contra el ancho propio del elemento — y
+   desde que este banner comparte fila con el panel "Jugar ya" (pase 181),
+   su padre real es esa fila entera (banner + panel), mucho más ancha que
+   el banner en sí. Ese 39% calculado contra la fila completa daba muchos
+   más píxeles que los que el banner mide de ancho, empujando el texto casi
+   al borde derecho y dejando la mitad de la madera vacía — exactamente lo
+   que se veía en las capturas (y más marcado en pantallas anchas, donde la
+   fila es más ancha, tal como reportó el usuario).
+   Fix: mover el texto a un `<span>` interno posicionado en `absolute`. Un
+   elemento absoluto resuelve sus porcentajes de left/right/top/bottom
+   contra el contenedor POSICIONADO más cercano (`.ts-banner`, ahora con
+   `position: relative` arriba) — es decir, contra el ancho del banner
+   mismo, sin importar cuán ancha sea la fila que lo contiene.
+   Pase siguiente: ese posicionamiento por porcentaje ya deja el texto
+   dentro de la zona de madera correcta, pero el usuario pidió un ajuste
+   fino más — unos píxeles hacia arriba y hacia la izquierda para quedar
+   mejor centrado dentro de esa zona. Se agrega con un `transform:
+   translate()` chico (en píxeles fijos, no % — no depende del ancho real
+   del banner).
+   Pase siguiente: "casi casi perfecto" — un ajuste más, en la dirección
+   contraria en Y (bajarlo un poquito, se había subido de más) y un poco
+   más a la izquierda en X. -5→-2 en Y (menos hacia arriba), -6→-9 en X
+   (un poco más a la izquierda). También se agranda el tamaño de letra
+   (13→15px): el usuario notó que quedaba espacio de sobra sin rellenar
+   en la zona de texto de la plaqueta. */
+.ts-banner-texto {
+  position: absolute;
+  left: 39%; right: 6%; top: 0; bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translate(-9px, -2px);
+  font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 15px;
+  line-height: 1.25;
+  /* Pase siguiente: el marrón chocolate no se lee sobre la madera oscura
+     de la plaqueta (quedaba prácticamente invisible, tal cual reportó el
+     usuario) — mismo fix ya usado para el nombre sobre la tarjeta de
+     perfil (`.ts-tarjeta-perfil-nombre`, más arriba en este archivo):
+     texto crema con contorno oscuro de 4 sombras direccionales, que se
+     lee parejo sin importar en qué parte de la veta de la madera caiga
+     cada letra. */
+  color: var(--ts-crema);
+  /* Pase siguiente — bug real encontrado: el usuario reportó que a las
+     letras "les falta definición" — el contorno era MÁS FINO que el de
+     `.ts-tarjeta-perfil-nombre` (arriba en este archivo), la referencia
+     que este mismo comentario decía estar copiando: 1px de offset en vez
+     de los 1.5px que usa esa referencia, con el mismo tamaño de letra
+     (15px). Ese contorno más fino se ve más débil/lavado contra la
+     textura de la madera. Fix: mismo offset que la referencia (1.5px) +
+     se agregan las 4 direcciones cardinales (arriba/abajo/izq/der, no
+     solo las diagonales) para un contorno más sólido y parejo alrededor
+     de cada letra. */
+  text-shadow:
+    -1.5px -1.5px 0 var(--ts-chocolate),
+    1.5px -1.5px 0 var(--ts-chocolate),
+    -1.5px 1.5px 0 var(--ts-chocolate),
+    1.5px 1.5px 0 var(--ts-chocolate),
+    0 -1.5px 0 var(--ts-chocolate),
+    0 1.5px 0 var(--ts-chocolate),
+    -1.5px 0 0 var(--ts-chocolate),
+    1.5px 0 0 var(--ts-chocolate);
+  pointer-events: none; /* el click sigue viviendo en el <button> que lo envuelve */
+}
+
+/* ---------- CONTENIDO ---------- */
+.ts-content {
+  flex: 1;
+  padding: 14px 12px 90px; /* padding-bottom grande: deja lugar a la nav inferior fija en mobile */
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.ts-content-inner {
+  width: 100%;
+  max-width: 460px;
+}
+
+/* ---------- NAV — mobile: se desengancha del header y cae fija abajo ---------- */
+.ts-nav {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: var(--ts-crema);
+  border-top: 4px solid var(--ts-chocolate);
+  display: flex;
+  z-index: 100;
+}
+
+.ts-nav-item {
+  flex: 1;
+  background: none; border: none;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 8px 4px 6px;
+  /* Quincuagésimo noveno pase — punto 6: margen + radio para que el fondo
+     del tab activo (ver .ts-nav-item-activo más abajo) se vea como una
+     píldora contenida en vez de un bloque a sangre que toca los bordes de
+     la barra — antes no hacía falta porque el activo no tenía fondo. */
+  margin: 6px 4px;
+  /* Pase siguiente: más redondeado, a pedido del usuario (14px→20px) —
+     mismo criterio en la variante de escritorio más abajo (@media
+     min-width:900px) y en la píldora equivalente del tab bar nativo. */
+  border-radius: 20px;
+  cursor: pointer;
+  color: #8c8078;
+  position: relative;
+  /* Centésimo cuadragésimo pase — pedido del usuario: pequeño zoom al
+     pasar el mouse por el nav de escritorio (ver el hover más abajo,
+     dentro de @media min-width:900px). La transición vive acá afuera
+     para que la vuelta al tamaño normal también sea suave; sin :hover
+     definido en mobile, esta línea no tiene ningún efecto visible ahí. */
+  transition: transform 0.18s ease;
+}
+
+.ts-nav-icon { font-size: 30px; }
+.ts-nav-label { font-family: 'Fredoka', sans-serif; font-weight: 600; font-size: 15px; }
+
+/* Quincuagésimo noveno pase — punto 6 del feedback de diseño ("Top bar y
+   navegación"): el tab activo en mobile solo cambiaba de color antes (el
+   texto a verde + un glow en el ícono) — nada lo distinguía de un vistazo
+   contra la barra entera. Se le agrega la misma píldora dorada que YA
+   usa el desktop más abajo (@media 900px), en vez de inventar un
+   tratamiento nuevo — mismo lenguaje visual en los dos layouts. */
+.ts-nav-item-activo {
+  color: var(--ts-verde-oscuro);
+  background: var(--ts-dorado-claro);
+}
+.ts-nav-item-activo .ts-nav-icon {
+  filter: drop-shadow(0 0 4px rgba(45,155,79,0.5));
+}
+
+.ts-nav-badge {
+  position: absolute;
+  top: 2px; right: 22%;
+  background: var(--ts-crimson);
+  color: #fff;
+  font-size: 10px; font-weight: 800;
+  min-width: 16px; height: 16px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  border: 1.5px solid var(--ts-chocolate);
+  padding: 0 3px;
+}
+/* Pase siguiente: variante "punto" sin número (aviso de Chat Global sin
+   leer) — mismo círculo rojo, más chico y sin contenido adentro. */
+.ts-nav-badge-punto {
+  min-width: 11px; width: 11px; height: 11px;
+  padding: 0;
+}
+
+/* ============================================================
+   DESKTOP (>= 900px): el nav queda DENTRO del header, como fila
+   horizontal entre el saludo/saldo y el botón de logout. Ya no hay
+   sidebar — el contenido usa todo el ancho debajo del header.
+   ============================================================ */
+/* Pase siguiente: SEGUNDO bug real de overflow horizontal, independiente
+   del de mobile de arriba — mismo síntoma (franja blanca + scroll
+   horizontal) pero en escritorio/laptop. Medido con el mismo harness de
+   Playwright: `.ts-nav-item` acá abajo tenía `flex:none` (ancho fijo
+   por contenido, sin encogerse nunca) — con los 6 ítems (ícono 46px +
+   texto + padding) la fila del nav necesita ~911px sí o sí, y CUALQUIER
+   ventana o laptop más angosta que eso (la inmensa mayoría — 1280x800,
+   1366x768, o cualquier browser no maximizado) desbordaba la página
+   entera, exactamente igual que el bug de mobile. Confirmado que pasaba
+   en TODO el rango de 900 a ~1330px (donde `.ts-header-inner` ya no
+   llega a su `max-width` de 1400px y por lo tanto tiene menos lugar real
+   que el que el nav pide).
+   Fix, dos partes:
+   1) `.ts-nav`/`.ts-nav-item` pasan a `min-width:0` + `flex:1 1 auto` —
+      sin esto, el "min-content" de un flex container anidado obliga a
+      mantener el ancho natural completo aunque el padre dé menos lugar
+      (la misma trampa de flexbox anidado). Con esto, los ítems pueden
+      encogerse de verdad (y, si hiciera falta, el texto se trunca con
+      "…" en vez de forzar overflow — ver `.ts-nav-label`), en vez de
+      quedar `flex:none`.
+   2) Aun así, achicar el texto a "Hist…"/"Ajus…" se ve mal — así que en
+      el tramo donde el ancho real (900-1399px) NO alcanza para mostrar
+      ícono+texto completo, se pasa a un nav SOLO ÍCONO (ver el media
+      query nuevo más abajo, fuera de este bloque) — mismo criterio que
+      ya usa el selector de modo compacto del Lobby. Arriba de 1399px ya
+      entra el nav completo sin recortar nada (con el `max-width:1400px`
+      nuevo de `.ts-header-inner`). */
+@media (min-width: 900px) {
+  .ts-nav {
+    position: static;
+    bottom: auto; left: auto; right: auto;
+    background: none;
+    border-top: none;
+    flex-direction: row;
+    gap: 6px;
+    margin: 0 auto;   /* ← centra el nav en el espacio libre del header */
+    min-width: 0;
+  }
+
+  .ts-nav-item {
+    flex: 1 1 auto;
+    min-width: 0;
+    flex-direction: row;
+    justify-content: center;
+    gap: 8px;
+    padding: 9px 16px;
+    border-radius: 18px;
+    /* Anula el margin de la píldora mobile (ver regla base) — acá el
+       espaciado entre items ya lo da el `gap` de .ts-nav. */
+    margin: 0;
+  }
+
+  .ts-nav-item-activo {
+    background: var(--ts-dorado-claro);
+  }
+
+  .ts-nav-label {
+    font-size: 18px;
+    /* Red de seguridad — si algún ancho intermedio no deja entrar el
+       texto completo, que se trunque con "…" en vez de volver a forzar
+       overflow de toda la página. En la práctica, con el nav solo-ícono
+       de abajo cubriendo el tramo apretado, esto no debería dispararse
+       casi nunca. */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .ts-nav-badge {
+    position: static;
+    margin-left: 2px;
+  }
+
+  .ts-content {
+    padding: 24px 32px 40px;
+  }
+
+  .ts-content-inner {
+    max-width: 1100px;
+  }
+
+  .ts-banner {
+    /* Antes 1100px, pensado para la franja angosta de ancho completo.
+       Con la plaqueta a proporción fija (3:1) ese ancho daría un banner
+       de ~366px de ALTO — se deja en un máximo moderado, más grande que
+       el de mobile (340px) pero sin volverse gigante en desktop. Bajado
+       otra vez (520→400) junto con el ajuste de mobile. */
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+}
+
+/* Pase siguiente (#2): el usuario pidió que en vez de ocultar el texto
+   del todo en el tramo 900-1399px, el texto se achique — "tenemos ahora
+   espacio para no achicar tanto el menú superior". Se divide el tramo en
+   dos, verificado de nuevo con el harness de Playwright contra el CSS
+   real (worst-case con el botón de bono visible):
+   1) 900-1099px: sigue siendo el tramo más apretado (tarjeta de perfil +
+      2 íconos circulares ya ocupan la mayor parte del header-inner) —
+      acá el ícono solo sigue siendo necesario, no entra ni el texto más
+      chico sin desbordar.
+   2) 1100-1399px: ahora hay lugar real para ícono + texto en tamaño
+      reducido (11px, gap y padding más ajustados que el desktop normal
+      de 18px) — el `.ts-nav-label` de la regla base ya tiene
+      overflow:hidden/ellipsis como red de seguridad si algún ancho
+      intermedio quedara justo. */
+@media (min-width: 900px) and (max-width: 1099px) {
+  .ts-nav-item { padding: 9px 10px; gap: 0; }
+  .ts-nav-label { display: none; }
+}
+
+@media (min-width: 1100px) and (max-width: 1399px) {
+  .ts-nav-item { padding: 8px 8px; gap: 4px; }
+  .ts-nav-label { font-size: 11px; }
+}
+
+/* Centésimo cuadragésimo pase — pedido del usuario: al pasar el mouse por
+   un botón del nav de escritorio (de "Salas" a "Ajustes"), que agrande un
+   poco el ícono junto con el texto. Se escala el botón completo (ícono +
+   label van juntos dentro de .ts-nav-item, ver el JSX en AppShell.js) en
+   vez de solo el ícono, que es justo lo que pidió ("que se agrande un
+   poco el logo con el texto"). Combinado con min-width:900px (mismo corte
+   que separa el nav de escritorio del de mobile) y hover:hover, para que
+   el efecto no se dispare ni se quede "pegado" en pantallas táctiles. */
+@media (min-width: 900px) and (hover: hover) {
+  .ts-nav-item:hover {
+    transform: scale(1.08);
+  }
+}
+
+/* ---------- SLIDER "casero" (panel de configuración de la partida) ----------
+   Reemplaza el thumb/track azul de default del navegador por uno dorado,
+   misma fórmula de degradé que ya usa .ts-coin, para que el <input type=
+   "range"> nativo del HTML se sienta parte del mismo juego. */
+.tc-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 8px;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #e8d9c0, #d8c4a0);
+  border: 1.5px solid var(--ts-chocolate);
+  outline: none;
+  cursor: pointer;
+}
+.tc-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, var(--ts-dorado-claro), var(--ts-dorado) 60%, var(--ts-dorado-oscuro) 100%);
+  border: 2px solid var(--ts-chocolate);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.35);
+}
+.tc-slider::-moz-range-track {
+  height: 8px;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #e8d9c0, #d8c4a0);
+  border: 1.5px solid var(--ts-chocolate);
+}
+.tc-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, var(--ts-dorado-claro), var(--ts-dorado) 60%, var(--ts-dorado-oscuro) 100%);
+  border: 2px solid var(--ts-chocolate);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.35);
+}
