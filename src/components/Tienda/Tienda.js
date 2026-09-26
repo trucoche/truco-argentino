@@ -117,7 +117,8 @@ export default function Tienda({ usuario }) {
 
   return (
     <>
-      <div style={estilos.sectionTitle}>Comprá monedas</div>
+      <div style={estilos.sectionTitle}>🛒 Comprá monedas</div>
+      <div style={estilos.sectionSubtitle}>Se acreditan al instante en tu cuenta</div>
 
       {/* Centésimo décimo cuarto pase: banner promocional, punto 1 de la
           lista del usuario — usa el descuento real del pack de inauguración
@@ -214,6 +215,7 @@ export default function Tienda({ usuario }) {
                       <div style={{ ...estilos.precioOriginal, visibility: 'hidden' }}>$0</div>
                     )}
                     <button
+                      className="tc-precio-boton"
                       style={{
                         ...estilos.precioBoton,
                         ...(destacado ? estilos.precioBotonVerde : inauguracion ? estilos.precioBotonRojo : estilos.precioBotonDorado),
@@ -238,7 +240,10 @@ export default function Tienda({ usuario }) {
 }
 
 const estilos = {
-  sectionTitle: { fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 16, color: C.crema, margin: '4px 0 10px 4px' },
+  sectionTitle: { fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 16, color: C.crema, margin: '4px 0 2px 4px' },
+  // Mismo criterio que el subtítulo agregado en Ranking.js — la tienda
+  // tampoco tenía ninguna bajada de línea, solo el título suelto.
+  sectionSubtitle: { fontSize: 12.5, color: 'rgba(255,248,237,0.75)', fontWeight: 700, margin: '0 0 10px 4px' },
   aviso: {
     display: 'flex', alignItems: 'center', gap: 10,
     background: C.doradoClaro, border: `2px solid ${C.doradoOscuro}`, color: C.chocolate,
@@ -596,3 +601,19 @@ const estilos = {
     margin: '12px 10px 0', lineHeight: 1.35
   },
 };
+
+// Pase siguiente: pequeño feedback de hover/click en el botón de precio —
+// antes los botones se veían idénticos en reposo/hover, sin sensación de
+// "esto se puede clickear" más allá del cursor. Se inyecta una sola vez
+// (mismo patrón que ya usa MonedaEasterEgg.js para su @keyframes) en vez
+// de :hover inline, que los objetos de estilo de React no soportan.
+if (typeof document !== 'undefined' && !document.getElementById('tienda-hover-boton')) {
+  const style = document.createElement('style');
+  style.id = 'tienda-hover-boton';
+  style.textContent = `
+    .tc-precio-boton { transition: transform 0.15s ease, filter 0.15s ease; }
+    .tc-precio-boton:hover { transform: translateY(-2px); filter: brightness(1.06); }
+    .tc-precio-boton:active { transform: translateY(0); filter: brightness(0.95); }
+  `;
+  document.head.appendChild(style);
+}

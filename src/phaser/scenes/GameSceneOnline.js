@@ -985,7 +985,7 @@ _conectarSocket() {
         const delay = hayRevelacionPendiente ? 3800 : 0;
 
         this.time.delayedCall(delay, () => {
-          this._mostrarPantallaFinal(titulo, !!data.esCampeon, data.esTorneo, data.torneoId, data.jugadores, extra);
+          this._mostrarPantallaFinal(titulo, !!data.esCampeon, data.esTorneo, data.torneoId, data.jugadores, extra, gano);
         });
       });
     this.socket.off('revancha-estado').on('revancha-estado', (data) => {
@@ -1041,7 +1041,7 @@ _esRepartoNuevo(nuevoEstado) {
     return rondaAnterior !== nuevoEstado.numeroRonda;
 }
 
-_mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = null, jugadoresFinal = null, subtitulo = '') {
+_mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = null, jugadoresFinal = null, subtitulo = '', gano = false) {
 this._limpiarSprites();
     this._ocultarCanto();
     this.children.list
@@ -1131,9 +1131,13 @@ this._limpiarSprites();
     // coloreado por resultado) + franja de acento a la izquierda, mismo
     // criterio que `filaJugadorResultado` en el nativo (ahí el color
     // solo tiñe la franja y el texto, nunca el fondo de la fila entera).
+    // Pase siguiente: se agrega una línea divisoria fina antes de las
+    // filas de jugadores (separa visualmente "resultado" de "detalle de
+    // quién ganó/perdió", como pide el feedback de que esta pantalla se
+    // sentía poco jerarquizada) — de ahí el +14 extra acá.
     const hayJugadores = jugadoresFinal && jugadoresFinal.length > 0;
     if (hayJugadores) {
-      altoContenido += jugadoresFinal.length * 32 + 16;
+      altoContenido += 14 + jugadoresFinal.length * 32 + 16;
     }
 
     // 5) Botón de revancha (si no es torneo) — con su texto de estado
@@ -1160,6 +1164,35 @@ this._limpiarSprites();
     panel.strokeRoundedRect(px, py, panelAncho, panelAlto, 20);
     this._sprites.push(panel);
 
+    // Pase siguiente: pedido del usuario de "sumar algún detalle de
+    // celebración si ganás" — un puñado de cuadraditos de colores que
+    // caen desde arriba del panel y se desvanecen, una sola vez, nada
+    // en loop. Solo cuando el resultado es una victoria propia (nunca en
+    // el caso neutro de sala cancelada ni cuando perdés).
+    if (gano) {
+      const coloresConfeti = [0xFFB627, 0xFFD668, 0x4FB3E8, 0x2D9B4F];
+      for (let i = 0; i < 16; i++) {
+        const cx = px + 16 + Math.random() * (panelAncho - 32);
+        const cy = py - 4;
+        const pieza = this.add.graphics().setDepth(901.5);
+        pieza.fillStyle(coloresConfeti[i % coloresConfeti.length], 1);
+        pieza.fillRect(-3, -3, 6, 6);
+        pieza.setPosition(cx, cy);
+        pieza.setAngle(Math.random() * 360);
+        this._sprites.push(pieza);
+        this.tweens.add({
+          targets: pieza,
+          y: cy + 46 + Math.random() * 44,
+          x: cx + (Math.random() * 44 - 22),
+          angle: pieza.angle + (Math.random() > 0.5 ? 220 : -220),
+          alpha: 0,
+          duration: 1000 + Math.random() * 500,
+          delay: Math.random() * 250,
+          ease: 'Cubic.easeIn',
+        });
+      }
+    }
+
     const pillCenterY = py + padArriba + pillH / 2;
     const cartel = this.add.graphics().setDepth(901);
     cartel.fillStyle(0xFFB627, 1);
@@ -1180,7 +1213,19 @@ this._limpiarSprites();
     }
 
     if (hayJugadores) {
+      // Línea divisoria fina — separa el cartel de resultado de arriba
+      // del detalle de "quién ganó/perdió" de abajo, mismo criterio de
+      // separadores tenues que ya usa Ranking.js (fila con
+      // borderBottom dashed) en vez de dejarlo todo flotando junto.
+      const anchoLinea = panelAncho - 60;
+      const lineaDivisoria = this.add.graphics().setDepth(901);
+      lineaDivisoria.lineStyle(2, 0x4A2C2A, 0.12);
+      lineaDivisoria.lineBetween(400 - anchoLinea / 2, y, 400 + anchoLinea / 2, y);
+      this._sprites.push(lineaDivisoria);
+      y += 14;
+
       const filaAncho = panelAncho - 80;
+      const avatarRadio = 12;
       jugadoresFinal.forEach((j) => {
         const colorAcento = j.gano ? 0x3E8E5A : 0xB0454B;
         const colorTexto = j.gano ? '#1f7a3c' : '#8c3a3a';
@@ -1193,7 +1238,26 @@ this._limpiarSprites();
         filaFondo.fillRoundedRect(400 - filaAncho / 2, y - 14, 5, 28, 2);
         this._sprites.push(filaFondo);
 
-        const filaTexto = this.add.text(400 - filaAncho / 2 + 12, y, j.nombre, {
+        // Chip de avatar con la inicial del nombre — rompe la monotonía
+        // de puro texto en la fila, dorado si ganó, verde si perdió
+        // (mismo criterio de color que ya usa BracketView para sus
+        // chips de cruce).
+        const avatarX = 400 - filaAncho / 2 + 12 + avatarRadio;
+        const avatarGraf = this.add.graphics().setDepth(902);
+        avatarGraf.fillStyle(j.gano ? 0xFFB627 : 0x1f7a3c, 1);
+        avatarGraf.fillCircle(avatarX, y, avatarRadio);
+        avatarGraf.lineStyle(2, 0x4A2C2A, 1);
+        avatarGraf.strokeCircle(avatarX, y, avatarRadio);
+        this._sprites.push(avatarGraf);
+
+        const inicialNombre = (j.nombre || '?').trim().charAt(0).toUpperCase();
+        const avatarTexto = this.add.text(avatarX, y, inicialNombre, {
+          fontFamily: 'Fredoka, Arial', fontSize: '11px', fontStyle: '700',
+          color: j.gano ? '#4A2C2A' : '#FFF8ED',
+        }).setOrigin(0.5).setDepth(903);
+        this._sprites.push(avatarTexto);
+
+        const filaTexto = this.add.text(avatarX + avatarRadio + 8, y, j.nombre, {
           fontFamily: 'Nunito, Arial', fontSize: '13px', fontStyle: 'bold', color: colorTexto,
         }).setOrigin(0, 0.5).setDepth(902);
         this._sprites.push(filaTexto);

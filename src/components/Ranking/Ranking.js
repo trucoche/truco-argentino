@@ -103,6 +103,9 @@ export default function Ranking({ token, usuarioActual }) {
 
   return (
     <>
+      <div style={estilos.sectionTitle}>🏅 Ranking</div>
+      <div style={estilos.sectionSubtitle}>Los mejores jugadores de TrucoChe</div>
+
       <div style={estilos.podioPanel}>
         <Filigrana />
         <div style={estilos.podio}>
@@ -117,7 +120,9 @@ export default function Ranking({ token, usuarioActual }) {
           {p1 && (
             <div style={{ ...estilos.puesto, cursor: 'pointer' }} onClick={() => setPerfilAbierto(p1.username)}>
               <div style={{ fontSize: 20, marginBottom: -4 }}>👑</div>
-              <div style={estilos.medallionP1}><img src={avatarSrcDe(p1)} alt="" style={estilos.medallionImg} /></div>
+              <div style={estilos.medallionP1Halo}>
+                <div style={estilos.medallionP1}><img src={avatarSrcDe(p1)} alt="" style={estilos.medallionImg} /></div>
+              </div>
               <div style={{ ...estilos.puestoNombre, fontSize: 15, color: C.doradoOscuro }}>{p1.username}</div>
               <div style={estilos.puestoStat}>{p1.partidas_ganadas} victorias</div>
               <div style={{ ...estilos.base, ...estilos.baseP1 }}>1</div>
@@ -142,7 +147,12 @@ export default function Ranking({ token, usuarioActual }) {
             return (
               <div
                 key={r.username}
-                style={{ ...estilos.fila, ...(esYo ? estilos.filaYo : {}), cursor: 'pointer' }}
+                style={{
+                  ...estilos.fila,
+                  ...(i % 2 === 1 ? estilos.filaImpar : {}),
+                  ...(esYo ? estilos.filaYo : {}),
+                  cursor: 'pointer'
+                }}
                 onClick={() => setPerfilAbierto(r.username)}
               >
                 <div style={estilos.filaPuesto}>{puesto}</div>
@@ -171,6 +181,11 @@ const estilos = {
     background: '#ffe0dd', border: '2px solid #E8483A', color: '#c2352a',
     borderRadius: 10, padding: '8px 12px', fontWeight: 700, fontSize: 13
   },
+  // Mismo criterio que el "Historial de partidas" de Historial.js — antes
+  // Ranking arrancaba directo en el banner de torneo/podio, sin ningún
+  // título propio de la pantalla.
+  sectionTitle: { fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 16, color: C.crema, margin: '4px 0 2px 4px' },
+  sectionSubtitle: { fontSize: 12.5, color: 'rgba(255,248,237,0.75)', fontWeight: 700, margin: '0 0 10px 4px' },
   podioPanel: {
     background: C.crema, border: `4px solid ${C.chocolate}`, borderRadius: 20,
     boxShadow: '0 6px 0 rgba(0,0,0,0.25)', padding: '26px 16px 18px',
@@ -181,6 +196,12 @@ const estilos = {
   medallionBase: {
     borderRadius: '50%', background: C.verdeOscuro,
     display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative'
+  },
+  // Halo dorado detrás del medallion del 1° puesto — lo destaca del resto
+  // del podio de un vistazo, sin depender solo de que sea "el del medio".
+  medallionP1Halo: {
+    width: 84, height: 84, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+    background: `radial-gradient(circle, rgba(255,214,104,0.55) 0%, rgba(255,214,104,0) 70%)`
   },
   medallionP1: {
     width: 68, height: 68, borderRadius: '50%', background: C.verdeOscuro,
@@ -219,6 +240,10 @@ const estilos = {
     display: 'flex', alignItems: 'center', gap: 10, padding: '10px 10px',
     borderBottom: '2px dashed rgba(74,44,42,0.12)'
   },
+  // Cebreado sutil — antes todas las filas eran del mismo blanco/crema
+  // parejo, con listas largas (siempre hay al menos 20+ jugadores) costaba
+  // seguir la fila con la vista.
+  filaImpar: { background: 'rgba(74,44,42,0.03)' },
   filaYo: { background: '#fff2d6', borderRadius: 12, borderBottom: 'none' },
   filaPuesto: { fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 14, color: '#a89a90', width: 22, textAlign: 'center' },
   filaAvatar: {
