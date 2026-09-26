@@ -13,6 +13,7 @@ import Configuracion from './components/Configuracion/Configuracion';
 import PoliticaPrivacidad from './components/Configuracion/PoliticaPrivacidad';
 import OlvidePassword from './components/Auth/OlvidePassword';
 import ResetPassword from './components/Auth/ResetPassword';
+import VerificarEmail from './components/Auth/VerificarEmail';
 import Perfil from './components/Perfil/perfil';
 import Tienda from './components/Tienda/Tienda';
 import ChatGlobal from './components/ChatGlobal/ChatGlobal';
@@ -33,6 +34,7 @@ function App() {
   const [torneoIdActual, setTorneoIdActual] = useState(null);
   const [torneoDestacado, setTorneoDestacado] = useState(null);
   const [resetToken, setResetToken] = useState(null);
+  const [verificarToken, setVerificarToken] = useState(null);
   const [codigoParaUnirse, setCodigoParaUnirse] = useState('');
   // Pase siguiente: logros recién desbloqueados en la última partida (ver
   // LogroDesbloqueadoPopup.js) — se llena desde GameOnlinePhaser justo
@@ -147,6 +149,14 @@ function App() {
     if (path === '/reset-password' && params.get('token')) {
       setResetToken(params.get('token'));
       setPantalla('reset-password');
+      return;
+    }
+    // Ruta pública para el link de verificación de email (ver
+    // routes/auth.js POST /verificar-email) — mismo criterio que
+    // /reset-password de arriba.
+    if (path === '/verificar-email') {
+      setVerificarToken(params.get('token'));
+      setPantalla('verificar-email');
       return;
     }
     if (path === '/olvidar-password') {
@@ -393,6 +403,17 @@ function App() {
         }}
       />
     );
+  } else if (pantalla === 'verificar-email') {
+    contenido = (
+      <VerificarEmail
+        token={verificarToken}
+        onIrALogin={() => {
+          setVerificarToken(null);
+          setPantalla('auth');
+          window.history.replaceState({}, '', '/');
+        }}
+      />
+    );
   } else if (['lobby', 'torneos', 'ranking', 'historial', 'perfil', 'config', 'tienda', 'chat', 'privacidad'].includes(pantalla)) {
     contenido = (
       <>
@@ -409,6 +430,7 @@ function App() {
             genérico, sin título ni horario. */}
         <AppShell
           usuario={usuario}
+          token={token}
           pantallaActiva={pantalla}
           onNavegar={setPantalla}
           onLogout={handleLogout}

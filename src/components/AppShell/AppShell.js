@@ -1,4 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { API_URL as BASE_URL } from '../../config';
+
+const API_URL = `${BASE_URL}/api/auth`;
 
 const C = {
   verde: '#2D9B4F', verdeOscuro: '#1f7a3c',
@@ -38,6 +41,7 @@ const NAV_ITEMS = [
 // header mismo, en vez de sidebar lateral.
 export default function AppShell({
   usuario,
+  token,
   pantallaActiva,
   onNavegar,
   onLogout,
@@ -48,6 +52,33 @@ export default function AppShell({
   onReclamarBonus,
   children
 }) {
+  // Pase siguiente: banner de "confirmá tu email" — se eligió explícitamente
+  // NO restringir nada mientras la cuenta no está verificada (no hay pagos
+  // reales conectados todavía), solo recordárselo con un cartel discreto y
+  // reenviable. `descartado` es de esta sesión nomás (no se guarda en
+  // ningún lado) — reaparece si recarga la página, para no dejar el aviso
+  // enterrado para siempre en una cuenta que nunca llegó a verificarse.
+  const [descartado, setDescartado] = useState(false);
+  const [estadoReenvio, setEstadoReenvio] = useState('idle'); // 'idle' | 'enviando' | 'enviado' | 'error'
+
+  const mostrarBannerVerificacion = usuario && usuario.email_verificado === false && !descartado;
+
+  const reenviarVerificacion = async () => {
+    if (estadoReenvio === 'enviando') return;
+    setEstadoReenvio('enviando');
+    try {
+      const res = await fetch(`${API_URL}/reenviar-verificacion`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error('fallo el reenvío');
+      setEstadoReenvio('enviado');
+    } catch (err) {
+      console.error('Error reenviando verificación:', err);
+      setEstadoReenvio('error');
+    }
+  };
+
   return (
     <div
       className="ts-shell"
@@ -179,6 +210,27 @@ export default function AppShell({
         </div>
       </header>
 
+      {mostrarBannerVerificacion && (
+        <div style={estilosBanner.contenedor}>
+          <span style={estilosBanner.icono}>✉️</span>
+          <span style={estilosBanner.texto}>
+            {estadoReenvio === 'enviado'
+              ? 'Te reenviamos el mail — revisá tu bandeja (y spam).'
+              : 'Confirmá tu email para asegurar tu cuenta.'}
+          </span>
+          {estadoReenvio !== 'enviado' && (
+            <button
+              style={estilosBanner.boton}
+              onClick={reenviarVerificacion}
+              disabled={estadoReenvio === 'enviando'}
+            >
+              {estadoReenvio === 'enviando' ? 'Enviando...' : estadoReenvio === 'error' ? 'Reintentar' : 'Reenviar mail'}
+            </button>
+          )}
+          <button style={estilosBanner.cerrar} onClick={() => setDescartado(true)} title="Cerrar">✕</button>
+        </div>
+      )}
+
       {/* Pase siguiente: en el Lobby este banner ya no se dibuja acá —
           se movió a compartir fila con el panel "Jugar ya" (ver
           Lobby.js), a pedido del usuario, para acortar la página. En el
@@ -225,3 +277,25 @@ export default function AppShell({
     </div>
   );
 }
+
+// Estilos inline del banner de verificación — vive en su propio objeto
+// (no en app-shell.css) porque es chico y nuevo, mismo criterio que ya usan
+// otros componentes de esta app para bloques puntuales.
+const estilosBanner = {
+  contenedor: {
+    display: 'flex', alignItems: 'center', gap: 10,
+    background: '#FFF3D6', borderBottom: '3px solid #C9860E',
+    padding: '9px 14px', fontFamily: "'Nunito', sans-serif"
+  },
+  icono: { fontSize: 16, flexShrink: 0 },
+  texto: { flex: 1, fontSize: 13, fontWeight: 700, color: '#4A2C2A', minWidth: 0 },
+  boton: {
+    fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 12,
+    background: '#4A2C2A', color: '#FFF8ED', border: 'none',
+    borderRadius: 10, padding: '6px 12px', cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap'
+  },
+  cerrar: {
+    background: 'none', border: 'none', cursor: 'pointer', fontSize: 13,
+    fontWeight: 800, color: '#4A2C2A', flexShrink: 0, padding: 4, opacity: 0.6
+  }
+};
