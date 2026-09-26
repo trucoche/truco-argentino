@@ -257,7 +257,7 @@ useEffect(() => {
                 <input
                   type="text"
                   name="username"
-                  placeholder="catrielquin01"
+                  placeholder="truquero99"
                   value={form.username}
                   onChange={handleChange}
                   required
