@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { API_URL as BASE_URL } from '../config';
 
-const API_URL = 'http://localhost:3001/api/easter-eggs';
+const API_URL = `${BASE_URL}/api/easter-eggs`;
 
 const POSICIONES_POR_PANTALLA = {
   lobby: { bottom: 20, right: 20 },
