@@ -239,10 +239,10 @@ function Seccion({ seccion }) {
   );
 }
 
-export default function PoliticaPrivacidad({ onVolver }) {
+export default function PoliticaPrivacidad({ onVolver, textoVolver = '← Volver a Ajustes' }) {
   return (
     <div style={estilos.contenedor}>
-      <button style={estilos.btnVolver} onClick={onVolver}>← Volver a Ajustes</button>
+      <button style={estilos.btnVolver} onClick={onVolver}>{textoVolver}</button>
       <div style={estilos.panel}>
         <div style={estilos.titulo}>Política de Privacidad de TrucoChe</div>
         <div style={estilos.fecha}>Última actualización: {FECHA_ACTUALIZACION}</div>

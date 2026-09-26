@@ -325,6 +325,9 @@ useEffect(() => {
           <div style={estilos.footerHint}>
             Un juego de truco argentino
           </div>
+          <div style={estilos.footerLinkWrap}>
+            <a href="/privacidad" style={estilos.footerLink}>Política de privacidad</a>
+          </div>
 
       </div>
     </div>
@@ -423,6 +426,8 @@ botonGoogleTexto: {
   divider: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, margin: '20px 0 16px' },  dividerTexto: { fontWeight: 800, fontSize: 12, color: '#a09085', textTransform: 'uppercase' },
   googleBox: { display: 'flex', justifyContent: 'center' },
   footerHint: { textAlign: 'center', marginTop: 16, fontSize: 12, color: 'rgba(255,248,237,0.75)', fontWeight: 700 },
+  footerLinkWrap: { textAlign: 'center', marginTop: 6 },
+  footerLink: { fontSize: 11, color: 'rgba(255,248,237,0.65)', fontWeight: 700, textDecoration: 'underline' },
 linkOlvide: {
     fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 13,
     background: 'none', color: C.chocolate, border: 'none',

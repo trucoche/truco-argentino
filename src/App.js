@@ -153,6 +153,13 @@ function App() {
       setPantalla('olvide-password');
       return;
     }
+    // Ruta pública (sin login) para la Política de Privacidad — la pide
+    // Facebook Login para poder pasar la app a modo Live (antes solo se
+    // podía ver logueado, dentro de Ajustes).
+    if (path === '/privacidad') {
+      setPantalla('privacidad-publica');
+      return;
+    }
 
     const preview = params.get('preview');
     if (preview) {
@@ -365,6 +372,16 @@ function App() {
     );
   } else if (pantalla === 'olvide-password') {
     contenido = <OlvidePassword onVolverLogin={() => setPantalla('auth')} />;
+  } else if (pantalla === 'privacidad-publica') {
+    contenido = (
+      <PoliticaPrivacidad
+        textoVolver="← Volver al inicio"
+        onVolver={() => {
+          setPantalla('auth');
+          window.history.replaceState({}, '', '/');
+        }}
+      />
+    );
   } else if (pantalla === 'reset-password') {
     contenido = (
       <ResetPassword
