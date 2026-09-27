@@ -1920,8 +1920,14 @@ _renderizarEquipos(e, animarReparto, hayCantoSinResolver) {
       const esArribaCentro = Math.sin(rad) < -0.7;
 
       if (esAbajo) {
+        // Pase 215 — pedido explícito: "subir en el eje y los jugadores de
+        // izquierda y derecha de abajo" (rival0@150° y rival2@30° en 3v3,
+        // los únicos dos asientos que caen en esta rama — 2v2 no tiene
+        // ninguno). Se baja el multiplicador de 1.2 a 0.9 para acercarlos
+        // al centro de la mesa (menos radio vertical = más arriba en
+        // pantalla, ya que esAbajo siempre suma hacia abajo).
         radioXAsiento = radioX * 0.85;
-        radioYAsiento = radioY * 1.2;
+        radioYAsiento = radioY * 0.9;
       } else if (esArribaCostado) {
         radioXAsiento = radioX * 0.9;
         radioYAsiento = radioY * 1.2;
@@ -2208,10 +2214,23 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
       // `outLen` (la distancia real centro→asiento, también de arriba)
       // reconstruyen el mismo vector que antes se recalculaba acá como
       // dirX/dirY/dirLen — no hace falta repetirlo.
-      const fraccionHaciaAsiento = 0.42;
+      // Pase 215 — pedido explícito: las cartas jugadas quedaban "muy cerca
+      // de la ubicación de la carta del jugador" (o sea, muy cerca del
+      // centro de la mesa) en vez de cerca de la mano de cada uno. Se sube
+      // la fracción de 0.42 a 0.68 para que la carta jugada se dibuje bastante
+      // más lejos del centro y más cerca del asiento real (outX/outY/outLen
+      // ya apuntan en la dirección correcta para cada jugador).
+      const fraccionHaciaAsiento = 0.68;
       const baseX = centroMesaX + outX * outLen * fraccionHaciaAsiento;
       const baseY = centroMesaY + outY * outLen * fraccionHaciaAsiento;
-      const pasoApilado = 2;
+      // Pase 215 — bug real encontrado: "únicamente se ven las primeras
+      // cartas jugadas, las que le siguen no se ven" en 2v2. Los datos ya
+      // estaban confirmados correctos (log DIAG del pase anterior), así que
+      // no era un bug de datos: con pasoApilado=2 cada carta nueva se
+      // dibujaba apenas 2px corrida de la anterior (~40x60px), invisible a
+      // simple vista. Se sube a 16px para que cada carta de una mano nueva
+      // se note como una carta distinta, apilada en abanico.
+      const pasoApilado = 16;
 
       // Igual que _dibujarFilaCartas: pre-escalamos con el canvas de alta
       // calidad (mismo criterio que la mano y el dorso) al tamaño BASE, antes
