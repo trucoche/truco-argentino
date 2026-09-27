@@ -184,7 +184,12 @@ preload() {
     this.load.audio('jugar-carta', 'assets/sounds/CardGame-SoundEffect.mp3');
     this.load.audio('ganar',       'assets/sounds/ganarpartidasonido.mp3');
     this.load.audio('repartir',    'assets/sounds/repartir_cartas.mp3');
-    this.load.image('fondoEspera', conVersion('assets/images/juego/fondo-espera.jpeg'));
+    // Pase 206: pedido del usuario — la pantalla de "esperando rival" tenía
+    // su propio fondo de boliche/bar (marrón), distinto al fondo verde
+    // fotográfico que usa el resto de la app (lobby, torneos, bracket,
+    // etc.). Se apunta la misma clave 'fondoEspera' al mismo archivo
+    // fondo-lobby.jpeg para no tener que tocar el resto de este archivo.
+    this.load.image('fondoEspera', conVersion('assets/images/fondo-lobby.jpeg'));
     const PERSONAJES_CANTO = ['gaucho', 'gaucha', 'gaucho2', 'gaucha2'];
 
     // Pase 201: fondo de la pantalla de resultado final (reemplaza el
@@ -1527,9 +1532,25 @@ _renderizarEstado(animarReparto) {
 
 _renderizarEquipos(e, animarReparto, hayCantoSinResolver) {
     const centroX = 400;
-    const centroY = 320;
     const totalAsientos = e.companeros.length + e.rivales.length;
     const esTresVTres = totalAsientos === 5;
+    // Pase 207: bug real reportado por el usuario ("las posiciones... están
+    // muy abajo de la posición de la mesa") — en 2v2 (esTresVTres=false) los
+    // dos asientos rivales quedan EXACTOS a 180°/0° (ver _calcularAsientos:
+    // N=3, anguloPaso=90), donde sin(ángulo)=0. Como py = centroY +
+    // sin(ángulo)*radioY, para esos dos asientos radioY no aporta NADA — su
+    // Y queda siempre pegada a centroY, sin importar su valor. Con
+    // centroY=320 (el mismo que usa 3v3) los rivales terminaban casi a la
+    // altura del centro de la mesa en vez de "del otro lado", muy por
+    // debajo de dónde 1v1 dibuja a su único rival (y=105, ver
+    // _dibujarFilaDorso). Se sube centroY solo para el modo "normal" (2v2),
+    // sin tocar 3v3 (que no tenía este reclamo).
+    const centroY = esTresVTres ? 320 : 250;
+    // _dibujarJugador hace su propia clasificación de ángulo (para ubicar
+    // las cartas jugadas de cada asiento) contra un centro de mesa
+    // hardcodeado por separado — se sincroniza acá para que las dos cuentas
+    // usen siempre el mismo centro y no se desalineen entre sí.
+    this._centroMesaYActual = centroY;
     const radioX = esTresVTres ? 280 : 285;
     const radioY = esTresVTres ? 235 : 100;
 
@@ -1676,7 +1697,12 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
     const rotacion = (angulo + 90) * (Math.PI / 180);
 
     const centroMesaX = 400;
-    const centroMesaY = 320;
+    // Pase 207: sincronizado con el centroY dinámico de _renderizarEquipos
+    // (antes este valor estaba hardcodeado en 320 acá, DESALINEADO del
+    // centroY real usado para calcular cx/cy cuando ese cambió a 250 para
+    // 2v2 — ver el comentario ahí). El `?? 320` cubre el caso 1v1, que no
+    // pasa por _renderizarEquipos y nunca setea this._centroMesaYActual.
+    const centroMesaY = this._centroMesaYActual ?? 320;
     let outX = cx - centroMesaX;
     let outY = cy - centroMesaY;
     const outLen = Math.sqrt(outX * outX + outY * outY) || 1;
@@ -1824,6 +1850,18 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
       } else if (esAbajoJugada) {
         baseX = esIzquierda ? 330 : 470;
         baseY = 400;
+      } else {
+        // Pase 207: bug real — "las cartas jugadas no aparecen" en 2v2. Los
+        // dos asientos rivales de 2v2 quedan EXACTOS a 180°/0° (outY≈0), un
+        // ángulo que no entra en NINGUNA de las tres ramas de arriba (todas
+        // piden |outY|>0.3) — antes caían siempre acá abajo, en el mismo
+        // (400,320) por defecto que ya usa el asiento de al lado, apiladas
+        // una sobre otra e indistinguibles del resto de la mesa. Esta rama
+        // cubre asientos "de costado, a la altura de la mesa" (ni arriba ni
+        // abajo): separa la carta jugada hacia el lado del asiento en vez
+        // de dejarla en el centro.
+        baseX = esIzquierda ? 330 : 470;
+        baseY = 330;
       }
 
       const dirX = cx - centroMesaX;
