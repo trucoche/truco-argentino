@@ -693,6 +693,11 @@ _crearElementosDeTexto() {
       ancho: this._anchoBotonImagen('TablonEspera', altoBotonVolver),
       alto: altoBotonVolver,
       tamanoFuente: 19,
+      // Pase 212: el texto usaba el color por default de _crearBoton
+      // (#4A2C2A, marrón chocolate oscuro) — pensado para fondos claros
+      // (pergamino), ilegible sobre la madera oscura del tablón. Mismo
+      // crema claro que usa el resto de esta pantalla.
+      colorTexto: '#FFF8ED',
       imagen: 'TablonEspera',
       texto: 'Volver al Lobby',
       onClick: () => {
@@ -1111,14 +1116,21 @@ _dibujarTileEspera(cx, cy, radio, jugador, pendientes) {
 
   // Pase 210: el anillo/círculo de fondo dibujados a mano (Graphics) se
   // reemplazan por el marco de madera real que pasó el usuario
-  // (marcoAvatarEspera, ver preload). La foto/avatar va DETRÁS, recortada
-  // a un círculo bastante más chico que el marco entero (72% de su
-  // diámetro) para que el borde de soga + esquineros de metal del marco
-  // se sigan viendo alrededor — si el asiento todavía está vacío, no hay
-  // foto detrás y el marco se ve "vacío" tal cual (madera lisa en el
-  // centro), atenuado y pulsando en vez de dorado y quieto.
+  // (marcoAvatarEspera, ver preload).
+  // Pase 212 — bug real reportado ("ahora no se ve nada"): el archivo
+  // NO es un aro con un agujero transparente en el medio — es una
+  // plaqueta de madera SÓLIDA de punta a punta (verificado con PIL: el
+  // centro entero es opaco, alpha=255; recién cerca del 90-95% del
+  // radio aparece la textura de soga/esquineros). La foto iba DETRÁS
+  // (depth menor que el marco) asumiendo un agujero que no existe, así
+  // que el marco opaco la tapaba por completo. Fix de 2 partes: (1) la
+  // foto ahora va ENCIMA del marco (`_dibujarImagenAvatarEspera` usa
+  // depth 412, marco usa 411), (2) su radio baja de 0.72×radio a
+  // 0.46×radio — la zona lisa central del archivo real llega hasta
+  // ~0.50×radio, así que a 0.46 la foto queda adentro de esa zona
+  // lisa sin tapar el borde de soga/esquineros que hay más afuera.
   const tamanoFrame = radio * 2;
-  const radioFoto = tamanoFrame * 0.36;
+  const radioFoto = radio * 0.46;
 
   if (conectado) {
     const esFoto = jugador.avatar_tipo === 'foto' && !!jugador.foto_perfil_url;
@@ -1186,7 +1198,11 @@ _dibujarImagenAvatarEspera({ key, cx, cy, radio }) {
   // _redibujarFilaEspera) — si esta función se llegara a invocar con la
   // partida ya arrancada, no dibujar sobre la mesa real.
   if (this._salaEnJuego) return;
-  const img = this.add.image(cx, cy, key).setDisplaySize(radio * 2, radio * 2).setDepth(410);
+  // Pase 212: depth 410→412 — el marco (marcoAvatarEspera, depth 411) es
+  // una plaqueta opaca sin agujero real en el medio (ver comentario en
+  // _dibujarTileEspera), así que la foto tiene que quedar ENCIMA del
+  // marco, no detrás, para poder verse.
+  const img = this.add.image(cx, cy, key).setDisplaySize(radio * 2, radio * 2).setDepth(412);
   const mask = this.make.graphics();
   mask.fillStyle(0xffffff);
   mask.fillCircle(cx, cy, radio);
@@ -2174,6 +2190,15 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
     }
 
       const jugadas = j.jugadas;
+    // Pase 212 — diagnóstico temporal: repasé toda la cadena de datos
+    // (backend GameEngineEquipos.getEstado → jugadas: this.jugadas[id]
+    // para cada compañero/rival, y el emitirEstado por-jugador en
+    // index.js) y en el papel está bien armada, así que el problema real
+    // no se ve leyendo código — hace falta ver qué llega DE VERDAD acá en
+    // vivo. Este log se saca en cuanto tengamos la respuesta (buscar
+    // "DIAG jugadas" en la consola del navegador, F12, durante una mano
+    // en 2v2/3v3 justo después de que alguien juega una carta).
+    console.log('DIAG jugadas', { id: j.id, nombre: j.nombre, tipo, jugadas });
     if (jugadas && jugadas.length > 0) {
       const esArribaCentro = outY < -0.7;
       const esArribaCostadoJugada = outY < -0.3 && Math.abs(outX) > 0.3;
