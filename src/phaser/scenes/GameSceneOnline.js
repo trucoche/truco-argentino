@@ -2190,15 +2190,6 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
     }
 
       const jugadas = j.jugadas;
-    // Pase 212 — diagnóstico temporal: repasé toda la cadena de datos
-    // (backend GameEngineEquipos.getEstado → jugadas: this.jugadas[id]
-    // para cada compañero/rival, y el emitirEstado por-jugador en
-    // index.js) y en el papel está bien armada, así que el problema real
-    // no se ve leyendo código — hace falta ver qué llega DE VERDAD acá en
-    // vivo. Este log se saca en cuanto tengamos la respuesta (buscar
-    // "DIAG jugadas" en la consola del navegador, F12, durante una mano
-    // en 2v2/3v3 justo después de que alguien juega una carta).
-    console.log('DIAG jugadas', { id: j.id, nombre: j.nombre, tipo, jugadas });
     if (jugadas && jugadas.length > 0) {
       const esArribaCentro = outY < -0.7;
       const esArribaCostadoJugada = outY < -0.3 && Math.abs(outX) > 0.3;
@@ -2258,9 +2249,26 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
         const keyEscalada = `${keyOriginal}_${anchoBaseJugadaR}x${altoBaseJugadaR}`;
         this._crearTexturaEscalada(keyOriginal, keyEscalada, anchoBaseJugadaR, altoBaseJugadaR);
 
+        // Pase 212 — BUG REAL ENCONTRADO (la causa de fondo de "las cartas
+        // jugadas no aparecen" en 2v2/3v3, el diagnóstico con el log
+        // temporal confirmó que `jugadas` llega perfecto desde el backend,
+        // así que el problema SIEMPRE estuvo acá abajo): `_calcularPerspectiva`
+        // devuelve `{ scale, offsetY, sombraOffsetY, sombraAlpha }` — nunca
+        // tuvo una propiedad `scaleY` con ESE nombre exacto desde que se
+        // refactorizó a escalado uniforme (ver el comentario del pase
+        // "decimoséptimo" en _dibujarFilaCartas, unas líneas más abajo en
+        // este archivo, que explica ese cambio). Este único call site nunca
+        // se actualizó — `persp.scaleY` daba `undefined`, `60 * undefined`
+        // daba `NaN`, y `setDisplaySize(40, NaN)` deja la imagen con alto
+        // inválido: se crea el sprite (por eso el dato llegaba bien y el
+        // objeto existía en la escena) pero no se ve nada, sin ningún error
+        // en consola. De paso, el ancho también pasa a escalar con
+        // `persp.scale` (antes quedaba fijo en 40) — mismo criterio de
+        // "más lejos = más chica en las dos dimensiones" que ya usan
+        // _dibujarFilaCartas/_dibujarDueloCartas más abajo.
         const persp = this._calcularPerspectiva(py);
-        const anchoCarta = 40;
-        const altoCarta  = 60 * persp.scaleY;
+        const anchoCarta = 40 * persp.scale;
+        const altoCarta  = 60 * persp.scale;
 
         const img = this.add.image(px, py, keyEscalada)
           .setDisplaySize(anchoCarta, altoCarta)
