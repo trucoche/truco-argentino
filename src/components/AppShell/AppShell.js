@@ -171,23 +171,36 @@ export default function AppShell({
               </button>
             ))}
           </nav>
-          {/* Centésimo tercer pase: el botón de bono diario ya no se queda
-              visible-pero-deshabilitado una vez reclamado — desaparece del
-              todo (pedido explícito del usuario), en vez de mostrar el
-              estado "inactivo" que tenía desde su creación. */}
-          {bonusDisponible && (
-            <button
-              className="ts-icon-btn ts-icon-bonus-activo"
-              onClick={onReclamarBonus}
-              title="Reclamar bono diario (+5)"
-            >
-              <img
-                src="/assets/images/regalo.png"
-                alt=""
-                style={{ width: 46, height: 46, objectFit: 'contain' }}
-              />
-            </button>
-          )}
+          {/* Centésimo tercer pase: el botón de bono diario desaparece
+              visualmente al reclamarse (pedido explícito del usuario), en
+              vez de mostrar el estado "inactivo" que tenía desde su
+              creación.
+              Pase 208 — bug real reportado por el usuario: sacar el botón
+              del todo del DOM (como hacía este `{bonusDisponible && (...)}`
+              antes) le sacaba su lugar en el flex row del header, y el
+              botón de logout (el elemento siguiente) se corría de lugar al
+              ocupar ese espacio liberado — más notorio en mobile, donde
+              `.ts-nav` es `position:fixed` y no compensa nada del layout
+              del header. Se deja el botón SIEMPRE montado (mismo tamaño,
+              mismo lugar en el flex row) y se lo esconde con
+              `visibility:hidden` + `pointer-events:none` cuando no hay
+              bono disponible, en vez de desmontarlo — sigue "desapareciendo"
+              a la vista (no ocupa vista, no es clickeable, no tiene el
+              pulso dorado) pero el logout ya no se mueve ni un píxel. */}
+          <button
+            className={`ts-icon-btn ${bonusDisponible ? 'ts-icon-bonus-activo' : ''}`}
+            onClick={onReclamarBonus}
+            title="Reclamar bono diario (+5)"
+            style={bonusDisponible ? undefined : { visibility: 'hidden', pointerEvents: 'none' }}
+            aria-hidden={!bonusDisponible}
+            tabIndex={bonusDisponible ? 0 : -1}
+          >
+            <img
+              src="/assets/images/regalo.png"
+              alt=""
+              style={{ width: 46, height: 46, objectFit: 'contain' }}
+            />
+          </button>
           {/* Octogésimo tercer pase: se saca el botón de mutear música de
               acá (vivía arriba de TODAS las pantallas con nav, no solo el
               lobby) — se reemplaza por un slider de volumen en Ajustes,

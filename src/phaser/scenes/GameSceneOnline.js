@@ -76,6 +76,16 @@ export default class GameSceneOnline extends Phaser.Scene {
     this._sprites   = [];
     this._numeroRondaAnterior = undefined;
     this._mesaModoActual = null;
+    // Pase 208 — pantalla de espera con avatares reales por jugador (pedido
+    // del usuario, con una imagen de referencia armada con IA): se llenan
+    // desde el evento 'jugador-unido' (ver _conectarSocket), que ahora manda
+    // personaje/avatar_tipo/foto_perfil_url/modo/capacidadTotal además de
+    // username/equipo (ver truco-backend/src/index.js).
+    this._jugadoresSala = [];
+    this._modoSala = null;
+    this._capacidadSala = null;
+    this._avataresEsperaSprites = [];
+    this._filaEsperaGeneracion = 0;
     // Volumen de las voces de los cantos, elegido por el usuario en el
     // panel de configuración de la partida (React lo sigue actualizando
     // directo sobre la instancia de la escena mientras juega, sin
@@ -580,25 +590,26 @@ _crearElementosDeTexto() {
     this.veloEspera = this.add.rectangle(400, 300, 800, 600, 0x000000, 0.35).setDepth(350);
     this._sprites.push(this.veloEspera);
 
+    // Pase 208: se saca la tarjetita de pergamino chica que tapaba media
+    // pantalla ("Esperando rival..." + punto dorado pulsando) — a pedido
+    // del usuario, se reemplaza por una fila de avatares reales (uno por
+    // asiento de la sala) con anillo dorado + "Conectado"/"Conectando..."
+    // debajo de cada uno (ver _redibujarFilaEspera/_dibujarTileEspera más
+    // abajo), directo sobre el fondo verde de fondoEspera — sin tarjeta de
+    // por medio, igual que la referencia que pasó el usuario. `panelEspera`
+    // se mantiene (mismo nombre, se sigue mostrando/ocultando en los mismos
+    // lugares) pero ahora solo contiene el título de arriba y el botón de
+    // volver — la fila de avatares en sí vive AFUERA de este container,
+    // como objetos de escena sueltos (mismo criterio que mesaImg/fondoEspera
+    // más arriba), porque sus posiciones se recalculan en coordenadas
+    // absolutas según cuántos asientos tenga la sala.
     this.panelEspera = this.add.container(400, 300).setDepth(400);
 
-    const fondoEsperaPanel = this.add.graphics();
-    fondoEsperaPanel.fillStyle(0xFFF8ED, 1);
-    fondoEsperaPanel.fillRoundedRect(-190, -90, 380, 180, 20);
-    fondoEsperaPanel.lineStyle(4, 0x4A2C2A, 1);
-    fondoEsperaPanel.strokeRoundedRect(-190, -90, 380, 180, 20);
-    this.panelEspera.add(fondoEsperaPanel);
-
-    this.textoEsperaCartel = this.add.text(0, -35, 'Esperando rival...', {
-      font: '16px Nunito, Arial', fill: '#4A2C2A', align: 'center', wordWrap: { width: 340 }
+    this.textoEsperaCartel = this.add.text(0, -170, 'Conectando con la sala...', {
+      font: 'bold 20px Fredoka, Arial', fill: '#FFF8ED', stroke: '#000000', strokeThickness: 4,
+      align: 'center', wordWrap: { width: 600 }
     }).setOrigin(0.5);
     this.panelEspera.add(this.textoEsperaCartel);
-
-    this.puntoEspera = this.add.text(0, -5, '●', { font: '20px Arial', fill: '#FFB627' }).setOrigin(0.5);
-    this.panelEspera.add(this.puntoEspera);
-    this.tweens.add({
-      targets: this.puntoEspera, alpha: 0.2, duration: 500, yoyo: true, repeat: -1
-    });
 
     // Pase siguiente: bug de coordenadas — `_crearBoton` crea su propio
     // `this.add.container(x, y)` posicionado en coordenadas de ESCENA
@@ -609,8 +620,13 @@ _crearElementosDeTexto() {
     // volver al lobby" en web). El resto de los elementos del panel
     // (texto, punto animado) ya usan coordenadas relativas al centro del
     // panel (0,0) — el botón tiene que hacer lo mismo.
+    // Pase 208: bajado de y=45 a y=195 — con la fila de avatares ocupando
+    // el centro de la pantalla (ver _redibujarFilaEspera, fila en y=280
+    // absoluto = -20 relativo a este panel), el botón necesita quedar
+    // debajo de las tarjetas de estado/nombre de cada avatar, no
+    // superpuesto con ellas.
     this.botonVolverEspera = this._crearBoton({
-      x: 0, y: 45, ancho: 180, colorFondo: 0x2E9BD6, texto: 'Volver al Lobby',
+      x: 0, y: 195, ancho: 180, colorFondo: 0x2E9BD6, texto: 'Volver al Lobby',
       onClick: () => {
         this.socket.emit('cancelar-espera', { codigoSala: this.codigoSala });
         if (this.onVolverLobby) this.onVolverLobby();
@@ -900,6 +916,166 @@ _crearTexturaDorsoGrande() {
   this._crearTexturaEscalada('cardBackGrandeMaster', this._claveDorsoGrandeActual, anchoR, altoR);
 }
 
+// Pase 208 — pantalla de espera con avatares reales: destruye la fila de
+// tiles (anillos, fotos, pills de estado, nombres) del render anterior
+// antes de reconstruirla desde cero. Se llama al principio de cada
+// _redibujarFilaEspera — reconstruir toda la fila en cada 'jugador-unido'
+// es más simple y menos propenso a bugs que ir agregando/sacando tiles
+// sueltos a medida que entra cada jugador.
+_limpiarAvataresEspera() {
+  (this._avataresEsperaSprites || []).forEach(s => { if (s && s.destroy) s.destroy(); });
+  const viejos = new Set(this._avataresEsperaSprites || []);
+  this._sprites = this._sprites.filter(s => !viejos.has(s));
+  this._avataresEsperaSprites = [];
+}
+
+// Oculta (sin destruir) la fila de avatares — mismo criterio que ya usa
+// panelEspera/botonVolverEspera en 'partida-iniciada' y en el modo preview:
+// estos objetos son independientes de panelEspera (no son hijos suyos,
+// ver comentario en create()), así que necesitan su propio setVisible.
+_ocultarFilaEspera() {
+  (this._avataresEsperaSprites || []).forEach(s => { if (s && s.setVisible) s.setVisible(false); });
+}
+
+// Reconstruye la fila completa de avatares de la sala de espera a partir
+// de this._jugadoresSala/_modoSala/_capacidadSala (llenados por el evento
+// 'jugador-unido', ver _conectarSocket). Un tile por asiento total de la
+// sala (2 en 1v1, 4 en 2v2, 6 en 3v3): los primeros `_jugadoresSala.length`
+// muestran el avatar real de quien ya se unió + "Conectado"; el resto
+// quedan como placeholders grises pulsando "Conectando...".
+_redibujarFilaEspera() {
+  this._limpiarAvataresEspera();
+  this._filaEsperaGeneracion = (this._filaEsperaGeneracion || 0) + 1;
+
+  if (!this.panelEspera || !this.panelEspera.scene) return;
+  // Instante entre conectar el socket y recibir el primer 'jugador-unido'
+  // (todavía no sabemos cuántos asientos tiene la sala) — se deja el
+  // cartel de texto de arriba solo, sin fila, hasta que llegue ese primer
+  // evento (siempre llega, es casi inmediato).
+  if (!this._modoSala || !this._capacidadSala) return;
+
+  this.textoEsperaCartel.setText(
+    `${this._modoSala.toUpperCase()} — esperando jugadores`
+  );
+
+  const total = this._capacidadSala;
+  const tamano = total <= 2 ? 96 : total <= 4 ? 82 : 68;
+  const gap = total <= 2 ? 34 : total <= 4 ? 24 : 16;
+  const paso = tamano + gap;
+  const anchoTotal = total * paso - gap;
+  const inicioX = 400 - anchoTotal / 2 + tamano / 2;
+  const cy = 280;
+
+  const pendientes = [];
+  for (let i = 0; i < total; i++) {
+    const jugador = this._jugadoresSala[i] || null;
+    const cx = inicioX + i * paso;
+    this._dibujarTileEspera(cx, cy, tamano / 2, jugador, pendientes);
+  }
+
+  if (pendientes.length > 0) {
+    const generacionDeEstaCarga = this._filaEsperaGeneracion;
+    pendientes.forEach(p => this.load.image(p.key, p.url));
+    this.load.once(Phaser.Loader.Events.COMPLETE, () => {
+      // Si mientras cargaba entró otro jugador y se volvió a llamar a
+      // _redibujarFilaEspera, esta carga quedó vieja — no dibujar sobre
+      // una fila que ya no existe (evita duplicados/tiles fantasma).
+      if (generacionDeEstaCarga !== this._filaEsperaGeneracion) return;
+      pendientes.forEach(p => this._dibujarImagenAvatarEspera(p));
+    });
+    this.load.start();
+  }
+}
+
+// Un tile de la fila: anillo (dorado si ya se unió, gris pulsando si no),
+// la foto/avatar real (o un "?" placeholder si el asiento está vacío),
+// una pill de estado ("Conectado"/"Conectando...") y el nombre debajo.
+// `pendientes` acumula los avatares que todavía no están en la caché de
+// texturas de Phaser, para cargarlos todos juntos en un solo batch (ver
+// _redibujarFilaEspera) en vez de un load.start() por jugador.
+_dibujarTileEspera(cx, cy, radio, jugador, pendientes) {
+  const conectado = !!jugador;
+  const colorAnillo = conectado ? 0xFFB627 : 0x8c8078;
+
+  const anillo = this.add.graphics().setDepth(411);
+  anillo.lineStyle(4, colorAnillo, 1);
+  anillo.strokeCircle(cx, cy, radio + 4);
+  this._avataresEsperaSprites.push(anillo);
+  this._sprites.push(anillo);
+
+  const fondo = this.add.graphics().setDepth(409);
+  fondo.fillStyle(conectado ? 0x1f7a3c : 0x00000055, 1);
+  fondo.fillCircle(cx, cy, radio);
+  this._avataresEsperaSprites.push(fondo);
+  this._sprites.push(fondo);
+
+  if (!conectado) {
+    // Asiento todavía vacío — anillo gris pulsando, sin foto.
+    this.tweens.add({ targets: anillo, alpha: 0.35, duration: 650, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+
+    const signo = this.add.text(cx, cy, '?', {
+      font: `bold ${Math.round(radio * 0.9)}px Fredoka, Arial`, fill: '#ffffffaa'
+    }).setOrigin(0.5).setDepth(412);
+    this._avataresEsperaSprites.push(signo);
+    this._sprites.push(signo);
+  } else {
+    const esFoto = jugador.avatar_tipo === 'foto' && !!jugador.foto_perfil_url;
+    const url = esFoto ? jugador.foto_perfil_url : `/assets/${jugador.personaje || 'gaucho'}-avatar.png`;
+    const key = `avatarEspera_${this._hashSimple(url)}`;
+
+    if (this.textures.exists(key)) {
+      this._dibujarImagenAvatarEspera({ key, cx, cy, radio });
+    } else {
+      pendientes.push({ key, url, cx, cy, radio });
+    }
+  }
+
+  // Pill de estado, debajo del avatar.
+  const pillAncho = radio * 2 + 14;
+  const pillAlto = 22;
+  const pillY = cy + radio + 14;
+  const pill = this.add.graphics().setDepth(413);
+  pill.fillStyle(conectado ? 0x2D9B4F : 0xFFF8ED, 1);
+  pill.fillRoundedRect(cx - pillAncho / 2, pillY - pillAlto / 2, pillAncho, pillAlto, pillAlto / 2);
+  pill.lineStyle(2, 0x4A2C2A, 1);
+  pill.strokeRoundedRect(cx - pillAncho / 2, pillY - pillAlto / 2, pillAncho, pillAlto, pillAlto / 2);
+  this._avataresEsperaSprites.push(pill);
+  this._sprites.push(pill);
+
+  const pillTexto = this.add.text(cx, pillY, conectado ? '✓ Conectado' : 'Conectando...', {
+    font: 'bold 11px Nunito, Arial',
+    fill: conectado ? '#FFF8ED' : '#4A2C2A'
+  }).setOrigin(0.5).setDepth(414);
+  this._avataresEsperaSprites.push(pillTexto);
+  this._sprites.push(pillTexto);
+
+  const nombreTxt = this.add.text(cx, pillY + 20, conectado ? jugador.username : '—', {
+    font: 'bold 13px Nunito, Arial', fill: '#FFF8ED', stroke: '#000000', strokeThickness: 3
+  }).setOrigin(0.5).setDepth(414);
+  this._avataresEsperaSprites.push(nombreTxt);
+  this._sprites.push(nombreTxt);
+}
+
+// Dibuja la foto/avatar real ya cargada en la caché de texturas, recortada
+// a círculo con una máscara de geometría (Phaser no tiene un equivalente
+// directo a `border-radius:50%` para imágenes — el criterio estándar es
+// una Graphics con un círculo relleno, convertida a máscara vía
+// `createGeometryMask()`, aplicada sobre la imagen real).
+_dibujarImagenAvatarEspera({ key, cx, cy, radio }) {
+  // Si falló la carga (loaderror — foto rota, URL vieja, sin conexión a
+  // ese host, etc.) la textura nunca llega a existir; nos quedamos con el
+  // fondo verde liso ya dibujado en _dibujarTileEspera en vez de romper
+  // el resto de la fila.
+  if (!this.textures.exists(key)) return;
+  const img = this.add.image(cx, cy, key).setDisplaySize(radio * 2, radio * 2).setDepth(410);
+  const mask = this.make.graphics();
+  mask.fillStyle(0xffffff);
+  mask.fillCircle(cx, cy, radio);
+  img.setMask(mask.createGeometryMask());
+  this._avataresEsperaSprites.push(img, mask);
+  this._sprites.push(img, mask);
+}
+
 _conectarSocket() {
     // Modo preview: "PREVIEW_1V1" / "PREVIEW_2V2" / "PREVIEW_3V3" no abren
     // conexión real, solo simulan el estado para ajustar el layout de la
@@ -908,6 +1084,7 @@ _conectarSocket() {
       const modo = this.codigoSala.replace('PREVIEW_', '').toLowerCase();
       if (this.panelEspera) this.panelEspera.setVisible(false);
       if (this.botonVolverEspera) this.botonVolverEspera.setVisible(false);
+      this._ocultarFilaEspera();
       if (this.mesaImg) this.mesaImg.setVisible(true);
       if (this.sombraMesa) this.sombraMesa.setVisible(true);
       this.estado = this._crearEstadoMockPorModo(modo);
@@ -940,13 +1117,22 @@ _conectarSocket() {
 
     this.socket.off('jugador-unido').on('jugador-unido', (data) => {
       this.mensajeText.setText(data.mensaje);
+      // Pase 208: además del mensaje de siempre, este evento ahora trae el
+      // roster completo de la sala (username/equipo/personaje/avatar) más
+      // el modo y la capacidad total — se guardan y se reconstruye toda la
+      // fila de avatares de la pantalla de espera (ver _redibujarFilaEspera).
+      if (Array.isArray(data.jugadores)) this._jugadoresSala = data.jugadores;
+      if (data.modo) this._modoSala = data.modo;
+      if (data.capacidadTotal) this._capacidadSala = data.capacidadTotal;
       if (this.textoEsperaCartel && this.textoEsperaCartel.scene) {
         this.textoEsperaCartel.setText(data.mensaje);
       }
+      this._redibujarFilaEspera();
     });
     this.socket.off('partida-iniciada').on('partida-iniciada', (data) => {
       if (this.panelEspera) this.panelEspera.setVisible(false);
       if (this.botonVolverEspera) this.botonVolverEspera.setVisible(false);
+      this._ocultarFilaEspera();
       if (this.mesaImg) this.mesaImg.setVisible(true);
       if (this.sombraMesa) this.sombraMesa.setVisible(true);
     });

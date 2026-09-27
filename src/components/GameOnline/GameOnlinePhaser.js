@@ -136,13 +136,31 @@ useEffect(() => {
 const estilosPagina = {
   // Ocupa toda la pantalla, con un color de fondo acorde a la estética
   // de la cantina en vez del blanco por defecto del body.
+  // Pase 208: bug real reportado por el usuario — probando desde el
+  // navegador del celular, el lobby y el resto de las pantallas se sentían
+  // "como la app", pero la pantalla de PARTIDA en particular se sentía "como
+  // un navegador". La diferencia: esta es la única pantalla que fija su
+  // alto con `100vh` y centra todo adentro sin scroll — el resto de la app
+  // usa flujo normal de documento (crece/scrollea con la página), que no
+  // sufre este problema. `100vh` en un navegador de celular mide la altura
+  // MÁXIMA posible (con la barra de direcciones escondida), no la altura
+  // real visible en cada momento — con la barra visible (el estado normal
+  // al recién entrar, o al hacer cualquier gesto) el contenedor se pasa por
+  // abajo del borde inferior real de la pantalla, dejando la mesa
+  // parcialmente tapada o forzando un salto de layout al esconderse la
+  // barra — exactamente la sensación de "esto es una página web" en vez de
+  // una pantalla de juego fija. `100dvh` (dynamic viewport height, con
+  // soporte amplio en navegadores mobile modernos) mide el alto VISIBLE
+  // real en cada momento, así que el contenedor nunca se pasa del marco
+  // visible ni salta al aparecer/ocultarse la barra.
   fondoPagina: {
     width: '100vw',
-    height: '100vh',
+    height: '100dvh',
     background: '#2D1B14',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
   // Mismo proporción que el canvas (800x600 = 4:3), con un límite de
   // tamaño razonable para pantallas grandes. Position:relative acá (no
@@ -176,9 +194,14 @@ const estilosPagina = {
   // que entra en 95vh convertido a ancho vía la proporción 4:3) — así el
   // alto que sale de `aspectRatio` nunca necesita recortarse aparte, y el
   // contenedor es SIEMPRE 4:3 real, sin importar qué eje sea el que achica.
+  // Pase 208: mismo motivo que fondoPagina de arriba — 95vh calculaba
+  // sobre el alto máximo teórico (barra de direcciones escondida), no el
+  // visible real, así que este límite de ancho podía quedarse corto o
+  // largo según el estado de esa barra en cada momento. 95dvh sigue el
+  // alto visible real.
   contenedorJuego: {
     position: 'relative',
-    width: `min(100%, ${ANCHO_MAX_CSS}px, calc(95vh * 4 / 3))`,
+    width: `min(100%, ${ANCHO_MAX_CSS}px, calc(95dvh * 4 / 3))`,
     aspectRatio: '4 / 3',
   },
 }
