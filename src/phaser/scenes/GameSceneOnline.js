@@ -2191,43 +2191,26 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
 
       const jugadas = j.jugadas;
     if (jugadas && jugadas.length > 0) {
-      const esArribaCentro = outY < -0.7;
-      const esArribaCostadoJugada = outY < -0.3 && Math.abs(outX) > 0.3;
-      const esAbajoJugada = outY > 0.3;
-      const esIzquierda = outX < 0;
-
-      // Coordenadas fijas en la mesa (centro en 400,320) — totalmente
-      // independientes de dónde esté la carta oculta del jugador. Cada
-      // grupo se ajusta acá directo, sin efecto secundario sobre nada más.
-      let baseX = 400;
-      let baseY = 320;
-
-      if (esArribaCentro) {
-        baseX = 400;
-        baseY = 250;
-      } else if (esArribaCostadoJugada) {
-        baseX = esIzquierda ? 330 : 470;
-        baseY = 290;
-      } else if (esAbajoJugada) {
-        baseX = esIzquierda ? 330 : 470;
-        baseY = 400;
-      } else {
-        // Pase 207: bug real — "las cartas jugadas no aparecen" en 2v2. Los
-        // dos asientos rivales de 2v2 quedan EXACTOS a 180°/0° (outY≈0), un
-        // ángulo que no entra en NINGUNA de las tres ramas de arriba (todas
-        // piden |outY|>0.3) — antes caían siempre acá abajo, en el mismo
-        // (400,320) por defecto que ya usa el asiento de al lado, apiladas
-        // una sobre otra e indistinguibles del resto de la mesa. Esta rama
-        // cubre asientos "de costado, a la altura de la mesa" (ni arriba ni
-        // abajo): separa la carta jugada hacia el lado del asiento en vez
-        // de dejarla en el centro.
-        baseX = esIzquierda ? 330 : 470;
-        baseY = 330;
-      }
-
-      const dirX = cx - centroMesaX;
-      const dirY = cy - centroMesaY;
-      const dirLen = Math.sqrt(dirX * dirX + dirY * dirY) || 1;
+      // Pase 214 — pedido del usuario: "las cartas jugadas están
+      // desordenadas, deberíamos acercarlas más a la posición de cada uno
+      // en la mesa". El esquema anterior (clasificar el ángulo en 3-4
+      // "baldes" con coordenadas fijas hardcodeadas — esArribaCentro/
+      // esArribaCostadoJugada/esAbajoJugada/el "else" del pase 207)
+      // agrupaba asientos DISTINTOS en el mismo puñado de puntos, sin
+      // relación real con dónde está sentado cada jugador — por eso se
+      // veían amontonadas en vez de "la carta de cada uno cerca de cada
+      // uno". Se reemplaza por un punto a mitad de camino entre el centro
+      // de la mesa y la posición REAL de este asiento (cx,cy, ya conocida
+      // por el llamador) — así cada jugador tiene un punto único que se
+      // mueve junto con su propio asiento, sin casos especiales por
+      // ángulo, y funciona igual para 2v2, 3v3 o cualquier otra cantidad
+      // de asientos. `outX/outY` (definidos arriba, normalizados) más
+      // `outLen` (la distancia real centro→asiento, también de arriba)
+      // reconstruyen el mismo vector que antes se recalculaba acá como
+      // dirX/dirY/dirLen — no hace falta repetirlo.
+      const fraccionHaciaAsiento = 0.42;
+      const baseX = centroMesaX + outX * outLen * fraccionHaciaAsiento;
+      const baseY = centroMesaY + outY * outLen * fraccionHaciaAsiento;
       const pasoApilado = 2;
 
       // Igual que _dibujarFilaCartas: pre-escalamos con el canvas de alta
@@ -2243,8 +2226,8 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
       jugadas.forEach((carta, idx) => {
         const esUltima = idx === jugadas.length - 1;
         const offset = (jugadas.length - 1 - idx) * pasoApilado;
-        const px = baseX + (dirX / dirLen) * offset;
-        const py = baseY + (dirY / dirLen) * offset;
+        const px = baseX + outX * offset;
+        const py = baseY + outY * offset;
         const keyOriginal = `${carta.valor}_${carta.palo}`;
         const keyEscalada = `${keyOriginal}_${anchoBaseJugadaR}x${altoBaseJugadaR}`;
         this._crearTexturaEscalada(keyOriginal, keyEscalada, anchoBaseJugadaR, altoBaseJugadaR);
