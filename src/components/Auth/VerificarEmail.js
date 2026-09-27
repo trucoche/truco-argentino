@@ -106,9 +106,13 @@ export default function VerificarEmail({ token, onIrALogin }) {
 }
 
 const estilos = {
+  // Mismo fondo con foto que AuthScreen.js/OlvidePassword.js/ResetPassword.js.
   pagina: {
     minHeight: '100vh',
-    background: 'radial-gradient(circle at 50% 0%, #379a54 0%, #2D9B4F 45%, #1f7a3c 100%)',
+    backgroundImage: 'linear-gradient(rgba(20,20,15,0.55), rgba(20,20,15,0.55)), url(/assets/images/fondo-login.jpeg)',
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    backgroundRepeat: 'no-repeat',
     display: 'flex', justifyContent: 'center', alignItems: 'center',
     padding: '30px 12px', fontFamily: "'Nunito', sans-serif"
   },
