@@ -58,6 +58,13 @@ function App() {
   // conteo, que AvisosGlobales actualiza vía onCambioSolicitudesPendientes
   // para seguir encendiendo este mismo punto rojo.
   const [solicitudesAmistadPendientes, setSolicitudesAmistadPendientes] = useState(0);
+  // Pase 205: señal de "un solo disparo" para que tocar el toast de "te
+  // envió una solicitud de amistad" (ver AvisosGlobales.js) no solo
+  // navegue a Chat Global sino que además abra ahí el panel de
+  // solicitudes — antes tocar ese toast no llevaba a ningún lado (bug
+  // reportado por el usuario). Cualquier incremento dispara el efecto en
+  // ChatGlobal.js, así que no hace falta resetearla.
+  const [senialAbrirSolicitudes, setSenialAbrirSolicitudes] = useState(0);
   // Octogésimo tercer pase (web, mismo criterio que nativo): el botón de
   // mutear música que vivía en AppShell (arriba de TODAS las pantallas con
   // nav) se sacó de ahí y se reemplazó por el slider de volumen que ya usa
@@ -500,7 +507,7 @@ function App() {
             <Tienda usuario={usuario} />
           )}
           {pantalla === 'chat' && (
-            <ChatGlobal token={token} usuario={usuario} />
+            <ChatGlobal token={token} usuario={usuario} abrirSolicitudesSenial={senialAbrirSolicitudes} />
           )}
           {pantalla === 'config' && (
             <Configuracion
@@ -568,6 +575,10 @@ function App() {
           setPantalla('juego');
         }}
         onCambioSolicitudesPendientes={setSolicitudesAmistadPendientes}
+        onIrASolicitudesAmistad={() => {
+          setPantalla('chat');
+          setSenialAbrirSolicitudes((n) => n + 1);
+        }}
       />
     </ToastProvider>
   );

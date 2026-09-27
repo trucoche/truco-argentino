@@ -57,7 +57,7 @@ function horaCorta(fecha) {
   return new Date(fecha).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
 }
 
-export default function ChatGlobal({ token, usuario }) {
+export default function ChatGlobal({ token, usuario, abrirSolicitudesSenial }) {
   const { mostrarToast } = useToast();
   const usuarioActual = usuario?.username;
   // Pase siguiente: hace falta para elegir la cara de expresión correcta
@@ -92,6 +92,21 @@ export default function ChatGlobal({ token, usuario }) {
   const [solicitudesAmistad, setSolicitudesAmistad] = useState([]);
   const [solicitudesAbiertas, setSolicitudesAbiertas] = useState(false);
   const [procesandoSolicitud, setProcesandoSolicitud] = useState(null);
+
+  // Pase 205: tocar el toast de "te envió una solicitud de amistad" (ver
+  // AvisosGlobales.js) ahora trae hasta acá y además abre directamente
+  // este panel — antes el toast no llevaba a ningún lado (bug reportado
+  // por el usuario). `abrirSolicitudesSenial` es un número que App.js
+  // incrementa cada vez que se toca ese toast: cualquier cambio (incluso
+  // a un valor ya visto antes) dispara este efecto, así que sirve como
+  // señal de "un solo disparo" sin necesitar que nadie la resetee. Se
+  // ignora el valor inicial (0/undefined) para no abrir nada solo por
+  // entrar a esta pantalla de la forma normal.
+  useEffect(() => {
+    if (!abrirSolicitudesSenial) return;
+    setSidebarAbierto(true);
+    setSolicitudesAbiertas(true);
+  }, [abrirSolicitudesSenial]);
   // Pase 196: lista de amigos para la pestaña "Privado" rediseñada como
   // tarjetas (ver GET /api/usuarios/amigos, que ahora manda `sin_leer` por
   // cada amigo). Cubre también el pedido separado de "una lista de

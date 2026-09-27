@@ -20,7 +20,7 @@ const C = {
   dorado: '#FFB627', doradoClaro: '#FFD668', chocolate: '#4A2C2A', crema: '#FFF8ED',
 };
 
-export default function AvisosGlobales({ usuario, token, onAceptarDesafio, onCambioSolicitudesPendientes }) {
+export default function AvisosGlobales({ usuario, token, onAceptarDesafio, onCambioSolicitudesPendientes, onIrASolicitudesAmistad }) {
   const { mostrarToast } = useToast();
   const [desafioRecibido, setDesafioRecibido] = useState(null); // { idDesafio, de }
   // Pase siguiente: tocar el toast de "mensaje privado nuevo" ahora abre
@@ -124,7 +124,15 @@ export default function AvisosGlobales({ usuario, token, onAceptarDesafio, onCam
           if (solicitudesConocidasRef.current) {
             usernamesActuales.forEach((username) => {
               if (!solicitudesConocidasRef.current.has(username)) {
-                mostrarToast(`🤝 ${username} te envió una solicitud de amistad.`, 'info');
+                // Pase 205: bug real reportado por el usuario — tocar este
+                // toast no llevaba a ningún lado (no tenía `alPresionar`,
+                // así que tocarlo solo lo cerraba, igual que cualquier
+                // otro toast sin acción propia). Ahora navega a Chat
+                // Global y le avisa a esa pantalla que abra el panel de
+                // "Solicitudes de amistad" (ver `onIrASolicitudesAmistad`
+                // en App.js y `abrirSolicitudesSenial` en ChatGlobal.js),
+                // en vez de dejar al usuario a encontrarlo por su cuenta.
+                mostrarToast(`🤝 ${username} te envió una solicitud de amistad.`, 'info', 3200, onIrASolicitudesAmistad);
               }
             });
           }
@@ -139,7 +147,7 @@ export default function AvisosGlobales({ usuario, token, onAceptarDesafio, onCam
     cargarSolicitudesAmistad();
     const intervalo = setInterval(cargarSolicitudesAmistad, 20000);
     return () => { activo = false; clearInterval(intervalo); };
-  }, [token, usuario?.id, mostrarToast, onCambioSolicitudesPendientes]);
+  }, [token, usuario?.id, mostrarToast, onCambioSolicitudesPendientes, onIrASolicitudesAmistad]);
 
   const responder = (aceptar) => {
     if (!desafioRecibido) return;

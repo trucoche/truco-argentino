@@ -239,8 +239,10 @@ export default function AppShell({
           sacarlo de esas dos ("no tiene sentido tenerlo en ajustes" /
           "no hace falta tenerlo en la página misma de torneo", ya que
           ahí el usuario ya está viendo el torneo, no tiene sentido
-          invitarlo a anotarse). */}
-      {bannerTexto && !['lobby', 'torneos', 'config'].includes(pantallaActiva) && (
+          invitarlo a anotarse).
+          Pase 205: se suma "perfil" a la lista — mismo pedido del
+          usuario ("quitar el banner de torneo" de esa pantalla). */}
+      {bannerTexto && !['lobby', 'torneos', 'config', 'perfil'].includes(pantallaActiva) && (
         // Bug real encontrado (pase siguiente): este banner tenía su
         // propia copia vieja del botón — imagen de fondo Y texto los dos
         // directo en el <button> `.ts-banner`, sin el glow (`.ts-banner-
