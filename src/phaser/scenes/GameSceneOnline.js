@@ -86,6 +86,24 @@ export default class GameSceneOnline extends Phaser.Scene {
     this._capacidadSala = null;
     this._avataresEsperaSprites = [];
     this._filaEsperaGeneracion = 0;
+    // Referencia del banner-título de la sala de espera (ver
+    // _actualizarBannerEsperaTitulo) — reseteada acá por la misma razón que
+    // _avataresEsperaSprites arriba: en un restart de escena (cambio de
+    // codigoSala) el container viejo ya fue destruido por Phaser junto con
+    // el resto de la escena anterior, no queremos arrastrar esa referencia.
+    this._bannerEsperaTitulo = null;
+    // Pase 210 — bug real reportado: para el ÚLTIMO jugador que entra, la
+    // carga de imagen de un avatar de la sala de espera (async, ver
+    // _redibujarFilaEspera) podía terminar DESPUÉS de que la partida ya
+    // arrancó ('partida-iniciada' llega primero), y su callback de
+    // "completó la carga" dibujaba un tile nuevo sobre la mesa ya visible
+    // del juego real — el contador `_filaEsperaGeneracion` solo protege
+    // contra OTRO _redibujarFilaEspera más nuevo, no contra el inicio de la
+    // partida. Esta bandera es la protección real: se pone en `true` en el
+    // handler de 'partida-iniciada' y en el modo preview (ver
+    // _conectarSocket), y toda carga/dibujo de la fila de espera la chequea
+    // antes de tocar la escena.
+    this._salaEnJuego = false;
     // Volumen de las voces de los cantos, elegido por el usuario en el
     // panel de configuración de la partida (React lo sigue actualizando
     // directo sobre la instancia de la escena mientras juega, sin
@@ -200,6 +218,15 @@ preload() {
     // etc.). Se apunta la misma clave 'fondoEspera' al mismo archivo
     // fondo-lobby.jpeg para no tener que tocar el resto de este archivo.
     this.load.image('fondoEspera', conVersion('assets/images/fondo-lobby.jpeg'));
+    // Pase 210: assets reales que mandó el usuario para la pantalla de
+    // espera — el marco de madera (soga + esquineros de metal) que
+    // reemplaza el anillo/círculo dibujado a mano detrás de cada avatar
+    // (ver _dibujarTileEspera), y el tablón que reemplaza el fondo plano
+    // celeste del botón "Volver al Lobby" (ver _crearBoton, clave
+    // `boton_img_${imagen}` — el prefijo `boton_img_` es el que ya usa esa
+    // función para CUALQUIER botón-imagen, no una convención nueva).
+    this.load.image('marcoAvatarEspera', conVersion('assets/images/juego/marco-avatar-espera.png'));
+    this.load.image('boton_img_TablonEspera', conVersion('assets/images/juego/tablon-boton-espera.png'));
     const PERSONAJES_CANTO = ['gaucho', 'gaucha', 'gaucho2', 'gaucha2'];
 
     // Pase 201: fondo de la pantalla de resultado final (reemplaza el
@@ -607,11 +634,15 @@ _crearElementosDeTexto() {
 
     // Pase 209: título agrandado (20→28px) junto con el resto de la
     // pantalla de espera.
-    this.textoEsperaCartel = this.add.text(0, -170, 'Conectando con la sala...', {
-      font: 'bold 28px Fredoka, Arial', fill: '#FFF8ED', stroke: '#000000', strokeThickness: 5,
-      align: 'center', wordWrap: { width: 700 }
-    }).setOrigin(0.5);
-    this.panelEspera.add(this.textoEsperaCartel);
+    // Pase 210: el simple add.text de acá se reemplaza por el banner de
+    // pergamino real (_actualizarBannerEsperaTitulo/_crearBannerTexto) —
+    // pedido del usuario ("cambiar el estilo... muy chiquito y apenas se
+    // lee"). Vive AFUERA de panelEspera (como objeto de escena suelto,
+    // mismo criterio que la fila de avatares) porque _crearBannerTexto ya
+    // posiciona su container en coordenadas absolutas — se destruye junto
+    // con el resto de la sala de espera en 'partida-iniciada'/preview (ver
+    // _destruirBannerEsperaTitulo en esos puntos, _conectarSocket).
+    this._actualizarBannerEsperaTitulo('Conectando con la sala...');
 
     // Pase siguiente: bug de coordenadas — `_crearBoton` crea su propio
     // `this.add.container(x, y)` posicionado en coordenadas de ESCENA
@@ -629,8 +660,22 @@ _crearElementosDeTexto() {
     // superpuesto con ellas.
     // Pase 209: botón agrandado (180x44 → 240x56, fuente 15→19) junto con
     // el resto de la pantalla de espera.
+    // Pase 210: fondo de color plano reemplazado por el tablón de madera
+    // real que mandó el usuario ("un tablón para reemplazar el botón de
+    // volver al lobby por ese fondo, con el texto dentro") — mismo
+    // mecanismo `imagen`+`texto` que ya usa "Tengo [puntos]" en
+    // _crearBoton (el texto se dibuja horneado encima, con contorno negro,
+    // porque el archivo no trae el texto adentro). El ancho sale de
+    // `_anchoBotonImagen` (mismo criterio que el resto de los botones-
+    // imagen) para no estirar el arte a un aspecto que no es el suyo.
+    const altoBotonVolver = 56;
     this.botonVolverEspera = this._crearBoton({
-      x: 0, y: 210, ancho: 240, alto: 56, tamanoFuente: 19, colorFondo: 0x2E9BD6, texto: 'Volver al Lobby',
+      x: 0, y: 210,
+      ancho: this._anchoBotonImagen('TablonEspera', altoBotonVolver),
+      alto: altoBotonVolver,
+      tamanoFuente: 19,
+      imagen: 'TablonEspera',
+      texto: 'Volver al Lobby',
       onClick: () => {
         this.socket.emit('cancelar-espera', { codigoSala: this.codigoSala });
         if (this.onVolverLobby) this.onVolverLobby();
@@ -937,12 +982,38 @@ _limpiarAvataresEspera() {
   this._avataresEsperaSprites = [];
 }
 
-// Oculta (sin destruir) la fila de avatares — mismo criterio que ya usa
-// panelEspera/botonVolverEspera en 'partida-iniciada' y en el modo preview:
-// estos objetos son independientes de panelEspera (no son hijos suyos,
-// ver comentario en create()), así que necesitan su propio setVisible.
-_ocultarFilaEspera() {
-  (this._avataresEsperaSprites || []).forEach(s => { if (s && s.setVisible) s.setVisible(false); });
+// Pase 210: título de la sala de espera ("2v2 — esperando jugadores"),
+// restyled con el mismo marco de pergamino de 3 slices que ya usan los
+// carteles de canto en partida (_crearBannerTexto) en vez de un simple
+// add.text con stroke negro — pedido del usuario ("cambiar el estilo...
+// muy chiquito y apenas se lee"). _crearBannerTexto arma un container
+// NUEVO en cada llamada (no hay forma de solo cambiarle el texto a uno ya
+// creado), así que esta función guarda la referencia y destruye la
+// anterior antes de crear la que la reemplaza — mismo patrón que
+// _redibujarFilaEspera con los tiles de avatares.
+_actualizarBannerEsperaTitulo(texto) {
+  if (this._bannerEsperaTitulo) {
+    const viejo = this._bannerEsperaTitulo;
+    viejo.destroy();
+    this._sprites = this._sprites.filter(s => s !== viejo);
+  }
+  this._bannerEsperaTitulo = this._crearBannerTexto(400, 130, texto, 401, {
+    tamanoFuente: 24, colorTexto: '#FFF8ED', anchoWrap: 700,
+  });
+}
+
+// Destruye (no solo oculta) el título de la sala de espera — se llama en
+// los mismos puntos donde arranca la partida de verdad (ver
+// 'partida-iniciada' y el modo preview en _conectarSocket), mismo criterio
+// de "no dejar nada de la sala de espera en la partida" que el resto de
+// esta pantalla.
+_destruirBannerEsperaTitulo() {
+  if (this._bannerEsperaTitulo) {
+    const viejo = this._bannerEsperaTitulo;
+    viejo.destroy();
+    this._sprites = this._sprites.filter(s => s !== viejo);
+    this._bannerEsperaTitulo = null;
+  }
 }
 
 // Reconstruye la fila completa de avatares de la sala de espera a partir
@@ -952,6 +1023,12 @@ _ocultarFilaEspera() {
 // muestran el avatar real de quien ya se unió + "Conectado"; el resto
 // quedan como placeholders grises pulsando "Conectando...".
 _redibujarFilaEspera() {
+  // Pase 210: si la partida ya arrancó (bandera puesta en 'partida-iniciada'
+  // y en el modo preview, ver _conectarSocket) no hay que redibujar nada de
+  // la sala de espera — puede llegar un 'jugador-unido' tardío de socket.io
+  // ya con la mesa real visible.
+  if (this._salaEnJuego) return;
+
   this._limpiarAvataresEspera();
   this._filaEsperaGeneracion = (this._filaEsperaGeneracion || 0) + 1;
 
@@ -962,7 +1039,7 @@ _redibujarFilaEspera() {
   // evento (siempre llega, es casi inmediato).
   if (!this._modoSala || !this._capacidadSala) return;
 
-  this.textoEsperaCartel.setText(
+  this._actualizarBannerEsperaTitulo(
     `${this._modoSala.toUpperCase()} — esperando jugadores`
   );
 
@@ -991,7 +1068,13 @@ _redibujarFilaEspera() {
       // Si mientras cargaba entró otro jugador y se volvió a llamar a
       // _redibujarFilaEspera, esta carga quedó vieja — no dibujar sobre
       // una fila que ya no existe (evita duplicados/tiles fantasma).
+      // Pase 210: la otra forma en que esta carga puede quedar vieja — la
+      // partida arrancó mientras la imagen todavía bajaba de la red (el
+      // bug real reportado: para el último jugador en unirse, sus tiles de
+      // espera quedaban dibujados ENCIMA de la mesa real ya visible, y solo
+      // desaparecían al recargar la página).
       if (generacionDeEstaCarga !== this._filaEsperaGeneracion) return;
+      if (this._salaEnJuego) return;
       pendientes.forEach(p => this._dibujarImagenAvatarEspera(p));
     });
     this.load.start();
@@ -1006,39 +1089,40 @@ _redibujarFilaEspera() {
 // _redibujarFilaEspera) en vez de un load.start() por jugador.
 _dibujarTileEspera(cx, cy, radio, jugador, pendientes) {
   const conectado = !!jugador;
-  const colorAnillo = conectado ? 0xFFB627 : 0x8c8078;
 
-  const anillo = this.add.graphics().setDepth(411);
-  anillo.lineStyle(4, colorAnillo, 1);
-  anillo.strokeCircle(cx, cy, radio + 4);
-  this._avataresEsperaSprites.push(anillo);
-  this._sprites.push(anillo);
+  // Pase 210: el anillo/círculo de fondo dibujados a mano (Graphics) se
+  // reemplazan por el marco de madera real que pasó el usuario
+  // (marcoAvatarEspera, ver preload). La foto/avatar va DETRÁS, recortada
+  // a un círculo bastante más chico que el marco entero (72% de su
+  // diámetro) para que el borde de soga + esquineros de metal del marco
+  // se sigan viendo alrededor — si el asiento todavía está vacío, no hay
+  // foto detrás y el marco se ve "vacío" tal cual (madera lisa en el
+  // centro), atenuado y pulsando en vez de dorado y quieto.
+  const tamanoFrame = radio * 2;
+  const radioFoto = tamanoFrame * 0.36;
 
-  const fondo = this.add.graphics().setDepth(409);
-  fondo.fillStyle(conectado ? 0x1f7a3c : 0x00000055, 1);
-  fondo.fillCircle(cx, cy, radio);
-  this._avataresEsperaSprites.push(fondo);
-  this._sprites.push(fondo);
-
-  if (!conectado) {
-    // Asiento todavía vacío — anillo gris pulsando, sin foto.
-    this.tweens.add({ targets: anillo, alpha: 0.35, duration: 650, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-
-    const signo = this.add.text(cx, cy, '?', {
-      font: `bold ${Math.round(radio * 0.9)}px Fredoka, Arial`, fill: '#ffffffaa'
-    }).setOrigin(0.5).setDepth(412);
-    this._avataresEsperaSprites.push(signo);
-    this._sprites.push(signo);
-  } else {
+  if (conectado) {
     const esFoto = jugador.avatar_tipo === 'foto' && !!jugador.foto_perfil_url;
     const url = esFoto ? jugador.foto_perfil_url : `/assets/${jugador.personaje || 'gaucho'}-avatar.png`;
     const key = `avatarEspera_${this._hashSimple(url)}`;
 
     if (this.textures.exists(key)) {
-      this._dibujarImagenAvatarEspera({ key, cx, cy, radio });
+      this._dibujarImagenAvatarEspera({ key, cx, cy, radio: radioFoto });
     } else {
-      pendientes.push({ key, url, cx, cy, radio });
+      pendientes.push({ key, url, cx, cy, radio: radioFoto });
     }
+  }
+
+  const marco = this.add.image(cx, cy, 'marcoAvatarEspera')
+    .setDisplaySize(tamanoFrame, tamanoFrame)
+    .setDepth(411);
+  this._avataresEsperaSprites.push(marco);
+  this._sprites.push(marco);
+
+  if (!conectado) {
+    // Asiento todavía vacío — marco gris pulsando, sin foto detrás.
+    marco.setTint(0x999999);
+    this.tweens.add({ targets: marco, alpha: 0.55, duration: 650, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
   }
 
   // Pill de estado, debajo del avatar. Pase 209: agrandada (ancho extra,
@@ -1079,6 +1163,10 @@ _dibujarImagenAvatarEspera({ key, cx, cy, radio }) {
   // fondo verde liso ya dibujado en _dibujarTileEspera en vez de romper
   // el resto de la fila.
   if (!this.textures.exists(key)) return;
+  // Pase 210: defensa extra (además del chequeo en el callback de carga en
+  // _redibujarFilaEspera) — si esta función se llegara a invocar con la
+  // partida ya arrancada, no dibujar sobre la mesa real.
+  if (this._salaEnJuego) return;
   const img = this.add.image(cx, cy, key).setDisplaySize(radio * 2, radio * 2).setDepth(410);
   const mask = this.make.graphics();
   mask.fillStyle(0xffffff);
@@ -1094,9 +1182,14 @@ _conectarSocket() {
     // mesa sin crear salas de verdad.
     if (this.codigoSala?.startsWith?.('PREVIEW_')) {
       const modo = this.codigoSala.replace('PREVIEW_', '').toLowerCase();
+      // Pase 210: bandera "ya arrancó" + destrucción completa (no solo
+      // ocultar) de todo lo de la sala de espera — mismo criterio que el
+      // handler real de 'partida-iniciada' más abajo, ver comentario ahí.
+      this._salaEnJuego = true;
       if (this.panelEspera) this.panelEspera.setVisible(false);
       if (this.botonVolverEspera) this.botonVolverEspera.setVisible(false);
-      this._ocultarFilaEspera();
+      this._limpiarAvataresEspera();
+      this._destruirBannerEsperaTitulo();
       if (this.mesaImg) this.mesaImg.setVisible(true);
       if (this.sombraMesa) this.sombraMesa.setVisible(true);
       this.estado = this._crearEstadoMockPorModo(modo);
@@ -1136,15 +1229,29 @@ _conectarSocket() {
       if (Array.isArray(data.jugadores)) this._jugadoresSala = data.jugadores;
       if (data.modo) this._modoSala = data.modo;
       if (data.capacidadTotal) this._capacidadSala = data.capacidadTotal;
-      if (this.textoEsperaCartel && this.textoEsperaCartel.scene) {
-        this.textoEsperaCartel.setText(data.mensaje);
-      }
+      // Pase 210: el título ya no es un add.text suelto (this.textoEsperaCartel,
+      // sacado) sino el banner de pergamino — _redibujarFilaEspera lo
+      // actualiza con el texto "<MODO> — esperando jugadores" en cuanto
+      // conoce el modo/capacidad de la sala, así que no hace falta tocarlo
+      // acá aparte.
       this._redibujarFilaEspera();
     });
     this.socket.off('partida-iniciada').on('partida-iniciada', (data) => {
+      // Pase 210 — bug real reportado: al último jugador en unirse le
+      // quedaban los círculos de la sala de espera dibujados ENCIMA de la
+      // mesa real ya visible (una carga de avatar en curso terminaba
+      // después de este evento y dibujaba sobre la mesa; solo recargar la
+      // página los sacaba). Fix de 2 partes: (1) esta bandera, chequeada en
+      // _redibujarFilaEspera/_dibujarImagenAvatarEspera, evita que cualquier
+      // carga que termine tarde dibuje algo nuevo; (2) en vez de solo
+      // ocultar (setVisible(false), lo que dejaba los objetos vivos en la
+      // escena) ahora se DESTRUYEN de una — pedido explícito del usuario:
+      // "lo mejor es que no quede nada de la sala de espera en la partida".
+      this._salaEnJuego = true;
       if (this.panelEspera) this.panelEspera.setVisible(false);
       if (this.botonVolverEspera) this.botonVolverEspera.setVisible(false);
-      this._ocultarFilaEspera();
+      this._limpiarAvataresEspera();
+      this._destruirBannerEsperaTitulo();
       if (this.mesaImg) this.mesaImg.setVisible(true);
       if (this.sombraMesa) this.sombraMesa.setVisible(true);
     });
@@ -1793,8 +1900,11 @@ _renderizarEquipos(e, animarReparto, hayCantoSinResolver) {
         // Multiplicador mode-specific para no tocar 3v3 (que no tenía este
         // pedido): 0.85 (sin cambios) en 3v3, 1.15 en 2v2 — más radio
         // vertical = más lejos de centroY = más arriba en pantalla.
+        // Pase 210: "quedó mejor... pero lo levantaría un poco más" — el
+        // usuario confirmó que los dos de costado quedaron perfectos (no se
+        // tocan), solo se sube otro poco el multiplicador 2v2: 1.15 → 1.3.
         radioXAsiento = radioX * 0.9;
-        radioYAsiento = radioY * (esTresVTres ? 0.85 : 1.15);
+        radioYAsiento = radioY * (esTresVTres ? 0.85 : 1.3);
       }
 
       const px = centroX + Math.cos(rad) * radioXAsiento;
@@ -2924,10 +3034,15 @@ _calcularPerspectiva(y) {
 // slices igual que _crearBoton. Reemplaza los textos sueltos con
 // backgroundColor plano que se usaban para "¿Querés el Truco?", "Tengo
 // tanto", etc. El ancho/alto se calculan solos según el largo del texto.
-_crearBannerTexto(x, y, texto, depth = 200) {
+// Pase 210: agregado un 5to parámetro opcional (nunca usado antes — todos
+// los llamados existentes pasan solo 4 args y siguen viendo el mismo 14px
+// marrón de siempre) para poder reusar este mismo marco en el título de la
+// sala de espera con letra más grande/clara (pedido del usuario: "cambiar
+// el estilo... muy chiquito y apenas se lee" — ver _actualizarBannerEsperaTitulo).
+_crearBannerTexto(x, y, texto, depth = 200, { tamanoFuente = 14, colorTexto = '#4A2C2A', anchoWrap = 620 } = {}) {
   const label = this.add.text(0, 0, texto, {
-    fontFamily: 'Nunito, Arial', fontSize: '14px', fontStyle: 'bold', color: '#4A2C2A',
-    align: 'center', wordWrap: { width: 620 },
+    fontFamily: 'Nunito, Arial', fontSize: `${tamanoFuente}px`, fontStyle: 'bold', color: colorTexto,
+    align: 'center', wordWrap: { width: anchoWrap },
   }).setOrigin(0.5);
 
   const padX = 26, padY = 14;
