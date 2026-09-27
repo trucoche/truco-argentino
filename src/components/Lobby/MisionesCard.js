@@ -12,14 +12,11 @@ const C = {
   cremaSutil: '#FFFCF6'
 };
 
-// Mismo mapa de imágenes que el selector de personaje, pero con las
-// variantes "escribiendo en la agenda" en vez de los avatares parados.
-const IMAGENES_MISION = {
-  gaucho: '/assets/images/mision-gaucho.png',
-  gaucha: '/assets/images/mision-gaucha.png',
-  gaucha2: '/assets/images/mision-gaucha2.png',
-  gaucho2: '/assets/images/mision-gaucho2.png',
-};
+// Pase 202: a pedido del usuario, se saca la imagen del personaje
+// seleccionado (antes vivía acá, en el círculo de la izquierda) y en su
+// lugar se usa el mismo cartelito ilustrado que ya se mostraba chico al
+// lado del título "Misiones semanales" — un solo ícono, más grande, en
+// vez de dos íconos distintos compitiendo por atención.
 
 // Quincuagésimo octavo pase — la tarjeta muestra de a 2 misiones (antes
 // mostraba todas apiladas verticalmente, sin límite de alto) con flechas +
@@ -33,7 +30,7 @@ const IMAGENES_MISION = {
 // tarjeta entera, sin tocar ningún otro estilo.
 const MISIONES_POR_PAGINA = 1;
 
-export default function MisionesCard({ token, personaje = 'gaucho', onMisionReclamada }) {
+export default function MisionesCard({ token, onMisionReclamada }) {
   const [datos, setDatos] = useState(null);
   const [error, setError] = useState('');
   const [reclamando, setReclamando] = useState(null);
@@ -106,18 +103,13 @@ export default function MisionesCard({ token, personaje = 'gaucho', onMisionRecl
       <div style={estilos.header}>
         <div style={estilos.avatarWrap}>
           <img
-            src={IMAGENES_MISION[personaje] || IMAGENES_MISION.gaucho}
+            src="/assets/images/icono-misiones.png"
             alt=""
             style={estilos.imagenPersonaje}
           />
         </div>
         <div>
-          {/* Pase siguiente: el emoji 📋 se reemplaza por el cartelito de
-              corcho ilustrado que pasó el usuario, mismo criterio que el
-              resto de los reemplazos de emoji del proyecto. */}
-          <div style={estilos.panelTitle}>
-            <img src="/assets/images/icono-misiones.png" alt="" style={estilos.iconoPanelTitle} /> Misiones semanales
-          </div>
+          <div style={estilos.panelTitle}>Misiones semanales</div>
           <div style={estilos.resumen}>{completadas}/{datos.misiones.length} completadas</div>
         </div>
       </div>
@@ -211,10 +203,12 @@ const estilos = {
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     flexShrink: 0
   },
-  imagenPersonaje: { width: 46, height: 46, objectFit: 'contain' },
-  panelTitle: { fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 17, color: C.chocolate, display: 'flex', alignItems: 'center', gap: 6 },
-  // Pase siguiente: agrandado (22→34) a pedido del usuario.
-  iconoPanelTitle: { height: 34, width: 'auto', objectFit: 'contain' },
+  // Pase 202: maxWidth/maxHeight en vez de un tamaño fijo — el cartelito
+  // ilustrado no es cuadrado como los avatares de personaje que mostraba
+  // antes, así que se deja que conserve su proporción real dentro del
+  // círculo en vez de estirarse o recortarse.
+  imagenPersonaje: { maxWidth: 52, maxHeight: 46, objectFit: 'contain' },
+  panelTitle: { fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 17, color: C.chocolate },
   resumen: { fontSize: 12.5, color: '#7a6660', fontWeight: 700, marginTop: 2 },
   errorBox: {
     background: '#ffe0dd', border: `2px solid #E8483A`, color: '#c2352a',
