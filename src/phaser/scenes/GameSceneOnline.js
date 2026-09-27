@@ -226,6 +226,13 @@ preload() {
     // `boton_img_${imagen}` — el prefijo `boton_img_` es el que ya usa esa
     // función para CUALQUIER botón-imagen, no una convención nueva).
     this.load.image('marcoAvatarEspera', conVersion('assets/images/juego/marco-avatar-espera.png'));
+    // Pase 211: tablon-boton-espera.png se recortó a su contenido real
+    // (490x240 aprox, ver comentario en _crearBoton/botonVolverEspera en
+    // create()) — el archivo que llegó tenía el tablón dentro de un
+    // lienzo cuadrado 500x500 con relleno transparente arriba/abajo, y
+    // `_anchoBotonImagen` (que calcula el ancho del botón a partir del
+    // aspecto del archivo) tomaba ese lienzo cuadrado como si fuera la
+    // forma real del tablón — resultado: un tablón diminuto.
     this.load.image('boton_img_TablonEspera', conVersion('assets/images/juego/tablon-boton-espera.png'));
     const PERSONAJES_CANTO = ['gaucho', 'gaucha', 'gaucho2', 'gaucha2'];
 
@@ -668,7 +675,19 @@ _crearElementosDeTexto() {
     // porque el archivo no trae el texto adentro). El ancho sale de
     // `_anchoBotonImagen` (mismo criterio que el resto de los botones-
     // imagen) para no estirar el arte a un aspecto que no es el suyo.
-    const altoBotonVolver = 56;
+    // Pase 211: bug real reportado ("el tablón se ve muy pequeño detrás
+    // del texto") — el archivo original que mandó el usuario es un
+    // lienzo cuadrado de 500x500 con el tablón real ocupando solo una
+    // franja angosta en el medio (490px de ancho x 240px de alto, no
+    // 500x500), y `_anchoBotonImagen` calcula el ancho a partir del
+    // aspecto del ARCHIVO ENTERO — con el lienzo cuadrado eso daba un
+    // ancho casi igual al alto (56px), un tablón diminuto estirando todo
+    // el lienzo (con su relleno transparente) a esa cajita chica. Se
+    // recortó el PNG a su contenido real (490x248, ver comentario en
+    // preload) y se subió el alto acá (56→100) para que el tablón real
+    // (aspecto ~2:1, más "achatado" que un botón normal) tenga lugar
+    // para el texto sin quedar apretado.
+    const altoBotonVolver = 100;
     this.botonVolverEspera = this._crearBoton({
       x: 0, y: 210,
       ancho: this._anchoBotonImagen('TablonEspera', altoBotonVolver),
@@ -1417,9 +1436,20 @@ this._limpiarSprites();
     // de una fórmula por cantidad de caracteres — mismo criterio que el
     // `carteloTitulo` nativo, que se ciñe por padding, no por un ancho
     // fijo adivinado.
+    // Pase 211: bug real reportado — con un título largo (ej. "Pasaron 10
+    // minutos sin que se sumara nadie más. Se canceló la sala.", el
+    // mensaje de sala cancelada por timeout) este texto no tenía
+    // `wordWrap`, así que medía su ancho REAL en una sola línea sin
+    // límite — y el cartel dorado (`pillW`, calculado a partir de ese
+    // ancho) terminaba mucho más ancho que la tarjeta entera
+    // (`panelAncho`), desbordando sus bordes. Mismo `wordWrap` que ya usa
+    // `textoSubtitulo` más abajo (panelAncho - 60) — un título corto
+    // ("¡Ganaste!") sigue entrando en una sola línea igual que antes, uno
+    // largo ahora pasa a 2-3 líneas en vez de estirar el cartel.
     const padHTitulo = 18, padVTitulo = 6;
     const textoTitulo = this.add.text(0, 0, titulo, {
       fontFamily: 'Fredoka, Arial', fontSize: '22px', fontStyle: '600', color: '#4A2C2A', align: 'center',
+      wordWrap: { width: panelAncho - 60 },
     }).setDepth(902);
     const pillW = textoTitulo.width + padHTitulo * 2;
     const pillH = textoTitulo.height + padVTitulo * 2;
