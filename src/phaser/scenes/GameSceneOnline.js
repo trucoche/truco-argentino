@@ -605,9 +605,11 @@ _crearElementosDeTexto() {
     // absolutas según cuántos asientos tenga la sala.
     this.panelEspera = this.add.container(400, 300).setDepth(400);
 
+    // Pase 209: título agrandado (20→28px) junto con el resto de la
+    // pantalla de espera.
     this.textoEsperaCartel = this.add.text(0, -170, 'Conectando con la sala...', {
-      font: 'bold 20px Fredoka, Arial', fill: '#FFF8ED', stroke: '#000000', strokeThickness: 4,
-      align: 'center', wordWrap: { width: 600 }
+      font: 'bold 28px Fredoka, Arial', fill: '#FFF8ED', stroke: '#000000', strokeThickness: 5,
+      align: 'center', wordWrap: { width: 700 }
     }).setOrigin(0.5);
     this.panelEspera.add(this.textoEsperaCartel);
 
@@ -625,8 +627,10 @@ _crearElementosDeTexto() {
     // absoluto = -20 relativo a este panel), el botón necesita quedar
     // debajo de las tarjetas de estado/nombre de cada avatar, no
     // superpuesto con ellas.
+    // Pase 209: botón agrandado (180x44 → 240x56, fuente 15→19) junto con
+    // el resto de la pantalla de espera.
     this.botonVolverEspera = this._crearBoton({
-      x: 0, y: 195, ancho: 180, colorFondo: 0x2E9BD6, texto: 'Volver al Lobby',
+      x: 0, y: 210, ancho: 240, alto: 56, tamanoFuente: 19, colorFondo: 0x2E9BD6, texto: 'Volver al Lobby',
       onClick: () => {
         this.socket.emit('cancelar-espera', { codigoSala: this.codigoSala });
         if (this.onVolverLobby) this.onVolverLobby();
@@ -697,8 +701,12 @@ _crearTexturaDorsoMini() {
   // en _crearTexturaDorsoGrande, comentario más abajo) y de ahí se saca
   // la textura final según el dpr real. El bake es 100% offline (canvas
   // 2D, no GPU) así que no cuesta FPS en tiempo real.
-  const ANCHO_FINAL = 56;
-  const ALTO_FINAL  = 86;
+  // Pase 209: 56x86 → 45x69 (mismo aspecto ~0.65) — pedido del usuario, los
+  // dorsos de la mano de rivales/compañeros en equipos (2v2/3v3, es la
+  // única textura que usa esta función, ver _dibujarJugador) se sentían
+  // "un poco grandes".
+  const ANCHO_FINAL = 45;
+  const ALTO_FINAL  = 69;
   // 5x cubre el peor caso real: zoom de cámara 1.5 * dpr hasta 3 = 4.5x,
   // con un poco de margen (ver _factorEscalaTextura).
   const FACTOR_CALIDAD_FIJO = 5;
@@ -959,8 +967,11 @@ _redibujarFilaEspera() {
   );
 
   const total = this._capacidadSala;
-  const tamano = total <= 2 ? 96 : total <= 4 ? 82 : 68;
-  const gap = total <= 2 ? 34 : total <= 4 ? 24 : 16;
+  // Pase 209: pedido del usuario ("en la pantalla nueva de carga,
+  // agrandemos todo") — tiles, huecos y tipografía de toda la fila (ver
+  // también _dibujarTileEspera más abajo) subieron de tamaño.
+  const tamano = total <= 2 ? 140 : total <= 4 ? 115 : 92;
+  const gap = total <= 2 ? 40 : total <= 4 ? 30 : 20;
   const paso = tamano + gap;
   const anchoTotal = total * paso - gap;
   const inicioX = 400 - anchoTotal / 2 + tamano / 2;
@@ -1030,10 +1041,11 @@ _dibujarTileEspera(cx, cy, radio, jugador, pendientes) {
     }
   }
 
-  // Pill de estado, debajo del avatar.
-  const pillAncho = radio * 2 + 14;
-  const pillAlto = 22;
-  const pillY = cy + radio + 14;
+  // Pill de estado, debajo del avatar. Pase 209: agrandada (ancho extra,
+  // más alto, tipografía más grande) junto con el resto de la fila.
+  const pillAncho = radio * 2 + 22;
+  const pillAlto = 30;
+  const pillY = cy + radio + 18;
   const pill = this.add.graphics().setDepth(413);
   pill.fillStyle(conectado ? 0x2D9B4F : 0xFFF8ED, 1);
   pill.fillRoundedRect(cx - pillAncho / 2, pillY - pillAlto / 2, pillAncho, pillAlto, pillAlto / 2);
@@ -1043,14 +1055,14 @@ _dibujarTileEspera(cx, cy, radio, jugador, pendientes) {
   this._sprites.push(pill);
 
   const pillTexto = this.add.text(cx, pillY, conectado ? '✓ Conectado' : 'Conectando...', {
-    font: 'bold 11px Nunito, Arial',
+    font: 'bold 15px Nunito, Arial',
     fill: conectado ? '#FFF8ED' : '#4A2C2A'
   }).setOrigin(0.5).setDepth(414);
   this._avataresEsperaSprites.push(pillTexto);
   this._sprites.push(pillTexto);
 
-  const nombreTxt = this.add.text(cx, pillY + 20, conectado ? jugador.username : '—', {
-    font: 'bold 13px Nunito, Arial', fill: '#FFF8ED', stroke: '#000000', strokeThickness: 3
+  const nombreTxt = this.add.text(cx, pillY + 27, conectado ? jugador.username : '—', {
+    font: 'bold 17px Nunito, Arial', fill: '#FFF8ED', stroke: '#000000', strokeThickness: 3
   }).setOrigin(0.5).setDepth(414);
   this._avataresEsperaSprites.push(nombreTxt);
   this._sprites.push(nombreTxt);
@@ -1774,8 +1786,15 @@ _renderizarEquipos(e, animarReparto, hayCantoSinResolver) {
         // Se lo deja con un radio parecido al de los asientos de costado
         // (radioY*1.2 ahí), apenas más chico para que este jugador se note
         // "más al fondo" que los de costado, pero sin salirse del canvas.
+        // Pase 209: pedido del usuario, con la fila de asientos de 2v2 ya
+        // corregida (pase 207) — quiere subir el asiento "de enfrente"
+        // (compañero, único con esArribaCentro en 2v2) un poco más
+        // todavía, dejando los dos de costado (rivales) tal cual están.
+        // Multiplicador mode-specific para no tocar 3v3 (que no tenía este
+        // pedido): 0.85 (sin cambios) en 3v3, 1.15 en 2v2 — más radio
+        // vertical = más lejos de centroY = más arriba en pantalla.
         radioXAsiento = radioX * 0.9;
-        radioYAsiento = radioY * 0.85;
+        radioYAsiento = radioY * (esTresVTres ? 0.85 : 1.15);
       }
 
       const px = centroX + Math.cos(rad) * radioXAsiento;
