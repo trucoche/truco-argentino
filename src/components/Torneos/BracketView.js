@@ -51,12 +51,13 @@ export default function BracketView({ torneoId, usuario, token, onVolver, onEntr
     return () => clearInterval(intervalo);
   }, [cargar]);
 
-  // Centésimo cuadragésimo sexto pase: BracketView vive fuera del
-  // AppShell (se monta directo en App.js), así que es la única pantalla
-  // de esta lista que necesita su propio fondo-lobby detrás — de ahí
-  // `completa`, igual que hace `estilos.pagina` para el resto de esta vista.
-  if (cargando) return <PantallaCarga completa />;
-  if (error) return <div style={estilos.pagina}><div style={{ ...estilos.errorBox, maxWidth: 700, margin: '60px auto' }}>{error}</div></div>;
+  // Pase 203: BracketView ahora vive DENTRO del AppShell (pedido del
+  // usuario: "colocar acá todos los elementos que tienen las otras
+  // páginas, el header con el menú y la información del usuario", ver
+  // App.js) — ya no necesita pintar su propio fondo-lobby ni pasar
+  // `completa`, el mismo criterio que ya usan Ranking/Historial/Torneos.
+  if (cargando) return <PantallaCarga />;
+  if (error) return <div style={{ ...estilos.errorBox, maxWidth: 700, margin: '60px auto' }}>{error}</div>;
   if (!torneo) return null;
 
   const rondas = {};
@@ -99,7 +100,6 @@ export default function BracketView({ torneoId, usuario, token, onVolver, onEntr
   };
 
   return (
-    <div style={estilos.pagina}>
       <div style={estilos.contenedor}>
 
         <div style={estilos.headerCard}>
@@ -220,24 +220,11 @@ export default function BracketView({ torneoId, usuario, token, onVolver, onEntr
         )}
 
       </div>
-    </div>
   );
 }
 
 const estilos = {
-  // Pase siguiente: el gradiente verde plano de acá se reemplaza por el
-  // mismo fondo-imagen (fondo-lobby.jpeg + velo oscuro) que usa
-  // AppShell.js/.ts-shell y PantallaCarga(completa) en el resto de la
-  // app — antes esta era la única pantalla con un fondo distinto al de
-  // Ranking/Torneos/Lobby, por vivir fuera del AppShell.
-  pagina: {
-    minHeight: '100vh',
-    backgroundImage: 'linear-gradient(rgba(20,20,15,0.38), rgba(20,20,15,0.38)), url(/assets/images/fondo-lobby.jpeg)',
-    backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat', backgroundAttachment: 'fixed',
-    fontFamily: "'Nunito', sans-serif",
-    padding: '24px 16px 60px'
-  },
-  contenedor: { maxWidth: 900, margin: '0 auto' },
+  contenedor: { maxWidth: 900, margin: '0 auto', fontFamily: "'Nunito', sans-serif" },
 
   headerCard: {
     display: 'flex', alignItems: 'center', gap: 12,

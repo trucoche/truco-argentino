@@ -291,7 +291,7 @@ function App() {
   };
 
   useEffect(() => {
-    if (['lobby', 'torneos', 'ranking', 'historial', 'perfil', 'config', 'tienda', 'chat'].includes(pantalla)) {
+    if (['lobby', 'torneos', 'ranking', 'historial', 'perfil', 'config', 'tienda', 'chat', 'bracket'].includes(pantalla)) {
       actualizarPerfil();
       buscarTorneoDestacado();
     }
@@ -414,7 +414,7 @@ function App() {
         }}
       />
     );
-  } else if (['lobby', 'torneos', 'ranking', 'historial', 'perfil', 'config', 'tienda', 'chat', 'privacidad'].includes(pantalla)) {
+  } else if (['lobby', 'torneos', 'ranking', 'historial', 'perfil', 'config', 'tienda', 'chat', 'privacidad', 'bracket'].includes(pantalla)) {
     contenido = (
       <>
         {/* Pase de la plaqueta de trofeo: se saca el emoji 🏆 del texto de
@@ -427,11 +427,17 @@ function App() {
             horario de inicio guardado en la base para mostrar en su lugar
             (los torneos arrancan cuando se llena el cupo, no a una hora
             fija) — confirmado con el usuario vía pregunta directa: texto
-            genérico, sin título ni horario. */}
+            genérico, sin título ni horario.
+            Pase 203: "bracket" se suma acá (antes vivía en su propia rama,
+            fuera del AppShell — pedido del usuario de que tenga el mismo
+            header/menú/info de usuario que el resto de las pantallas). Se
+            lo mapea a "torneos" para el resaltado del nav y para que el
+            banner de "hay un torneo abierto" siga oculto ahí (mismo
+            criterio que ya tenía la pantalla de Torneos misma). */}
         <AppShell
           usuario={usuario}
           token={token}
-          pantallaActiva={pantalla}
+          pantallaActiva={pantalla === 'bracket' ? 'torneos' : pantalla}
           onNavegar={setPantalla}
           onLogout={handleLogout}
           bannerTexto={torneoDestacado ? '¡Hay un torneo abierto! Anotate ahora' : null}
@@ -509,22 +515,21 @@ function App() {
           {pantalla === 'privacidad' && (
             <PoliticaPrivacidad onVolver={() => setPantalla('config')} />
           )}
+          {pantalla === 'bracket' && (
+            <BracketView
+              torneoId={torneoIdActual}
+              usuario={usuario}
+              token={token}
+              onVolver={() => setPantalla('torneos')}
+              onEntrarAPartida={(codigoSala) => {
+                setCodigoSalaActual(codigoSala);
+                setPantalla('juego');
+              }}
+            />
+          )}
         </AppShell>
         <MonedaEasterEgg token={token} pantalla={pantalla} onEncontrada={actualizarPerfil} />
       </>
-    );
-  } else if (pantalla === 'bracket') {
-    contenido = (
-      <BracketView
-        torneoId={torneoIdActual}
-        usuario={usuario}
-        token={token}
-        onVolver={() => setPantalla('torneos')}
-        onEntrarAPartida={(codigoSala) => {
-          setCodigoSalaActual(codigoSala);
-          setPantalla('juego');
-        }}
-      />
     );
   } else if (pantalla === 'juego') {
     contenido = (

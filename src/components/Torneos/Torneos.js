@@ -247,8 +247,12 @@ return (
 
       {torneoDestacado && (
         <div style={estilos.destacadoCard}>
-          <div style={estilos.destacadoBadge}>🏆 PRÓXIMO TORNEO</div>
-          <div style={estilos.destacadoTitulo}>{torneoDestacado.titulo}</div>
+          <div style={estilos.destacadoBadge}>
+            <img src="/assets/images/trofeo.png" alt="" style={estilos.destacadoBadgeIcono} /> PRÓXIMO TORNEO
+          </div>
+          <div style={estilos.destacadoTitulo}>
+            <img src="/assets/images/trofeo.png" alt="" style={estilos.destacadoTituloIcono} /> {torneoDestacado.titulo}
+          </div>
 
           <div style={estilos.destacadoStats}>
             <div style={estilos.destacadoStat}>
@@ -298,13 +302,18 @@ return (
                   style={{ ...estilos.input, marginBottom: 8 }}
                 />
               )}
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button onClick={() => handleInscribirse(torneoDestacado)} style={{ ...estilos.btnPrimary, flex: 1 }}>
+              {/* Pase 203: antes "Cancelar" heredaba width:100% de
+                  estilos.btnSecondary (pensado para usos donde va solo) y
+                  quedaba mucho más grande que "Confirmar" al lado — ahora
+                  los dos se anulan a su ancho natural y quedan parejos,
+                  centrados en la fila (pedido del usuario). */}
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+                <button onClick={() => handleInscribirse(torneoDestacado)} style={{ ...estilos.btnPrimary, width: 'auto', padding: '10px 26px' }}>
                   Confirmar
                 </button>
                 <button
                   onClick={() => { setInscribiendoId(null); setCompanerosTexto(''); }}
-                  style={estilos.btnSecondary}
+                  style={{ ...estilos.btnSecondary, width: 'auto', padding: '10px 26px' }}
                 >
                   Cancelar
                 </button>
@@ -575,15 +584,23 @@ const estilos = {
     boxShadow: '0 6px 0 rgba(0,0,0,0.35)', padding: '20px 20px 22px',
     marginBottom: 16, textAlign: 'center'
   },
+  // Pase 203: se saca el emoji 🏆 (acá y en destacadoTitulo) a pedido del
+  // usuario, y en su lugar se usa la misma imagen de trofeo que ya usa el
+  // menú/AppShell para la pestaña "Torneos" — un solo asset de copa en
+  // todo el proyecto en vez de la copa como emoji conviviendo con la copa
+  // como imagen en otras pantallas.
   destacadoBadge: {
-    display: 'inline-block', background: C.dorado, color: C.chocolate,
+    display: 'inline-flex', alignItems: 'center', gap: 6, background: C.dorado, color: C.chocolate,
     fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 12,
     padding: '4px 12px', borderRadius: 20, marginBottom: 10, letterSpacing: 0.5
   },
+  destacadoBadgeIcono: { height: 13, width: 'auto', objectFit: 'contain' },
   destacadoTitulo: {
+    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
     fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 22,
     color: C.crema, marginBottom: 16
   },
+  destacadoTituloIcono: { height: 26, width: 'auto', objectFit: 'contain' },
   // Pase siguiente: flexWrap agregado — con las 2 stats nuevas (Entrada/
   // Premio) ya son 5 en la fila, y sin wrap podían desbordar en mobile.
   destacadoStats: { display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 18, marginBottom: 18 },
