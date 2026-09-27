@@ -186,6 +186,20 @@ preload() {
     this.load.audio('repartir',    'assets/sounds/repartir_cartas.mp3');
     this.load.image('fondoEspera', conVersion('assets/images/juego/fondo-espera.jpeg'));
     const PERSONAJES_CANTO = ['gaucho', 'gaucha', 'gaucho2', 'gaucha2'];
+
+    // Pase 201: fondo de la pantalla de resultado final (reemplaza el
+    // velo negro plano por el mismo fondo fotográfico que ya usa el
+    // lobby) y la cara del propio personaje del jugador — victoriosa
+    // si ganó, derrotada si perdió — que reemplaza el emoji fijo que
+    // antes vivía pegado al texto del título. Se carga solo el par
+    // derrotado/victorioso del personaje que el jugador tiene elegido
+    // (con fallback a 'gaucho' si no tiene uno válido todavía), no los
+    // 8 juegos completos de expresiones, para no descargar de más.
+    this.load.image('fondoResultado', conVersion('assets/images/fondo-lobby.jpeg'));
+    const miPersonajeResultado = PERSONAJES_CANTO.includes(this.usuario?.personaje) ? this.usuario.personaje : 'gaucho';
+    this.load.image('caraDerrotado', conVersion(`assets/expresionesGaucho/${miPersonajeResultado}_derrotado.png`));
+    this.load.image('caraVictorioso', conVersion(`assets/expresionesGaucho/${miPersonajeResultado}_victorioso.png`));
+
     const CLAVES_CANTO = ['truco', 'retruco', 'vale-cuatro', 'envido', 'real-envido', 'falta-envido', 'quiero', 'no-quiero'];
     PERSONAJES_CANTO.forEach(p => {
       CLAVES_CANTO.forEach(c => {
@@ -968,7 +982,7 @@ _conectarSocket() {
         // revés de cómo estaba antes acá) se muestra SIEMPRE, y la
         // frase de campeón es una línea aparte, debajo, solo si
         // corresponde (ver `_mostrarPantallaFinal`).
-        const titulo = gano ? '🏆 ¡Ganaste!' : '😔 Perdiste';
+        const titulo = gano ? '¡Ganaste!' : 'Perdiste';
 
         // La aclaración de motivo ("El rival abandonó la partida.") NO
         // existe en el nativo (esa pantalla no distingue el motivo) —
@@ -1048,8 +1062,15 @@ this._limpiarSprites();
       .filter(c => c !== undefined)
       .forEach(c => { if (c !== this.scoreBg && c !== this.scoreText) c.setVisible(false); });
 
-    // Velo oscuro cubriendo toda la mesa
-    const velo = this.add.rectangle(400, 300, 800, 600, 0x000000, 0.65).setDepth(900);
+    // Pase 201: pedido del usuario de sacar el fondo negro plano de
+    // esta pantalla y usar el mismo fondo fotográfico que ya tiene el
+    // lobby — el velo de color pasa a ser mucho más liviano, solo para
+    // que la tarjeta central siga leyéndose bien encima.
+    const fondoResultado = this.add.image(400, 300, 'fondoResultado').setDepth(898);
+    fondoResultado.setDisplaySize(800, 600);
+    this._sprites.push(fondoResultado);
+
+    const velo = this.add.rectangle(400, 300, 800, 600, 0x14140f, 0.45).setDepth(900);
     this._sprites.push(velo);
 
     // Septuagésimo sexto pase: pedido explícito del usuario de copiar
@@ -1095,6 +1116,17 @@ this._limpiarSprites();
     this._sprites.push(textoTitulo);
 
     let altoContenido = padArriba + pillH;
+
+    // 1.5) Cara del personaje del propio jugador — victoriosa si ganó,
+    // derrotada si perdió — reemplaza el emoji fijo que antes vivía
+    // pegado al texto del título (pedido del usuario). Mismo personaje
+    // que el jugador tiene elegido, cargado en preload() como
+    // 'caraVictorioso'/'caraDerrotado'.
+    const caraTam = 72;
+    const caraFinal = this.add.image(400, 0, gano ? 'caraVictorioso' : 'caraDerrotado').setDepth(902);
+    caraFinal.setDisplaySize(caraTam, caraTam);
+    this._sprites.push(caraFinal);
+    altoContenido += 10 + caraTam;
 
     // 2) "👑 ¡Sos el campeón del torneo!" — línea aparte, no reemplaza
     // el título (en el nativo conviven las dos: el título de
@@ -1202,6 +1234,9 @@ this._limpiarSprites();
 
     let y = pillCenterY + pillH / 2 + 12;
 
+    caraFinal.setPosition(400, y + caraTam / 2);
+    y += caraTam + 10;
+
     if (campeonTxt) {
       campeonTxt.setPosition(400, y);
       y += campeonTxt.height + 16;
@@ -1225,7 +1260,6 @@ this._limpiarSprites();
       y += 14;
 
       const filaAncho = panelAncho - 80;
-      const avatarRadio = 12;
       jugadoresFinal.forEach((j) => {
         const colorAcento = j.gano ? 0x3E8E5A : 0xB0454B;
         const colorTexto = j.gano ? '#1f7a3c' : '#8c3a3a';
@@ -1238,26 +1272,11 @@ this._limpiarSprites();
         filaFondo.fillRoundedRect(400 - filaAncho / 2, y - 14, 5, 28, 2);
         this._sprites.push(filaFondo);
 
-        // Chip de avatar con la inicial del nombre — rompe la monotonía
-        // de puro texto en la fila, dorado si ganó, verde si perdió
-        // (mismo criterio de color que ya usa BracketView para sus
-        // chips de cruce).
-        const avatarX = 400 - filaAncho / 2 + 12 + avatarRadio;
-        const avatarGraf = this.add.graphics().setDepth(902);
-        avatarGraf.fillStyle(j.gano ? 0xFFB627 : 0x1f7a3c, 1);
-        avatarGraf.fillCircle(avatarX, y, avatarRadio);
-        avatarGraf.lineStyle(2, 0x4A2C2A, 1);
-        avatarGraf.strokeCircle(avatarX, y, avatarRadio);
-        this._sprites.push(avatarGraf);
-
-        const inicialNombre = (j.nombre || '?').trim().charAt(0).toUpperCase();
-        const avatarTexto = this.add.text(avatarX, y, inicialNombre, {
-          fontFamily: 'Fredoka, Arial', fontSize: '11px', fontStyle: '700',
-          color: j.gano ? '#4A2C2A' : '#FFF8ED',
-        }).setOrigin(0.5).setDepth(903);
-        this._sprites.push(avatarTexto);
-
-        const filaTexto = this.add.text(avatarX + avatarRadio + 8, y, j.nombre, {
+        // Pase 201: se quita el chip de avatar con la inicial del
+        // nombre (pedido del usuario: "con el nombre alcanza") — el
+        // texto de la fila arranca directo después de la franja de
+        // acento izquierda.
+        const filaTexto = this.add.text(400 - filaAncho / 2 + 14, y, j.nombre, {
           fontFamily: 'Nunito, Arial', fontSize: '13px', fontStyle: 'bold', color: colorTexto,
         }).setOrigin(0, 0.5).setDepth(902);
         this._sprites.push(filaTexto);
