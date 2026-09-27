@@ -101,13 +101,11 @@ export default function MisionesCard({ token, onMisionReclamada }) {
   return (
     <div style={estilos.panel}>
       <div style={estilos.header}>
-        <div style={estilos.avatarWrap}>
-          <img
-            src="/assets/images/icono-misiones.png"
-            alt=""
-            style={estilos.imagenPersonaje}
-          />
-        </div>
+        <img
+          src="/assets/images/icono-misiones.png"
+          alt=""
+          style={estilos.imagenPersonaje}
+        />
         <div>
           <div style={estilos.panelTitle}>Misiones semanales</div>
           <div style={estilos.resumen}>{completadas}/{datos.misiones.length} completadas</div>
@@ -192,22 +190,12 @@ const estilos = {
     position: 'relative', overflow: 'hidden'
   },
   header: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 },
-  // Quincuagésimo segundo pase — punto 4 del feedback de diseño ("Misiones
-  // semanales"): el avatar antes flotaba solo, sin nada detrás — ahora
-  // tiene un marco circular suave (blanco + borde chocolate muy tenue)
-  // para sentirse más "integrado" a la tarjeta en vez de superpuesto.
-  avatarWrap: {
-    width: 64, height: 64, borderRadius: '50%',
-    background: '#fff', border: `2px solid ${C.chocolate}22`,
-    boxShadow: '0 2px 0 rgba(0,0,0,0.08)',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    flexShrink: 0
-  },
-  // Pase 202: maxWidth/maxHeight en vez de un tamaño fijo — el cartelito
-  // ilustrado no es cuadrado como los avatares de personaje que mostraba
-  // antes, así que se deja que conserve su proporción real dentro del
-  // círculo en vez de estirarse o recortarse.
-  imagenPersonaje: { maxWidth: 52, maxHeight: 46, objectFit: 'contain' },
+  // Pase 204: a pedido del usuario se saca el marco circular blanco que
+  // rodeaba el cartelito (quedaba chico y recortado adentro) y la imagen
+  // se agranda ocupando ese mismo espacio directo, sin fondo ni borde
+  // propio — mismo criterio "sin marco" que ya usa el ícono grande del
+  // banner de torneo.
+  imagenPersonaje: { maxWidth: 78, maxHeight: 68, objectFit: 'contain', flexShrink: 0 },
   panelTitle: { fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 17, color: C.chocolate },
   resumen: { fontSize: 12.5, color: '#7a6660', fontWeight: 700, marginTop: 2 },
   errorBox: {

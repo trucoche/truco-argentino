@@ -247,11 +247,15 @@ return (
 
       {torneoDestacado && (
         <div style={estilos.destacadoCard}>
-          <div style={estilos.destacadoBadge}>
-            <img src="/assets/images/trofeo.png" alt="" style={estilos.destacadoBadgeIcono} /> PRÓXIMO TORNEO
-          </div>
-          <div style={estilos.destacadoTitulo}>
-            <img src="/assets/images/trofeo.png" alt="" style={estilos.destacadoTituloIcono} /> {torneoDestacado.titulo}
+          {/* Pase 204: un solo trofeo grande al lado de las DOS líneas de
+              texto (badge + título), en vez de un ícono chico repetido en
+              cada línea por separado — pedido explícito del usuario. */}
+          <div style={estilos.destacadoHeader}>
+            <img src="/assets/images/trofeo.png" alt="" style={estilos.destacadoHeaderIcono} />
+            <div style={estilos.destacadoHeaderTextos}>
+              <div style={estilos.destacadoBadge}>PRÓXIMO TORNEO</div>
+              <div style={estilos.destacadoTitulo}>{torneoDestacado.titulo}</div>
+            </div>
           </div>
 
           <div style={estilos.destacadoStats}>
@@ -589,18 +593,21 @@ const estilos = {
   // menú/AppShell para la pestaña "Torneos" — un solo asset de copa en
   // todo el proyecto en vez de la copa como emoji conviviendo con la copa
   // como imagen en otras pantallas.
+  // Pase 204: el trofeo pasó de vivir chico dentro de cada línea a ser un
+  // solo ícono grande al costado de las dos, así que estos dos ya no
+  // necesitan su propio display/gap para acomodar una imagen adentro.
+  destacadoHeader: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, marginBottom: 16 },
+  destacadoHeaderIcono: { height: 56, width: 'auto', objectFit: 'contain', flexShrink: 0 },
+  destacadoHeaderTextos: { display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 5, textAlign: 'left' },
   destacadoBadge: {
-    display: 'inline-flex', alignItems: 'center', gap: 6, background: C.dorado, color: C.chocolate,
+    display: 'inline-block', background: C.dorado, color: C.chocolate,
     fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 12,
-    padding: '4px 12px', borderRadius: 20, marginBottom: 10, letterSpacing: 0.5
+    padding: '4px 12px', borderRadius: 20, letterSpacing: 0.5
   },
-  destacadoBadgeIcono: { height: 13, width: 'auto', objectFit: 'contain' },
   destacadoTitulo: {
-    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
     fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 22,
-    color: C.crema, marginBottom: 16
+    color: C.crema
   },
-  destacadoTituloIcono: { height: 26, width: 'auto', objectFit: 'contain' },
   // Pase siguiente: flexWrap agregado — con las 2 stats nuevas (Entrada/
   // Premio) ya son 5 en la fila, y sin wrap podían desbordar en mobile.
   destacadoStats: { display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 18, marginBottom: 18 },

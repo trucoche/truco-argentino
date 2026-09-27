@@ -1122,7 +1122,11 @@ this._limpiarSprites();
     // pegado al texto del título (pedido del usuario). Mismo personaje
     // que el jugador tiene elegido, cargado en preload() como
     // 'caraVictorioso'/'caraDerrotado'.
-    const caraTam = 72;
+    // Pase 204: 72→140 — el usuario pidió agrandarla porque sobraba
+    // espacio vacío alrededor; el resto del layout ya calcula el alto
+    // del panel en base a `caraTam`, así que agrandarla acá alcanza (el
+    // panel sigue cómodo bajo el tope de 560px, ver `panelAlto` abajo).
+    const caraTam = 140;
     const caraFinal = this.add.image(400, 0, gano ? 'caraVictorioso' : 'caraDerrotado').setDepth(902);
     caraFinal.setDisplaySize(caraTam, caraTam);
     this._sprites.push(caraFinal);

@@ -81,6 +81,23 @@ export default function BracketView({ torneoId, usuario, token, onVolver, onEntr
     return nombreEquipo || jugadores.join(' / ');
   };
 
+  // Pase 204: nombre del campeón para la copa grande de arriba (pedido
+  // del usuario) — no hay un endpoint separado para esto, así que se
+  // busca en el partido de la ronda final cuál de los dos lados coincide
+  // con `ganador_entrada_id` (el mismo dato que ya usa el bracket de
+  // abajo para la coronita 👑 de cada cruce).
+  let nombreCampeon = null;
+  if (torneo.estado === 'finalizada' && torneo.ganador_entrada_id) {
+    const partidoFinal = partidos.find(p => p.ronda === ultimaRonda);
+    if (partidoFinal) {
+      if (partidoFinal.entrada_a_id === torneo.ganador_entrada_id) {
+        nombreCampeon = nombreDeLado(partidoFinal.nombre_entrada_a, partidoFinal.jugadores_a);
+      } else if (partidoFinal.entrada_b_id === torneo.ganador_entrada_id) {
+        nombreCampeon = nombreDeLado(partidoFinal.nombre_entrada_b, partidoFinal.jugadores_b);
+      }
+    }
+  }
+
   const yoJuegoEste = (partido) => {
     const enA = partido.jugadores_a && partido.jugadores_a.includes(usuario.username);
     const enB = partido.jugadores_b && partido.jugadores_b.includes(usuario.username);
@@ -110,6 +127,21 @@ export default function BracketView({ torneoId, usuario, token, onVolver, onEntr
           </div>
           <div style={{ ...estilos.estadoPill, ...(torneo.estado === 'finalizada' ? estilos.estadoPillFinalizado : estilos.estadoPillEnCurso) }}>
             {torneo.estado === 'finalizada' ? 'Finalizado' : 'En curso'}
+          </div>
+        </div>
+
+        {/* Pase 204: copa grande con el nombre del campeón — pedido del
+            usuario ("colocar la imagen de una copa grande, con el
+            espacio vacío en la parte del nombre y al finalizar el
+            torneo pondríamos allí el nombre del ganador"). Antes de que
+            el torneo termine el espacio del nombre queda como "Por
+            definir", igual que el resto de los placeholders de esta
+            pantalla. */}
+        <div style={estilos.trofeoCard}>
+          <img src="/assets/images/trofeo.png" alt="" style={estilos.trofeoCardImg} />
+          <div style={estilos.trofeoCardLabel}>Campeón</div>
+          <div style={{ ...estilos.trofeoCardNombre, ...(nombreCampeon ? estilos.trofeoCardNombreListo : {}) }}>
+            {nombreCampeon || 'Por definir'}
           </div>
         </div>
 
@@ -248,6 +280,19 @@ const estilos = {
   },
   estadoPillEnCurso: { background: C.celeste, color: C.chocolate },
   estadoPillFinalizado: { background: `linear-gradient(180deg, ${C.doradoClaro}, ${C.dorado})`, color: C.chocolate },
+
+  trofeoCard: {
+    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+    background: 'rgba(255,248,237,0.92)', border: `3px solid ${C.chocolate}`, borderRadius: 20,
+    padding: '18px 16px 16px', marginBottom: 14, boxShadow: '0 4px 0 rgba(0,0,0,0.25)'
+  },
+  trofeoCardImg: { height: 96, width: 'auto', objectFit: 'contain', marginBottom: 4 },
+  trofeoCardLabel: {
+    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 11, color: C.apagado,
+    textTransform: 'uppercase', letterSpacing: 0.8
+  },
+  trofeoCardNombre: { fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 20, color: C.apagado },
+  trofeoCardNombreListo: { color: C.doradoOscuro },
 
   progresoBox: {
     background: 'rgba(255,248,237,0.92)', border: `2.5px solid ${C.chocolate}`, borderRadius: 14,
