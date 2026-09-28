@@ -139,6 +139,13 @@ export default function Tienda({ usuario, token }) {
         setComprandoPackId(null);
         return;
       }
+      // Pase 220 — se guarda el saldo actual ANTES de mandar al usuario a
+      // Mercado Pago. El webhook que acredita las monedas es asíncrono y
+      // puede llegar después de que el navegador ya volvió del checkout;
+      // App.js usa este valor como referencia para saber si ya se acreditó
+      // o si todavía hay que esperar un poco (ver Pase 220 en App.js).
+      localStorage.setItem('truco_saldo_antes_de_pagar', String(usuario?.saldo ?? ''));
+
       // `sandboxInitPoint` solo viene con credenciales de PRUEBA — con las
       // credenciales productivas de verdad, el backend no lo manda y acá
       // se cae directo a `initPoint`.

@@ -212,12 +212,20 @@ function App() {
     // Pase 219 — vuelta desde Checkout Pro de Mercado Pago (ver
     // routes/pagos.js, back_urls). Quien realmente acredita las monedas es
     // el webhook del backend, no esta pantalla — acá solo se avisa y, si
-    // fue exitoso, se refresca el perfil para traer el saldo ya actualizado
-    // (el webhook normalmente ya corrió para cuando el navegador vuelve).
+    // fue exitoso, se refresca el perfil para traer el saldo ya actualizado.
     // No se usa `actualizarPerfil` (definida más abajo con useCallback) por
     // el `token` que tenía en el momento en que se montó ESTE efecto (null,
     // antes de que `restaurarSesion` lo cargue) — se pide el perfil de
     // nuevo acá mismo, con el token recién leído de localStorage.
+    //
+    // Pase 220 — se detectó en producción que el webhook (asíncrono) puede
+    // llegar DESPUÉS de que el navegador ya volvió del checkout: el cartel
+    // de "¡listo!" aparecía pero el saldo mostrado seguía siendo el viejo
+    // hasta que el usuario recargaba la página a mano. Ahora, en vez de
+    // pedir el perfil una sola vez, se reintenta cada 1.5s (hasta 9s en
+    // total) comparando contra el saldo que Tienda.js guardó ANTES de
+    // mandar al usuario a pagar — así se espera de verdad a que el webhook
+    // haya corrido, en lugar de confiar en que ya corrió.
     const pago = params.get('pago');
     if (pago) {
       window.history.replaceState({}, '', window.location.pathname);
@@ -226,17 +234,32 @@ function App() {
         if (pago === 'exito') {
           const tokenActual = localStorage.getItem('truco_token');
           if (tokenActual) {
-            try {
-              const res = await fetch(`${API_URL}/api/auth/perfil`, {
-                headers: { 'Authorization': `Bearer ${tokenActual}` }
-              });
-              const data = await res.json();
-              if (res.ok) {
-                setUsuario(data.usuario);
-                localStorage.setItem('truco_usuario', JSON.stringify(data.usuario));
+            const saldoAntesTexto = localStorage.getItem('truco_saldo_antes_de_pagar');
+            const saldoAntes = saldoAntesTexto ? Number(saldoAntesTexto) : null;
+            localStorage.removeItem('truco_saldo_antes_de_pagar');
+
+            for (let intento = 0; intento < 6; intento++) {
+              try {
+                const res = await fetch(`${API_URL}/api/auth/perfil`, {
+                  headers: { 'Authorization': `Bearer ${tokenActual}` }
+                });
+                const data = await res.json();
+                if (res.ok) {
+                  setUsuario(data.usuario);
+                  localStorage.setItem('truco_usuario', JSON.stringify(data.usuario));
+                  // Si no teníamos un saldo "antes" para comparar, o si ya
+                  // cambió respecto a ese valor, no hace falta seguir
+                  // esperando — ya se acreditó.
+                  if (saldoAntes === null || data.usuario.saldo !== saldoAntes) {
+                    break;
+                  }
+                }
+              } catch (err) {
+                console.error('Error actualizando perfil tras el pago:', err);
               }
-            } catch (err) {
-              console.error('Error actualizando perfil tras el pago:', err);
+              if (intento < 5) {
+                await new Promise((resolver) => setTimeout(resolver, 1500));
+              }
             }
           }
           alert('¡Listo! Tu pago se acreditó y ya tenés las monedas nuevas en tu cuenta.');
