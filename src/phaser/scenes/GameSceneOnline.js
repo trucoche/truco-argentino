@@ -2228,9 +2228,11 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
       // estaban confirmados correctos (log DIAG del pase anterior), así que
       // no era un bug de datos: con pasoApilado=2 cada carta nueva se
       // dibujaba apenas 2px corrida de la anterior (~40x60px), invisible a
-      // simple vista. Se sube a 16px para que cada carta de una mano nueva
-      // se note como una carta distinta, apilada en abanico.
-      const pasoApilado = 16;
+      // simple vista.
+      // Pase 216 — con 16px ya se distinguían, pero el usuario pidió
+      // juntarlas más ("separación bastante amplia"): se baja a 10px, lo
+      // justo para que se note el abanico sin dejar hueco entre cartas.
+      const pasoApilado = 10;
 
       // Igual que _dibujarFilaCartas: pre-escalamos con el canvas de alta
       // calidad (mismo criterio que la mano y el dorso) al tamaño BASE, antes
@@ -2238,9 +2240,13 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
       // el ajuste fino, en vez de reducir de un salto el PNG original a
       // ~40px vía WebGL sin mipmaps reales (por ser NPOT), que es lo que se
       // veía "escalonado" en estas cartitas jugadas de los rivales.
+      // Pase 216 — pedido explícito: agrandar el tamaño de las cartas
+      // jugadas en 2v2. Se sube el tamaño base de 40x60 a 52x78 (misma
+      // proporción, ~1.3x) — afecta también 3v3 y 1v1 al ser código
+      // compartido, pero nadie reportó que ahí se vieran mal.
       const factorJugada = this._factorEscalaTextura();
-      const anchoBaseJugadaR = Math.round(40 * factorJugada);
-      const altoBaseJugadaR = Math.round(60 * factorJugada);
+      const anchoBaseJugadaR = Math.round(52 * factorJugada);
+      const altoBaseJugadaR = Math.round(78 * factorJugada);
 
       jugadas.forEach((carta, idx) => {
         const esUltima = idx === jugadas.length - 1;
@@ -2269,8 +2275,8 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
         // "más lejos = más chica en las dos dimensiones" que ya usan
         // _dibujarFilaCartas/_dibujarDueloCartas más abajo.
         const persp = this._calcularPerspectiva(py);
-        const anchoCarta = 40 * persp.scale;
-        const altoCarta  = 60 * persp.scale;
+        const anchoCarta = 52 * persp.scale;
+        const altoCarta  = 78 * persp.scale;
 
         const img = this.add.image(px, py, keyEscalada)
           .setDisplaySize(anchoCarta, altoCarta)
