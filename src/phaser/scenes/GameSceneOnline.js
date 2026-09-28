@@ -1926,11 +1926,25 @@ _renderizarEquipos(e, animarReparto, hayCantoSinResolver) {
         // ninguno). Se baja el multiplicador de 1.2 a 0.9 para acercarlos
         // al centro de la mesa (menos radio vertical = más arriba en
         // pantalla, ya que esAbajo siempre suma hacia abajo).
-        radioXAsiento = radioX * 0.85;
-        radioYAsiento = radioY * 0.9;
+        // Pase 217 — nuevo pedido, mismos dos asientos: correrlos hacia
+        // afuera en X (cada uno se aleja del centro en su propio lado,
+        // izquierda/derecha) y un poco más arriba en Y todavía.
+        // Pase 218 — "en especial las de izquierda y derecha de abajo esas
+        // especialmente están muy abajo": bajan bastante más el
+        // multiplicador de Y (0.8 → 0.55) que el resto de los asientos, que
+        // solo suben "un poco". X no se toca, no fue parte de este pedido.
+        radioXAsiento = radioX * 0.95;
+        radioYAsiento = radioY * 0.55;
       } else if (esArribaCostado) {
-        radioXAsiento = radioX * 0.9;
-        radioYAsiento = radioY * 1.2;
+        // Pase 217 — mismo pedido para los de costado de arriba (3v3): más
+        // afuera en X, y más arriba en Y. Acá sin(rad) es NEGATIVO (a
+        // diferencia de esAbajo), así que subir más el asiento significa
+        // AUMENTAR radioYAsiento, no bajarlo (centroY + negativo*radio: a
+        // mayor radio, más se resta, más arriba en pantalla).
+        // Pase 218 — "los jugadores deben subir en el eje y un poco": se
+        // sube otro poco más (1.3 → 1.4).
+        radioXAsiento = radioX * 1.0;
+        radioYAsiento = radioY * 1.4;
       } else if (esArribaCentro) {
         // Pase 182 — bug real encontrado: este es el único asiento (de los 5
         // del 3v3) con cos(ángulo)≈0 — el que queda "de enfrente" del
@@ -1955,8 +1969,18 @@ _renderizarEquipos(e, animarReparto, hayCantoSinResolver) {
         // Pase 210: "quedó mejor... pero lo levantaría un poco más" — el
         // usuario confirmó que los dos de costado quedaron perfectos (no se
         // tocan), solo se sube otro poco el multiplicador 2v2: 1.15 → 1.3.
+        // Pase 217 — pedido nuevo, esta vez para 3v3: "el de enfrente al
+        // jugador también debe elevarse en el eje y unos pixeles para que
+        // entren todos correctamente en la mesa". Mismo razonamiento que
+        // esArribaCostado (sin(rad) negativo acá también): subir el
+        // multiplicador sube el asiento en pantalla. Se toca solo la rama
+        // 3v3 (0.85 → 0.95); el valor de 2v2 (1.3) no se toca, no fue parte
+        // de este pedido.
+        // Pase 218 — "los jugadores deben subir en el eje y un poco" (todos
+        // los de 3v3): se sube otro poco más (0.95 → 1.05). 2v2 sigue sin
+        // tocarse.
         radioXAsiento = radioX * 0.9;
-        radioYAsiento = radioY * (esTresVTres ? 0.85 : 1.3);
+        radioYAsiento = radioY * (esTresVTres ? 1.05 : 1.3);
       }
 
       const px = centroX + Math.cos(rad) * radioXAsiento;
@@ -2232,7 +2256,10 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
       // Pase 216 — con 16px ya se distinguían, pero el usuario pidió
       // juntarlas más ("separación bastante amplia"): se baja a 10px, lo
       // justo para que se note el abanico sin dejar hueco entre cartas.
-      const pasoApilado = 10;
+      // Pase 217 — con 10px, en 2v2 costaba distinguir bien cuál carta se
+      // había jugado; se sube a 14px, término medio entre el 16 (mucho
+      // hueco) y el 10 (demasiado pegadas).
+      const pasoApilado = 14;
 
       // Igual que _dibujarFilaCartas: pre-escalamos con el canvas de alta
       // calidad (mismo criterio que la mano y el dorso) al tamaño BASE, antes
@@ -2244,9 +2271,12 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
       // jugadas en 2v2. Se sube el tamaño base de 40x60 a 52x78 (misma
       // proporción, ~1.3x) — afecta también 3v3 y 1v1 al ser código
       // compartido, pero nadie reportó que ahí se vieran mal.
+      // Pase 217 — "quedó casi perfecto, agrandemos solo un poco más": se
+      // sube de 52x78 a 58x87 (misma proporción 2:3, ~1.12x), un ajuste
+      // fino, no otro salto grande.
       const factorJugada = this._factorEscalaTextura();
-      const anchoBaseJugadaR = Math.round(52 * factorJugada);
-      const altoBaseJugadaR = Math.round(78 * factorJugada);
+      const anchoBaseJugadaR = Math.round(58 * factorJugada);
+      const altoBaseJugadaR = Math.round(87 * factorJugada);
 
       jugadas.forEach((carta, idx) => {
         const esUltima = idx === jugadas.length - 1;
@@ -2275,8 +2305,8 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
         // "más lejos = más chica en las dos dimensiones" que ya usan
         // _dibujarFilaCartas/_dibujarDueloCartas más abajo.
         const persp = this._calcularPerspectiva(py);
-        const anchoCarta = 52 * persp.scale;
-        const altoCarta  = 78 * persp.scale;
+        const anchoCarta = 58 * persp.scale;
+        const altoCarta  = 87 * persp.scale;
 
         const img = this.add.image(px, py, keyEscalada)
           .setDisplaySize(anchoCarta, altoCarta)
@@ -2868,7 +2898,14 @@ _dibujarFilaCartas(cartas, y, jugable, esMiMano = false, escala = 1, animar = fa
     if (!cartas || cartas.length === 0) return;
     const anchoBase = 90 * escala;
     const altoBase  = 135 * escala;
-    const espacio   = Math.max(anchoBase + 15, 80);
+    // Pase 217 — único call site: la fila de cartas jugadas POR EL USUARIO
+    // en 2v2/3v3 (ver _renderizarEquipos, más abajo en este archivo). El
+    // usuario pidió acercarlas ("actualmente muy separadas") — con
+    // escala=0.60 el piso viejo de 80 quedaba muy por encima del ancho real
+    // de la carta (54px), dejando ~26px de hueco entre una y la siguiente.
+    // Se cambia a un piso mucho más chico (56) casi pegado al ancho de la
+    // carta, para que queden casi tocándose sin llegar a taparse del todo.
+    const espacio   = Math.max(anchoBase + 4, 56);
     const inicioX   = 400 - ((cartas.length - 1) * espacio) / 2;
 
     const esCartaJugada = !esMiMano;

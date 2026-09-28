@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { API_URL } from '../../config';
 
 const C = {
   verde: '#2D9B4F', verdeOscuro: '#1f7a3c',
@@ -108,11 +109,46 @@ function formatearPrecio(n) {
   return '$' + n.toLocaleString('es-AR');
 }
 
-export default function Tienda({ usuario }) {
+export default function Tienda({ usuario, token }) {
+  // Pase 219: reemplaza el placeholder "todavía no está conectado el pago"
+  // por la integración real con Mercado Pago (Checkout Pro) — el backend
+  // arma la preferencia (ver routes/pagos.js) y acá simplemente se manda al
+  // usuario a esa URL de pago. `comprandoPackId` deshabilita SOLO el botón
+  // del pack que se está por comprar (no toda la tienda), para que no se
+  // pueda hacer doble click y disparar dos preferencias para el mismo pack.
   const [avisoVisible, setAvisoVisible] = useState(false);
+  const [mensajeAviso, setMensajeAviso] = useState('');
+  const [comprandoPackId, setComprandoPackId] = useState(null);
 
-  const comprar = () => {
-    setAvisoVisible(true);
+  const comprar = async (packId) => {
+    if (comprandoPackId) return;
+    setComprandoPackId(packId);
+    try {
+      const res = await fetch(`${API_URL}/api/pagos/crear-preferencia`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ packId }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setMensajeAviso(data.error || 'No se pudo iniciar el pago. Probá de nuevo en un momento.');
+        setAvisoVisible(true);
+        setComprandoPackId(null);
+        return;
+      }
+      // `sandboxInitPoint` solo viene con credenciales de PRUEBA — con las
+      // credenciales productivas de verdad, el backend no lo manda y acá
+      // se cae directo a `initPoint`.
+      window.location.href = data.sandboxInitPoint || data.initPoint;
+    } catch (err) {
+      console.error('Error iniciando compra:', err);
+      setMensajeAviso('No se pudo conectar con el servidor. Probá de nuevo en un momento.');
+      setAvisoVisible(true);
+      setComprandoPackId(null);
+    }
   };
 
   return (
@@ -131,7 +167,7 @@ export default function Tienda({ usuario }) {
 
       {avisoVisible && (
         <div style={estilos.aviso}>
-          <span>🔜 Todavía no está conectado el pago acá — ¡ya estamos trabajando para sumar Mercado Pago pronto!</span>
+          <span>⚠️ {mensajeAviso}</span>
           <button style={estilos.avisoCerrar} onClick={() => setAvisoVisible(false)} title="Cerrar">✕</button>
         </div>
       )}
@@ -219,10 +255,12 @@ export default function Tienda({ usuario }) {
                       style={{
                         ...estilos.precioBoton,
                         ...(destacado ? estilos.precioBotonVerde : inauguracion ? estilos.precioBotonRojo : estilos.precioBotonDorado),
+                        ...(comprandoPackId ? estilos.precioBotonDeshabilitado : null),
                       }}
-                      onClick={comprar}
+                      disabled={!!comprandoPackId}
+                      onClick={() => comprar(pack.id)}
                     >
-                      {formatearPrecio(pack.precio)}
+                      {comprandoPackId === pack.id ? 'Redirigiendo…' : formatearPrecio(pack.precio)}
                     </button>
                   </div>
                 </div>
@@ -586,6 +624,9 @@ const estilos = {
   },
   precioBotonRojo: {
     background: `linear-gradient(180deg, ${C.crimson}, ${C.crimsonOscuro})`, color: '#fff',
+  },
+  precioBotonDeshabilitado: {
+    opacity: 0.6, cursor: 'default',
   },
   bannerPromo: {
     background: `linear-gradient(180deg, ${C.crimson}, ${C.crimsonOscuro})`, color: '#fff',

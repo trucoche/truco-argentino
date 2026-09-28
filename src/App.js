@@ -209,6 +209,46 @@ function App() {
       setCodigoParaUnirse(codigoDesdeUrl.toUpperCase());
     }
 
+    // Pase 219 — vuelta desde Checkout Pro de Mercado Pago (ver
+    // routes/pagos.js, back_urls). Quien realmente acredita las monedas es
+    // el webhook del backend, no esta pantalla — acá solo se avisa y, si
+    // fue exitoso, se refresca el perfil para traer el saldo ya actualizado
+    // (el webhook normalmente ya corrió para cuando el navegador vuelve).
+    // No se usa `actualizarPerfil` (definida más abajo con useCallback) por
+    // el `token` que tenía en el momento en que se montó ESTE efecto (null,
+    // antes de que `restaurarSesion` lo cargue) — se pide el perfil de
+    // nuevo acá mismo, con el token recién leído de localStorage.
+    const pago = params.get('pago');
+    if (pago) {
+      window.history.replaceState({}, '', window.location.pathname);
+      restaurarSesion().then(async () => {
+        setPantalla('tienda');
+        if (pago === 'exito') {
+          const tokenActual = localStorage.getItem('truco_token');
+          if (tokenActual) {
+            try {
+              const res = await fetch(`${API_URL}/api/auth/perfil`, {
+                headers: { 'Authorization': `Bearer ${tokenActual}` }
+              });
+              const data = await res.json();
+              if (res.ok) {
+                setUsuario(data.usuario);
+                localStorage.setItem('truco_usuario', JSON.stringify(data.usuario));
+              }
+            } catch (err) {
+              console.error('Error actualizando perfil tras el pago:', err);
+            }
+          }
+          alert('¡Listo! Tu pago se acreditó y ya tenés las monedas nuevas en tu cuenta.');
+        } else if (pago === 'pendiente') {
+          alert('Tu pago quedó pendiente de aprobación. Apenas se confirme, te vamos a acreditar las monedas.');
+        } else {
+          alert('El pago no se completó — no se realizó ningún cobro.');
+        }
+      });
+      return;
+    }
+
     restaurarSesion();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -504,7 +544,7 @@ function App() {
             />
           )}
           {pantalla === 'tienda' && (
-            <Tienda usuario={usuario} />
+            <Tienda usuario={usuario} token={token} />
           )}
           {pantalla === 'chat' && (
             <ChatGlobal token={token} usuario={usuario} abrirSolicitudesSenial={senialAbrirSolicitudes} />
