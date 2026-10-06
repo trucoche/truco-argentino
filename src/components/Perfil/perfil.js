@@ -275,13 +275,10 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
                   ><img src="/assets/images/icono-cambiar-foto.png" alt="" style={estilos.avatarBadgeIcono} /></button>
                 </div>
 
+                {/* Pase 329: el nombre va en un cartelito de pergamino con contorno negro (legible sobre
+                    cualquier fondo). El rango se muestra en su propia tarjeta, justo al lado/abajo. */}
                 <div style={estilos.identidad}>
-                  <div style={{ ...estilos.username, ...(usuario?.fondo_perfil_url ? estilos.textoSobreFondo : {}) }}>{usuario?.username}</div>
-                  <div style={{ ...estilos.nivelTexto, ...(usuario?.fondo_perfil_url ? estilos.textoSobreFondo : {}) }}>
-                    {usuario?.rango?.esTop500
-                      ? `${usuario.rango.nombre} · #${usuario.rango.posicion ?? '—'}`
-                      : `${usuario?.rango?.nombre || 'Mancebo'} ${usuario?.rango?.division || 'III'}`}
-                  </div>
+                  <div style={estilos.cartelNombre}>{usuario?.username}</div>
                 </div>
               </div>
 
@@ -475,6 +472,11 @@ const estilos = {
   },
   // Pase 328: sin placa translúcida; el texto sobre el banner lleva sombra oscura.
   textoSobreFondo: { color: '#FFFBEB', textShadow: '0 1px 3px rgba(0,0,0,0.8), 0 0 2px rgba(0,0,0,0.6)' },
+  cartelNombre: {
+    display: 'inline-block', maxWidth: '100%', boxSizing: 'border-box', background: '#FFFBEB', border: '1.5px solid #000',
+    borderRadius: 10, padding: '5px 14px', fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 22,
+    color: '#2C160E', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
+  },
   nivelTexto: { fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 14, color: C.chocolate, marginTop: 2 },
   monedasChip: {
     position: 'absolute', right: 10, bottom: 10, zIndex: 2,
