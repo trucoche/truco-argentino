@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import Cropper from 'react-easy-crop';
 import { API_URL as BASE_URL } from '../../config';
+import PopupMadera from '../Popup/PopupMadera';
 
 const API_BASE = `${BASE_URL}/api`;
 
@@ -131,104 +132,90 @@ export default function CambiarFondoModal({ token, saldoActual, onCerrar, onFond
     }
   };
 
+  // Pase 325: pop-up de madera (cinta, placa con tachas, botones píldora 3D, X en chip carmesí).
+  const deshabilitado = !puedeAceptar || saldoInsuficiente;
+  const botones = [];
+  if (tieneFondo && !archivoSrc) {
+    botones.push({
+      texto: enviando ? 'Eliminando...' : 'Eliminar fondo (restablecer por defecto)',
+      tipo: 'carmesi', onClick: eliminarFondo, disabled: enviando,
+    });
+  }
+  botones.push({ texto: 'Cancelar', tipo: 'neutro', onClick: onCerrar });
+  botones.push({
+    tipo: 'verde',
+    disabled: deshabilitado,
+    onClick: confirmar,
+    contenido: enviando ? 'Guardando...' : (
+      <>
+        Aceptar <img src="/assets/images/moneda.png" alt="" /> {COSTO_FONDO}
+      </>
+    ),
+  });
+
   return (
-    <div style={estilos.overlay} onClick={onCerrar}>
-      <div style={estilos.modal} onClick={(e) => e.stopPropagation()}>
-        <div style={estilos.header}>
-          <div style={estilos.titulo}>Cambiar fondo de perfil</div>
-          <button style={estilos.btnCerrar} onClick={onCerrar} title="Cerrar">✕</button>
+    <PopupMadera
+      visible
+      titulo="Cambiar fondo"
+      cinta="dorada"
+      anchoMax={480}
+      scroll
+      centrado={false}
+      onCerrar={onCerrar}
+      botones={botones}
+    >
+      {!archivoSrc ? (
+        <label style={estilos.elegirArchivo}>
+          <span style={estilos.elegirArchivoIcono}>🖼️</span>
+          <span>Elegí una foto de tu dispositivo</span>
+          <input type="file" accept="image/png,image/jpeg,image/webp" onChange={elegirArchivo} style={{ display: 'none' }} />
+        </label>
+      ) : (
+        <div style={estilos.cropArea}>
+          <Cropper
+            image={archivoSrc}
+            crop={crop}
+            zoom={zoom}
+            aspect={ASPECTO_RECORTE}
+            onCropChange={setCrop}
+            onZoomChange={setZoom}
+            onCropComplete={onCropComplete}
+          />
         </div>
+      )}
 
-        {!archivoSrc ? (
-          <label style={estilos.elegirArchivo}>
-            <span style={estilos.elegirArchivoIcono}>🖼️</span>
-            <span>Elegí una foto de tu dispositivo</span>
-            <input type="file" accept="image/png,image/jpeg,image/webp" onChange={elegirArchivo} style={{ display: 'none' }} />
-          </label>
-        ) : (
-          <div style={estilos.cropArea}>
-            <Cropper
-              image={archivoSrc}
-              crop={crop}
-              zoom={zoom}
-              aspect={ASPECTO_RECORTE}
-              onCropChange={setCrop}
-              onZoomChange={setZoom}
-              onCropComplete={onCropComplete}
-            />
-          </div>
-        )}
-
-        {archivoSrc && (
-          <div style={estilos.zoomFila}>
-            <span style={estilos.zoomLabel}>🔍</span>
-            <input
-              type="range" min={1} max={3} step={0.05} value={zoom}
-              onChange={(e) => setZoom(Number(e.target.value))}
-              style={estilos.zoomSlider}
-            />
-          </div>
-        )}
-
-        {tieneFondo && !archivoSrc && (
-          <button style={estilos.btnEliminarFondo} onClick={eliminarFondo} disabled={enviando}>
-            {enviando ? 'Eliminando...' : 'Eliminar fondo (restablecer por defecto)'}
-          </button>
-        )}
-
-        {error && <div style={estilos.errorBox}>{error}</div>}
-        {saldoInsuficiente && !error && (
-          <div style={estilos.errorBox}>No te alcanzan las monedas — te faltan {COSTO_FONDO - Math.round(Number(saldoActual) || 0)}.</div>
-        )}
-
-        <div style={estilos.terminos}>
-          <div style={estilos.terminosTitulo}>Debés aceptar estos términos antes de continuar:</div>
-          <label style={estilos.checkFila}>
-            <input type="checkbox" checked={aceptaNormas} onChange={(e) => setAceptaNormas(e.target.checked)} />
-            <span>No infringe las normas: no se permite pornografía, fotos ofensivas, desagradables, ni discursos de odio. Entiendo que mi cuenta será suspendida en caso contrario.</span>
-          </label>
-          <label style={estilos.checkFila}>
-            <input type="checkbox" checked={aceptaCosto} onChange={(e) => setAceptaCosto(e.target.checked)} />
-            <span>Acepto que se me descontarán <strong>{COSTO_FONDO} monedas</strong> por cambiar mi fondo.</span>
-          </label>
+      {archivoSrc && (
+        <div style={estilos.zoomFila}>
+          <span style={estilos.zoomLabel}>🔍</span>
+          <input
+            type="range" min={1} max={3} step={0.05} value={zoom}
+            onChange={(e) => setZoom(Number(e.target.value))}
+            style={estilos.zoomSlider}
+          />
         </div>
+      )}
 
-        <div style={estilos.botonera}>
-          <button style={estilos.btnCancelar} onClick={onCerrar}>Cancelar</button>
-          <button
-            style={{ ...estilos.btnAceptar, ...(!puedeAceptar || saldoInsuficiente ? estilos.btnAceptarDisabled : {}) }}
-            onClick={confirmar}
-            disabled={!puedeAceptar || saldoInsuficiente}
-          >
-            {enviando ? 'Guardando...' : (
-              <>
-                Aceptar <img src="/assets/images/moneda.png" alt="" style={estilos.monedaIcono} /> {COSTO_FONDO}
-              </>
-            )}
-          </button>
-        </div>
+      {error && <div style={estilos.errorBox}>{error}</div>}
+      {saldoInsuficiente && !error && (
+        <div style={estilos.errorBox}>No te alcanzan las monedas — te faltan {COSTO_FONDO - Math.round(Number(saldoActual) || 0)}.</div>
+      )}
+
+      <div style={estilos.terminos}>
+        <div style={estilos.terminosTitulo}>Debés aceptar estos términos antes de continuar:</div>
+        <label style={estilos.checkFila}>
+          <input type="checkbox" checked={aceptaNormas} onChange={(e) => setAceptaNormas(e.target.checked)} />
+          <span>No infringe las normas: no se permite pornografía, fotos ofensivas, desagradables, ni discursos de odio. Entiendo que mi cuenta será suspendida en caso contrario.</span>
+        </label>
+        <label style={estilos.checkFila}>
+          <input type="checkbox" checked={aceptaCosto} onChange={(e) => setAceptaCosto(e.target.checked)} />
+          <span>Acepto que se me descontarán <strong>{COSTO_FONDO} monedas</strong> por cambiar mi fondo.</span>
+        </label>
       </div>
-    </div>
+    </PopupMadera>
   );
 }
 
 const estilos = {
-  overlay: {
-    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    zIndex: 1000, padding: 16
-  },
-  modal: {
-    background: C.crema, border: `4px solid ${C.chocolate}`, borderRadius: 20,
-    boxShadow: '0 8px 0 rgba(0,0,0,0.3)', padding: '18px 20px 20px',
-    width: '100%', maxWidth: 460, maxHeight: '92vh', overflowY: 'auto'
-  },
-  header: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
-  titulo: { fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 19, color: C.chocolate },
-  btnCerrar: {
-    width: 30, height: 30, borderRadius: 8, border: `2px solid ${C.chocolate}`,
-    background: '#fff', color: C.chocolate, fontWeight: 800, cursor: 'pointer'
-  },
   elegirArchivo: {
     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
     gap: 8, height: 200, border: `3px dashed ${C.chocolate}55`, borderRadius: 14,

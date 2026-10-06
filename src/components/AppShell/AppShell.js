@@ -207,10 +207,11 @@ export default function AppShell({
             aria-hidden={!bonusDisponible}
             tabIndex={bonusDisponible ? 0 : -1}
           >
+            {/* Pase 326: medallón ilustrado nuevo (aro dorado + caja de regalo). */}
             <img
               src="/assets/images/regalo.png"
               alt=""
-              style={{ width: 46, height: 46, objectFit: 'contain' }}
+              style={{ width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none' }}
             />
           </button>
           {/* Octogésimo tercer pase: se saca el botón de mutear música de
@@ -230,9 +231,8 @@ export default function AppShell({
               header — agrandado 30x44→38x54 (misma proporción real del
               archivo), sin tocar el tamaño del recuadro. */}
           <button className="ts-icon-btn ts-icon-logout" onClick={onLogout} title="Cerrar sesión" aria-label="Cerrar sesión">
-            {/* Pase 318: placa gris de cuero de fondo + puerta de madera adelante. */}
-            <img src="/assets/images/boton-logout-fondo.png" alt="" className="ts-logout-fondo" />
-            <img src="/assets/images/icono-logout.png" alt="" className="ts-logout-puerta" />
+            {/* Pase 326: una sola ilustración (puerta sobre placa de cuero granate). */}
+            <img src="/assets/images/boton-logout.png" alt="" className="ts-logout-fondo" />
           </button>
         </div>
       </header>

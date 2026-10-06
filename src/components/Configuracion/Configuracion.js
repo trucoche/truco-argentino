@@ -1,3 +1,4 @@
+import { confirmarPopup } from '../Popup/PopupMadera';
 import React, { useState, useEffect, useCallback } from 'react';
 import PersonajeSelector from '../Lobby/PersonajeSelector';
 import { API_URL as BASE_URL } from '../../config';
@@ -57,7 +58,14 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
   // abrir otra página. La cuenta recién se desactiva al hacer clic en el link.
   const pedirEliminacionCuenta = async () => {
     if (enviandoEliminacion) return;
-    if (!window.confirm('Te vamos a enviar un mail para confirmar la eliminación de tu cuenta. Recién cuando abras el enlace del mail se desactiva, y tenés 30 días para arrepentirte volviendo a iniciar sesión. ¿Enviar el mail?')) return;
+    const confirmado = await confirmarPopup({
+      titulo: 'Eliminar mi cuenta',
+      cinta: 'roja',
+      mensaje: 'Te vamos a enviar un mail para confirmar la eliminación de tu cuenta. Recién cuando abras el enlace del mail se desactiva, y tenés 30 días para arrepentirte volviendo a iniciar sesión. ¿Enviar el mail?',
+      textoSi: 'Enviar el mail',
+      tipoSi: 'carmesi',
+    });
+    if (!confirmado) return;
     setEnviandoEliminacion(true);
     try {
       const res = await fetch(`${API_URL}/solicitar-eliminacion-propia`, {

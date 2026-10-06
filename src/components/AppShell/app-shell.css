@@ -302,10 +302,12 @@
 /* Pase 317: botón de bono como en el nativo — círculo de madera oscura con borde negro
    grueso, sombra dura y resplandor rojo detrás del regalo dorado. */
 .ts-icon-btn.ts-icon-bonus-activo {
+  /* Pase 326: el medallón ilustrado (aro dorado) ya trae su propio marco; solo se le deja el resplandor rojo. */
   border-radius: 50%;
-  border: 3px solid #1A1410;
-  background: linear-gradient(135deg, #6B4A34 0%, #4A3226 55%, #2A1C14 100%);
-  box-shadow: 0 4px 0 #000, 0 0 20px 9px rgba(232, 72, 58, 0.55);
+  border: none;
+  padding: 0;
+  background: transparent;
+  box-shadow: 0 0 20px 9px rgba(232, 72, 58, 0.55);
 }
 
 /* Centésimo tercer pase: se saca `.ts-icon-bonus-inactivo` — el botón de

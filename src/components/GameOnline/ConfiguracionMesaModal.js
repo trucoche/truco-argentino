@@ -1,4 +1,5 @@
 import React from 'react';
+import PopupMadera from '../Popup/PopupMadera';
 
 const C = {
   chocolate: '#4A2C2A',
@@ -35,77 +36,53 @@ export default function ConfiguracionMesaModal({
 }) {
   if (!visible) return null;
 
+  // Pase 325: pop-up de madera unificado (cinta, placa con 4 tachas, botón píldora 3D, X en chip).
+  // Los sliders de madera con nudo ilustrado (nonagésimo cuarto pase) se mantienen tal cual.
   return (
-    <div style={estilos.fondo} onClick={onCerrar}>
-      {/* Nonagésimo quinto pase: contenedor exterior nuevo — mismo criterio
-          de 2 capas que `accesoCardExterior`/`accesoCard` en Lobby.js. Antes
-          el marco (borde + fondo + boxShadow) vivía directo en `panel`
-          (la misma caja que el header/cuerpo); ahora `panelExterior` es la
-          placa de madera oscura con los 4 remaches de bronce, y `panel`
-          (renombrado en los hechos a "tarjeta interior") queda inset
-          adentro, sin su propio borde/ancho/boxShadow de antes. */}
-      <div style={estilos.panelExterior} onClick={(e) => e.stopPropagation()}>
-        <span style={{ ...estilos.remache, top: 8, left: 8 }} />
-        <span style={{ ...estilos.remache, top: 8, right: 8 }} />
-        <span style={{ ...estilos.remache, bottom: 8, left: 8 }} />
-        <span style={{ ...estilos.remache, bottom: 8, right: 8 }} />
-      <div style={estilos.panel}>
-        <div style={estilos.header}>
-          <img src="/assets/images/icono-engranaje.png" alt="" style={estilos.iconoTitulo} />
-          <span>Configuración de la partida</span>
-        </div>
-
-        <div style={estilos.cuerpo}>
-          {/* Nonagésimo cuarto pase: estos 2 sliders usaban solo `.tc-slider`
-              (thumb/track dorado liso de navegador) — el usuario pidió
-              explícitamente el MISMO slider de madera con el nudo-círculo
-              ilustrado que ya usa Configuracion.js (pantalla de ajustes
-              global) para "música de fondo". Como ambos controles manejan
-              el mismo volumen global (música/voces), tiene sentido que se
-              vean idénticos en los dos lugares. Al ser un solo componente
-              compartido por GameOnlinePhaser.js, este cambio ya cubre 1v1,
-              2v2 y 3v3 sin duplicar nada por modo. Mismo patrón de 2 capas
-              que Configuracion.js: el `<div>` de afuera (`sliderPistaContenedor`)
-              lleva la imagen del tronco a tamaño fijo (250x54, sin estirar)
-              y el `<input>` de adentro (`tc-slider-grande`) va acortado para
-              que el recorrido del thumb no pise las puntas ilustradas. */}
-          <div style={estilos.fila}>
-            <label style={estilos.label}>🎵 Música de fondo</label>
-            <div style={estilos.sliderPistaContenedor}>
-              <input
-                type="range"
-                min={0}
-                max={1}
-                step={0.05}
-                value={musicaVolumen}
-                onChange={(e) => onCambiarMusicaVolumen(Number(e.target.value))}
-                className="tc-slider tc-slider-grande"
-              />
-            </div>
-          </div>
-
-          <div style={estilos.fila}>
-            <label style={estilos.label}>🗣️ Voces de los cantos</label>
-            <div style={estilos.sliderPistaContenedor}>
-              <input
-                type="range"
-                min={0}
-                max={1}
-                step={0.05}
-                value={vocesVolumen}
-                onChange={(e) => onCambiarVocesVolumen(Number(e.target.value))}
-                className="tc-slider tc-slider-grande"
-              />
-            </div>
-          </div>
-
-          <p style={estilos.notaFutura}>Más opciones de partida, próximamente.</p>
-
-          <button style={estilos.botonCerrar} onClick={onCerrar}>Cerrar</button>
+    <PopupMadera
+      visible
+      absoluto
+      titulo="Configuración"
+      cinta="madera"
+      icono="/assets/images/icono-engranaje.png"
+      tamIcono={56}
+      anchoMax={340}
+      centrado={false}
+      onCerrar={onCerrar}
+      botones={[{ texto: 'Cerrar', tipo: 'dorado', onClick: onCerrar }]}
+    >
+      <div style={estilos.fila}>
+        <label style={estilos.label}>🎵 Música de fondo</label>
+        <div style={estilos.sliderPistaContenedor}>
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.05}
+            value={musicaVolumen}
+            onChange={(e) => onCambiarMusicaVolumen(Number(e.target.value))}
+            className="tc-slider tc-slider-grande"
+          />
         </div>
       </div>
+
+      <div style={estilos.fila}>
+        <label style={estilos.label}>🗣️ Voces de los cantos</label>
+        <div style={estilos.sliderPistaContenedor}>
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.05}
+            value={vocesVolumen}
+            onChange={(e) => onCambiarVocesVolumen(Number(e.target.value))}
+            className="tc-slider tc-slider-grande"
+          />
+        </div>
       </div>
-    </div>
+
+      <p style={estilos.notaFutura}>Más opciones de partida, próximamente.</p>
+    </PopupMadera>
   );
 }
 

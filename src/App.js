@@ -12,7 +12,6 @@ import Historial from './components/Historial/Historial';
 import Configuracion from './components/Configuracion/Configuracion';
 import PoliticaPrivacidad from './components/Configuracion/PoliticaPrivacidad';
 import TerminosServicio from './components/Configuracion/TerminosServicio';
-import RangosPrueba from './components/Perfil/RangosPrueba';
 import OlvidePassword from './components/Auth/OlvidePassword';
 import ResetPassword from './components/Auth/ResetPassword';
 import VerificarEmail from './components/Auth/VerificarEmail';
@@ -26,6 +25,10 @@ import LogroDesbloqueadoPopup from './components/Lobby/LogroDesbloqueadoPopup';
 import { ToastProvider } from './contexts/ToastContext';
 import { getSocket } from './services/socket';
 import AvisosGlobales from './components/Desafio/AvisosGlobales';
+import { AvisoMaderaHost, instalarAlertaMadera, mostrarAviso } from './components/Popup/PopupMadera';
+
+// Pase 325: todos los `alert()` de la web se muestran con el pop-up de madera.
+instalarAlertaMadera();
 
 // Pase 313: las páginas públicas de Política de Privacidad y Términos de
 // Servicio (sin login, fuera del AppShell) no tenían fondo. Mismo fondo que el
@@ -39,7 +42,7 @@ const FONDO_PAGINA_PUBLICA = {
   backgroundRepeat: 'no-repeat',
 };
 
-function App() {
+function AppInterna() {
   const CLAVE_MUSICA_MUTEADA = 'truco_musica_muteada';
   const CLAVE_MUSICA_VOLUMEN = 'truco_musica_volumen';
   const CLAVE_VOCES_VOLUMEN = 'truco_voces_volumen';
@@ -201,11 +204,6 @@ function App() {
     // Pase 312: Términos de Servicio, también público (enlazado con /privacidad).
     if (path === '/terminos') {
       setPantalla('terminos-publica');
-      return;
-    }
-    // Pase 316: página de prueba de assets de rangos (panel/anillo/logo de los 10 rangos).
-    if (path === '/rangos-prueba') {
-      setPantalla('rangos-prueba');
       return;
     }
     if (path === '/eliminar-cuenta') {
@@ -388,11 +386,15 @@ function App() {
       const data = await res.json();
 
       if (!res.ok) {
-        alert(data.error || 'No se pudo reclamar el bono');
+        mostrarAviso({ titulo: 'Aviso', cinta: 'roja', mensaje: data.error || 'No se pudo reclamar el bono', botones: [{ texto: 'Aceptar' }] });
         return;
       }
 
-      alert(data.mensaje);
+      // Pase 325: pop-up de madera con la caja de regalo y resplandor.
+      mostrarAviso({
+        titulo: '¡Bonus diario!', cinta: 'dorada', icono: '/assets/images/regalo.png', tamIcono: 96,
+        mensaje: data.mensaje, botones: [{ texto: 'Aceptar', tipo: 'verde' }],
+      });
       actualizarPerfil();
     } catch (err) {
       console.error('Error reclamando bono diario:', err);
@@ -508,15 +510,6 @@ function App() {
         }}
       />
       </div>
-    );
-  } else if (pantalla === 'rangos-prueba') {
-    contenido = (
-      <RangosPrueba
-        onVolver={() => {
-          setPantalla('auth');
-          window.history.replaceState({}, '', '/');
-        }}
-      />
     );
   } else if (pantalla === 'terminos-publica') {
     contenido = (
@@ -746,6 +739,17 @@ function App() {
         }}
       />
     </ToastProvider>
+  );
+}
+
+// Pase 325: el anfitrión de pop-ups vive acá afuera para que funcione en TODAS las pantallas
+// (login, partida, políticas…), no solo en la principal.
+function App() {
+  return (
+    <>
+      <AppInterna />
+      <AvisoMaderaHost />
+    </>
   );
 }
 

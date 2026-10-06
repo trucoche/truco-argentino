@@ -298,10 +298,6 @@ export default function PerfilRivalModal({ username, token, onClose }) {
               </div>
             </div>
 
-            {expandido && datos.usuario.bio && (
-              <div style={estilos.bio}>“{datos.usuario.bio}”</div>
-            )}
-
             <div style={estilos.insigniasHeader}>Insignias</div>
             <div style={estilos.insigniasFila}>
               {datos.insignias.map(i => (

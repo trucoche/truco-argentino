@@ -1,3 +1,4 @@
+import PopupMadera from '../Popup/PopupMadera';
 import React, { useEffect, useRef, useState } from 'react';
 import { useToast } from '../../contexts/ToastContext';
 import { getSocket } from '../../services/socket';
@@ -157,20 +158,23 @@ export default function AvisosGlobales({ usuario, token, onAceptarDesafio, onCam
 
   return (
     <>
-      {!!desafioRecibido && (
-        <div style={estilos.overlay}>
-          <div style={estilos.box}>
-            <div style={estilos.icono}>⚔️</div>
-            <div style={estilos.texto}>
-              <strong>{desafioRecibido.de?.username}</strong> te desafió a jugar.
-            </div>
-            <div style={estilos.fila}>
-              <button style={estilos.btnAceptar} onClick={() => responder(true)}>✔ Aceptar</button>
-              <button style={estilos.btnRechazar} onClick={() => responder(false)}>✖ Rechazar</button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Pase 325: el desafío es un pop-up de madera (cinta roja, espadas con resplandor, botones píldora 3D). */}
+      <PopupMadera
+        visible={!!desafioRecibido}
+        titulo="¡Desafío!"
+        cinta="roja"
+        emojiIcono="⚔️"
+        tamIcono={64}
+        onCerrar={() => responder(false)}
+        botones={[
+          { texto: '✔ Aceptar', tipo: 'verde', onClick: () => responder(true) },
+          { texto: '✖ Rechazar', tipo: 'carmesi', onClick: () => responder(false) },
+        ]}
+      >
+        <p style={{ margin: '0 0 14px', fontWeight: 800, fontSize: 15, color: '#2C160E', textAlign: 'center' }}>
+          <strong>{desafioRecibido?.de?.username}</strong> te desafió a jugar.
+        </p>
+      </PopupMadera>
       {conversacionAbierta && token && (
         <MensajePrivadoModal
           username={conversacionAbierta}

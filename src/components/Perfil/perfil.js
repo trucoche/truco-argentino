@@ -4,6 +4,7 @@ import PantallaCarga from '../PantallaCarga/PantallaCarga';
 import { useToast } from '../../contexts/ToastContext';
 import { API_URL as BASE_URL } from '../../config';
 import { rangoUi } from './rangosUi';
+import { PlacaMadera } from '../Popup/PopupMadera';
 
 const API_BASE = `${BASE_URL}/api`;
 
@@ -186,42 +187,6 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
     }
   };
 
-  // ---------- Sobre mí (bio) ----------
-  const [bio, setBio] = useState(usuario?.bio || '');
-  const [editandoBio, setEditandoBio] = useState(false);
-  const [guardandoBio, setGuardandoBio] = useState(false);
-  const [errorBio, setErrorBio] = useState('');
-
-  useEffect(() => {
-    if (!editandoBio) setBio(usuario?.bio || '');
-  }, [usuario?.bio, editandoBio]);
-
-  const guardarBio = async () => {
-    setGuardandoBio(true);
-    setErrorBio('');
-    try {
-      const res = await fetch(`${API_BASE}/auth/bio`, {
-        method: 'PUT',
-        headers,
-        body: JSON.stringify({ bio })
-      });
-      const data = await res.json();
-
-      if (!res.ok) {
-        setErrorBio(data.error || 'No se pudo guardar');
-        return;
-      }
-
-      setEditandoBio(false);
-      if (onPerfilActualizado) onPerfilActualizado();
-    } catch (err) {
-      console.error('Error guardando bio:', err);
-      setErrorBio('No se pudo conectar con el servidor');
-    } finally {
-      setGuardandoBio(false);
-    }
-  };
-
   const completados = logros.filter(l => l.completado).length;
 
   const partidasJugadas = Number(usuario?.partidas_jugadas || 0);
@@ -238,7 +203,7 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
         <div style={estilos.columnaPrincipal}>
 
           {/* Encabezado: foto, nombre, saldo + acceso a la Tienda, bio y género */}
-          <div style={estilos.panel}>
+          <PlacaMadera>
             {/* Centésimo pase: fondo de perfil personalizable (foto propia,
                 20 monedas) — va DETRÁS de esta fila (no del panel entero,
                 para no pisar la legibilidad de bio/género más abajo).
@@ -246,9 +211,14 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
                 translúcido que ya no estira `saldoBloque` al borde derecho
                 (antes usaba `marginLeft:auto`) — eso libera el resto de la
                 fila para que se vea la foto de fondo. */}
+            {/* Pase 325: el banner va incrustado en un marco de madera ahuecado (esquinas suaves) en
+                vez del recorte gris de antes; sin fondo propio queda el pergamino. */}
+            <div style={estilos.marcoBanner}>
+            <div style={estilos.marcoBannerSombra} />
             <div
               style={{
                 ...estilos.encabezadoFilaContenedor,
+                ...(usuario?.fondo_perfil_url ? {} : { background: '#FFF3D6' }),
                 ...(usuario?.fondo_perfil_url ? {
                   backgroundImage: `linear-gradient(rgba(20,20,15,0.1), rgba(20,20,15,0.35)), url(${usuario.fondo_perfil_url})`,
                   backgroundSize: 'cover',
@@ -327,50 +297,12 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
                 {Math.round(Number(usuario?.saldo) || 0)}
               </div>
             </div>
-
-            <div style={estilos.campo}>
-              <div style={estilos.campoEtiqueta}>💭 Sobre mí</div>
-              {editandoBio ? (
-                <>
-                  <textarea
-                    value={bio}
-                    onChange={(e) => setBio(e.target.value.slice(0, 280))}
-                    style={estilos.bioTextarea}
-                    placeholder="Contá quién sos, qué te gusta, y usá emojis si querés."
-                    maxLength={280}
-                    autoFocus
-                  />
-                  <div style={estilos.bioFooter}>
-                    <span style={estilos.bioContador}>{bio.length}/280</span>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button
-                        style={estilos.btnCancelar}
-                        onClick={() => { setEditandoBio(false); setErrorBio(''); setBio(usuario?.bio || ''); }}
-                      >
-                        Cancelar
-                      </button>
-                      <button style={estilos.btnGuardar} disabled={guardandoBio} onClick={guardarBio}>
-                        {guardandoBio ? 'Guardando...' : 'Guardar'}
-                      </button>
-                    </div>
-                  </div>
-                  {errorBio && <div style={estilos.errorTexto}>{errorBio}</div>}
-                </>
-              ) : (
-                <div style={estilos.bioTexto} onClick={() => setEditandoBio(true)}>
-                  <span>
-                    {usuario?.bio || (
-                      <span style={estilos.bioPlaceholder}>Describí quién sos, qué te gusta, y usá emojis si querés.</span>
-                    )}
-                  </span>
-                  <span style={estilos.lapiz}>✏️</span>
-                </div>
-              )}
             </div>
-          </div>
+
+          </PlacaMadera>
 
           {/* Logros — misma lógica y contenido que ya existía */}
-          <div style={estilos.panel}>
+          <PlacaMadera>
             <div style={estilos.panelHeader}>
               <div style={estilos.panelTitle}>🏅 Logros</div>
               {logros.length > 0 && (
@@ -439,7 +371,7 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
               </div>
               </div>
             )}
-          </div>
+          </PlacaMadera>
         </div>
 
         {/* Pase siguiente: se quitó la tarjeta "Top jugadores" (poco
@@ -450,7 +382,7 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
             logros. Ahora queda a la altura de la parte de arriba de
             Logros en vez de debajo de toda la grilla. */}
         <div style={estilos.columnaLateral}>
-          <div style={estilos.panel}>
+          <PlacaMadera>
             <div style={estilos.panelTitle}>📊 Rendimiento</div>
             <div style={estilos.statsGrid}>
               <StatTile label="Partidas jugadas" valor={partidasJugadas} />
@@ -458,7 +390,7 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
               <StatTile label="Perdidas" valor={partidasPerdidas} color={C.crimsonOscuro} />
               <StatTile label="Abandonos" valor={`${porcentajeAbandonos}%`} />
             </div>
-          </div>
+          </PlacaMadera>
 
           {/* Sistema de rangos — nonagésimo sexto pase: reemplaza el
               placeholder por la tarjeta real, con las 10 categorías que
@@ -477,7 +409,7 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
               (bajar la altura total de la página) y a pedido del usuario,
               que además va a ir reemplazando el emoji 🎖️ por logos
               propios de cada rango a futuro. */}
-          <div style={estilos.panelRango}>
+          <PlacaMadera colorInterior="#FFE9B0" interiorStyle={estilos.panelRangoInterior}>
             <img src={rangoAssets.logo} alt={usuario?.rango?.nombre || 'Rango'} style={estilos.rangoLogo} />
             <div style={estilos.rangoTitulo}>
               {usuario?.rango?.esTop500
@@ -495,7 +427,7 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
                 </div>
               </div>
             )}
-          </div>
+          </PlacaMadera>
         </div>
       </div>
 
@@ -528,11 +460,6 @@ const estilos = {
   columnaPrincipal: { flex: '7 1 420px', display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 },
   columnaLateral: { flex: '2 1 220px', display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 },
 
-  panel: {
-    background: C.crema, border: `4px solid ${C.chocolate}`, borderRadius: 20,
-    boxShadow: '0 6px 0 rgba(0,0,0,0.25)', padding: '18px 18px 20px', boxSizing: 'border-box'
-  },
-
   // Centésimo pase: contenedor nuevo que envuelve la fila de encabezado —
   // acá va el fondo de perfil personalizable (cuando el usuario eligió
   // uno) y el botón para cambiarlo. `encabezadoFila` en sí pasó de
@@ -540,8 +467,16 @@ const estilos = {
   // `width` implícito 100% a `fit-content` — ya no necesita estirarse
   // porque `identidad`/`saldoBloque` dejaron de forzarlo (ver abajo).
   encabezadoFilaContenedor: {
-    position: 'relative', borderRadius: 16, marginBottom: 16,
-    padding: 12, overflow: 'hidden', minHeight: 150
+    position: 'relative', borderRadius: 11, padding: 12, overflow: 'hidden', minHeight: 150
+  },
+  // Pase 325: marco de madera ahuecado alrededor del banner (esquinas suaves, sombra interior arriba).
+  marcoBanner: {
+    position: 'relative', borderRadius: 16, border: '3px solid #1a1410', background: '#4a3226',
+    padding: 4, overflow: 'hidden', boxSizing: 'border-box'
+  },
+  marcoBannerSombra: {
+    position: 'absolute', top: 0, left: 0, right: 0, height: 8, zIndex: 3, pointerEvents: 'none',
+    background: 'linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0))'
   },
   // Pase 324: botón circular 3D del fondo + chip de monedas fijo + línea de nivel.
   btnFondoCircular: {
@@ -620,35 +555,6 @@ const estilos = {
     boxShadow: `0 3px 0 ${C.doradoOscuro}`, cursor: 'pointer', whiteSpace: 'nowrap'
   },
 
-  campo: { marginTop: 14 },
-  campoEtiqueta: { fontSize: 13, fontWeight: 800, color: C.chocolate, marginBottom: 6 },
-  bioTexto: {
-    display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10,
-    // Pase 324: pergamino ahuecado claro con marco fino café y sombra interna.
-    background: '#F3EFE0', border: '1.5px solid #4A2C11', borderRadius: 12,
-    boxShadow: 'inset 0 3px 5px rgba(74,44,17,0.3)',
-    padding: '10px 12px', fontSize: 13.5, fontWeight: 800, color: '#2C160E', cursor: 'pointer', lineHeight: 1.4
-  },
-  bioPlaceholder: { color: '#8D7B68', fontWeight: 800 },
-  lapiz: { flexShrink: 0, fontSize: 13, opacity: 0.6 },
-  bioTextarea: {
-    width: '100%', minHeight: 70, resize: 'vertical',
-    background: '#F3EFE0', border: '1.5px solid #4A2C11', borderRadius: 12,
-    boxShadow: 'inset 0 3px 5px rgba(74,44,17,0.3)',
-    padding: '10px 12px', fontSize: 13.5, fontWeight: 800, color: '#2C160E', fontFamily: 'inherit',
-    boxSizing: 'border-box'
-  },
-  bioFooter: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 },
-  bioContador: { fontSize: 11, color: '#a09085', fontWeight: 700 },
-  btnCancelar: {
-    fontSize: 12, fontWeight: 700, color: C.chocolate, background: 'none',
-    border: `2px solid ${C.chocolate}44`, borderRadius: 8, padding: '6px 10px', cursor: 'pointer'
-  },
-  btnGuardar: {
-    fontSize: 12, fontWeight: 700, color: C.chocolate, background: C.doradoClaro,
-    border: `2px solid ${C.chocolate}`, borderRadius: 8, padding: '6px 10px', cursor: 'pointer'
-  },
-  errorTexto: { fontSize: 11.5, color: C.crimsonOscuro, fontWeight: 700, marginTop: 4 },
   chipsFila: { display: 'flex', flexWrap: 'wrap', gap: 8 },
   chip: {
     fontSize: 12.5, fontWeight: 700, color: C.chocolate,
@@ -665,15 +571,7 @@ const estilos = {
   // rango), título y concepto debajo, y la línea de puntaje al final de
   // todo. Mismo criterio de tarjeta-insignia que ya usa el popup de logro
   // desbloqueado (ícono grande arriba, texto centrado debajo).
-  panelRango: {
-    background: `linear-gradient(135deg, ${C.doradoClaro}, ${C.dorado})`,
-    // Pase 324: mismo borde (4px), radio (20) y sombra que `panel` para que Rendimiento y
-    // Rango no se vean desfasados en la columna lateral. `boxSizing` explícito en ambos.
-    border: `4px solid ${C.chocolate}`, borderRadius: 20,
-    padding: '18px 18px 20px', display: 'flex', flexDirection: 'column',
-    alignItems: 'center', textAlign: 'center', gap: 6, boxSizing: 'border-box',
-    boxShadow: '0 6px 0 rgba(0,0,0,0.25)'
-  },
+  panelRangoInterior: { display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 6 },
   rangoLogo: { width: 112, height: 112, objectFit: 'contain', display: 'block' },
   rangoTitulo: { fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 15.5, color: C.chocolate, marginTop: 4 },
   rangoSubtitulo: { fontSize: 12.5, color: C.chocolate, opacity: 0.85, lineHeight: 1.4 },

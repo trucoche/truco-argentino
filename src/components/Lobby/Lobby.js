@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import MisionesCard from './MisionesCard';
 import PerfilRivalModal from '../PerfilRival/PerfilRivalModal';
 import PantallaCarga from '../PantallaCarga/PantallaCarga';
+import PopupMadera from '../Popup/PopupMadera';
 import { useToast } from '../../contexts/ToastContext';
 import { API_URL as BASE_URL } from '../../config';
 
@@ -706,78 +707,62 @@ useEffect(() => {
       </div>
       </div>
 
-      {codigoPrivadoCreado && (
-        <div style={estilos.modalOverlay}>
-          <div style={estilos.modalBox}>
-            <button
-              onClick={() => setCodigoPrivadoCreado(null)}
-              style={estilos.btnCerrarX}
-              aria-label="Cerrar"
-            >
-              ✕
-            </button>
-            <div style={estilos.panelTitle}>
-              <img src="/assets/images/icono-sala-privada.png" alt="" style={estilos.iconoPanelTitle} /> {privada ? 'Sala privada creada' : '¡Sala creada!'}
-            </div>
-            <p style={{ fontSize: 16, color: C.chocolate, marginBottom: 10 }}>
-              {privada
-                ? 'Compartí este código con quien quieras invitar:'
-                : 'Ya aparece en el listado de salas disponibles. También podés compartir el código directamente:'}
-            </p>
-              <div style={estilos.codigoBox}>{codigoPrivadoCreado}</div>
-
-            <div style={estilos.featuresRow}>
-              <div style={estilos.featureCard}>
-                <span style={estilos.featureIcon}>🔗</span>
-                <span style={estilos.featureLabel}>Enlace para compartir</span>
-              </div>
-              <div style={estilos.featureCard}>
-                <span style={estilos.featureIcon}>🎧</span>
-                <span style={estilos.featureLabel}>Audio en la mesa</span>
-              </div>
-            </div>
-
-            <button
-              onClick={() => {
-                navigator.clipboard.writeText(codigoPrivadoCreado);
-                setCopiado(true);
-                mostrarToast('Código copiado', 'exito');
-                setTimeout(() => setCopiado(false), 2000);
-              }}
-              style={{ ...estilos.btnSecondary, marginBottom: 10 }}
-            >
-
-              {copiado ? '✓ ¡Copiado!' : '📋 Copiar código'}
-            </button>
-            <button
-              onClick={() => {
-                const url = `${window.location.origin}/?codigo=${codigoPrivadoCreado}`;
-                navigator.clipboard.writeText(url);
-                setCopiadoUrl(true);
-                mostrarToast('Enlace copiado', 'exito');
-                setTimeout(() => setCopiadoUrl(false), 2000);
-              }}
-              style={{ ...estilos.btnSecondary, marginBottom: 10 }}
-            >
-              {copiadoUrl ? '✓ ¡Enlace copiado!' : '🔗 Copiar enlace'}
-            </button>
-            {/* Pase siguiente: antes este botón solo navegaba (el creador ya
-                estaba sentado como jugador desde el backend). Ahora crear
-                la sala no ocupa lugar, así que este botón hace el join real
-                — el mismo POST /:codigo/unirse que usa "Unirse con código"
-                — recién cuando el creador decide efectivamente jugar. */}
-            <button
-              onClick={async () => {
-                await handleUnirse(codigoPrivadoCreado);
-                setCodigoPrivadoCreado(null);
-              }}
-              style={{ ...estilos.btnPrimary, marginBottom: 10 }}
-            >
-              ✓ Entrar a jugar
-            </button>
+      {/* Pase 325: pop-up de madera (cinta verde, icono de sala con resplandor, botones píldora 3D). */}
+      <PopupMadera
+        visible={!!codigoPrivadoCreado}
+        titulo={privada ? 'Sala privada creada' : '¡Sala creada!'}
+        cinta="verde"
+        icono="/assets/images/icono-sala-privada.png"
+        tamIcono={72}
+        onCerrar={() => setCodigoPrivadoCreado(null)}
+        botones={[
+          {
+            texto: copiado ? '✓ ¡Copiado!' : 'Copiar código',
+            onClick: () => {
+              navigator.clipboard.writeText(codigoPrivadoCreado);
+              setCopiado(true);
+              mostrarToast('Código copiado', 'exito');
+              setTimeout(() => setCopiado(false), 2000);
+            },
+          },
+          {
+            texto: copiadoUrl ? '✓ ¡Enlace copiado!' : 'Copiar enlace',
+            onClick: () => {
+              const url = `${window.location.origin}/?codigo=${codigoPrivadoCreado}`;
+              navigator.clipboard.writeText(url);
+              setCopiadoUrl(true);
+              mostrarToast('Enlace copiado', 'exito');
+              setTimeout(() => setCopiadoUrl(false), 2000);
+            },
+          },
+          // Pase siguiente (se mantiene): crear la sala no ocupa lugar; este botón hace el join real.
+          {
+            texto: '✓ Entrar a jugar',
+            tipo: 'verde',
+            onClick: async () => {
+              await handleUnirse(codigoPrivadoCreado);
+              setCodigoPrivadoCreado(null);
+            },
+          },
+        ]}
+      >
+        <p style={{ fontSize: 15, fontWeight: 800, color: '#2C160E', margin: '0 0 10px', textAlign: 'center' }}>
+          {privada
+            ? 'Compartí este código con quien quieras invitar:'
+            : 'Ya aparece en el listado de salas disponibles. También podés compartir el código directamente:'}
+        </p>
+        <div style={estilos.codigoBox}>{codigoPrivadoCreado}</div>
+        <div style={estilos.featuresRow}>
+          <div style={estilos.featureCard}>
+            <span style={estilos.featureIcon}>🔗</span>
+            <span style={estilos.featureLabel}>Enlace para compartir</span>
+          </div>
+          <div style={estilos.featureCard}>
+            <span style={estilos.featureIcon}>🎧</span>
+            <span style={estilos.featureLabel}>Audio en la mesa</span>
           </div>
         </div>
-      )}
+      </PopupMadera>
 
       {perfilAbierto && (
         <PerfilRivalModal
