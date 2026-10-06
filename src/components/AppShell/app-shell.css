@@ -151,6 +151,10 @@
 .ts-tarjeta-perfil-avatar img {
   width: 100%; height: 100%; object-fit: cover; display: block;
 }
+/* Pase 318: la imagen baja unos píxeles para quedar apoyada en el círculo.
+   La foto además se agranda un poco para que no quede franja vacía arriba. */
+.ts-tarjeta-perfil-avatar img.ts-avatar-personaje { transform: translateY(4%); }
+.ts-tarjeta-perfil-avatar img.ts-avatar-foto { transform: translateY(4%) scale(1.08); }
 /* Nonagésimo pase: letra más grande (12→15px, acompañando el +23% de la
    tarjeta) y color aclarado — el usuario reportó que el marrón chocolate
    no se lee bien contra el fondo de madera (la veta tiene zonas más
@@ -254,14 +258,26 @@
    celeste neutro no compite con ningún otro botón cercano ni evoca
    "peligro" como el rojo viejo. Sin override de color: esta clase queda
    solo como hook para el tamaño específico del ícono (ver AppShell.js). */
-/* Pase 317: botón de salir 3D carmesí con contorno negro y sombra dura inferior
-   (reemplaza al cuadrado celeste plano). */
+/* Pase 318: botón de salir = placa gris de cuero (boton-logout-fondo.png) con la
+   puerta de madera adelante. Sin fondo/borde propios; la puerta puede sobresalir
+   un poco por arriba. */
 .ts-icon-btn.ts-icon-logout {
-  background: #E74C3C;
-  border: 3px solid #000;
-  box-shadow: 0 4px 0 #78281F, 0 5px 0 #000;
+  position: relative;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  overflow: visible;
 }
-.ts-icon-btn.ts-icon-logout:active { transform: translateY(3px); box-shadow: 0 1px 0 #78281F, 0 2px 0 #000; }
+.ts-icon-btn.ts-icon-logout:active { transform: translateY(2px); box-shadow: none; }
+.ts-logout-fondo {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: contain; pointer-events: none;
+}
+.ts-logout-puerta {
+  position: relative; width: 38px; height: 56px; object-fit: contain;
+  transform: translateY(-3px); pointer-events: none;
+}
 
 /* Octogésimo séptimo pase: el botón de bono diario, cuando está
    disponible, tenía fondo dorado (#FFB627) — el mismo tono que el regalo

@@ -122,6 +122,7 @@ export default function AppShell({
                       : `/assets/${usuario?.personaje || 'gaucho'}-avatar-cara.png`
                   }
                   alt="Avatar"
+                  className={usuario?.avatar_tipo === 'foto' && usuario?.foto_perfil_url ? 'ts-avatar-foto' : 'ts-avatar-personaje'}
                 />
               </div>
               <div className="ts-tarjeta-perfil-nombre">{usuario?.username}</div>
@@ -229,14 +230,9 @@ export default function AppShell({
               header — agrandado 30x44→38x54 (misma proporción real del
               archivo), sin tocar el tamaño del recuadro. */}
           <button className="ts-icon-btn ts-icon-logout" onClick={onLogout} title="Cerrar sesión" aria-label="Cerrar sesión">
-            {/* Pase 317: botón 3D carmesí con puerta abriéndose (SVG vectorial). */}
-            <svg width="38" height="42" viewBox="0 0 38 42" aria-hidden="true">
-              <rect x="7" y="4" width="24" height="34" rx="2" fill="#2A0D08" stroke="#FFF8ED" strokeWidth="2.5" />
-              <polygon points="7,4 23,9 23,34 7,38" fill="#D9A066" stroke="#2A1408" strokeWidth="2" strokeLinejoin="round" />
-              <line x1="11.5" y1="11" x2="11.5" y2="31" stroke="#A8692F" strokeWidth="1.6" strokeLinecap="round" />
-              <circle cx="20" cy="21.5" r="1.9" fill="#FFD668" stroke="#2A1408" strokeWidth="1.2" />
-              <path d="M27 21.5 H35 M32 17.5 L36 21.5 L32 25.5" fill="none" stroke="#FFF8ED" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+            {/* Pase 318: placa gris de cuero de fondo + puerta de madera adelante. */}
+            <img src="/assets/images/boton-logout-fondo.png" alt="" className="ts-logout-fondo" />
+            <img src="/assets/images/icono-logout.png" alt="" className="ts-logout-puerta" />
           </button>
         </div>
       </header>
