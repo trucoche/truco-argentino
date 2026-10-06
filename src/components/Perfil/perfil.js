@@ -220,7 +220,7 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
                 ...estilos.encabezadoFilaContenedor,
                 ...(usuario?.fondo_perfil_url ? {} : { background: '#FFF3D6' }),
                 ...(usuario?.fondo_perfil_url ? {
-                  backgroundImage: `linear-gradient(rgba(20,20,15,0.1), rgba(20,20,15,0.35)), url(${usuario.fondo_perfil_url})`,
+                  backgroundImage: `url(${usuario.fondo_perfil_url})`,
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
                 } : {}),
@@ -240,12 +240,7 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
                 </svg>
               </button>
 
-              <div
-                style={{
-                  ...estilos.encabezadoFila,
-                  ...(usuario?.fondo_perfil_url ? estilos.encabezadoFilaConFondo : {}),
-                }}
-              >
+              <div style={estilos.encabezadoFila}>
                 <div style={{ ...estilos.avatarWrap, width: TAM_ANILLO, height: TAM_ANILLO }}>
                   {/* Centésimo cuarto pase: si el usuario tiene un fondo de
                       perfil comprado, se ve también detrás del avatar (los
@@ -281,8 +276,8 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
                 </div>
 
                 <div style={estilos.identidad}>
-                  <div style={estilos.username}>{usuario?.username}</div>
-                  <div style={estilos.nivelTexto}>
+                  <div style={{ ...estilos.username, ...(usuario?.fondo_perfil_url ? estilos.textoSobreFondo : {}) }}>{usuario?.username}</div>
+                  <div style={{ ...estilos.nivelTexto, ...(usuario?.fondo_perfil_url ? estilos.textoSobreFondo : {}) }}>
                     {usuario?.rango?.esTop500
                       ? `${usuario.rango.nombre} · #${usuario.rango.posicion ?? '—'}`
                       : `${usuario?.rango?.nombre || 'Mancebo'} ${usuario?.rango?.division || 'III'}`}
@@ -290,12 +285,6 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
                 </div>
               </div>
 
-              {/* Pase 324: monedas fijas abajo a la derecha del banner (sin "Comprá monedas":
-                  la compra vive en la pestaña Tienda). */}
-              <div style={estilos.monedasChip}>
-                <img src="/assets/images/moneda.png" alt="" style={estilos.saldoIcono} />
-                {Math.round(Number(usuario?.saldo) || 0)}
-              </div>
             </div>
             </div>
 
@@ -484,6 +473,8 @@ const estilos = {
     background: '#8B5A2B', border: '3px solid #000', boxShadow: '0 3px 0 #000',
     display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0
   },
+  // Pase 328: sin placa translúcida; el texto sobre el banner lleva sombra oscura.
+  textoSobreFondo: { color: '#FFFBEB', textShadow: '0 1px 3px rgba(0,0,0,0.8), 0 0 2px rgba(0,0,0,0.6)' },
   nivelTexto: { fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 14, color: C.chocolate, marginTop: 2 },
   monedasChip: {
     position: 'absolute', right: 10, bottom: 10, zIndex: 2,

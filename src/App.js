@@ -42,6 +42,23 @@ const FONDO_PAGINA_PUBLICA = {
   backgroundRepeat: 'no-repeat',
 };
 
+// Pase 327: claves de "hoy" (fecha local y fecha UTC). El servidor guarda `ultimo_bonus_diario` como
+// DATE (llega como "2026-10-06T00:00:00.000Z"); con `new Date(...).toDateString()` en Argentina (UTC-3)
+// eso daba el día ANTERIOR y el botón del bono nunca desaparecía tras reclamarlo.
+function clavesDeHoy() {
+  const d = new Date();
+  const p = (n) => String(n).padStart(2, '0');
+  return [`${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`, d.toISOString().slice(0, 10)];
+}
+function bonusYaReclamado(ultimo, reclamadoLocal) {
+  const hoy = clavesDeHoy();
+  if (reclamadoLocal && hoy.includes(reclamadoLocal)) return true;
+  if (!ultimo) return false;
+  const s = String(ultimo);
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return hoy.includes(s.slice(0, 10));
+  return new Date(s).toDateString() === new Date().toDateString();
+}
+
 function AppInterna() {
   const CLAVE_MUSICA_MUTEADA = 'truco_musica_muteada';
   const CLAVE_MUSICA_VOLUMEN = 'truco_musica_volumen';
@@ -370,12 +387,8 @@ function AppInterna() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
-  const bonusDisponible = (() => {
-    if (!usuario?.ultimo_bonus_diario) return true;
-    const hoy = new Date().toDateString();
-    const ultimo = new Date(usuario.ultimo_bonus_diario).toDateString();
-    return hoy !== ultimo;
-  })();
+  const [bonusReclamadoEn, setBonusReclamadoEn] = useState(null);
+  const bonusDisponible = !bonusYaReclamado(usuario?.ultimo_bonus_diario, bonusReclamadoEn);
 
   const handleReclamarBonus = async () => {
     try {
@@ -386,9 +399,15 @@ function AppInterna() {
       const data = await res.json();
 
       if (!res.ok) {
+        // Pase 327: si ya estaba reclamado hoy, el botón desaparece sin mostrar ningún cartel.
+        if (/ya reclamaste/i.test(String(data.error || ''))) {
+          setBonusReclamadoEn(clavesDeHoy()[0]);
+          return;
+        }
         mostrarAviso({ titulo: 'Aviso', cinta: 'roja', mensaje: data.error || 'No se pudo reclamar el bono', botones: [{ texto: 'Aceptar' }] });
         return;
       }
+      setBonusReclamadoEn(clavesDeHoy()[0]);
 
       // Pase 325: pop-up de madera con la caja de regalo y resplandor.
       mostrarAviso({
