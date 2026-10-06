@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { API_URL as BASE_URL } from '../../config';
+import { rangoUi } from '../Perfil/rangosUi';
 
 const API_URL = `${BASE_URL}/api/auth`;
 
@@ -101,8 +102,18 @@ export default function AppShell({
                 existe). Coordenadas en % calculadas a mano sobre el archivo
                 fuente (tarjeta-perfil.png, recortado a su contenido real,
                 491x226) — ver detalle en app-shell.css. */}
-            <div className="ts-tarjeta-perfil">
-              <img src="/assets/images/tarjeta-perfil.png" alt="" className="ts-tarjeta-perfil-fondo" />
+            {/* Pase 313: la tarjeta es el panel ilustrado del rango del jugador
+                (ver Perfil/rangosUi.js); los colores del texto dependen de lo
+                claro u oscuro que sea ese panel. */}
+            <div
+              className="ts-tarjeta-perfil"
+              style={{
+                '--ts-nombre-color': rangoUi(usuario?.rango).nombreColor,
+                '--ts-nombre-halo': rangoUi(usuario?.rango).nombreHalo,
+                '--ts-saldo-color': rangoUi(usuario?.rango).saldoColor,
+              }}
+            >
+              <img src={rangoUi(usuario?.rango).panel} alt="" className="ts-tarjeta-perfil-fondo" />
               <div className="ts-tarjeta-perfil-avatar">
                 <img
                   src={
@@ -254,8 +265,12 @@ export default function AppShell({
           ahí el usuario ya está viendo el torneo, no tiene sentido
           invitarlo a anotarse).
           Pase 205: se suma "perfil" a la lista — mismo pedido del
-          usuario ("quitar el banner de torneo" de esa pantalla). */}
-      {bannerTexto && !['lobby', 'torneos', 'config', 'perfil'].includes(pantallaActiva) && (
+          usuario ("quitar el banner de torneo" de esa pantalla).
+          Ducentésimo trigésimo cuarto pase: se suma "tienda" — mismo
+          pedido, esa pantalla ya tiene su propio contenido promocional
+          (la cinta de descuento del pack de Inauguración) y no necesita
+          además la invitación a torneos arriba. */}
+      {bannerTexto && !['lobby', 'torneos', 'config', 'perfil', 'tienda'].includes(pantallaActiva) && (
         // Bug real encontrado (pase siguiente): este banner tenía su
         // propia copia vieja del botón — imagen de fondo Y texto los dos
         // directo en el <button> `.ts-banner`, sin el glow (`.ts-banner-
@@ -313,4 +328,4 @@ const estilosBanner = {
     background: 'none', border: 'none', cursor: 'pointer', fontSize: 13,
     fontWeight: 800, color: '#4A2C2A', flexShrink: 0, padding: 4, opacity: 0.6
   }
-};
+};

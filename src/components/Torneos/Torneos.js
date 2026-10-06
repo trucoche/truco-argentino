@@ -22,12 +22,21 @@ const TIEMPO_OPCIONES = [
   { valor: '60', label: '60s' },
 ];
 
+// Pase de rediseño estructural: se suman los tonos de madera+bronce que ya
+// usan Ranking/Historial/Chat Global (mismo "lenguaje visual" de placa de
+// taberna en toda la app) para reemplazar los contenedores blancos planos
+// de esta pantalla. Los botones ilustrados (`boton-amarillo/verde/rojo.png`)
+// también son los mismos que ya usa Tienda.js — se reutilizan en vez de
+// generar assets nuevos.
 const C = {
-  verde: '#2D9B4F', verdeOscuro: '#1f7a3c',
+  verde: '#2D9B4F', verdeOscuro: '#1f7a3c', verdeEsmeralda: '#1e8f4e', verdeProfundo: '#163f24',
   crimson: '#E8483A', crimsonOscuro: '#c2352a',
   dorado: '#FFB627', doradoClaro: '#FFD668', doradoOscuro: '#C9860E',
   celeste: '#4FB3E8',
-  crema: '#FFF8ED', chocolate: '#4A2C2A'
+  crema: '#FFF8ED', cremaSutil: '#FFFCF6', chocolate: '#4A2C2A',
+  maderaClara: '#6b4a34', maderaMedia: '#4a3226', maderaOscura: '#2a1c14',
+  remacheClaro: '#f0d9a0', remache: '#c9973e', remacheOscuro: '#7a5322',
+  negroPulido: '#1a1410',
 };
 
 function Filigrana() {
@@ -47,6 +56,48 @@ function Filigrana() {
       <svg style={{ ...base, bottom: 6, left: 6, transform: 'scaleY(-1)' }} viewBox="0 0 46 46" fill="none">{path}</svg>
       <svg style={{ ...base, bottom: 6, right: 6, transform: 'scale(-1,-1)' }} viewBox="0 0 46 46" fill="none">{path}</svg>
     </>
+  );
+}
+
+// Pase siguiente: separa la hora (si el título la trae pegada al final,
+// ej. "Campeonato Rápido - 15:22") en un badge dorado aparte, para que
+// resalte más que el resto del título — es un parseo del string nomás
+// (no hay un campo de hora separado en la base), así que si el título no
+// termina en ese patrón exacto se muestra entero, sin romper nada.
+function renderTituloTorneo(titulo) {
+  const match = /^(.+?)\s-\s(\d{1,2}:\d{2})$/.exec(titulo || '');
+  if (!match) return titulo;
+  return (
+    <>
+      {match[1]}
+      <span style={{ color: C.doradoOscuro, fontWeight: 800 }}> · {match[2]}</span>
+    </>
+  );
+}
+
+// Controles "‹ Anterior / Siguiente ›" para las listas paginadas de abajo
+// — se oculta solo si hay una sola página, no hace falta que cada
+// llamador se acuerde de chequearlo.
+function Paginador({ pagina, totalPaginas, onCambiar }) {
+  if (totalPaginas <= 1) return null;
+  return (
+    <div style={estilos.paginador}>
+      <button
+        onClick={() => onCambiar(pagina - 1)}
+        disabled={pagina === 0}
+        style={{ ...estilos.paginadorBtn, ...(pagina === 0 ? estilos.paginadorBtnDisabled : {}) }}
+      >
+        ‹ Anterior
+      </button>
+      <span style={estilos.paginadorTexto}>Página {pagina + 1} de {totalPaginas}</span>
+      <button
+        onClick={() => onCambiar(pagina + 1)}
+        disabled={pagina >= totalPaginas - 1}
+        style={{ ...estilos.paginadorBtn, ...(pagina >= totalPaginas - 1 ? estilos.paginadorBtnDisabled : {}) }}
+      >
+        Siguiente ›
+      </button>
+    </div>
   );
 }
 
@@ -72,6 +123,15 @@ export default function Torneos({ token, onVerBracket }) {
   const [torneosFinalizados, setTorneosFinalizados] = useState([]);
   const [cargandoFinalizados, setCargandoFinalizados] = useState(false);
 
+  // Pase siguiente: paginación para "Torneos disponibles"/"Finalizados" —
+  // la cantidad de torneos crece sin tope (cada reinicio del backend en
+  // desarrollo genera más) y la grilla entera hacía la página cada vez
+  // más larga. Cada pestaña tiene su propia página para que cambiar de
+  // Activos a Finalizados no arrastre la posición de la otra lista.
+  const [paginaActivos, setPaginaActivos] = useState(0);
+  const [paginaFinalizados, setPaginaFinalizados] = useState(0);
+  const TORNEOS_POR_PAGINA = 8;
+
   const torneoDestacado = torneos.find(
     t => t.estado === 'inscripcion' && Number(t.entradas_actuales) < t.cupo_entradas
   );
@@ -82,6 +142,24 @@ export default function Torneos({ token, onVerBracket }) {
   const jugadoresParticipando = torneos.reduce(
     (acc, t) => acc + Number(t.entradas_actuales) * (JUGADORES_POR_EQUIPO[t.modo] || 1),
     0
+  );
+
+  // `Math.min` contra el total real de páginas — si la lista se achica
+  // (ej. se cierran/filtran torneos) y la página guardada quedó fuera de
+  // rango, se acomoda sola a la última página válida sin necesitar un
+  // efecto aparte.
+  const totalPaginasActivos = Math.max(1, Math.ceil(torneos.length / TORNEOS_POR_PAGINA));
+  const paginaActivosActual = Math.min(paginaActivos, totalPaginasActivos - 1);
+  const torneosPaginados = torneos.slice(
+    paginaActivosActual * TORNEOS_POR_PAGINA,
+    paginaActivosActual * TORNEOS_POR_PAGINA + TORNEOS_POR_PAGINA
+  );
+
+  const totalPaginasFinalizados = Math.max(1, Math.ceil(torneosFinalizados.length / TORNEOS_POR_PAGINA));
+  const paginaFinalizadosActual = Math.min(paginaFinalizados, totalPaginasFinalizados - 1);
+  const torneosFinalizadosPaginados = torneosFinalizados.slice(
+    paginaFinalizadosActual * TORNEOS_POR_PAGINA,
+    paginaFinalizadosActual * TORNEOS_POR_PAGINA + TORNEOS_POR_PAGINA
   );
 
   const headers = {
@@ -245,100 +323,131 @@ return (
     <>
       {error && <div style={estilos.errorBox}>{error}</div>}
 
+      {/* Pase siguiente: se probó `torneo-marco-destacado.png` como
+          `border-image` para este panel, pero el usuario pidió volver
+          atrás — mismo problema de fondo que ya se vivió en ChatGlobal.js
+          (pases 246-254): un marco ilustrado como `border-image` termina
+          con una costura de subpíxel entre la madera del PNG y el fondo
+          propio de la pantalla. Se vuelve a la misma técnica 100% CSS que
+          ya usan Ranking/Historial/Chat Global — degradé de madera + bisel
+          simulado con `boxShadow` en capas + remaches de bronce como
+          `<span>`s — sin ningún PNG de marco de por medio, con un borde
+          dorado para que este panel en particular (el que más invita a la
+          acción) se distinga del resto. */}
       {torneoDestacado && (
-        <div style={estilos.destacadoCard}>
-          {/* Pase 204: un solo trofeo grande al lado de las DOS líneas de
-              texto (badge + título), en vez de un ícono chico repetido en
-              cada línea por separado — pedido explícito del usuario. */}
-          <div style={estilos.destacadoHeader}>
-            <img src="/assets/images/trofeo.png" alt="" style={estilos.destacadoHeaderIcono} />
-            <div style={estilos.destacadoHeaderTextos}>
-              <div style={estilos.destacadoBadge}>PRÓXIMO TORNEO</div>
+        <div style={estilos.destacadoPanelExterior}>
+          <span style={{ ...estilos.remache, top: 10, left: 10 }} />
+          <span style={{ ...estilos.remache, top: 10, right: 10 }} />
+          <span style={{ ...estilos.remache, bottom: 10, left: 10 }} />
+          <span style={{ ...estilos.remache, bottom: 10, right: 10 }} />
+          <div style={estilos.destacadoCard}>
+            <Filigrana />
+            <div style={estilos.destacadoCinta}>PRÓXIMO TORNEO</div>
+
+            <div style={estilos.destacadoHeader}>
+              <img src="/assets/images/trofeo.png" alt="" style={estilos.destacadoHeaderIcono} />
               <div style={estilos.destacadoTitulo}>{torneoDestacado.titulo}</div>
             </div>
-          </div>
 
-          <div style={estilos.destacadoStats}>
-            <div style={estilos.destacadoStat}>
-              <span style={estilos.destacadoStatValor}>
-                {torneoDestacado.entradas_actuales}/{torneoDestacado.cupo_entradas}
-              </span>
-              <span style={estilos.destacadoStatLabel}>Jugadores</span>
-            </div>
-            <div style={estilos.destacadoStat}>
-              <span style={estilos.destacadoStatValor}>{torneoDestacado.modo}</span>
-              <span style={estilos.destacadoStatLabel}>Modo</span>
-            </div>
-            <div style={estilos.destacadoStat}>
-              <span style={estilos.destacadoStatValor}>{torneoDestacado.puntos_para_ganar}</span>
-              <span style={estilos.destacadoStatLabel}>Puntos</span>
-            </div>
-            {/* Pase siguiente: se restauró el costo de inscripción (10 🪙) y
-                el premio fijo al campeón (35 🪙, ver PREMIO_CAMPEON_POR_JUGADOR
-                en torneoManager.js — no viene del backend, es la misma
-                constante que ya paga el sistema) — se muestran acá para que
-                se sepa antes de anotarse, mismo criterio que "(cuesta 1 🪙)"
-                en salas privadas. */}
-            <div style={estilos.destacadoStat}>
-              {/* Pase siguiente: Math.round() para que nunca se vean
-                  decimales acá (el campo apuesta es numeric en Postgres y
-                  puede volver como string tipo "10.00") — a pedido del
-                  usuario, "para que sea menos confuso". */}
-              <span style={estilos.destacadoStatValor}>🪙 {Math.round(Number(torneoDestacado.apuesta))}</span>
-              <span style={estilos.destacadoStatLabel}>Entrada</span>
-            </div>
-            <div style={estilos.destacadoStat}>
-              <span style={estilos.destacadoStatValor}>🪙 35</span>
-              <span style={estilos.destacadoStatLabel}>Premio</span>
-            </div>
-          </div>
-
-          {torneoDestacado.ya_inscripto ? (
-            <div style={estilos.destacadoYaInscripto}>✓ Ya estás anotado</div>
-          ) : inscribiendoId === torneoDestacado.id ? (
-            <div>
-              {JUGADORES_POR_EQUIPO[torneoDestacado.modo] > 1 && (
-                <input
-                  type="text"
-                  placeholder={`Usernames de tus ${JUGADORES_POR_EQUIPO[torneoDestacado.modo] - 1} compañero(s), separados por coma`}
-                  value={companerosTexto}
-                  onChange={(e) => setCompanerosTexto(e.target.value)}
-                  style={{ ...estilos.input, marginBottom: 8 }}
-                />
-              )}
-              {/* Pase 203: antes "Cancelar" heredaba width:100% de
-                  estilos.btnSecondary (pensado para usos donde va solo) y
-                  quedaba mucho más grande que "Confirmar" al lado — ahora
-                  los dos se anulan a su ancho natural y quedan parejos,
-                  centrados en la fila (pedido del usuario). */}
-              <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
-                <button onClick={() => handleInscribirse(torneoDestacado)} style={{ ...estilos.btnPrimary, width: 'auto', padding: '10px 26px' }}>
-                  Confirmar
-                </button>
-                <button
-                  onClick={() => { setInscribiendoId(null); setCompanerosTexto(''); }}
-                  style={{ ...estilos.btnSecondary, width: 'auto', padding: '10px 26px' }}
-                >
-                  Cancelar
-                </button>
+            <div style={estilos.destacadoStats}>
+              <div style={estilos.destacadoStatBadge}>
+                <img src="/assets/images/icono-personaje.png" alt="" style={estilos.destacadoStatIcono} />
+                <span style={estilos.destacadoStatValor}>
+                  {torneoDestacado.entradas_actuales}/{torneoDestacado.cupo_entradas}
+                </span>
+                <span style={estilos.destacadoStatLabel}>Jugadores</span>
+              </div>
+              <div style={estilos.destacadoStatBadge}>
+                <img src="/assets/images/icono-cartas-nueva.png" alt="" style={estilos.destacadoStatIcono} />
+                <span style={estilos.destacadoStatValor}>{torneoDestacado.modo}</span>
+                <span style={estilos.destacadoStatLabel}>Modo</span>
+              </div>
+              <div style={estilos.destacadoStatBadge}>
+                <span style={estilos.fichaTruco} />
+                <span style={estilos.destacadoStatValor}>{torneoDestacado.puntos_para_ganar}</span>
+                <span style={estilos.destacadoStatLabel}>Puntos</span>
+              </div>
+              {/* Pase siguiente: se restauró el costo de inscripción (10 🪙) y
+                  el premio fijo al campeón (35 🪙, ver PREMIO_CAMPEON_POR_JUGADOR
+                  en torneoManager.js — no viene del backend, es la misma
+                  constante que ya paga el sistema) — se muestran acá para que
+                  se sepa antes de anotarse, mismo criterio que "(cuesta 1 🪙)"
+                  en salas privadas. */}
+              <div style={estilos.destacadoStatBadge}>
+                {/* Pase siguiente: Math.round() para que nunca se vean
+                    decimales acá (el campo apuesta es numeric en Postgres y
+                    puede volver como string tipo "10.00") — a pedido del
+                    usuario, "para que sea menos confuso". */}
+                <img src="/assets/images/moneda.png" alt="" style={estilos.destacadoStatIcono} />
+                <span style={estilos.destacadoStatValor}>{Math.round(Number(torneoDestacado.apuesta))}</span>
+                <span style={estilos.destacadoStatLabel}>Entrada</span>
+              </div>
+              <div style={estilos.destacadoStatBadge}>
+                <img src="/assets/images/historial-trofeo.png" alt="" style={estilos.destacadoStatIcono} />
+                <span style={estilos.destacadoStatValor}>35</span>
+                <span style={estilos.destacadoStatLabel}>Premio</span>
               </div>
             </div>
-          ) : (
-            <button onClick={() => setInscribiendoId(torneoDestacado.id)} style={estilos.destacadoBtn}>
-              Anotarme ahora
-            </button>
-          )}
+
+            {torneoDestacado.ya_inscripto ? (
+              <div style={estilos.destacadoYaInscripto}>✓ Ya estás anotado</div>
+            ) : inscribiendoId === torneoDestacado.id ? (
+              <div>
+                {JUGADORES_POR_EQUIPO[torneoDestacado.modo] > 1 && (
+                  <input
+                    type="text"
+                    placeholder={`Usernames de tus ${JUGADORES_POR_EQUIPO[torneoDestacado.modo] - 1} compañero(s), separados por coma`}
+                    value={companerosTexto}
+                    onChange={(e) => setCompanerosTexto(e.target.value)}
+                    style={{ ...estilos.input, marginBottom: 8 }}
+                  />
+                )}
+                {/* Pase 203: antes "Cancelar" heredaba width:100% de
+                    estilos.btnSecondary (pensado para usos donde va solo) y
+                    quedaba mucho más grande que "Confirmar" al lado — ahora
+                    los dos se anulan a su ancho natural y quedan parejos,
+                    centrados en la fila (pedido del usuario). */}
+                <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+                  <button onClick={() => handleInscribirse(torneoDestacado)} style={{ ...estilos.btnPrimary, width: 'auto', padding: '11px 26px' }}>
+                    Confirmar
+                  </button>
+                  <button
+                    onClick={() => { setInscribiendoId(null); setCompanerosTexto(''); }}
+                    style={{ ...estilos.btnSecondary, width: 'auto', padding: '10px 26px' }}
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button onClick={() => setInscribiendoId(torneoDestacado.id)} style={estilos.destacadoBtn}>
+                Anotarme ahora
+              </button>
+            )}
+          </div>
         </div>
       )}
 
+      {/* Pase de rediseño estructural: de rectángulo blanco plano a mini
+          placa de madera (mismo degradé maderaClara/Media/Oscura + borde
+          negro que el resto de la pantalla) — el "0" pasa a dorado y bien
+          grande, y los emoji de las etiquetas se cambian por los íconos
+          ilustrados ya existentes (personaje/trofeo), para no mezclar
+          emoji con arte ilustrado en la misma pantalla. */}
       <div style={estilos.statsRow}>
         <div style={estilos.statCard}>
           <div style={estilos.statValor}>{jugadoresParticipando}</div>
-          <div style={estilos.statLabel}>👥 jugadores participando</div>
+          <div style={estilos.statLabel}>
+            <img src="/assets/images/icono-personaje.png" alt="" style={estilos.statLabelIcono} />
+            jugadores participando
+          </div>
         </div>
         <div style={estilos.statCard}>
           <div style={estilos.statValor}>{torneosEnJuego}</div>
-          <div style={estilos.statLabel}>🏆 torneos en juego</div>
+          <div style={estilos.statLabel}>
+            <img src="/assets/images/historial-trofeo.png" alt="" style={estilos.statLabelIcono} />
+            torneos en juego
+          </div>
         </div>
       </div>
 
@@ -351,12 +460,24 @@ return (
           necesitar una media query aparte (mismo truco que ya usa
           torneosGrid más abajo). */}
       <div style={estilos.crearYListaWrap}>
-      <div style={{ ...estilos.panel, marginBottom: 0 }}>
+      {/* Pase de rediseño estructural: mismo criterio de "placa de madera
+          de taberna" que el resto de la app (exterior de madera oscura +
+          remaches, interior de pergamino cálido) en vez del rectángulo
+          blanco plano de antes. */}
+      <div style={{ ...estilos.panelExterior, marginBottom: 0 }}>
+        <span style={{ ...estilos.remache, top: 10, left: 10 }} />
+        <span style={{ ...estilos.remache, top: 10, right: 10 }} />
+        <span style={{ ...estilos.remache, bottom: 10, left: 10 }} />
+        <span style={{ ...estilos.remache, bottom: 10, right: 10 }} />
+      <div style={estilos.panelInterior}>
         <Filigrana />
-        <div style={estilos.panelTitle}>🏆 Crear torneo</div>
+        <div style={estilos.panelTitle}>
+          <img src="/assets/images/icono-cartas-nueva.png" alt="" style={estilos.panelTitleIcono} />
+          Crear torneo
+        </div>
 
         {!creando ? (
-          <button onClick={() => setCreando(true)} style={estilos.btnSecondary}>+ Nuevo torneo</button>
+          <button onClick={() => setCreando(true)} style={estilos.btnNuevoTorneo}>+ Nuevo torneo</button>
         ) : (
           <form onSubmit={handleCrearTorneo}>
             <div style={estilos.field}>
@@ -449,6 +570,7 @@ return (
           </form>
         )}
       </div>
+      </div>
 
       <div style={estilos.listaColumna}>
       <div style={estilos.tabs}>
@@ -477,15 +599,16 @@ return (
       <p style={{ color: C.crema, textAlign: 'center' }}>No hay torneos activos. ¡Creá uno!</p>
     ) : (
       <div style={estilos.torneosGrid}>
-        {torneos.map((t) => {
+        {torneosPaginados.map((t) => {
           const jugadoresNecesarios = JUGADORES_POR_EQUIPO[t.modo];
           const completo = Number(t.entradas_actuales) >= t.cupo_entradas;
           const enCurso = t.estado === 'en-curso';
 
           return (
-            <div key={t.id} style={estilos.torneoCard}>
+            <div key={t.id} style={estilos.torneoCardExterior}>
+              <div style={estilos.torneoCard}>
               <div style={estilos.torneoHeader}>
-                <div style={estilos.torneoNombre}>{t.titulo}</div>
+                <div style={estilos.torneoNombre}>{renderTituloTorneo(t.titulo)}</div>
                 <div style={{ ...estilos.badge, ...(enCurso ? estilos.badgeCurso : estilos.badgeAbierta) }}>
                   {enCurso ? 'En curso' : t.estado === 'inscripcion' ? 'Inscripción abierta' : t.estado}
                 </div>
@@ -527,11 +650,17 @@ return (
               {enCurso && (
                 <button onClick={() => onVerBracket(t.id)} style={estilos.btnCard}>Ver bracket</button>
               )}
+              </div>
             </div>
           );
         })}
       </div>
     )}
+    <Paginador
+      pagina={paginaActivosActual}
+      totalPaginas={totalPaginasActivos}
+      onCambiar={setPaginaActivos}
+    />
   </>
 )}
 
@@ -546,10 +675,11 @@ return (
       <p style={{ color: C.crema, textAlign: 'center' }}>Todavía no jugaste ningún torneo hasta el final.</p>
     ) : (
       <div style={estilos.torneosGrid}>
-        {torneosFinalizados.map((t) => (
-          <div key={t.id} style={estilos.torneoCard}>
+        {torneosFinalizadosPaginados.map((t) => (
+          <div key={t.id} style={estilos.torneoCardExterior}>
+            <div style={estilos.torneoCard}>
             <div style={estilos.torneoHeader}>
-              <div style={estilos.torneoNombre}>{t.titulo}</div>
+              <div style={estilos.torneoNombre}>{renderTituloTorneo(t.titulo)}</div>
               {t.soy_campeon && (
                 <div style={{ ...estilos.badge, background: '#ffe8c2', color: C.doradoOscuro }}>
                   👑 Campeón
@@ -560,10 +690,16 @@ return (
               {t.modo} · {t.puntos_para_ganar} pts · {t.creador_nombre}
             </div>
             <button onClick={() => onVerBracket(t.id)} style={estilos.btnCard}>Ver bracket</button>
+            </div>
           </div>
         ))}
       </div>
     )}
+    <Paginador
+      pagina={paginaFinalizadosActual}
+      totalPaginas={totalPaginasFinalizados}
+      onCambiar={setPaginaFinalizados}
+    />
   </>
 )}
       </div>
@@ -577,65 +713,156 @@ const estilos = {
     background: '#ffe0dd', border: `2px solid ${C.crimson}`, color: C.crimsonOscuro,
     borderRadius: 10, padding: '8px 12px', marginBottom: 12, fontWeight: 700, fontSize: 13
   },
-  panel: {
-    background: C.crema, border: `4px solid ${C.chocolate}`, borderRadius: 20,
-    boxShadow: '0 6px 0 rgba(0,0,0,0.25)', padding: '18px 18px 20px',
-    marginBottom: 18, position: 'relative', overflow: 'hidden'
+  // Pase de rediseño estructural: exterior de madera oscura + remaches de
+  // bronce en las esquinas (mismo criterio que `podioPanelExterior` de
+  // Ranking.js) envolviendo un interior de pergamino cálido — reemplaza el
+  // rectángulo blanco plano de antes. `remache` es el mismo punto de bronce
+  // (radial-gradient) que ya usan Ranking/Historial/Chat Global.
+  remache: {
+    position: 'absolute', width: 13, height: 13, borderRadius: '50%',
+    background: `radial-gradient(circle at 35% 30%, ${C.remacheClaro} 0%, ${C.remache} 45%, ${C.remacheOscuro} 78%, #3a2610 100%)`,
+    boxShadow: '0 1px 2px rgba(0,0,0,0.65), inset 0 1px 1px rgba(255,255,255,0.4)',
+    zIndex: 2,
   },
+  panelExterior: {
+    position: 'relative',
+    background: `linear-gradient(160deg, ${C.maderaClara} 0%, ${C.maderaMedia} 55%, ${C.maderaOscura} 100%)`,
+    border: `3px solid ${C.negroPulido}`, borderRadius: 20, padding: 12,
+    marginBottom: 18,
+    boxShadow: [
+      'inset 0 2px 0 rgba(255,255,255,0.10)',
+      'inset 0 -4px 10px rgba(0,0,0,0.5)',
+      `0 8px 0 ${C.negroPulido}`,
+      '0 16px 26px rgba(0,0,0,0.4)',
+    ].join(', '),
+  },
+  // Pase siguiente: padding reducido — en el estado "sin creando" (solo
+  // título + 1 botón) quedaba mucho aire arriba y abajo del botón.
+  panelInterior: {
+    position: 'relative', overflow: 'hidden',
+    background: [
+      'radial-gradient(ellipse at 20% 25%, rgba(210,182,130,0.4) 0%, transparent 50%)',
+      'radial-gradient(ellipse at 82% 75%, rgba(190,160,115,0.35) 0%, transparent 55%)',
+      `linear-gradient(180deg, ${C.cremaSutil}, ${C.crema})`,
+    ].join(', '),
+    borderRadius: 14, padding: '16px 16px 14px',
+    boxShadow: 'inset 0 4px 14px rgba(74,44,42,0.28), inset 0 -3px 10px rgba(74,44,42,0.22), inset 0 0 0 2px rgba(0,0,0,0.08)',
+  },
+  // Pase siguiente: vuelta a la placa de madera 100% CSS (mismo degradé +
+  // bisel en capas que `panelExterior`/`pagina` de Chat Global), con borde
+  // dorado en vez de negro para que este panel — el que más invita a la
+  // acción — se distinga del resto de placas informativas de la pantalla.
+  destacadoPanelExterior: {
+    position: 'relative',
+    background: `linear-gradient(160deg, ${C.maderaClara} 0%, ${C.maderaMedia} 55%, ${C.maderaOscura} 100%)`,
+    border: `3px solid ${C.doradoOscuro}`, borderRadius: 22, padding: 10,
+    marginBottom: 16,
+    boxShadow: [
+      'inset 0 2px 0 rgba(255,255,255,0.10)',
+      'inset 0 -4px 10px rgba(0,0,0,0.5)',
+      `0 8px 0 ${C.negroPulido}`,
+      '0 16px 26px rgba(0,0,0,0.4)',
+    ].join(', '),
+  },
+  // Pase siguiente: interior de "fieltro" verde oscuro en vez del marrón
+  // liso plano (mismo criterio que `cuerpo`/`interiorFieltro` de
+  // ChatGlobal.js/Historial.js) — mismo lenguaje visual de paño de mesa
+  // de truco que el resto de la app, en vez de una caja lisa sin textura.
   destacadoCard: {
-    background: `linear-gradient(135deg, ${C.chocolate}, #2e1c15)`,
-    border: `4px solid ${C.doradoOscuro}`, borderRadius: 20,
-    boxShadow: '0 6px 0 rgba(0,0,0,0.35)', padding: '20px 20px 22px',
-    marginBottom: 16, textAlign: 'center'
+    position: 'relative', overflow: 'hidden', textAlign: 'center',
+    background: `linear-gradient(180deg, ${C.verdeProfundo}, ${C.verdeOscuro})`,
+    borderRadius: 16, padding: '22px 20px 22px',
+    boxShadow: 'inset 0 4px 14px rgba(0,0,0,0.55), inset 0 -3px 10px rgba(0,0,0,0.35), inset 0 0 0 2px rgba(0,0,0,0.25)',
   },
-  // Pase 203: se saca el emoji 🏆 (acá y en destacadoTitulo) a pedido del
-  // usuario, y en su lugar se usa la misma imagen de trofeo que ya usa el
-  // menú/AppShell para la pestaña "Torneos" — un solo asset de copa en
-  // todo el proyecto en vez de la copa como emoji conviviendo con la copa
-  // como imagen en otras pantallas.
-  // Pase 204: el trofeo pasó de vivir chico dentro de cada línea a ser un
-  // solo ícono grande al costado de las dos, así que estos dos ya no
-  // necesitan su propio display/gap para acomodar una imagen adentro.
-  destacadoHeader: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, marginBottom: 16 },
-  destacadoHeaderIcono: { height: 56, width: 'auto', objectFit: 'contain', flexShrink: 0 },
-  destacadoHeaderTextos: { display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 5, textAlign: 'left' },
-  destacadoBadge: {
-    display: 'inline-block', background: C.dorado, color: C.chocolate,
-    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 12,
-    padding: '4px 12px', borderRadius: 20, letterSpacing: 0.5
+  // Insignia "PRÓXIMO TORNEO" — cinta recortada con clip-path (2 muescas
+  // en V a los costados, look de sticker) en vez del pill plano de antes.
+  destacadoCinta: {
+    display: 'inline-block', margin: '0 0 14px',
+    background: `linear-gradient(180deg, ${C.doradoClaro}, ${C.dorado})`,
+    color: C.chocolate, fontFamily: "'Fredoka', sans-serif", fontWeight: 800, fontSize: 12.5,
+    padding: '8px 28px', letterSpacing: 0.6,
+    border: `2.5px solid ${C.negroPulido}`,
+    clipPath: 'polygon(0 0, 100% 0, 91% 50%, 100% 100%, 0 100%, 9% 50%)',
+    boxShadow: '0 3px 0 rgba(0,0,0,0.4)',
   },
+  destacadoHeader: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 18 },
+  destacadoHeaderIcono: { height: 50, width: 'auto', objectFit: 'contain', flexShrink: 0 },
   destacadoTitulo: {
     fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 22,
     color: C.crema
   },
   // Pase siguiente: flexWrap agregado — con las 2 stats nuevas (Entrada/
   // Premio) ya son 5 en la fila, y sin wrap podían desbordar en mobile.
-  destacadoStats: { display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 18, marginBottom: 18 },
-  destacadoStat: { display: 'flex', flexDirection: 'column', alignItems: 'center' },
-  destacadoStatValor: {
-    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 20,
-    color: C.doradoClaro, display: 'flex', alignItems: 'center'
+  destacadoStats: { display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 10, marginBottom: 20 },
+  // Cada stat pasa de texto suelto a una mini placa de madera 3D (mismo
+  // degradé que los paneles grandes, a escala de badge) con su ícono
+  // ilustrado arriba del valor.
+  destacadoStatBadge: {
+    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+    background: `linear-gradient(160deg, ${C.maderaClara} 0%, ${C.maderaMedia} 60%, ${C.maderaOscura} 100%)`,
+    border: `2px solid ${C.negroPulido}`, borderRadius: 12,
+    padding: '9px 13px 8px', minWidth: 62,
+    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -2px 5px rgba(0,0,0,0.4), 0 3px 0 rgba(0,0,0,0.3)',
   },
-  destacadoStatLabel: { fontSize: 11, color: 'rgba(255,248,237,0.7)', fontWeight: 700, marginTop: 2 },
+  // Pase siguiente: +4px — el usuario los vio bien pero un poco chicos.
+  destacadoStatIcono: { width: 26, height: 26, objectFit: 'contain', filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.4))' },
+  // "Ficha de truco" — mismo degradé de remache (moneda/ficha de bronce)
+  // dibujado en CSS, no hay un asset de ficha de truco individual todavía.
+  fichaTruco: {
+    display: 'block', width: 24, height: 24, borderRadius: '50%',
+    background: `radial-gradient(circle at 35% 30%, ${C.remacheClaro} 0%, ${C.remache} 45%, ${C.remacheOscuro} 78%, #3a2610 100%)`,
+    boxShadow: '0 1px 2px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.35)',
+    border: '1.5px solid rgba(0,0,0,0.4)', boxSizing: 'border-box',
+  },
+  destacadoStatValor: {
+    fontFamily: "'Fredoka', sans-serif", fontWeight: 800, fontSize: 16,
+    color: C.doradoClaro, textShadow: '0 1px 2px rgba(0,0,0,0.5)',
+  },
+  destacadoStatLabel: { fontSize: 9.5, color: 'rgba(255,248,237,0.75)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.3 },
+  // Botón "Anotarme ahora" — pedido explícito: bajarlo a 50-60% del ancho
+  // (en vez de ocupar toda la placa, que lo hacía ver desproporcionado) y
+  // subirle la tipografía ~20% en negrita para que un botón más compacto y
+  // grueso pese más como CTA principal. `destacadoCard` es `textAlign:
+  // 'center'`, así que un botón inline-block más angosto queda centrado
+  // solo, sin flex ni margin:auto.
   destacadoBtn: {
-    fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 16,
-    background: `linear-gradient(180deg, ${C.doradoClaro}, ${C.dorado})`, color: C.chocolate,
-    border: `3px solid ${C.chocolate}`, borderRadius: 14, padding: '13px 28px',
-    boxShadow: `0 5px 0 ${C.doradoOscuro}`, cursor: 'pointer', width: '100%'
+    fontFamily: "'Fredoka', sans-serif", fontWeight: 800, fontSize: 19, color: C.chocolate,
+    border: '2px solid #000', borderRadius: 999, cursor: 'pointer', width: '58%', minWidth: 200,
+    background: 'linear-gradient(180deg, #FFD147 0%, #E69D00 100%)',
+    boxShadow: '0 4px 0 #000',
+    padding: '13px 20px',
   },
   destacadoYaInscripto: {
-    background: 'rgba(255,248,237,0.15)', color: C.doradoClaro,
-    fontWeight: 700, fontSize: 14, padding: '10px', borderRadius: 12
+    background: 'rgba(255,248,237,0.12)', color: C.doradoClaro,
+    fontWeight: 700, fontSize: 14, padding: '10px', borderRadius: 12,
+    border: `1.5px solid rgba(255,214,104,0.35)`,
   },
   iconoMonedaInline: { width: 16, height: 16, objectFit: 'contain', marginRight: 4 },
   statsRow: { display: 'flex', gap: 12, marginBottom: 16 },
+  // Mini placa de madera (misma receta que los paneles grandes, a escala
+  // chica) en vez del rectángulo blanco plano de antes.
   statCard: {
-    flex: 1, background: C.crema, border: `3px solid ${C.chocolate}`,
-    borderRadius: 16, padding: '14px', textAlign: 'center'
+    flex: 1, textAlign: 'center', padding: '14px 10px 12px',
+    background: `linear-gradient(160deg, ${C.maderaClara} 0%, ${C.maderaMedia} 55%, ${C.maderaOscura} 100%)`,
+    border: `2.5px solid ${C.negroPulido}`, borderRadius: 16,
+    boxShadow: [
+      'inset 0 2px 0 rgba(255,255,255,0.10)',
+      'inset 0 -3px 8px rgba(0,0,0,0.4)',
+      `0 5px 0 ${C.negroPulido}`,
+      '0 8px 14px rgba(0,0,0,0.3)',
+    ].join(', '),
   },
-  statValor: { fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 24, color: C.chocolate },
-  statLabel: { fontSize: 11, color: '#7a6660', fontWeight: 700, marginTop: 2 },
-  panelTitle: { fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 19, color: C.chocolate, marginBottom: 14 },
+  statValor: { fontFamily: "'Fredoka', sans-serif", fontWeight: 800, fontSize: 26, color: C.doradoClaro, textShadow: '0 1px 3px rgba(0,0,0,0.5)' },
+  statLabel: {
+    fontSize: 11, color: 'rgba(255,248,237,0.75)', fontWeight: 700, marginTop: 4,
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+  },
+  statLabelIcono: { width: 13, height: 13, objectFit: 'contain', marginRight: 4, filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.35))' },
+  panelTitle: {
+    fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 19, color: C.chocolate, marginBottom: 10,
+    display: 'flex', alignItems: 'center',
+  },
+  panelTitleIcono: { width: 24, height: 'auto', objectFit: 'contain', marginRight: 9 },
   // Pase siguiente: wrapper de 2 columnas para "Crear torneo" + lista de
   // torneos disponibles (ver comentario arriba de crearYListaWrap en el
   // JSX). minmax(340px,1fr) hace que cada columna use la mitad del ancho
@@ -672,61 +899,133 @@ const estilos = {
     color: C.chocolate, background: '#fff', border: `2.5px solid ${C.chocolate}`,
     borderRadius: 12, padding: '9px 11px'
   },
+  // Botón primario del form ("✓ Crear torneo", y "Confirmar" reutilizando
+  // este mismo estilo) — mismo pill 100% CSS que "Anotarme ahora", así el
+  // dorado queda consistente como "acción principal" en toda la pantalla.
   btnPrimary: {
-    fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 15,
-    background: `linear-gradient(180deg, ${C.doradoClaro}, ${C.dorado})`, color: C.chocolate,
-    border: `3px solid ${C.chocolate}`, borderRadius: 14, padding: '12px 20px',
-    boxShadow: `0 5px 0 ${C.doradoOscuro}`, cursor: 'pointer'
+    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 15, color: C.chocolate,
+    border: '2px solid #000', borderRadius: 999, cursor: 'pointer',
+    background: 'linear-gradient(180deg, #FFD147 0%, #E69D00 100%)',
+    boxShadow: '0 4px 0 #000',
+    padding: '11px 20px',
   },
   btnSecondary: {
     fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 15,
-    background: C.crema, color: C.chocolate, border: `3px solid ${C.chocolate}`,
-    borderRadius: 14, padding: '12px 20px', boxShadow: '0 5px 0 rgba(74,44,42,0.35)',
+    background: C.crema, color: C.chocolate, border: `3px solid ${C.negroPulido}`,
+    borderRadius: 14, padding: '12px 20px', boxShadow: '0 5px 0 rgba(0,0,0,0.3)',
     cursor: 'pointer', width: '100%'
+  },
+  // "+ Nuevo torneo" — mismo pill verde 100% CSS que "Inscribirse"/
+  // "Ver bracket" (ver `btnCard`), en vez de la barra blanca plana de
+  // antes o del pill ilustrado que se deformaba en este ancho.
+  btnNuevoTorneo: {
+    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 15, color: '#fff',
+    border: '2px solid #000', borderRadius: 999, cursor: 'pointer', width: '100%',
+    background: 'linear-gradient(180deg, #2ECC71 0%, #179B4A 100%)',
+    boxShadow: '0 4px 0 #000',
+    padding: '11px 20px',
   },
   sectionTitle: { fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 16, color: C.crema, margin: '4px 0 10px 4px' },
   tabs: { display: 'flex', gap: 8, marginBottom: 14 },
+  // Activa: madera clara/pergamino con borde dorado y contorno negro.
   tabActiva: {
-    fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 13,
-    background: `linear-gradient(180deg, ${C.doradoClaro}, ${C.dorado})`, color: C.chocolate,
-    border: `2.5px solid ${C.chocolate}`, borderRadius: 12, padding: '8px 14px',
-    boxShadow: `0 3px 0 ${C.doradoOscuro}`, cursor: 'pointer'
+    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 13,
+    background: `linear-gradient(180deg, ${C.cremaSutil}, ${C.crema})`, color: C.chocolate,
+    border: `2px solid ${C.doradoOscuro}`, borderRadius: 12, padding: '8px 16px',
+    boxShadow: `0 0 0 1.5px ${C.negroPulido}, 0 3px 0 ${C.negroPulido}`, cursor: 'pointer'
   },
+  // Inactiva: cuero oscuro "hundido" (sombra interior en vez de relieve).
   tabInactiva: {
-    fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 13,
-    background: C.crema, color: C.chocolate,
-    border: `2.5px solid ${C.chocolate}`, borderRadius: 12, padding: '8px 14px',
-    boxShadow: '0 3px 0 rgba(74,44,42,0.3)', cursor: 'pointer'
+    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 13,
+    background: 'linear-gradient(180deg, #2a1c12, #1a100a)', color: 'rgba(255,248,237,0.55)',
+    border: `2px solid ${C.negroPulido}`, borderRadius: 12, padding: '8px 16px',
+    boxShadow: 'inset 0 3px 6px rgba(0,0,0,0.6), inset 0 -1px 0 rgba(255,255,255,0.05)',
+    cursor: 'pointer'
+  },
+  // Pase siguiente: "placa nameplate" de 2 tonos (mismo criterio que
+  // `panelExterior`/`panelInterior` — exterior de madera, interior de
+  // pergamino cálido — pero a escala chica y sin remaches, para que no se
+  // sienta recargado repetido en toda una grilla de tarjetas) en vez del
+  // pergamino plano de un solo tono que tenía antes. Va en 2 capas porque
+  // el exterior necesita su propio padding para que se vea el filo de
+  // madera alrededor del pergamino.
+  torneoCardExterior: {
+    background: `linear-gradient(160deg, ${C.maderaClara} 0%, ${C.maderaMedia} 55%, ${C.maderaOscura} 100%)`,
+    border: `2px solid ${C.negroPulido}`, borderRadius: 16,
+    padding: 6, marginBottom: 10,
+    boxShadow: [
+      'inset 0 1px 0 rgba(255,255,255,0.10)',
+      'inset 0 -3px 7px rgba(0,0,0,0.4)',
+      `0 4px 0 ${C.negroPulido}`,
+      '0 6px 10px rgba(0,0,0,0.25)',
+    ].join(', '),
   },
   torneoCard: {
-    background: C.crema, border: `3px solid ${C.chocolate}`, borderRadius: 16,
-    padding: '12px 14px', marginBottom: 10, boxShadow: '0 4px 0 rgba(0,0,0,0.2)'
+    background: 'linear-gradient(135deg, #fffaf0 0%, #f7e8c8 100%)',
+    border: `1.5px solid rgba(26,20,16,0.35)`, borderRadius: 11,
+    padding: '12px 14px',
+    boxShadow: 'inset 0 0 0 1px rgba(26,20,16,0.12)',
   },
   torneoHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, gap: 8 },
-  torneoNombre: { fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 15, color: C.chocolate },
-  badge: { fontSize: 11, fontWeight: 800, padding: '3px 9px', borderRadius: 20, textTransform: 'uppercase', whiteSpace: 'nowrap' },
-  badgeAbierta: { background: '#d8f0da', color: C.verdeOscuro },
-  badgeCurso: { background: '#ffe8c2', color: C.doradoOscuro },
+  torneoNombre: { fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 15, color: C.chocolate },
+  badge: {
+    fontSize: 11, fontWeight: 800, padding: '3px 10px', borderRadius: 12,
+    textTransform: 'uppercase', whiteSpace: 'nowrap', border: `1.5px solid ${C.negroPulido}`,
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+  },
+  // Cinta/badge verde neón 3D con texto blanco, en vez del pill verde
+  // clarito plano.
+  badgeAbierta: {
+    background: 'linear-gradient(180deg, #5EE87A, #2FBD52)', color: '#fff',
+    boxShadow: `0 2px 0 #1a6b2e, inset 0 1px 0 rgba(255,255,255,0.5)`, textShadow: '0 1px 1px rgba(0,0,0,0.3)',
+  },
+  badgeCurso: {
+    background: `linear-gradient(180deg, ${C.doradoClaro}, ${C.dorado})`, color: C.chocolate,
+    boxShadow: `0 2px 0 ${C.doradoOscuro}, inset 0 1px 0 rgba(255,255,255,0.5)`,
+  },
   torneoInfo: { fontSize: 12.5, color: '#7a6660', fontWeight: 700, marginBottom: 10 },
+  // "Inscribirse"/"Ver bracket" — pedido explícito: rectangular con bordes
+  // redondeados (no pill completo como los botones grandes) para que
+  // encaje cómodo a la izquierda de la tarjeta sin tocar la franja
+  // inferior — el pill ilustrado se deformaba en óvalo con un anillo en
+  // el medio a este tamaño.
   btnCard: {
-    fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 13,
-    background: C.celeste, color: C.chocolate, border: `2px solid ${C.chocolate}`,
-    borderRadius: 10, padding: '7px 14px', boxShadow: '0 3px 0 #3a91c2', cursor: 'pointer'
+    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 13, color: '#fff',
+    border: '2px solid #000', borderRadius: 12, cursor: 'pointer',
+    background: 'linear-gradient(180deg, #2ECC71 0%, #179B4A 100%)',
+    boxShadow: '0 3px 0 #000',
+    padding: '8px 16px', marginBottom: 5,
   },
   btnCardSecondary: {
     fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 13,
-    background: '#fff', color: C.chocolate, border: `2px solid ${C.chocolate}`,
-    borderRadius: 10, padding: '7px 14px', boxShadow: '0 3px 0 rgba(74,44,42,0.3)', cursor: 'pointer'
+    background: '#fff', color: C.chocolate, border: `2px solid ${C.negroPulido}`,
+    borderRadius: 10, padding: '7px 14px', boxShadow: '0 3px 0 rgba(0,0,0,0.25)', cursor: 'pointer'
   },
+  // "Desinscribirme" — mismo criterio que `btnCard`: rectangular con
+  // bordes redondeados en rojo/crimson, no el pill ilustrado (mismo
+  // problema de deformación a este tamaño).
   btnCardCrimson: {
-    fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 13,
-    background: `linear-gradient(180deg, #f06052, ${C.crimson})`, color: C.crema,
-    border: `2px solid ${C.chocolate}`, borderRadius: 10, padding: '7px 14px',
-    boxShadow: `0 3px 0 ${C.crimsonOscuro}`, cursor: 'pointer'
+    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 13, color: '#fff',
+    border: '2px solid #000', borderRadius: 12, cursor: 'pointer',
+    background: `linear-gradient(180deg, #F0584A 0%, ${C.crimsonOscuro} 100%)`,
+    boxShadow: '0 3px 0 #000',
+    padding: '8px 16px', marginBottom: 5,
   },
   torneosGrid: {
   display: 'grid',
   gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
   gap: 12,
 },
+  // Controles de paginación — mismo criterio "3D plano" que el resto de
+  // botones de la pantalla, en madera oscura (neutro, no compite con el
+  // verde/dorado de las acciones reales de las tarjetas).
+  paginador: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginTop: 14 },
+  paginadorBtn: {
+    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 12.5, color: C.crema,
+    border: '2px solid #000', borderRadius: 10, cursor: 'pointer',
+    background: `linear-gradient(180deg, ${C.maderaClara} 0%, ${C.maderaOscura} 100%)`,
+    boxShadow: '0 3px 0 #000', padding: '7px 14px',
+  },
+  paginadorBtnDisabled: { opacity: 0.4, cursor: 'default', boxShadow: 'none' },
+  paginadorTexto: { fontSize: 12.5, color: C.crema, fontWeight: 700, minWidth: 92, textAlign: 'center' },
 };

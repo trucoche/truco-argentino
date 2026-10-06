@@ -46,6 +46,18 @@ function proximoNivelTruco(nivelActual) {
 // assets/images/juego/ui-botones-canva-final/<clave>.png). "con-flor-me-achico"
 // reusa a propósito el mismo archivo que "no-quiero" — decisión del
 // usuario para no generar un botón extra con el mismo significado.
+// Nonagésimo primer pase: el usuario completó el set — ya llegaron
+// Truco/Retruco/ValeCuatro/Envido/RealEnvido/FaltaEnvido/Quiero/NoQuiero/
+// SonBuenas/IrAlMazo/ContraFlor/ContraFlorResto con su texto ya horneado
+// en el mismo estilo píldora/sticker que las 3 píldoras genéricas del
+// pase anterior — así que se vuelve al criterio original (una imagen
+// propia por acción, sin texto dibujado por código encima) y se da de
+// baja el mapa TEXTO_BOTON_PILDORA/el ensanchado-por-texto de
+// `specImagen` que existían solo para tapar la falta de esas imágenes.
+// Las píldoras genéricas (PillVerde/PillRoja/PillAmarilla) quedan sin
+// uso pero no se borraron del repo (mismo criterio de no eliminar
+// assets superados que ya se usa con panel-puntaje-cuero.png). 'flor'
+// sigue con su tablita vieja — no llegó un asset nuevo para esa.
 const CLAVE_IMAGEN_BOTON = {
   'truco': 'Truco',
   'retruco': 'Retruco',
@@ -85,6 +97,7 @@ export default class GameSceneOnline extends Phaser.Scene {
     this._modoSala = null;
     this._capacidadSala = null;
     this._avataresEsperaSprites = [];
+    this._avataresEsperaTimers = [];
     this._filaEsperaGeneracion = 0;
     // Referencia del banner-título de la sala de espera (ver
     // _actualizarBannerEsperaTitulo) — reseteada acá por la misma razón que
@@ -160,16 +173,37 @@ preload() {
     this.load.image('fondoMesa', conVersion(modoOscuro
       ? 'assets/images/juego/fondo-cantina-web-noche.jpg'
       : 'assets/images/juego/fondo-cantina-web.jpg'));
-    this.load.image('mesaRedonda', conVersion('assets/images/juego/mesa-truco.png'));
+    // Pedido del usuario ("vamos a colocar ahora la nueva mesa, así ya
+    // completamos el diseño definitivo de la pantalla de juego 1v1"):
+    // nuevo asset de mesa (paño verde + isotipo "TC", ya recortado a su
+    // contenido real, sin relleno transparente alrededor — a diferencia
+    // del archivo anterior, que era una lámina de 1500x2700 con la mesa
+    // ocupando solo una región interna, de ahí el `setCrop` con offsets a
+    // mano en `_ajustarMesaSegunAsientos`). Esta nueva mesa es solo para
+    // 1v1/2v2 (la rama "normal" de esa función) — el usuario no mandó
+    // reemplazo para la mesa de 3v3, que sigue con su asset de siempre.
+    this.load.image('mesaRedonda', conVersion('assets/images/juego/mesa-truco-nueva.png'));
     this.load.image('mesaRedonda3v3', conVersion('assets/images/juego/mesa-truco-3v3.png'));
     // Fase 6 — fondo de la barra de acciones ("madera + filete dorado"),
     // reemplaza el rectángulo de color plano que había antes (ver
     // _crearElementosDeTexto). Imagen de 800x110, misma proporción que el
     // rectángulo que reemplaza, así que no hace falta tocar ninguna posición.
-    this.load.image('panelBotonera', conVersion('assets/images/juego/panel-botonera.png'));
-    // Trigésimo cuarto pase: placa de madera para el marcador de puntaje,
-    // reemplaza el rectángulo dorado dibujado por código.
-    this.load.image('panelPuntaje', conVersion('assets/images/juego/panel-puntaje.png'));
+    // Nonagésimo pase: reemplazada por la placa de madera con remaches de
+    // bronce que pasó el usuario (ver comentario junto al add.image más
+    // abajo sobre por qué el tamaño de display cambió de 800x110).
+    this.load.image('panelBotonera', conVersion('assets/images/juego/panel-botonera-madera-remaches.png'));
+    // Nonagésimo quinto pase: se había agregado acá la carga de
+    // `placaTurno` (faja de madera detrás de "● Tu turno") — el
+    // nonagésimo séptimo pase la sacó de nuevo a pedido del usuario (ver
+    // comentario junto a `turnoText` en create()), así que esta imagen ya
+    // no se usa en ningún lado.
+    // Trigésimo cuarto pase: placa de madera para el marcador de puntaje
+    // (imagen), que después pasó a un asset de cuero+bronce (pase
+    // siguiente) — el usuario dio marcha atrás y pidió volver al criterio
+    // de placa "madera+bronce" dibujada por código, mismo lenguaje visual
+    // que ya usan Lobby/Torneos/Ranking en CSS — ver `_dibujarPlacaMarcador`
+    // y `this.scoreBg` más abajo. Ya no se carga ninguna imagen para este
+    // panel.
 
     // Assets de la botonera vieja (Fase 1, 3 slices por material): de los
     // 4 materiales que existían originalmente, solo quedaba 'boton_verde'
@@ -205,10 +239,23 @@ preload() {
     });
     // Octogésimo sexto pase: "Tengo [puntos]" no tiene un id semántico de
     // canto (no pasa por CLAVE_IMAGEN_BOTON/specImagen), así que su textura
-    // se encola aparte — es la misma tablita de "Quiero" pero sin texto
-    // horneado (ver Tengo.png), con el número dibujado encima en
-    // `_crearBoton` (branch `imagen && texto`).
-    this.load.image('boton_img_Tengo', conVersion('assets/images/juego/ui-botones-canva-final/Tengo.png'));
+    // se encola aparte — con el número dibujado encima en `_crearBoton`
+    // (branch `imagen === 'Tengo'`).
+    // Pase 267: el asset de fondo pasó de una tablita de madera oscura
+    // plana a la píldora verde brillante que mandó el usuario (`Tengo.png`,
+    // mismo nombre/clave, solo cambió el contenido del archivo).
+    // Ducentésimo septuagésimo pase: esa píldora se estiraba entera a un
+    // ancho fijo (130), así que con textos cortos ("Tengo 7") se veía
+    // siempre más ancha de lo que el texto necesitaba — reportado por el
+    // usuario como "el botón cambia de tamaño y queda estirado" al variar
+    // el puntaje. Se recortó `Tengo.png` en 3 franjas (puntas fijas +
+    // tramo recto del medio) para poder estirar SOLO el medio, igual que ya
+    // se hace con los banners/botones-overlay de madera — a diferencia de
+    // Quiero/Truco/etc., esta tablita no tiene texto horneado, así que acá
+    // no hay nada que la técnica de 3 franjas pueda deformar.
+    this.load.image('tengoIzq', conVersion('assets/images/juego/ui-botones-canva-final/tengo-izq.png'));
+    this.load.image('tengoCentro', conVersion('assets/images/juego/ui-botones-canva-final/tengo-centro.png'));
+    this.load.image('tengoDer', conVersion('assets/images/juego/ui-botones-canva-final/tengo-der.png'));
     this.load.audio('jugar-carta', 'assets/sounds/CardGame-SoundEffect.mp3');
     this.load.audio('ganar',       'assets/sounds/ganarpartidasonido.mp3');
     this.load.audio('repartir',    'assets/sounds/repartir_cartas.mp3');
@@ -225,14 +272,26 @@ preload() {
     // celeste del botón "Volver al Lobby" (ver _crearBoton, clave
     // `boton_img_${imagen}` — el prefijo `boton_img_` es el que ya usa esa
     // función para CUALQUIER botón-imagen, no una convención nueva).
-    this.load.image('marcoAvatarEspera', conVersion('assets/images/juego/marco-avatar-espera.png'));
-    // Pase 211: tablon-boton-espera.png se recortó a su contenido real
-    // (490x240 aprox, ver comentario en _crearBoton/botonVolverEspera en
-    // create()) — el archivo que llegó tenía el tablón dentro de un
-    // lienzo cuadrado 500x500 con relleno transparente arriba/abajo, y
-    // `_anchoBotonImagen` (que calcula el ancho del botón a partir del
-    // aspecto del archivo) tomaba ese lienzo cuadrado como si fuera la
-    // forma real del tablón — resultado: un tablón diminuto.
+    // Pase 267, punto 2: el marco original (`marco-avatar-espera.png`) era
+    // una PLACA CUADRADA con esquineros de metal oscuros — pedido explícito
+    // del usuario: "los marcos cuadrados... quedan demasiado oscuros y sin
+    // contraste... convertir en Podios o Sellos Circulares de Madera Cálida
+    // con Pergamino Interior". No se generó arte nuevo — el archivo
+    // original YA tenía un medallón circular de soga tallada adentro de esa
+    // placa cuadrada (ver el PNG completo); se recortó esa parte circular
+    // (se descartaron la placa cuadrada y los esquineros de metal), se le
+    // subió el brillo/calidez, y se tiñó el disco interior hacia un tono
+    // crema/pergamino (antes era madera lisa oscura) — resultado: un sello
+    // circular de madera clara con centro de pergamino, mismo archivo de
+    // origen, sin ilustrar nada nuevo. Nuevo archivo, clave nueva (la vieja
+    // 'marcoAvatarEspera' se da de baja — un solo call site, ver
+    // _dibujarTileEspera).
+    this.load.image('selloAvatarEspera', conVersion('assets/images/juego/sello-avatar-espera.png'));
+    // Pase 267, punto 4: este tablón ya NO se usa — el botón "Volver al
+    // Lobby" pasa a ser el mismo Botón 3D Pill-shaped (nine-slice) que la
+    // pantalla final (ver botonVolverEspera en create()). Se deja la
+    // precarga igual (no hace daño, y por si se reutiliza en otro lado) en
+    // vez de borrarla a ciegas.
     this.load.image('boton_img_TablonEspera', conVersion('assets/images/juego/tablon-boton-espera.png'));
     const PERSONAJES_CANTO = ['gaucho', 'gaucha', 'gaucho2', 'gaucha2'];
 
@@ -246,8 +305,56 @@ preload() {
     // 8 juegos completos de expresiones, para no descargar de más.
     this.load.image('fondoResultado', conVersion('assets/images/fondo-lobby.jpeg'));
     const miPersonajeResultado = PERSONAJES_CANTO.includes(this.usuario?.personaje) ? this.usuario.personaje : 'gaucho';
-    this.load.image('caraDerrotado', conVersion(`assets/expresionesGaucho/${miPersonajeResultado}_derrotado.png`));
-    this.load.image('caraVictorioso', conVersion(`assets/expresionesGaucho/${miPersonajeResultado}_victorioso.png`));
+    // Pase 266: ahora se cargan las variantes "_cerca" — versiones
+    // recortadas al bbox de contenido (+6% de margen, luego centradas en
+    // un lienzo cuadrado) en vez de los PNG originales, que tenían
+    // relleno transparente interno muy inconsistente entre los 4
+    // personajes (del 4% al 19% del lienzo según el caso). Sin este
+    // recorte, agrandar `caraTam` solo mostraba más espacio vacío
+    // ampliado; con el recorte, el personaje ocupa todo el `caraTam` y
+    // el sombrero puede asomar por encima del anillo (ver `radioAvatar`
+    // más abajo). Los PNG originales quedan intactos por si se usan en
+    // otro lado (stickers de chat, etc.).
+    this.load.image('caraDerrotado', conVersion(`assets/expresionesGaucho/${miPersonajeResultado}_derrotado_cerca.png`));
+    this.load.image('caraVictorioso', conVersion(`assets/expresionesGaucho/${miPersonajeResultado}_victorioso_cerca.png`));
+    // Nonagésimo sexto pase: los botones de esta pantalla (revancha/volver
+    // al lobby) pasan de un relleno plano dibujado por Graphics a los
+    // MISMOS botones ilustrados píldora-3D (relieve+brillo horneados) que
+    // ya usa Tienda.js para sus botones de precio — pedido explícito del
+    // usuario: "mismo lenguaje de volumen 3D cartoon... para dar simetría
+    // y peso táctil". Se reutilizan los PNG existentes en vez de generar
+    // assets nuevos (mismo criterio que ya se usó para los botones de
+    // Torneos/Tienda).
+    // Pase 266: estos dos PNG completos ya no se dibujan directo en esta
+    // escena (ver abajo, se reemplazó por los 6 slices) — quedan
+    // cargados igual porque son el ORIGEN de esos slices (recortados de
+    // estos mismos archivos) y por si Tienda.js u otra pantalla los
+    // sigue usando enteros; no son candidatos a borrar, solo a dejar de
+    // referenciar acá.
+    this.load.image('botonVerde', conVersion('assets/images/boton-verde.png'));
+    this.load.image('botonAmarillo', conVersion('assets/images/boton-amarillo.png'));
+    // Pase 266, punto 3: los PNG de arriba (`botonVerde`/`botonAmarillo`,
+    // la píldora COMPLETA) se estiraban enteros con `setDisplaySize` para
+    // encajar en el ancho que pidiera cada texto — como el ancho varía
+    // según el texto ("Pedir revancha" vs "Volver al lobby") pero la
+    // imagen es una sola, estirarla horizontalmente aplastaba las puntas
+    // redondeadas. Estos 6 slices (recortados de los mismos PNG de
+    // arriba, puntas intactas) permiten el mismo truco de "3 franjas"
+    // que ya usa `_crearBannerTexto` para el cartel de madera: solo el
+    // centro liso se estira, las puntas solo cambian de alto. Usado en
+    // `_crearBotonOverlay` (los botones de la pantalla final).
+    this.load.image('botonVerdeIzq', conVersion('assets/images/boton-verde-izq.png'));
+    this.load.image('botonVerdeCentro', conVersion('assets/images/boton-verde-centro.png'));
+    this.load.image('botonVerdeDer', conVersion('assets/images/boton-verde-der.png'));
+    this.load.image('botonAmarilloIzq', conVersion('assets/images/boton-amarillo-izq.png'));
+    this.load.image('botonAmarilloCentro', conVersion('assets/images/boton-amarillo-centro.png'));
+    this.load.image('botonAmarilloDer', conVersion('assets/images/boton-amarillo-der.png'));
+    // Centésimo pase: ícono de trofeo dorado para la fila del ganador en
+    // la tabla de posiciones — se reutiliza `historial-trofeo.png` (ya
+    // tiene el contorno tipo sticker horneado, y ya se usa en Historial.js
+    // exactamente para marcar "esta partida la gané") en vez de generar
+    // un asset nuevo.
+    this.load.image('trofeoFila', conVersion('assets/images/historial-trofeo.png'));
 
     const CLAVES_CANTO = ['truco', 'retruco', 'vale-cuatro', 'envido', 'real-envido', 'falta-envido', 'quiero', 'no-quiero'];
     PERSONAJES_CANTO.forEach(p => {
@@ -310,6 +417,13 @@ _crearElementosDeTexto() {
     this.add.image(400, 300, 'vinetaMadera').setDepth(0.2);
 
     this.sombraMesa = this.add.ellipse(400, 520, 560, 90, 0x000000, 0.35).setDepth(0.5);
+    // Ducentésimo sexagésimo noveno pase: halo cálido detrás de la mesa
+    // (ver `resplandorMesa` en _crearTexturasAtmosfera) — depth 0.6, entre
+    // la sombra (0.5) y la mesa (1), así queda siempre DETRÁS del tapete,
+    // dándole un borde de luz que la separa de la pared de fondo. A
+    // diferencia de `luzCalidaMesa` más abajo, este se dibuja en los dos
+    // modos (día y noche).
+    this.add.image(400, 320, 'resplandorMesa').setDepth(0.6);
     this.mesaImg = this.add.image(400, 340, 'mesaRedonda').setDepth(1);
     this._ajustarMesaSegunAsientos(2);
 
@@ -374,10 +488,23 @@ _crearElementosDeTexto() {
     // por el viñeteado mientras el marcador al lado se veía nítido. Subidos
     // a depth 1002 (mismo nivel que `scoreText`) para que escapen del
     // viñeteado igual que el marcador. Además se agrega `fondoInfoRival`,
-    // una placa chica (Graphics, se redibuja en cada estado según el ancho
-    // real del nombre) detrás de nombre+ícono, para que las dos placas
-    // (marcador + info del rival) se lean como un solo bloque de HUD en vez
-    // de "puntaje con placa" + "nombre suelto flotando sobre el paño".
+    // una placa chica (Graphics) detrás de nombre+ícono, para que las dos
+    // placas (marcador + info del rival) se lean como un solo bloque de
+    // HUD en vez de "puntaje con placa" + "nombre suelto flotando sobre
+    // el paño".
+    //
+    // Pase siguiente ("Placa Doble de Madera", pedido del usuario: "mostrar
+    // los nombres de los jugadores con sus puntos"): esta placa pasa de
+    // tamaño DINÁMICO (según el ancho real del nombre, redibujada en cada
+    // `_renderizarEstado`) a tamaño FIJO, mismo criterio y mismo dibujo
+    // (`_dibujarPlacaMarcador`) que la placa de "Vos" de más abajo — las
+    // dos forman el par de placas gemelas del HUD. Al ser fijo, ya no hace
+    // falta redibujarla en cada estado (se dibuja una sola vez acá, con
+    // `_dibujarPlacaMarcador`, después de definir sus medidas junto con la
+    // placa de "Vos"). El nombre del rival, si es más largo que lo que
+    // entra, se trunca (ver `_renderizarEstado`) en vez de estirar la
+    // placa — evita que un nombre largo empuje el resto del HUD o invada
+    // el centro de la pantalla.
     this.fondoInfoRival = this.add.graphics().setDepth(1001);
     // Pase siguiente: anillo de tiempo (paridad con el nativo, pase 177) —
     // graphics aparte y persistente (no vive en `_sprites`, sobrevive a
@@ -389,7 +516,31 @@ _crearElementosDeTexto() {
     this.anilloTiempo = this.add.graphics().setDepth(1010);
     this._anilloRect = null;
 
-    this.labelRival = this.add.text(112, 18, 'Rival', { font: '14px Arial', fill: '#ffffffdd' }).setOrigin(0, 0.5).setDepth(1002);
+    // Placa doble — ver comentario junto a `fondoInfoRival` más arriba y
+    // el de la placa "Vos" más abajo (junto a `scoreBg`). Las dos placas
+    // son gemelas: mismo tamaño, mismo estilo, una al lado de la otra.
+    // `PLACA_RIVAL_CX/CY/ANCHO/ALTO` son las medidas de ESTA placa —
+    // separadas de `marcadorAncho/Alto/X` (placa "Vos") porque cada una
+    // vive en su propio bloque del archivo, pero comparten los mismos
+    // valores de ancho/alto por diseño.
+    // Pase siguiente (feedback del usuario: las placas quedaban "muy
+    // pegadas al marco superior e izquierdo" — pidió ~12px de aire arriba
+    // y a la izquierda). Con esta placa centrada en (178,36) y 96×48, el
+    // borde superior queda en Y=12 y el borde derecho de la placa "Vos"
+    // (ver más abajo) + el margen entre ambas dejan el borde izquierdo de
+    // ESTA en X=130 — ninguna placa toca ya el borde de la pantalla.
+    this.PLACA_RIVAL_CX = 178;
+    this.PLACA_RIVAL_CY = 36;
+    const placaAncho = 96;
+    const placaAlto = 48;
+    // Nonagésimo tercer pase: color sólido (sin alpha en el hex) +
+    // contorno fino, en vez de '#ffffffdd' sin stroke — pedido explícito
+    // del usuario, el nombre del rival se perdía sobre la madera. Mismo
+    // criterio que `labelPropio` (ver más abajo), para que las dos placas
+    // sean igual de legibles.
+    this.labelRival = this.add.text(this.PLACA_RIVAL_CX, this.PLACA_RIVAL_CY - 11, 'Rival', {
+      font: '12px Arial', fill: '#FFF8ED', stroke: '#2a1c14', strokeThickness: 2.5,
+    }).setOrigin(0.5).setDepth(1002);
     // Centésimo décimo quinto pase: nombre del rival clickeable, mismo
     // criterio que Ranking/Lobby/chat/Perfil (abre PerfilRivalModal). Se
     // deja interactivo una sola vez acá afuera del render loop — el texto
@@ -399,12 +550,27 @@ _crearElementosDeTexto() {
     this.labelRival.on('pointerdown', () => {
       if (this._nombreRivalActual && this.onVerPerfil) this.onVerPerfil(this._nombreRivalActual);
     });
+    // Puntos del rival — antes vivían combinados con los propios en un
+    // solo texto "N - N" adentro de la placa "Vos" (`scoreText`); ahora
+    // cada placa muestra sus propios puntos, en el mismo estilo (cifras
+    // doradas) que ya tenía ese texto combinado.
+    this.scoreTextRival = this.add.text(this.PLACA_RIVAL_CX, this.PLACA_RIVAL_CY + 11, '0', {
+      fontFamily: 'Nunito, Arial', fontSize: '18px', fontStyle: 'bold',
+      color: '#FFF8ED', stroke: '#4A2C2A', strokeThickness: 2,
+      shadow: { offsetX: 0, offsetY: 1, color: '#4A2C2A', blur: 0, fill: true },
+      resolution: this._factorEscalaTextura()
+    }).setOrigin(0.5).setDepth(1002);
+    this._dibujarPlacaMarcador(this.fondoInfoRival, this.PLACA_RIVAL_CX, this.PLACA_RIVAL_CY, placaAncho, placaAlto);
     // Trigésimo segundo pase: antes era el circulito de "es mano" (solo
     // visible cuando el rival era mano) — ahora es un ícono de persona
     // siempre visible junto al label, y el que "se prende" (dorado, con
     // pulso) o "se apaga" (gris, quieto) según de quién es el turno, no
     // según quién es mano. Ver _renderizarEstado (_rivalTurnoEncendido).
-    this.manoIconoRival = this.add.image(228, 18, 'icono_rival').setDisplaySize(19, 22).setDepth(1002).setVisible(false);
+    // Pase siguiente: antes seguía al ancho real del nombre (placa
+    // dinámica); con la placa fija, se fija por fuera de su borde derecho
+    // (mismo lugar relativo que antes — el ícono siempre quedaba DESPUÉS
+    // del nombre, nunca superpuesto) en vez de recalcularse en cada estado.
+    this.manoIconoRival = this.add.image(this.PLACA_RIVAL_CX + placaAncho / 2 + 11, this.PLACA_RIVAL_CY - 11, 'icono_rival').setDisplaySize(17, 19).setDepth(1002).setVisible(false);
 
     // Barra de fondo para los botones de acción — línea divisoria subida de
     // 521 a 500 (y panel agrandado a juego) para ganarle ~21px al área de la
@@ -417,28 +583,86 @@ _crearElementosDeTexto() {
     // divisoria chocolate encima (0x4A2C2A) — la imagen nueva de madera ya
     // trae su propio filete dorado como borde superior, así que la línea
     // divisoria de color plano quedaría duplicando ese borde y se sacó.
-    this.add.image(400, 555, 'panelBotonera').setDisplaySize(800, 110).setDepth(150);
+    // Nonagésimo pase: el asset nuevo (placa con remaches que pasó el
+    // usuario) tiene una proporción real de ~3.63:1, muy distinta de la
+    // caja vieja 800x110 (7.27:1) — forzarla a 800x110 la hubiese estirado
+    // horizontalmente al doble (remaches ovalados, mismo error que ya pasó
+    // con la mesa en un pase anterior). El alto se calcula a partir de la
+    // proporción real de la imagen en vez de forzarla a 800 de ancho — queda
+    // centrada, más angosta, con el fondo oscuro de `fondoMesa` (depth 0)
+    // asomando a los costados en vez de un estiro visible. Si se prefiere
+    // que ocupe todo el ancho de la mesa de punta a punta, hace falta un
+    // asset recortado en 3 franjas (punta/centro repetible/punta), como ya
+    // se usa en `_crearBannerTexto`.
+    // Nonagésimo segundo pase: el usuario pidió agrandar el panel 15-20%
+    // para que la fila única de botones nueva (ver _dibujarBotonesCanto)
+    // entre holgada — se sube el alto de 110 a 130 (+18%) MANTENIENDO la
+    // proporción real de la imagen (ancho sube en la misma proporción, a
+    // ~472, en vez de solo estirar el alto, que hubiese vuelto a deformar
+    // los remaches). El borde SUPERIOR queda fijo en Y=500 (la línea
+    // divisoria de siempre) y el panel crece hacia abajo desde ahí — si en
+    // cambio se centrara en el Y viejo (555), el borde superior con los
+    // remaches se corriría MÁS arriba, invadiendo más la zona de las
+    // cartas en mano en vez de darles aire (ver pedido del usuario sobre
+    // "la tira de remaches no tape las cartas en mano", resuelto en
+    // conjunto con el +10px de `_dibujarManoJugador`).
+    const altoBotonera = 130;
+    const anchoBotonera = Math.round(altoBotonera * (700 / 193));
+    const yBotonera = 500 + altoBotonera / 2;
+    this.add.image(400, yBotonera, 'panelBotonera').setDisplaySize(anchoBotonera, altoBotonera).setDepth(150);
+    // Nonagésimo primer pase: guardada como propiedad de la escena para que
+    // `_dibujarBotonesCanto` pueda repartir los botones dentro del ancho
+    // real de ESTA placa (más angosta que el canvas completo) en vez de un
+    // ancho fijo — si se vuelve a ensanchar la placa (ver comentario de
+    // arriba sobre el asset en 3 franjas), este número se actualiza solo.
+    this.anchoBotonera = anchoBotonera;
+    // Ducentésimo sexagésimo noveno pase: guardado también el centro
+    // vertical real de la placa (`yBotonera`, ya calculado arriba a partir
+    // del alto real `altoBotonera`) — `_dibujarBotonesCanto` lo venía
+    // ignorando y usaba números sueltos (550, 525/575) calculados a mano
+    // para la placa VIEJA de 100px de alto (banda 500-600), de antes del
+    // pase 92 que la agrandó a 130px (banda 500-630, centro real 565) sin
+    // actualizar esos números — por eso los botones se veían corridos
+    // hacia arriba dentro de la placa ya agrandada. Ver uso en
+    // `_dibujarBotonesCanto`.
+    this.yCentroBotonera = yBotonera;
 
-    // Trigésimo cuarto pase: el rectángulo dorado dibujado por código se
-    // reemplazó por una placa de madera (imagen del usuario), respetando su
-    // relación de aspecto real. Primer intento a 110×70 quedó "muy placa
-    // para tan poco texto" (feedback del usuario) — trigésimo quinto pase:
-    // se achicó a 72×46 y el texto subió de 18 a 20px. Trigésimo octavo
-    // pase: nueva versión de la imagen (aspecto real ≈1.52:1, levemente
-    // distinto) — se ajustó el alto a 48 para no forzar la proporción.
-    const marcadorAncho = 72;
+    // Trigésimo cuarto pase: el rectángulo dorado dibujado por código pasó
+    // a una placa de madera por imagen, después a un asset de cuero+bronce
+    // (pase siguiente) — el usuario dio marcha atrás sobre esa idea y pidió
+    // volver a una placa dibujada por código, mismo criterio "madera+bronce"
+    // que ya usan los paneles de Lobby/Torneos/Ranking (ahí en CSS, acá con
+    // Graphics — ver `_dibujarPlacaMarcador`). Al ser dibujada, no depende
+    // de la proporción de ningún asset: vuelve a 72×48 (el tamaño de antes
+    // de forzar la relación de aspecto de la imagen de cuero).
+    // Pase siguiente ("Placa Doble de Madera", pedido del usuario: "mostrar
+    // los nombres de los jugadores con sus puntos... convertir en una
+    // Placa Doble de Madera/Pergamino"): esta placa (antes un solo "N - N"
+    // combinado) pasa a mostrar SOLO los puntos propios, con el nombre
+    // arriba — su gemela (`fondoInfoRival`, ver más arriba) muestra lo
+    // mismo para el rival. Mismo ancho/alto que la placa del rival
+    // (`placaAncho`/`placaAlto`, definidos junto a esa placa) para que el
+    // par se vea como un solo bloque de HUD parejo.
+    const marcadorAncho = 96;
     const marcadorAlto = 48;
     // Decimoctavo pase: el marcador vivía centrado en (400,18), justo en el
     // mismo punto donde caen el texto de estado ("Conectando...") y las
     // cartas boca abajo del rival (fila que arranca en Y=95 más abajo) —
     // los tres se amontonaban ahí. Se lo movió a una placa fija arriba a la
-    // izquierda (x=68) para liberar el centro superior por completo.
-    const marcadorX = 68;
-    // Cuadragésimo tercer pase: con el panel de madera nuevo (cuadragésimo
-    // segundo pase), el usuario notó que el número quedaba desalineado
-    // respecto de la placa — se baja solo la IMAGEN unos px (el texto se
-    // queda en su Y de siempre) para recentrarla contra la numeración.
-    const marcadorImagenOffsetY = 4;
+    // izquierda para liberar el centro superior por completo.
+    // Pase siguiente: X bajado de 68 a 58 — con la placa del rival ahora
+    // FIJA en x=176 (en vez de seguir el ancho variable del nombre), hay
+    // que dejar aire explícito entre las dos placas: borde derecho de esta
+    // (58+48=106) a borde izquierdo de la del rival (176-48=128) quedan
+    // 22px libres.
+    // Pase siguiente (feedback del usuario: "las dos placas de madera del
+    // puntaje están muy pegadas al marco superior e izquierdo... que
+    // respiren"): X 58→60 e Y 24→36, mismo criterio que la placa del
+    // rival (ver comentario junto a `PLACA_RIVAL_CX/CY` más arriba) — deja
+    // ~12px de aire contra el borde superior e izquierdo real de la
+    // pantalla (borde de esta placa: X=12, Y=12).
+    const marcadorX = 60;
+    const marcadorY = 36;
 
     // Trigésimo octavo pase: causa real de "se ve semi transparente" — el
     // marcador vivía a depth 300, POR DEBAJO del viñeteado de atmósfera
@@ -450,10 +674,26 @@ _crearElementosDeTexto() {
     // las cartas, también le caía encima al marcador y lo apagaba/lavaba.
     // Antes con el rectángulo dorado plano se notaba menos (el dorado es
     // muy saturado); con la madera (tonos más neutros) se nota mucho más.
-    // Fix: subir el marcador (imagen + texto) a depth > 1000 para que
+    // Fix: subir el marcador (placa + texto) a depth > 1000 para que
     // quede POR ENCIMA del viñeteado, como corresponde a un elemento de
     // HUD — no es parte de la mesa que el viñeteado debería atenuar.
-    this.scoreBg = this.add.image(marcadorX, 18 + marcadorImagenOffsetY, 'panelPuntaje').setDisplaySize(marcadorAncho, marcadorAlto).setDepth(1001);
+    //
+    // Pase de esta vuelta atrás: ya no es una imagen, es un Graphics que se
+    // dibuja una sola vez acá (la placa no cambia de estado en ningún
+    // momento del juego, a diferencia del anillo de tiempo o el badge de
+    // turno, que sí se redibujan en cada `_renderizarEstado`).
+    this.scoreBg = this.add.graphics().setDepth(1001);
+    this._dibujarPlacaMarcador(this.scoreBg, marcadorX, marcadorY, marcadorAncho, marcadorAlto);
+
+    // Nombre propio, mismo criterio que `labelRival` (placa gemela) —
+    // texto chico arriba, puntos grandes abajo. Se trunca a 10 caracteres
+    // (ver `_truncarNombre`, usado también para el rival) para que un
+    // nombre de usuario largo nunca estire la placa.
+    // Nonagésimo tercer pase: mismo color sólido + contorno que
+    // `labelRival` (ver más arriba) en vez de '#ffffffdd' sin stroke.
+    this.labelPropio = this.add.text(marcadorX, marcadorY - 11, this._truncarNombre(this.usuario?.username) || 'Vos', {
+      font: '12px Arial', fill: '#FFF8ED', stroke: '#2a1c14', strokeThickness: 2.5,
+    }).setOrigin(0.5).setDepth(1002);
 
     // Texto crema con SOMBRA chocolate en vez del chocolate plano de antes:
     // sobre la madera (tonos marrón medio) el texto oscuro se perdía casi
@@ -496,9 +736,15 @@ _crearElementosDeTexto() {
     // sólido y duro, mismo espíritu que el truco nativo, sin tocar el
     // stroke (2px ya probado — 3px en el trigésimo sexto pase quedó
     // "hueco" para esta fuente de 20px).
-    this.scoreText = this.add.text(marcadorX, 21, '0 - 0', {
+    //
+    // Pase siguiente (placa doble): antes mostraba "N - N" (los dos
+    // puntajes combinados); ahora solo el propio — el del rival vive en
+    // `scoreTextRival`, en su propia placa. Tamaño 20→18 y baja un poco
+    // (21→marcadorY+11) para convivir con `labelPropio` arriba, mismo
+    // layout de dos líneas que la placa del rival.
+    this.scoreText = this.add.text(marcadorX, marcadorY + 11, '0', {
       fontFamily: 'Nunito, Arial',
-      fontSize: '20px',
+      fontSize: '18px',
       fontStyle: 'bold',
       color: '#FFF8ED',
       stroke: '#4A2C2A',
@@ -521,8 +767,14 @@ _crearElementosDeTexto() {
     // derecho de la mesa, por encima de la barra de botones y afuera del
     // abanico de cartas propias (que llega hasta X≈506) y de la zona del
     // botón de config (que arranca cerca de X≈755).
-    this.manoIconoPropio = this.add.image(650, 472, 'circulo_mano').setDisplaySize(24, 24).setDepth(200).setVisible(false);
-    this.miManoTexto = this.add.text(666, 472, '', {
+    // Nonagésimo tercer pase: "Sos mano" y "Tu turno" colisionaban (casi
+    // la misma posición) — pedido explícito del usuario, Opción B de las
+    // dos que ofreció: layout en columna, "Sos mano" arriba, "Tu turno"
+    // inmediatamente abajo, con ~8px de aire entre ambas filas (ver Y del
+    // `turnoText`, más abajo). Subida un poco (472→462) para dejarle
+    // lugar abajo sin invadir más la mesa hacia arriba.
+    this.manoIconoPropio = this.add.image(650, 462, 'circulo_mano').setDisplaySize(24, 24).setDepth(200).setVisible(false);
+    this.miManoTexto = this.add.text(666, 462, '', {
       font: 'bold 15px Arial', fill: '#FFD700', stroke: '#000000', strokeThickness: 3
     }).setOrigin(0, 0.5).setDepth(200);
 
@@ -531,9 +783,48 @@ _crearElementosDeTexto() {
     // Decimoctavo pase: subido de Y=45 a Y=16 (con el marcador ya afuera del
     // centro) para que quede claramente por ENCIMA de las cartas boca abajo
     // del rival (que ahora arrancan en Y=95) en vez de superpuesto con ellas.
-    this.mensajeText = this.add.text(400, 16, 'Conectando...', {
-      font: '16px Nunito, Arial', fill: '#ffffaa'
+    // Pedido del usuario: que el indicador de estado ("Conectando...",
+    // también usado para error-sala/jugador-desconectado) se destaque
+    // más sobre el fondo de la mesa — ya estaba centrado (origin 0.5,
+    // x=400 = centro del canvas de 800) y en un amarillo/blanco suave;
+    // se le agrega contorno negro + sombra suave, sin cambiar color ni
+    // posición.
+    // Nonagésimo cuarto pase: el usuario reportó que las 3 cartas (dorso)
+    // del rival, que arrancan en Y=80 (ver `_dibujarFilaDorso`, altura
+    // 95px → su borde superior llega a ~Y=23-24 en las cartas del medio
+    // del abanico), tapan un poco este texto — a Y=16 con una fuente de
+    // 16px, el texto ocupa aprox. Y=8 a Y=24, justo el rango donde
+    // empiezan las cartas. En vez de subirlo más (ya casi toca el borde
+    // real del canvas, Y=0) se le agrega un pequeño "cartelito" indicador
+    // detrás — una píldora oscura semitransparente con filete dorado fino,
+    // mismo espíritu que el resto de los carteles de la mesa pero mucho
+    // más chica — para que el texto se lea como un indicador de HUD
+    // propio en vez de quedar flotando directamente sobre el paño/cartas.
+    // Al estar en depth 300 (apenas debajo del texto, 301, y bastante por
+    // encima de los dorsos del rival, depth ~10-13) la píldora tapa
+    // cualquier carta que llegue a asomar por detrás, no al revés.
+    this.mensajeFondo = this.add.graphics().setDepth(300);
+    this.mensajeFondo.fillStyle(0x1a1008, 0.55);
+    this.mensajeFondo.fillRoundedRect(400 - 140, 13 - 13, 280, 26, 13);
+    this.mensajeFondo.lineStyle(1.5, 0xE3A94A, 0.8);
+    this.mensajeFondo.strokeRoundedRect(400 - 140, 13 - 13, 280, 26, 13);
+
+    this.mensajeText = this.add.text(400, 13, 'Conectando...', {
+      font: '16px Nunito, Arial', fill: '#ffffaa', stroke: '#000000', strokeThickness: 3,
+      shadow: { offsetX: 0, offsetY: 2, color: '#000000', blur: 4, fill: true }
     }).setOrigin(0.5).setDepth(301);
+
+    // Nonagésimo cuarto pase: chiquito helper para que la píldora
+    // (`mensajeFondo`) se oculte sola cuando no hay nada que mostrar —
+    // en vez de tocar los ~7 lugares que hacían `mensajeText.setText(...)`
+    // directo (estado-juego, jugador-unido, jugador-desconectado,
+    // error-sala, error-jugada, x2 variantes de equipos/1v1) y arriesgar
+    // dejar alguno sin actualizar, se centraliza en un solo punto.
+    this._actualizarMensajeEstado = (texto, color) => {
+      this.mensajeText.setText(texto || '');
+      if (color) this.mensajeText.setColor(color);
+      if (this.mensajeFondo) this.mensajeFondo.setVisible(!!texto);
+    };
 
     // Pase siguiente: mismo estilo "pergamino con marco de madera" que ya
     // usa _crearBannerTexto para "hay un Envido pendiente...", "¿Querés
@@ -557,8 +848,40 @@ _crearElementosDeTexto() {
     // miManoTexto (mismo motivo — ver comentario ahí arriba), manteniendo
     // el mismo desplazamiento relativo (20px arriba, centrado sobre el par
     // ícono+texto de "mano").
-    this.turnoText = this.add.text(678, 450, '', {
-      font: 'bold 15px Arial', fill: '#FFD700', stroke: '#000000', strokeThickness: 3
+    // Pase siguiente (feedback del usuario: el amarillo/naranja brillante
+    // "desentona con el tono rústico de madera" del resto de la mesa) —
+    // de un dorado neón (#FFD700 + contorno negro puro) a un dorado cálido
+    // más apagado (mismo tono que `remacheClaro`, el brillo que ya usan
+    // los remaches de bronce de esta escena) con contorno chocolate en vez
+    // de negro puro, mismo criterio que el resto del texto de esta mesa
+    // (scoreText, mensajeText).
+    // Nonagésimo segundo pase: bajado y corrido hacia adentro (678,450 →
+    // 665,478) — pedido explícito del usuario, invadía el costado derecho
+    // de la mesa/el paño.
+    // Nonagésimo tercer pase: "Sos mano" (arriba, ver `miManoTexto`) y
+    // "Tu turno" colisionaban — Opción B pedida por el usuario: columna
+    // con ~8px de aire entre ambas. Corrido a X=690 (centrado respecto al
+    // ícono+texto de "Sos mano", que arrancan en X=650/666) y bajado a
+    // Y=488 (fila de abajo, 26px por debajo de "Sos mano" en Y=462: alto
+    // de línea ~18px + 8px de aire).
+    // Nonagésimo quinto pase: Y bajado de 488 a 500 — con el badge de
+    // atrás pasando de una cajita ceñida al texto (24px de alto) a la
+    // placa/faja de madera ilustrada (ver `turnoPlaca` abajo, bastante
+    // más alta por su proporción real ~2.26:1), hace falta más aire
+    // contra "Sos mano" (icono+texto en Y=462, borde inferior ~474) para
+    // no pisarlo. X=690 queda igual — esa columna está libre de la
+    // botonera (que termina en X≈636) hasta bien abajo, así que no hay
+    // límite por ese lado.
+    // Nonagésimo séptimo pase: se sacó la placa/faja de madera ilustrada
+    // que tenía atrás (pase 95, PNG con remaches de bronce) — pedido
+    // explícito del usuario: "el panel de madera detrás del tu turno lo
+    // sacamos". Queda solo el texto, sin placa ni pulso de atención
+    // detrás (el pulso vivía en `this.turnoPlaca`, que ya no existe). El
+    // Y=500 queda igual aunque ya no haga falta el aire extra contra
+    // "Sos mano" que pedía la placa alta — mover el texto de vuelta no se
+    // pidió.
+    this.turnoText = this.add.text(690, 500, '', {
+      font: 'bold 15px Arial', fill: '#F0D9A0', stroke: '#2a1c14', strokeThickness: 3
     }).setOrigin(0.5).setDepth(200);
 
     this.timerText = this.add.text(400, 45, '', {
@@ -624,6 +947,30 @@ _crearElementosDeTexto() {
     this.veloEspera = this.add.rectangle(400, 300, 800, 600, 0x000000, 0.35).setDepth(350);
     this._sprites.push(this.veloEspera);
 
+    // Pase 267, punto 5: "romper el vacío del paño verde... agregar en el
+    // fondo (con opacidad muy suave) un par de naipes flotantes" — se
+    // reutiliza el dorso de carta ya cargado (`cardBack`, ver preload),
+    // sin generar ningún asset nuevo. Van por ENCIMA del velo oscuro
+    // (depth 351, `veloEspera` es 350) para no quedar completamente
+    // lavados por él, pero bien por DEBAJO de la fila de avatares/título
+    // (depth 400+) para que se lean como atmósfera de fondo, no como
+    // contenido. No se les aplica blur real (`postFX`, solo WebGL — con
+    // `Phaser.AUTO` el juego puede caer en Canvas en algunos dispositivos
+    // y ahí `postFX` no existe) — la opacidad bien baja ya alcanza para
+    // que no compitan visualmente con nada.
+    [
+      { x: 110, y: 480, angle: -22, scale: 0.85 },
+      { x: 690, y: 130, angle: 18, scale: 0.95 },
+      { x: 650, y: 470, angle: -10, scale: 0.7 },
+    ].forEach(({ x, y, angle, scale }) => {
+      const naipe = this.add.image(x, y, 'cardBack')
+        .setDisplaySize(70 * scale, 100 * scale)
+        .setAngle(angle)
+        .setAlpha(0.12)
+        .setDepth(351);
+      this._sprites.push(naipe);
+    });
+
     // Pase 208: se saca la tarjetita de pergamino chica que tapaba media
     // pantalla ("Esperando rival..." + punto dorado pulsando) — a pedido
     // del usuario, se reemplaza por una fila de avatares reales (uno por
@@ -687,25 +1034,31 @@ _crearElementosDeTexto() {
     // preload) y se subió el alto acá (56→100) para que el tablón real
     // (aspecto ~2:1, más "achatado" que un botón normal) tenga lugar
     // para el texto sin quedar apretado.
-    const altoBotonVolver = 100;
-    this.botonVolverEspera = this._crearBoton({
-      x: 0, y: 210,
-      ancho: this._anchoBotonImagen('TablonEspera', altoBotonVolver),
-      alto: altoBotonVolver,
-      tamanoFuente: 19,
-      // Pase 212: el texto usaba el color por default de _crearBoton
-      // (#4A2C2A, marrón chocolate oscuro) — pensado para fondos claros
-      // (pergamino), ilegible sobre la madera oscura del tablón. Mismo
-      // crema claro que usa el resto de esta pantalla.
-      colorTexto: '#FFF8ED',
-      imagen: 'TablonEspera',
-      texto: 'Volver al Lobby',
+    // Pase 267, punto 4: el tablón de madera (esquinas rectas, "esquinas
+    // de hierro pesadas" según el usuario) se reemplaza por el MISMO Botón
+    // 3D Pill-shaped con nine-slice que ya se armó en el pase 266 para la
+    // pantalla final (_crearBotonOverlay, variante 'dorado') — "que venimos
+    // estandarizando en las demás pantallas", pedido explícito. Como esa
+    // función posiciona su contenedor en coordenadas ABSOLUTAS de escena
+    // (no relativas a un container padre, a diferencia de `_crearBoton`),
+    // ya no se agrega como hijo de `panelEspera` — se pasa directo la
+    // posición absoluta (panelEspera vive en (400,300), así que y=210
+    // relativo pasa a ser 300+210=510 absoluto) y se deja que
+    // `_crearBotonOverlay` lo empuje a `_sprites` por su cuenta (mismo
+    // criterio que ya usa esa función para los botones de la pantalla
+    // final). `setVisible(false)` sobre el contenedor sigue funcionando
+    // igual, así que los dos puntos que ocultan `botonVolverEspera` más
+    // abajo no necesitan tocarse.
+    const textoVolverEspera = 'Volver al Lobby';
+    const anchoVolverEspera = this._medirAnchoTextoOverlay(textoVolverEspera, '19px') + 50;
+    this.botonVolverEspera = this._crearBotonOverlay({
+      x: 400, y: 510, ancho: anchoVolverEspera, alto: 60, variante: 'dorado',
+      texto: textoVolverEspera, tamanoFuente: 19,
       onClick: () => {
         this.socket.emit('cancelar-espera', { codigoSala: this.codigoSala });
         if (this.onVolverLobby) this.onVolverLobby();
       }
-    });
-    this.panelEspera.add(this.botonVolverEspera);
+    }).contenedor;
     this._sprites.push(this.panelEspera);
 
     this._crearTexturaDorsoMini();
@@ -727,6 +1080,15 @@ _crearElementosDeTexto() {
   // Multiplica el alto por encima de la proporción real del dibujo.
   // 1.0 = fiel al original (lo que se ve "aplastado").
   // Subilo de a 0.05 hasta que dej de leerse como plato.
+  // Pase siguiente (corrección sobre la mesa nueva de 1v1/2v2): este
+  // factor se había pensado para el asset VIEJO, una lámina casi plana
+  // que necesitaba un estirado fuerte para no leerse como un plato. La
+  // mesa nueva ya viene dibujada con perspectiva y patas propias — es una
+  // ilustración 3D de por sí, no "aplastada" — así que aplicarle el mismo
+  // 1.95x la deformaba de más (el marco de madera se estiraba demasiado
+  // hacia abajo, achatando el paño y empujando las cartas jugadas). Sigue
+  // usándose tal cual para 3v3 (mesa vieja, sin cambios), pero la rama
+  // "normal" de acá abajo ahora tiene su propio factor, bien separado.
   const FACTOR_ALTURA = 1.95;
 
   if (modo === '3v3') {
@@ -752,13 +1114,37 @@ _crearElementosDeTexto() {
     // modo === '3v3'. No se tocaron los radios de asientos (radioX/radioY
     // más abajo) — el cambio anterior (700→660, más grande que este) tampoco
     // los había tocado, así que se sigue el mismo criterio.
-    const CROP = { x: 36, y: 818, width: 1435, height: 1088 };
+    //
+    // Pedido del usuario: nuevo asset de mesa ("mesa-truco-nueva.png").
+    // A diferencia del anterior, este ya viene recortado a su contenido
+    // real (sin relleno transparente alrededor) — no hace falta ningún
+    // `setCrop` con offsets a mano como con la lámina vieja de 1500x2700.
+    // `.setCrop()` sin argumentos limpia cualquier recorte que haya
+    // quedado de un cambio de modo anterior (3v3 usa su propio CROP más
+    // arriba).
+    //
+    // Primer intento: mantener el mismo `FACTOR_ALTURA` (1.95) que ya
+    // usaba la mesa vieja, razonando que la proporción real de esta
+    // imagen (895/1169 ≈ 0.766) es casi idéntica a la del recorte viejo
+    // (1088/1435 ≈ 0.758). Feedback real del usuario tras probarlo: la
+    // mesa se veía deformada ("el borde de madera se estiró
+    // excesivamente hacia abajo, achatando el paño y empujando las
+    // cartas jugadas") — la diferencia de proporciones entre ambos
+    // assets no era lo que importaba: el asset VIEJO era una lámina casi
+    // plana que necesitaba ese estirado para dejar de verse como un
+    // plato, mientras que el asset NUEVO ya es una ilustración con
+    // perspectiva y patas propias, correctamente proporcionada de
+    // entrada. Factor propio para esta rama, sin estirado (1.0 = fiel al
+    // dibujo real) — si en el juego real se nota que igual le falta un
+    // poco (se ve "achatada"), conviene subir esto de a 0.05 como dice el
+    // comentario de `FACTOR_ALTURA` más arriba, no volver al 1.95 viejo.
+    const FACTOR_ALTURA_MESA_NUEVA = 1.0;
     const anchoDisplay = 690;
-    const altoDisplay = anchoDisplay * (CROP.height / CROP.width) * FACTOR_ALTURA;
+    const altoDisplay = anchoDisplay * (895 / 1169) * FACTOR_ALTURA_MESA_NUEVA;
 
     this.mesaImg
       .setTexture('mesaRedonda')
-      .setCrop(CROP.x, CROP.y, CROP.width, CROP.height)
+      .setCrop()
       .setDisplaySize(anchoDisplay, altoDisplay)
       .setPosition(400, 340);
   }
@@ -904,10 +1290,41 @@ _crearTexturasAtmosfera() {
     const ctx = cv.getContext('2d');
     const grad = ctx.createRadialGradient(400, 300, 260, 400, 300, 420);
     grad.addColorStop(0, 'rgba(30,15,8,0)');
-    grad.addColorStop(1, 'rgba(30,15,8,0.38)');
+    // Ducentésimo sexagésimo noveno pase: 0.38→0.48 — el usuario reportó
+    // que el fondo de pared de madera oscura queda "tono sobre tono" con
+    // la mesa (también de madera oscura), tragándosela. Oscurecer un poco
+    // más el anillo de pared inmediato alrededor de la mesa (sin tocar el
+    // paño, que sigue transparente hasta radio 260) le da más separación
+    // tonal sin necesitar un asset de pared nuevo.
+    grad.addColorStop(1, 'rgba(30,15,8,0.48)');
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, 800, 600);
     this.textures.addCanvas('vinetaMadera', cv);
+  }
+
+  // Ducentésimo sexagésimo noveno pase: "resplandorMesa" — halo cálido
+  // detrás de la mesa (no sobre el paño: transparente hasta radio 230, el
+  // mismo radio donde `luzCalidaMesa` ya cubre el centro del tapete) que
+  // se hace más intenso justo en el borde exterior de la mesa/sus patas
+  // (radio ~260-290) y se apaga de nuevo antes de la zona que oscurece
+  // `vinetaMadera` (radio 420) — la idea es un "backlight" que separe la
+  // mesa de la pared de atrás en vez de sumar otra capa pareja de luz
+  // sobre todo el fondo. A diferencia de `luzCalidaMesa` (que se apaga en
+  // modo oscuro porque quedaba como "una luz encendida detrás de las
+  // cartas"), este halo se dibuja siempre: vive DETRÁS de la mesa
+  // (depth 0.6, antes de `mesaImg` en depth 1), nunca se superpone a las
+  // cartas ni a ningún elemento de juego.
+  if (!this.textures.exists('resplandorMesa')) {
+    const cv = document.createElement('canvas');
+    cv.width = 800; cv.height = 600;
+    const ctx = cv.getContext('2d');
+    const grad = ctx.createRadialGradient(400, 320, 230, 400, 320, 360);
+    grad.addColorStop(0, 'rgba(255,178,90,0)');
+    grad.addColorStop(0.35, 'rgba(255,168,78,0.5)');
+    grad.addColorStop(1, 'rgba(255,150,60,0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 800, 600);
+    this.textures.addCanvas('resplandorMesa', cv);
   }
 }
 
@@ -1004,6 +1421,14 @@ _limpiarAvataresEspera() {
   const viejos = new Set(this._avataresEsperaSprites || []);
   this._sprites = this._sprites.filter(s => !viejos.has(s));
   this._avataresEsperaSprites = [];
+  // Pase 267, punto 3: el badge "Conectando..." usa un `time.addEvent` en
+  // loop para animar los 3 puntitos (ver _dibujarTileEspera) — a
+  // diferencia de un Tween (que Phaser ya tolera bien sobre un target
+  // destruido, mismo criterio que el marco gris pulsando de siempre), un
+  // timer en loop SIGUE disparando y tratando de hacer `.setText()` sobre
+  // un Text ya destruido si no se lo frena acá explícitamente.
+  (this._avataresEsperaTimers || []).forEach(t => { if (t && t.remove) t.remove(); });
+  this._avataresEsperaTimers = [];
 }
 
 // Pase 210: título de la sala de espera ("2v2 — esperando jugadores"),
@@ -1021,8 +1446,15 @@ _actualizarBannerEsperaTitulo(texto) {
     viejo.destroy();
     this._sprites = this._sprites.filter(s => s !== viejo);
   }
+  // Pase 267, punto 1: "Placa de Madera de Caoba... con biselado oscuro y
+  // remaches de bronce en los extremos" + "texto en negrita dorada/blanca
+  // con contorno negro marcado" + ícono animado al lado del texto — las 3
+  // opciones nuevas de `_crearBannerTexto` activadas SOLO acá (el resto de
+  // los llamados de esa función, los carteles de canto en partida, siguen
+  // sin stroke/remaches/ícono).
   this._bannerEsperaTitulo = this._crearBannerTexto(400, 130, texto, 401, {
-    tamanoFuente: 24, colorTexto: '#FFF8ED', anchoWrap: 700,
+    tamanoFuente: 24, colorTexto: '#FFD98A', anchoWrap: 700,
+    strokeTexto: '#000000', conRemaches: true, iconoAnimado: true,
   });
 }
 
@@ -1105,32 +1537,29 @@ _redibujarFilaEspera() {
   }
 }
 
-// Un tile de la fila: anillo (dorado si ya se unió, gris pulsando si no),
-// la foto/avatar real (o un "?" placeholder si el asiento está vacío),
-// una pill de estado ("Conectado"/"Conectando...") y el nombre debajo.
+// Un tile de la fila: sello circular de madera (cálido si ya se unió, gris
+// pulsando si no), la foto/avatar real (o un "?" placeholder si el asiento
+// está vacío), una pill de estado ("Conectado"/"Conectando...") y el
+// nombre debajo sobre su propia etiqueta de madera fina.
 // `pendientes` acumula los avatares que todavía no están en la caché de
 // texturas de Phaser, para cargarlos todos juntos en un solo batch (ver
 // _redibujarFilaEspera) en vez de un load.start() por jugador.
 _dibujarTileEspera(cx, cy, radio, jugador, pendientes) {
   const conectado = !!jugador;
 
-  // Pase 210: el anillo/círculo de fondo dibujados a mano (Graphics) se
-  // reemplazan por el marco de madera real que pasó el usuario
-  // (marcoAvatarEspera, ver preload).
-  // Pase 212 — bug real reportado ("ahora no se ve nada"): el archivo
-  // NO es un aro con un agujero transparente en el medio — es una
-  // plaqueta de madera SÓLIDA de punta a punta (verificado con PIL: el
-  // centro entero es opaco, alpha=255; recién cerca del 90-95% del
-  // radio aparece la textura de soga/esquineros). La foto iba DETRÁS
-  // (depth menor que el marco) asumiendo un agujero que no existe, así
-  // que el marco opaco la tapaba por completo. Fix de 2 partes: (1) la
-  // foto ahora va ENCIMA del marco (`_dibujarImagenAvatarEspera` usa
-  // depth 412, marco usa 411), (2) su radio baja de 0.72×radio a
-  // 0.46×radio — la zona lisa central del archivo real llega hasta
-  // ~0.50×radio, así que a 0.46 la foto queda adentro de esa zona
-  // lisa sin tapar el borde de soga/esquineros que hay más afuera.
+  // Pase 267, punto 2: `marcoAvatarEspera` (placa cuadrada con esquineros
+  // de metal, ver preload) se reemplaza por `selloAvatarEspera` — un
+  // medallón CIRCULAR recortado del mismo archivo original (se descartó
+  // la placa cuadrada y los esquineros), con el disco interior teñido a
+  // tono pergamino/crema. En este archivo nuevo el anillo de soga tallada
+  // llega prácticamente hasta el borde del lienzo (radio ≈ 0.98×radio) y
+  // el disco de pergamino interior llega hasta ≈0.80×radio — por eso la
+  // foto ahora puede agrandarse a 0.90×radio ("Efecto Pop-out... el avatar
+  // debe ser más grande, sobresaliendo ligeramente del marco") sin quedar
+  // chica y perdida como con el 0.46×radio de antes (pensado para la
+  // plaqueta vieja, con su zona lisa mucho más chica).
   const tamanoFrame = radio * 2;
-  const radioFoto = radio * 0.46;
+  const radioFoto = radio * 0.90;
 
   if (conectado) {
     const esFoto = jugador.avatar_tipo === 'foto' && !!jugador.foto_perfil_url;
@@ -1144,43 +1573,156 @@ _dibujarTileEspera(cx, cy, radio, jugador, pendientes) {
     }
   }
 
-  const marco = this.add.image(cx, cy, 'marcoAvatarEspera')
+  const marco = this.add.image(cx, cy, 'selloAvatarEspera')
     .setDisplaySize(tamanoFrame, tamanoFrame)
     .setDepth(411);
   this._avataresEsperaSprites.push(marco);
   this._sprites.push(marco);
 
   if (!conectado) {
-    // Asiento todavía vacío — marco gris pulsando, sin foto detrás.
+    // Asiento todavía vacío — sello gris pulsando, sin foto.
     marco.setTint(0x999999);
     this.tweens.add({ targets: marco, alpha: 0.55, duration: 650, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+
+    // Pase 267, punto 2: "mostrar la silueta del personaje en un todo
+    // sombreado/semi-transparente o... un signo de pregunta en estilo
+    // cartoon" — se optó por el "?" (no hay silueta de personaje
+    // disponible genérica, sería un avatar fijo que no corresponde a
+    // nadie en particular todavía) centrado donde iría la foto, bien
+    // atenuado para que se lea como placeholder y no como contenido real.
+    const signo = this.add.text(cx, cy, '?', {
+      fontFamily: 'Fredoka, Arial', fontSize: `${Math.round(radioFoto * 1.3)}px`, fontStyle: '700',
+      color: '#FFF8ED',
+    }).setOrigin(0.5).setAlpha(0.4).setDepth(412);
+    this._avataresEsperaSprites.push(signo);
+    this._sprites.push(signo);
+  } else {
+    // Pase 267, punto 2: "borde blanco tipo sticker UI" — círculo blanco
+    // macizo un poco más grande que la foto, DEBAJO de ella pero ENCIMA
+    // del sello, así se ve como un borde/ribete alrededor del avatar que
+    // sobresale del marco (mismo truco que un sticker con contorno
+    // blanco: el borde es el mismo círculo relleno, apenas más grande,
+    // asomando detrás del recorte).
+    const borde = this.add.graphics().setDepth(411.6);
+    borde.fillStyle(0xFFFFFF, 1);
+    borde.fillCircle(cx, cy, radioFoto + 5);
+    this._avataresEsperaSprites.push(borde);
+    this._sprites.push(borde);
   }
 
-  // Pill de estado, debajo del avatar. Pase 209: agrandada (ancho extra,
-  // más alto, tipografía más grande) junto con el resto de la fila.
-  const pillAncho = radio * 2 + 22;
-  const pillAlto = 30;
+  // Pase 267, punto 3: "✓ Conectado" pasa de una pill plana (Graphics,
+  // relleno sólido) a un Badge 3D Pill-shaped real — se reutilizan los
+  // MISMOS 3 slices de píldora verde (botonVerdeIzq/Centro/Der) que ya se
+  // armaron en el pase 266 para los botones de la pantalla final (mismo
+  // relieve/brillo horneado, mismo criterio de nine-slice horizontal para
+  // no estirar las puntas). "Conectando..." se queda con una pill dibujada
+  // a mano (no hay asset de píldora "madera clara/beige"), pero con el
+  // mismo criterio de capas (sombra + relleno + brillo superior) que ya
+  // usan las filas de la pantalla final (pase 265) para que se lea
+  // "3D"/ahuecada y no plana — más los 3 puntitos parpadeantes pedidos.
   const pillY = cy + radio + 18;
-  const pill = this.add.graphics().setDepth(413);
-  pill.fillStyle(conectado ? 0x2D9B4F : 0xFFF8ED, 1);
-  pill.fillRoundedRect(cx - pillAncho / 2, pillY - pillAlto / 2, pillAncho, pillAlto, pillAlto / 2);
-  pill.lineStyle(2, 0x4A2C2A, 1);
-  pill.strokeRoundedRect(cx - pillAncho / 2, pillY - pillAlto / 2, pillAncho, pillAlto, pillAlto / 2);
-  this._avataresEsperaSprites.push(pill);
-  this._sprites.push(pill);
+  const pillAlto = 32;
 
-  const pillTexto = this.add.text(cx, pillY, conectado ? '✓ Conectado' : 'Conectando...', {
-    font: 'bold 15px Nunito, Arial',
-    fill: conectado ? '#FFF8ED' : '#4A2C2A'
-  }).setOrigin(0.5).setDepth(414);
-  this._avataresEsperaSprites.push(pillTexto);
-  this._sprites.push(pillTexto);
+  if (conectado) {
+    const pillTextoBase = '✓ Conectado';
+    const medidor = this.add.text(0, 0, pillTextoBase, { fontFamily: 'Fredoka, Arial', fontSize: '14px', fontStyle: '600' });
+    const anchoTexto = medidor.width;
+    medidor.destroy();
 
-  const nombreTxt = this.add.text(cx, pillY + 27, conectado ? jugador.username : '—', {
-    font: 'bold 17px Nunito, Arial', fill: '#FFF8ED', stroke: '#000000', strokeThickness: 3
-  }).setOrigin(0.5).setDepth(414);
-  this._avataresEsperaSprites.push(nombreTxt);
-  this._sprites.push(nombreTxt);
+    const texIzqPill = this.textures.get('botonVerdeIzq').getSourceImage();
+    const texDerPill = this.textures.get('botonVerdeDer').getSourceImage();
+    const capIzqPill = Math.round(texIzqPill.width * (pillAlto / texIzqPill.height));
+    const capDerPill = Math.round(texDerPill.width * (pillAlto / texDerPill.height));
+    const pillAncho = Math.max(anchoTexto + 36, capIzqPill + capDerPill + 20);
+    const midPill = pillAncho - capIzqPill - capDerPill;
+
+    const pIzq = this.add.image(cx - pillAncho / 2 + capIzqPill / 2, pillY, 'botonVerdeIzq').setDisplaySize(capIzqPill, pillAlto).setDepth(413);
+    const pCentro = this.add.image(cx - pillAncho / 2 + capIzqPill + midPill / 2, pillY, 'botonVerdeCentro').setDisplaySize(midPill, pillAlto).setDepth(413);
+    const pDer = this.add.image(cx + pillAncho / 2 - capDerPill / 2, pillY, 'botonVerdeDer').setDisplaySize(capDerPill, pillAlto).setDepth(413);
+    this._avataresEsperaSprites.push(pIzq, pCentro, pDer);
+    this._sprites.push(pIzq, pCentro, pDer);
+
+    const pillTexto = this.add.text(cx, pillY, pillTextoBase, {
+      fontFamily: 'Fredoka, Arial', fontSize: '14px', fontStyle: '600', color: '#FFFFFF',
+      stroke: '#000000', strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(414);
+    this._avataresEsperaSprites.push(pillTexto);
+    this._sprites.push(pillTexto);
+  } else {
+    // "Conectando" fijo + puntitos separados que van y vienen cada 400ms
+    // — separados en 2 Text para que el ancho del texto no cambie cada
+    // vez que cambia la cantidad de puntos (se mide con los 3 puntos
+    // puestos, "Conectando...", y el texto base se ancla a la izquierda
+    // de ESE ancho fijo en vez de quedar centrado y bailando).
+    // Ducentésimo septuagésimo segundo pase: el usuario reportó que
+    // "Conectando..." se veía chico al lado de "✓ Conectado" — en código
+    // los dos ya estaban en 14px, pero "✓ Conectado" usa Fredoka bold
+    // (más ancha/pesada) mientras este texto usa Nunito, que a igual
+    // tamaño en px se lee más fino/chico. Sube a 17px (+21%, dentro del
+    // 20-25% pedido) para equipararlos a simple vista.
+    const FUENTE_CONECTANDO = 'bold 17px Nunito, Arial';
+    const base = 'Conectando';
+    const medidorTotal = this.add.text(0, 0, `${base}...`, { font: FUENTE_CONECTANDO });
+    const anchoTotal = medidorTotal.width;
+    medidorTotal.destroy();
+
+    // El ancho de la píldora venía fijo en `radio*2+22` (pensado para el
+    // 14px viejo) — con el texto más grande, en salas de 3+ asientos
+    // (`tamano`/`radio` más chicos, ver _redibujarFilaEspera) el texto ya
+    // no entraba y se salía de la píldora. Ahora el ancho es el máximo
+    // entre ese mínimo de siempre y lo que el texto real necesita (mismo
+    // criterio que ya usa la píldora "✓ Conectado" unas líneas arriba).
+    const pillAncho = Math.max(radio * 2 + 22, anchoTotal + 36);
+    const px = cx - pillAncho / 2, py = pillY - pillAlto / 2;
+    const pill = this.add.graphics().setDepth(413);
+    pill.fillStyle(0x3a2412, 0.18); // sombra sutil, da el "hueco" ahuecado
+    pill.fillRoundedRect(px, py, pillAncho, pillAlto, pillAlto / 2);
+    pill.fillStyle(0xE9D9B0, 1); // madera clara / beige
+    pill.fillRoundedRect(px + 1.5, py + 1.5, pillAncho - 3, pillAlto - 5, pillAlto / 2 - 1.5);
+    pill.fillStyle(0xFFFFFF, 0.4); // brillo superior sutil — mismo criterio que las filas del pase 265
+    pill.fillRoundedRect(px + 1.5, py + 1.5, pillAncho - 3, pillAlto * 0.45, pillAlto / 2 - 1.5);
+    pill.lineStyle(2, 0x4A2C2A, 1);
+    pill.strokeRoundedRect(px, py, pillAncho, pillAlto, pillAlto / 2);
+    this._avataresEsperaSprites.push(pill);
+    this._sprites.push(pill);
+
+    const textoBase = this.add.text(cx - anchoTotal / 2, pillY, base, {
+      font: FUENTE_CONECTANDO, fill: '#4A2C2A',
+    }).setOrigin(0, 0.5).setDepth(414);
+    const textoPuntos = this.add.text(cx - anchoTotal / 2 + textoBase.width, pillY, '.', {
+      font: FUENTE_CONECTANDO, fill: '#4A2C2A',
+    }).setOrigin(0, 0.5).setDepth(414);
+    this._avataresEsperaSprites.push(textoBase, textoPuntos);
+    this._sprites.push(textoBase, textoPuntos);
+
+    let n = 1;
+    const timer = this.time.addEvent({
+      delay: 400, loop: true,
+      callback: () => {
+        n = (n % 3) + 1;
+        textoPuntos.setText('.'.repeat(n));
+      },
+    });
+    this._avataresEsperaTimers.push(timer);
+  }
+
+  // Pase 267, punto 3: "colocar el nombre de usuario debajo de cada badge
+  // sobre una etiqueta de madera fina" — antes era un Text suelto
+  // flotando con solo stroke negro; ahora tiene una placa fina de madera
+  // clara detrás (mismo tono `maderaClara` que ya usa el resto de la app
+  // para marcos finos, ver _mostrarPantallaFinal).
+  const nombreY = pillY + 27;
+  const nombreTxt = this.add.text(cx, nombreY, conectado ? jugador.username : '—', {
+    font: 'bold 16px Nunito, Arial', fill: '#FFF8ED',
+  }).setOrigin(0.5).setDepth(416);
+  const padNombreX = 12, padNombreY = 5;
+  const etiqueta = this.add.graphics().setDepth(415);
+  etiqueta.fillStyle(0x6b4a34, 1); // maderaClara
+  etiqueta.fillRoundedRect(cx - nombreTxt.width / 2 - padNombreX, nombreY - nombreTxt.height / 2 - padNombreY, nombreTxt.width + padNombreX * 2, nombreTxt.height + padNombreY * 2, 7);
+  etiqueta.lineStyle(1.5, 0x3a2412, 1);
+  etiqueta.strokeRoundedRect(cx - nombreTxt.width / 2 - padNombreX, nombreY - nombreTxt.height / 2 - padNombreY, nombreTxt.width + padNombreX * 2, nombreTxt.height + padNombreY * 2, 7);
+  this._avataresEsperaSprites.push(etiqueta, nombreTxt);
+  this._sprites.push(etiqueta, nombreTxt);
 }
 
 // Dibuja la foto/avatar real ya cargada en la caché de texturas, recortada
@@ -1241,7 +1783,7 @@ _conectarSocket() {
       const esRepartoNuevo = this._esRepartoNuevo(estado);
       this.estadoAnterior = this.estado;
       this.estado = estado;
-      this.mensajeText.setText('');
+      this._actualizarMensajeEstado('');
 
       if (this.onEsEquipos) this.onEsEquipos(Array.isArray(estado.companeros));
 
@@ -1256,7 +1798,7 @@ _conectarSocket() {
     });
 
     this.socket.off('jugador-unido').on('jugador-unido', (data) => {
-      this.mensajeText.setText(data.mensaje);
+      this._actualizarMensajeEstado(data.mensaje);
       // Pase 208: además del mensaje de siempre, este evento ahora trae el
       // roster completo de la sala (username/equipo/personaje/avatar) más
       // el modo y la capacidad total — se guardan y se reconstruye toda la
@@ -1291,13 +1833,13 @@ _conectarSocket() {
       if (this.sombraMesa) this.sombraMesa.setVisible(true);
     });
     this.socket.off('jugador-desconectado').on('jugador-desconectado', (data) => {
-      this.mensajeText.setText(data.mensaje);
+      this._actualizarMensajeEstado(data.mensaje);
     });
     this.socket.off('error-sala').on('error-sala', (data) => {
-      this.mensajeText.setText(data.mensaje).setColor('#ff5555');
+      this._actualizarMensajeEstado(data.mensaje, '#ff5555');
     });
     this.socket.off('error-jugada').on('error-jugada', (data) => {
-      this.mensajeText.setText(data.mensaje).setColor('#ff5555');
+      this._actualizarMensajeEstado(data.mensaje, '#ff5555');
       this.time.delayedCall(2000, () => this.mensajeText.setColor('#ffffaa'));
     });
     this.socket.off('sala-cancelada').on('sala-cancelada', (data) => {
@@ -1354,9 +1896,7 @@ _conectarSocket() {
       if (this.onRevancha) this.onRevancha(data.codigoSala);
     });
     this.socket.off('revancha-cancelada').on('revancha-cancelada', (data) => {
-      if (this.textoEsperaRevancha) {
-        this.textoEsperaRevancha.setText(data.mensaje).setColor('#ff5555');
-      }
+      this._mostrarAlertaRevancha(data.mensaje);
     });
     
     this.socket.off('turno-timer').on('turno-timer', (data) => {
@@ -1372,7 +1912,7 @@ _conectarSocket() {
       const esRepartoNuevo = this._esRepartoNuevo(estado);
       this.estadoAnterior = this.estado;
       this.estado = estado;
-      this.mensajeText.setText('');
+      this._actualizarMensajeEstado('');
 
       if (this.onEsEquipos) this.onEsEquipos(Array.isArray(estado.companeros));
 
@@ -1403,9 +1943,27 @@ _esRepartoNuevo(nuevoEstado) {
 _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = null, jugadoresFinal = null, subtitulo = '', gano = false) {
 this._limpiarSprites();
     this._ocultarCanto();
+    // Centésimo pase: referencias a la placa de alerta de revancha y al
+    // botón de "Pedir revancha" — se resetean acá porque `_limpiarSprites`
+    // (arriba) ya destruyó los objetos de la pantalla final anterior, si
+    // hubo una (revancha aceptada → nueva partida → nuevo fin de partida).
+    // Sin este reset, `_mostrarAlertaRevancha` podría encontrar una
+    // referencia a un Graphics ya destruido y fallar al llamar `.clear()`.
+    this.fondoAlertaRevancha = null;
+    this.contRevancha = null;
+    // Pase siguiente (placa doble): antes solo `scoreBg`/`scoreText` (el
+    // "N - N" combinado) sobrevivían a esta pantalla final — ahora que el
+    // puntaje vive repartido en dos placas (la propia y la del rival), hay
+    // que conservar las DOS para que la pantalla de resultado siga
+    // mostrando el marcador completo (antes mostraba ambos números en un
+    // solo texto; con la placa dividida hace falta listar cada pieza).
+    const elementosMarcador = [
+      this.scoreBg, this.scoreText, this.labelPropio,
+      this.fondoInfoRival, this.scoreTextRival, this.labelRival, this.manoIconoRival,
+    ];
     this.children.list
       .filter(c => c !== undefined)
-      .forEach(c => { if (c !== this.scoreBg && c !== this.scoreText) c.setVisible(false); });
+      .forEach(c => { if (!elementosMarcador.includes(c)) c.setVisible(false); });
 
     // Pase 201: pedido del usuario de sacar el fondo negro plano de
     // esta pantalla y usar el mismo fondo fotográfico que ya tiene el
@@ -1446,10 +2004,26 @@ this._limpiarSprites();
     const px = 400 - panelAncho / 2;
     const padArriba = 26;
     const padAbajo = 26;
+    // Centésimo pase: alto fijo de cada fila de jugador + aire entre una y
+    // la otra — antes las dos filas quedaban pegadas (un solo bloque
+    // partido al medio por el color); ahora son dos placas visualmente
+    // independientes, así que hace falta un gap real entre ellas. Se
+    // declaran acá (no sueltos adentro del bloque de abajo) porque el
+    // cálculo de `altoContenido` (más abajo) necesita el mismo número para
+    // no desfasar el alto real del panel.
+    const filaJugadorAlto = 28;
+    const gapEntreFilas = 10;
+    // Pase 266, punto 3: 44→52 — el usuario pidió "aumentar la altura
+    // mínima de los botones (Pedir revancha / Volver al lobby) para que
+    // los textos interiores respiren con un margen amplio". Se declara
+    // acá (no un literal suelto en cada `_crearBotonOverlay`) por el
+    // mismo motivo que `filaJugadorAlto`: el precálculo de
+    // `altoContenido` más abajo y el `y +=` entre un botón y el otro
+    // necesitan el mismo número para no desfasar el panel.
+    const altoBotonFinal = 52;
 
-    // 1) Título — SIEMPRE dorado macizo (el nativo no lo hace variar
-    // según ganó/perdió), ancho ceñido al texto real vía `.width` en vez
-    // de una fórmula por cantidad de caracteres — mismo criterio que el
+    // 1) Título — ancho ceñido al texto real vía `.width` en vez de una
+    // fórmula por cantidad de caracteres — mismo criterio que el
     // `carteloTitulo` nativo, que se ciñe por padding, no por un ancho
     // fijo adivinado.
     // Pase 211: bug real reportado — con un título largo (ej. "Pasaron 10
@@ -1462,10 +2036,22 @@ this._limpiarSprites();
     // `textoSubtitulo` más abajo (panelAncho - 60) — un título corto
     // ("¡Ganaste!") sigue entrando en una sola línea igual que antes, uno
     // largo ahora pasa a 2-3 líneas en vez de estirar el cartel.
+    // Nonagésimo sexto pase: antes el título era SIEMPRE dorado macizo,
+    // sin importar el resultado (paridad explícita con el nativo, pase
+    // 76). El usuario pidió ahora lo contrario, explícitamente: título
+    // verde esmeralda con resplandor tipo cartoon si ganó, rojo carmesí/
+    // borgoña si perdió — se revierte esa paridad a propósito, por
+    // pedido directo, no por error. El resplandor (pedido solo para la
+    // victoria) se logra con la sombra de Phaser con blur>0 — el resto de
+    // los textos de esta escena usan a propósito blur:0 (contorno sólido,
+    // no difuminado) para legibilidad general, pero un halo difuminado es
+    // justamente el efecto pedido acá.
+    const colorTitulo = gano ? '#1f7a3c' : '#8c2a2a';
     const padHTitulo = 18, padVTitulo = 6;
     const textoTitulo = this.add.text(0, 0, titulo, {
-      fontFamily: 'Fredoka, Arial', fontSize: '22px', fontStyle: '600', color: '#4A2C2A', align: 'center',
+      fontFamily: 'Fredoka, Arial', fontSize: '22px', fontStyle: '600', color: colorTitulo, align: 'center',
       wordWrap: { width: panelAncho - 60 },
+      ...(gano ? { shadow: { offsetX: 0, offsetY: 0, color: '#FFD668', blur: 10, fill: true } } : {}),
     }).setDepth(902);
     const pillW = textoTitulo.width + padHTitulo * 2;
     const pillH = textoTitulo.height + padVTitulo * 2;
@@ -1482,10 +2068,41 @@ this._limpiarSprites();
     // espacio vacío alrededor; el resto del layout ya calcula el alto
     // del panel en base a `caraTam`, así que agrandarla acá alcanza (el
     // panel sigue cómodo bajo el tope de 560px, ver `panelAlto` abajo).
-    const caraTam = 140;
+    // Centésimo primer pase: 140→190 (+35%, dentro del 30-40% pedido) —
+    // mismo motivo que el pase 204, el usuario la pidió más grande todavía.
+    const caraTam = 190;
     const caraFinal = this.add.image(400, 0, gano ? 'caraVictorioso' : 'caraDerrotado').setDepth(902);
     caraFinal.setDisplaySize(caraTam, caraTam);
     this._sprites.push(caraFinal);
+
+    // Nonagésimo sexto pase: "borde circular estilo moneda de bronce...
+    // con trazo negro marcado para integrarlo a la placa" — 3 anillos
+    // concéntricos dibujados con `strokeCircle` (no `fillCircle`: un
+    // relleno tapa a `caraFinal`, un trazo deja el centro transparente)
+    // mismo criterio de capas que los remaches de `_dibujarPlacaMarcador`
+    // pero a la escala de un marco de avatar en vez de un rivet chico.
+    // Se posiciona junto con `caraFinal` más abajo (mismo punto, mismo
+    // momento), no acá — todavía no se sabe el Y final.
+    // Pase 266: + 6 → - 14. Ahora que `caraFinal` carga la variante
+    // "_cerca" (recorte ajustado al contenido, ver preload), el personaje
+    // ocupa el 100% de `caraTam` en vez de flotar con relleno vacío
+    // alrededor. Un radio MENOR que caraTam/2 hace que el sombrero/parte
+    // superior de la cabeza sobresalga por encima del anillo dorado en
+    // vez de quedar contenido adentro — el "efecto pop-out sticker"
+    // pedido. El valor -14 es empírico: deja asomar la copa del sombrero
+    // sin tapar el anillo en el resto del contorno (cara/hombros siguen
+    // adentro, que es lo que da la sensación de superposición y no de
+    // recorte roto).
+    const radioAvatar = caraTam / 2 - 14;
+    const marcoAvatar = this.add.graphics().setDepth(901.9);
+    marcoAvatar.lineStyle(10, 0x1a1410, 1); // negroPulido — contorno exterior grueso
+    marcoAvatar.strokeCircle(0, 0, radioAvatar);
+    marcoAvatar.lineStyle(7, 0xc9973e, 1); // remache — cuerpo de la moneda de bronce
+    marcoAvatar.strokeCircle(0, 0, radioAvatar - 1);
+    marcoAvatar.lineStyle(2, 0xf0d9a0, 0.85); // remacheClaro — brillo fino interior
+    marcoAvatar.strokeCircle(0, 0, radioAvatar - 4);
+    this._sprites.push(marcoAvatar);
+
     altoContenido += 10 + caraTam;
 
     // 2) "👑 ¡Sos el campeón del torneo!" — línea aparte, no reemplaza
@@ -1529,32 +2146,32 @@ this._limpiarSprites();
     // sentía poco jerarquizada) — de ahí el +14 extra acá.
     const hayJugadores = jugadoresFinal && jugadoresFinal.length > 0;
     if (hayJugadores) {
-      altoContenido += 14 + jugadoresFinal.length * 32 + 16;
+      // Centésimo pase: antes era `jugadoresFinal.length * 32` (28 de
+      // fila + 4 de aire implícito, pegadas) — ahora cada fila suma su
+      // propio alto más el gap real contra la siguiente, salvo la
+      // última (no hay gap después de la última fila, por eso el -1).
+      altoContenido += 14 + jugadoresFinal.length * filaJugadorAlto + (jugadoresFinal.length - 1) * gapEntreFilas + 16;
     }
 
     // 5) Botón de revancha (si no es torneo) — con su texto de estado
     // arriba (como en el nativo: "Esperando confirmación… (X/Y)" vive
     // ANTES del botón, no después) — y 6) botón de volver al lobby.
     if (!esTorneo) {
-      altoContenido += 20 + 44 + 8;
+      altoContenido += 20 + altoBotonFinal + 8;
     }
-    altoContenido += 44;
+    altoContenido += altoBotonFinal;
 
     const panelAlto = Math.min(560, Math.max(220, altoContenido + padAbajo));
     const py = 300 - panelAlto / 2;
-    const anilloGrosor = 5;
 
-    const anillo = this.add.graphics().setDepth(900);
-    anillo.fillStyle(0xFFB627, 1); // C.dorado
-    anillo.fillRoundedRect(px - anilloGrosor, py - anilloGrosor, panelAncho + anilloGrosor * 2, panelAlto + anilloGrosor * 2, 24);
-    this._sprites.push(anillo);
-
-    const panel = this.add.graphics().setDepth(901);
-    panel.fillStyle(0xFFF8ED, 1); // C.crema
-    panel.fillRoundedRect(px, py, panelAncho, panelAlto, 20);
-    panel.lineStyle(3, 0x4A2C2A, 1); // C.chocolate
-    panel.strokeRoundedRect(px, py, panelAncho, panelAlto, 20);
-    this._sprites.push(panel);
+    // Nonagésimo cuarto pase: el anillo dorado macizo + tarjeta crema
+    // plana (sin relieve, con líneas divisorias de tabla web — feedback
+    // explícito del usuario) se reemplazan por el marco de madera
+    // biselada con remaches de bronce que ya usa el Lobby — ver
+    // `_dibujarMarcoMaderaConRemaches`, un solo Graphics en vez de dos.
+    const marco = this.add.graphics().setDepth(900);
+    this._dibujarMarcoMaderaConRemaches(marco, px, py, panelAncho, panelAlto, 20, 14, 9);
+    this._sprites.push(marco);
 
     // Pase siguiente: pedido del usuario de "sumar algún detalle de
     // celebración si ganás" — un puñado de cuadraditos de colores que
@@ -1586,15 +2203,27 @@ this._limpiarSprites();
     }
 
     const pillCenterY = py + padArriba + pillH / 2;
-    const cartel = this.add.graphics().setDepth(901);
-    cartel.fillStyle(0xFFB627, 1);
-    cartel.fillRoundedRect(400 - pillW / 2, pillCenterY - pillH / 2, pillW, pillH, 10);
-    textoTitulo.setPosition(400, pillCenterY).setOrigin(0.5);
-    this._sprites.push(cartel);
+    // Nonagésimo cuarto pase: el cartel de título pasa del rectángulo
+    // dorado macizo y plano de antes al mismo banner de pergamino de 3
+    // franjas que ya usa el resto de la mesa para carteles de texto
+    // (`_crearBannerTexto`/`_mostrarCanto`) — pedido explícito del
+    // usuario: "colocar el encabezado en un cartel de madera o listón
+    // de pergamino desplegado".
+    const texIzqTit = this.textures.get('banner_izq').getSourceImage();
+    const texDerTit = this.textures.get('banner_der').getSourceImage();
+    const capWTit = Math.round(texIzqTit.width * (pillH / texIzqTit.height));
+    const capWDerTit = Math.round(texDerTit.width * (pillH / texDerTit.height));
+    const midWTit = Math.max(1, pillW - capWTit - capWDerTit);
+    const cartelIzq = this.add.image(400 - pillW / 2 + capWTit / 2, pillCenterY, 'banner_izq').setDisplaySize(capWTit, pillH).setDepth(901);
+    const cartelCentro = this.add.image(400 - pillW / 2 + capWTit + midWTit / 2, pillCenterY, 'banner_centro').setDisplaySize(midWTit, pillH).setDepth(901);
+    const cartelDer = this.add.image(400 + pillW / 2 - capWDerTit / 2, pillCenterY, 'banner_der').setDisplaySize(capWDerTit, pillH).setDepth(901);
+    textoTitulo.setPosition(400, pillCenterY).setOrigin(0.5).setDepth(902);
+    this._sprites.push(cartelIzq, cartelCentro, cartelDer);
 
     let y = pillCenterY + pillH / 2 + 12;
 
     caraFinal.setPosition(400, y + caraTam / 2);
+    marcoAvatar.setPosition(400, y + caraTam / 2);
     y += caraTam + 10;
 
     if (campeonTxt) {
@@ -1621,37 +2250,100 @@ this._limpiarSprites();
 
       const filaAncho = panelAncho - 80;
       jugadoresFinal.forEach((j) => {
-        const colorAcento = j.gano ? 0x3E8E5A : 0xB0454B;
-        const colorTexto = j.gano ? '#1f7a3c' : '#8c3a3a';
-        const etiqueta = j.gano ? '🏆 Ganador' : 'Perdedor';
-
         const filaFondo = this.add.graphics().setDepth(901);
-        filaFondo.fillStyle(0x4A2C2A, 0.05);
-        filaFondo.fillRoundedRect(400 - filaAncho / 2, y - 14, filaAncho, 28, 8);
-        filaFondo.fillStyle(colorAcento, 1);
-        filaFondo.fillRoundedRect(400 - filaAncho / 2, y - 14, 5, 28, 2);
+        const fy = y - filaJugadorAlto / 2;
+
+        // Centésimo pase: pedido explícito del usuario — ya no son dos
+        // mitades de un mismo bloque (franja de acento a la izquierda
+        // nada más); cada fila pasa a ser una placa VISUALMENTE
+        // INDEPENDIENTE, con su propio contorno fino alrededor entero
+        // ("borde de madera fina" en la ganadora, "borde rojo carmesí"
+        // en la perdedora) además del gap real que ya separa una de la
+        // otra (ver `gapEntreFilas`, declarado arriba junto a
+        // `panelAncho`). Se sacó la franja sólida de la izquierda — el
+        // contorno completo ya cumple ese rol de "detalle de color" sin
+        // necesitar las dos cosas a la vez.
+        let colorTexto;
+        if (j.gano) {
+          // Pergamino claro ahuecado (sin cambios de tono respecto al
+          // pase 263) + borde de madera fina (maderaClara, el mismo tono
+          // que ya usa el resto de la mesa para marcos de madera) en vez
+          // de la franja esmeralda sólida de antes — el verde esmeralda
+          // queda como "detalle" en el filete interior, no como borde.
+          filaFondo.fillStyle(0x4A2C2A, 0.18); // sombra sutil, da profundidad al hueco
+          filaFondo.fillRoundedRect(400 - filaAncho / 2, fy, filaAncho, filaJugadorAlto, 8);
+          filaFondo.fillStyle(0xFFF8ED, 1); // crema/pergamino
+          filaFondo.fillRoundedRect(400 - filaAncho / 2 + 1.5, fy + 1.5, filaAncho - 3, filaJugadorAlto - 5, 6.5);
+          filaFondo.fillStyle(0xFFFFFF, 0.35); // brillo superior sutil
+          filaFondo.fillRoundedRect(400 - filaAncho / 2 + 1.5, fy + 1.5, filaAncho - 3, 7, 6.5);
+          filaFondo.lineStyle(1, 0x2D9B4F, 0.5); // filete esmeralda interior — el "detalle" pedido
+          filaFondo.lineBetween(400 - filaAncho / 2 + 10, fy + filaJugadorAlto - 2.5, 400 + filaAncho / 2 - 10, fy + filaJugadorAlto - 2.5);
+          filaFondo.lineStyle(2, 0x6b4a34, 1); // maderaClara — borde de madera fina, entero
+          filaFondo.strokeRoundedRect(400 - filaAncho / 2, fy, filaAncho, filaJugadorAlto, 8);
+          colorTexto = '#3a2412'; // chocolate oscuro, legible sobre pergamino claro
+        } else {
+          // Cuero oscuro ahuecado (sin cambios de tono) + borde rojo
+          // carmesí entero, mismo criterio que la ganadora.
+          filaFondo.fillStyle(0x1a1410, 0.9); // negroPulido — base del hueco
+          filaFondo.fillRoundedRect(400 - filaAncho / 2, fy, filaAncho, filaJugadorAlto, 8);
+          filaFondo.fillStyle(0x4a3226, 1); // maderaMedia tratada como cuero
+          filaFondo.fillRoundedRect(400 - filaAncho / 2 + 1.5, fy + 1.5, filaAncho - 3, filaJugadorAlto - 5, 6.5);
+          filaFondo.fillStyle(0x000000, 0.22);
+          filaFondo.fillRoundedRect(400 - filaAncho / 2 + 1.5, fy + 1.5, filaAncho - 3, 7, 6.5);
+          filaFondo.lineStyle(2, 0xB0454B, 1); // rojo carmesí — borde entero
+          filaFondo.strokeRoundedRect(400 - filaAncho / 2, fy, filaAncho, filaJugadorAlto, 8);
+          colorTexto = '#FFF8ED'; // crema, legible sobre cuero oscuro
+        }
         this._sprites.push(filaFondo);
 
         // Pase 201: se quita el chip de avatar con la inicial del
         // nombre (pedido del usuario: "con el nombre alcanza") — el
-        // texto de la fila arranca directo después de la franja de
-        // acento izquierda.
+        // texto de la fila arranca directo después del borde izquierdo.
         const filaTexto = this.add.text(400 - filaAncho / 2 + 14, y, j.nombre, {
           fontFamily: 'Nunito, Arial', fontSize: '13px', fontStyle: 'bold', color: colorTexto,
+          ...(j.gano ? {} : { stroke: '#000000', strokeThickness: 2 }),
         }).setOrigin(0, 0.5).setDepth(902);
         this._sprites.push(filaTexto);
 
-        const filaEtiqueta = this.add.text(400 + filaAncho / 2 - 12, y, etiqueta, {
-          fontFamily: 'Nunito, Arial', fontSize: '12px', fontStyle: 'bold', color: colorTexto,
-        }).setOrigin(1, 0.5).setDepth(902);
-        this._sprites.push(filaEtiqueta);
+        // Centésimo pase: la etiqueta "🏆 Ganador" (texto) se reemplaza
+        // por un ícono de trofeo real en el extremo derecho — pedido
+        // explícito del usuario ("ícono de Copa/Trofeo dorado 3D en el
+        // extremo derecho"), en vez de un emoji adentro del texto. La
+        // fila perdedora mantiene su etiqueta de texto "Perdedor" (no se
+        // pidió ningún ícono para ese lado).
+        if (j.gano) {
+          const iconoTrofeo = this.add.image(400 + filaAncho / 2 - 16, y, 'trofeoFila')
+            .setDisplaySize(24, 24).setDepth(902);
+          this._sprites.push(iconoTrofeo);
+        } else {
+          const filaEtiqueta = this.add.text(400 + filaAncho / 2 - 12, y, 'Perdedor', {
+            fontFamily: 'Nunito, Arial', fontSize: '12px', fontStyle: 'bold', color: '#f0a3a3',
+            stroke: '#000000', strokeThickness: 2,
+          }).setOrigin(1, 0.5).setDepth(902);
+          this._sprites.push(filaEtiqueta);
+        }
 
-        y += 32;
+        y += filaJugadorAlto + gapEntreFilas;
       });
+      // La última fila ya suma `gapEntreFilas` de más (el gap es "contra
+      // la siguiente fila", pero no hay una siguiente) — se resta antes
+      // de sumar el margen real de cierre de esta sección.
+      y -= gapEntreFilas;
       y += 16;
     }
 
     if (!esTorneo) {
+      // Centésimo pase: placa de fondo para el texto de estado de la
+      // revancha — arranca invisible (la mayoría de los estados de este
+      // texto, "Esperando confirmación…", no llevan placa, solo texto
+      // apagado como antes). Se muestra solo cuando `_mostrarAlertaRevancha`
+      // la necesita (el aviso de "se agotó el tiempo"). Se crea ACÁ, no
+      // dentro de `_mostrarAlertaRevancha`, porque esta es la única vez
+      // que se conoce el ancho/posición real del panel — después solo se
+      // redimensiona con `.clear()` + redibujado.
+      this.fondoAlertaRevancha = this.add.graphics().setDepth(901).setVisible(false);
+      this._sprites.push(this.fondoAlertaRevancha);
+
       this.textoEsperaRevancha = this.add.text(400, y, '', {
         fontFamily: 'Nunito, Arial', fontSize: '12px', fontStyle: 'bold', color: '#7a6660', align: 'center',
         wordWrap: { width: panelAncho - 40 },
@@ -1659,27 +2351,38 @@ this._limpiarSprites();
       this._sprites.push(this.textoEsperaRevancha);
       y += 20;
 
-      const revanchaTexto = '🔁 Pedir revancha';
+      // Ducentésimo septuagésimo segundo pase: pedido explícito del
+      // usuario — sacar el ícono/emoji de la izquierda, texto limpio.
+      const revanchaTexto = 'Pedir revancha';
       const revanchaAncho = this._medirAnchoTextoOverlay(revanchaTexto, '13px') + 44;
-      const { contenedor: contRevancha, grafico: grafRevancha } = this._crearBotonOverlay({
-        x: 400, y: y + 22, ancho: revanchaAncho, colorFondo: 0x3E8E5A, texto: revanchaTexto, colorTexto: '#FFF8ED', tamanoFuente: 13,
+      const { contenedor: contRevancha, img: imgRevancha } = this._crearBotonOverlay({
+        x: 400, y: y + altoBotonFinal / 2, ancho: revanchaAncho, alto: altoBotonFinal, variante: 'verde', texto: revanchaTexto, tamanoFuente: 13,
         onClick: () => {
           this.socket.emit('pedir-revancha', { codigoSala: this.codigoSala });
+          // Nonagésimo sexto pase: antes el estado "ya pedida" se
+          // simulaba redibujando el Graphics con menos opacidad.
+          // Ducentésimo septuagésimo segundo pase: pedido explícito del
+          // usuario — los botones de esta pantalla deben quedar siempre
+          // en alpha 1.0 (nada semitransparente). El estado "ya pedida"
+          // ahora se marca solo con un tinte gris apagado sobre el
+          // sprite (sigue 100% opaco) en vez de bajar la opacidad.
           contRevancha.disableInteractive();
-          grafRevancha.clear();
-          grafRevancha.fillStyle(0x3E8E5A, 0.45);
-          grafRevancha.fillRoundedRect(-revanchaAncho / 2, -22, revanchaAncho, 44, 14);
-          grafRevancha.lineStyle(3, 0x4A2C2A, 0.45);
-          grafRevancha.strokeRoundedRect(-revanchaAncho / 2, -22, revanchaAncho, 44, 14);
+          if (imgRevancha) imgRevancha.setTint(0x8a9e8a);
         },
       });
-      y += 44 + 8;
+      // Centésimo pase: guardadas como propiedades de la escena — el
+      // handler de 'revancha-cancelada' (registrado en create(), fuera de
+      // esta función) necesita apagar este botón cuando se agota el
+      // tiempo, y no tenía ninguna referencia a él hasta ahora.
+      this.contRevancha = contRevancha;
+      this.imgRevancha = imgRevancha;
+      y += altoBotonFinal + 8;
     }
 
     const labelBoton = esTorneo ? '🏆 Ver bracket' : 'Volver al lobby';
     const volverAncho = this._medirAnchoTextoOverlay(labelBoton, '13px') + 44;
     this._crearBotonOverlay({
-      x: 400, y: y + 22, ancho: volverAncho, colorFondo: 0xFFB627, texto: labelBoton, tamanoFuente: 13,
+      x: 400, y: y + altoBotonFinal / 2, ancho: volverAncho, alto: altoBotonFinal, variante: 'dorado', texto: labelBoton, tamanoFuente: 13,
       onClick: () => {
         if (esTorneo && this.onVerBracket) {
           this.onVerBracket(torneoId);
@@ -1706,7 +2409,48 @@ this._limpiarSprites();
 
   _actualizarEstadoRevancha(confirmados, total) {
     if (this.textoEsperaRevancha) {
-      this.textoEsperaRevancha.setText(`Esperando confirmación… (${confirmados}/${total || '?'})`).setColor('#7a6660');
+      // Centésimo pase: por si este texto estaba mostrando la placa de
+      // alerta de un intento anterior (no debería pasar en el flujo
+      // normal, pero defensivo) — el estado de "esperando confirmación"
+      // es neutro, sin placa.
+      if (this.fondoAlertaRevancha) this.fondoAlertaRevancha.setVisible(false);
+      this.textoEsperaRevancha.setText(`Esperando confirmación… (${confirmados}/${total || '?'})`)
+        .setColor('#7a6660').setFontStyle('bold');
+    }
+  }
+
+  // Centésimo pase: "Se agotó el tiempo para confirmar la revancha" vivía
+  // como texto rojo plano flotando sobre el pergamino de la tarjeta —
+  // pedido explícito del usuario: que se lea como una notificación
+  // oficial del sistema, no como un error de texto suelto.
+  // Ducentésimo septuagésimo segundo pase: pedido explícito del usuario
+  // — eliminar la placa/recuadro secundario detrás del mensaje (y el
+  // atenuado del botón): "que solo se renderice el cartel del mensaje y
+  // el botón PNG directamente sobre el pergamino interior". El mensaje
+  // ahora se dibuja como texto suelto en rojo directo sobre el pergamino
+  // de la tarjeta (sin placa propia detrás), y el botón de "Pedir
+  // revancha" se desactiva sin bajarle la opacidad — mismo criterio de
+  // "alpha siempre 1.0" que el resto de los botones de esta pantalla.
+  _mostrarAlertaRevancha(mensaje) {
+    if (!this.textoEsperaRevancha) return;
+    if (this.fondoAlertaRevancha) this.fondoAlertaRevancha.setVisible(false);
+
+    // Pase 266: se agrega `setFontSize('10px')` acá (y no en la creación
+    // del texto, línea ~2089) para que la reducción de tamaño afecte
+    // SOLO al mensaje de alerta ("se agotó el tiempo..."), no al texto
+    // "Esperando confirmación… (n/n)" que reutiliza el mismo objeto en
+    // su estado normal y que el usuario no pidió achicar. 12px → 10px
+    // es ~17% de reducción, dentro del 15-20% pedido.
+    this.textoEsperaRevancha.setText(mensaje).setColor('#8c2a2a').setFontStyle('bold').setFontSize('10px');
+    this.textoEsperaRevancha.setDepth(902);
+
+    // Si el jugador todavía no había tocado "Pedir revancha" (el botón
+    // sigue interactivo), se desactiva — ya no se tiñe/atenúa (pedido
+    // explícito del usuario, ver comentario de la función). Si ya lo
+    // había tocado, el botón ya quedó en su propio estado "ya pedida"
+    // (tinte gris apagado, ver el onClick más arriba) y se deja así.
+    if (this.contRevancha && this.contRevancha.input && this.contRevancha.input.enabled) {
+      this.contRevancha.disableInteractive();
     }
   }
 
@@ -1728,6 +2472,10 @@ _renderizarEstado(animarReparto) {
     // se va vaciando — no se puede dibujar de una sola vez acá porque el
     // porcentaje restante cambia entre un render de estado y el siguiente.
     this._anilloRect = null;
+    // Nonagésimo séptimo pase: acá vivía el reset de `turnoPlaca` (la
+    // placa de madera detrás de "Tu turno", sacada a pedido del usuario —
+    // ver comentario junto a `turnoText` en create()). Ya no hay nada que
+    // esconder: `turnoText.setText('')` más abajo alcanza solo.
 
     // Defensivo: el backend siempre debería mandar truco/flor/envido como
     // objetos (con sus campos en null/false cuando no hay nada pendiente),
@@ -1744,14 +2492,13 @@ _renderizarEstado(animarReparto) {
       (!!e.envido.tipo && !e.envido.resuelto) ||
       (!!e.flor.nivel && !e.flor.resuelto);
 
-    // Pase siguiente: con AMBOS números en 2 cifras (ej "12 - 12") el texto
-    // a 20px se pasaba del ancho de la placa (`marcadorAncho`, 72px) — se
-    // achica un poco la fuente en ese caso (18px si algún lado ya llegó a
-    // 2 cifras, 20px normal con 1 cifra) para que siempre entre bien.
-    const textoScore = `${e.scores.yo} - ${e.scores.rival}`;
-    const algunLadoDosCifras = String(e.scores.yo).length >= 2 || String(e.scores.rival).length >= 2;
-    this.scoreText.setFontSize(algunLadoDosCifras ? '17px' : '20px');
-    this.scoreText.setText(textoScore);
+    // Pase siguiente (placa doble): cada lado tiene su propia placa/texto
+    // ahora (antes un solo "N - N" combinado en `scoreText`) — cada
+    // número, solo, casi nunca llega a 2 cifras muy seguido (el truco se
+    // juega a 15/30), así que ya no hace falta el ajuste de fontSize que
+    // tenía el texto combinado.
+    this.scoreText.setText(String(e.scores.yo));
+    if (this.scoreTextRival) this.scoreTextRival.setText(String(e.scores.rival));
     this.miManoTexto.setText(e.esMano ? 'Sos mano' : '');
     if (this.manoIconoPropio) this.manoIconoPropio.setVisible(!!e.esMano);
     this.turnoText.setText(e.turno === 'mio' ? '● Tu turno' : '');
@@ -1774,9 +2521,16 @@ _renderizarEstado(animarReparto) {
     }
 
     const esModoEquipos = Array.isArray(e.companeros);
+    // Pase siguiente (placa doble): `fondoInfoRival`/`scoreTextRival` ya
+    // NO se ocultan en modo equipos — antes la placa entera desaparecía
+    // porque el nombre "Rival" no tiene sentido con más de un rival, pero
+    // ahora esa misma placa también es donde vive el puntaje del equipo
+    // rival (antes combinado en el "N - N" de la placa "Vos", que SÍ
+    // seguía visible en equipos). Solo se sigue ocultando lo que de verdad
+    // no aplica a equipos: el nombre de un rival puntual y el ícono de
+    // persona (ambos pensados para "un solo rival", no para un equipo).
     this.labelRival.setVisible(!esModoEquipos);
     if (this.manoIconoRival) this.manoIconoRival.setVisible(!esModoEquipos);
-    if (this.fondoInfoRival) this.fondoInfoRival.setVisible(!esModoEquipos);
 
     // Trigésimo segundo pase: "Rival" + su ícono se prenden (dorado, con
     // pulso continuo, igual que el 🎯 de nativo) cuando es el turno del
@@ -1785,66 +2539,70 @@ _renderizarEstado(animarReparto) {
     // el tween en cada actualización de estado si no cambió nada — esta
     // función se llama en cada evento de estado del backend, no solo al
     // cambiar de turno.
+    // Nonagésimo tercer pase: el usuario reportó (de nuevo, ahora sobre el
+    // NOMBRE del rival en vez de los puntos — mismo bug de fondo) que se
+    // perdía por falta de opacidad: acá el pulso ENCENDIDO bajaba hasta
+    // alpha 0.6, y el estado APAGADO quedaba en alpha 0.5 sobre un color
+    // YA semitransparente ('#ffffff77') — compuesto, terminaba casi
+    // invisible. `labelRival` deja de animarse/atenuarse por turno —
+    // queda siempre a alpha 1 con el color sólido+contorno definidos en
+    // su creación (ver más arriba). El indicador de turno sigue existiendo
+    // (ahora solo vía el ícono `manoIconoRival`: dorado+pulso cuando es su
+    // turno, gris quieto cuando no).
     const esTurnoRival = !esModoEquipos && e.turno !== 'mio';
     if (esTurnoRival !== this._rivalTurnoEncendido) {
       this._rivalTurnoEncendido = esTurnoRival;
-      const objetivos = this.manoIconoRival ? [this.labelRival, this.manoIconoRival] : [this.labelRival];
-      this.tweens.killTweensOf(objetivos);
-      if (esTurnoRival) {
-        this.labelRival.setColor('#FFD700').setAlpha(1);
-        if (this.manoIconoRival) this.manoIconoRival.setAlpha(1).clearTint();
-        this.tweens.add({
-          targets: objetivos,
-          alpha: { from: 1, to: 0.6 },
-          duration: 550,
-          yoyo: true,
-          repeat: -1,
-          ease: 'Sine.easeInOut'
-        });
-      } else {
-        this.labelRival.setColor('#ffffff77').setAlpha(0.5);
-        if (this.manoIconoRival) this.manoIconoRival.setAlpha(0.4).setTint(0x777777);
+      if (this.manoIconoRival) {
+        this.tweens.killTweensOf(this.manoIconoRival);
+        if (esTurnoRival) {
+          this.manoIconoRival.setAlpha(1).clearTint();
+          this.tweens.add({
+            targets: this.manoIconoRival,
+            alpha: { from: 1, to: 0.6 },
+            duration: 550,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut'
+          });
+        } else {
+          this.manoIconoRival.setAlpha(0.4).setTint(0x777777);
+        }
       }
     }
+
+    // Pase siguiente (placa doble, pedido del usuario): antes solo la
+    // placa del rival se "prendía/apagaba" según de quién era el turno —
+    // la propia ("Vos") se quedaba siempre igual. Se probó atenuar juntas
+    // las dos (0.55 la que no tiene el turno) para reforzar de quién es el
+    // turno con solo mirar el marcador.
+    // Nonagésimo segundo pase: el usuario reportó que el número del rival
+    // se veía "casi transparente"/poco legible con esa atenuación — pidió
+    // opacidad 1.0 siempre en los DOS números, igual de legibles, con solo
+    // una sombra fina (ya la tienen, ver `shadow` en la definición de
+    // `scoreText`/`scoreTextRival` más arriba) en vez de alpha bajo. El
+    // indicador de turno sigue existiendo por otros medios (badge "● Tu
+    // turno", anillo/pulso de `labelRival` vía `_rivalTurnoEncendido`) —
+    // se saca SOLO esta atenuación redundante de los números.
+    this.scoreText.setAlpha(1);
+    if (this.scoreTextRival) this.scoreTextRival.setAlpha(1);
 
     if (esModoEquipos) {
       this._renderizarEquipos(e, animarReparto, hayCantoSinResolver);
     } else {
       this._ajustarMesaSegunAsientos(2);
       this._nombreRivalActual = e.nombreRival || null;
-      this.labelRival.setText(e.nombreRival || 'Rival');
-      // Centésimo décimo séptimo pase: `icono_rival` sigue al nombre en vez
-      // de vivir en un X fijo — antes (X=228 fijo) un nombre real más largo
-      // que "Rival" quedaba tapado por el ícono o lo empujaba visualmente;
-      // ahora el ícono siempre se acomoda justo después del texto, sea cual
-      // sea su largo. `manoIconoRival` tiene origen central (0.5,0.5) por
-      // default, así que se le suma la mitad de su ancho (19/2) al borde
-      // derecho del texto + un margen chico de 6px.
-      if (this.manoIconoRival) {
-        this.manoIconoRival.x = this.labelRival.x + this.labelRival.width + 6 + 9.5;
-      }
-      // Sexagésimo primer pase (punto 2): placa chica detrás de nombre+
-      // ícono, redibujada según el ancho real del texto (varía con el
-      // nombre) — mismo criterio de "medida real, no un número fijo" que
-      // ya se usa para reposicionar `manoIconoRival` arriba. Chocolate
-      // translúcido con filete dorado fino, mismo lenguaje visual que el
-      // resto de placas/paneles del juego (marcador, botones).
-      if (this.fondoInfoRival && this.manoIconoRival) {
-        const inicioX = this.labelRival.x - 8;
-        const finX = this.manoIconoRival.x + 9.5 + 8;
-        this.fondoInfoRival.clear();
-        this.fondoInfoRival.fillStyle(0x2a1a12, 0.55);
-        this.fondoInfoRival.fillRoundedRect(inicioX, 4, finX - inicioX, 28, 9);
-        this.fondoInfoRival.lineStyle(1.5, 0xC9860E, 0.6);
-        this.fondoInfoRival.strokeRoundedRect(inicioX, 4, finX - inicioX, 28, 9);
+      this.labelRival.setText(this._truncarNombre(e.nombreRival) || 'Rival');
 
-        // Pase siguiente: anillo de tiempo (paridad con el nativo, pase
-        // 177) — mismo rectángulo que la placa de arriba, se dibuja aparte
-        // (this.anilloTiempo, ver create()) solo cuando es el turno del
-        // rival y hay timer activo.
-        if (esTurnoRival) {
-          this._anilloRect = { x: inicioX, y: 4, w: finX - inicioX, h: 28, r: 9 };
-        }
+      // Pase siguiente: anillo de tiempo (paridad con el nativo, pase
+      // 177) — antes usaba el rectángulo dinámico de la placa vieja;
+      // ahora la placa del rival es fija (`PLACA_RIVAL_CX/CY`, ver
+      // create()), así que el anillo se calcula directo de esas
+      // constantes en vez de medir texto.
+      if (esTurnoRival) {
+        this._anilloRect = {
+          x: this.PLACA_RIVAL_CX - 48, y: this.PLACA_RIVAL_CY - 24,
+          w: 96, h: 48, r: 9,
+        };
       }
 
       const revelacionFlorRival = this._mostrandoRevelacionFlor
@@ -1855,10 +2613,17 @@ _renderizarEstado(animarReparto) {
         : null;
       const revelacionRival = revelacionFlorRival || revelacionEnvidoRival;
 
+      // Pase siguiente (feedback del usuario: "las cartas del rival deben
+      // asomar desde el borde superior exterior de la mesa, no estar
+      // apoyadas sobre el paño verde") — subidas 25px (105→80), quedan
+      // justo contra el borde superior real de la mesa nueva (el óvalo de
+      // madera arranca ~Y=76 con el tamaño/posición actual de `mesaImg`,
+      // ver `_ajustarMesaSegunAsientos`), en vez de nacer más abajo, ya
+      // sobre el paño.
       if (revelacionRival) {
         this._dibujarFilaCartasReveladas(revelacionRival.cartas, 80);
       } else {
-        this._dibujarFilaDorso(e.cartasRivalEnMano, 105);
+        this._dibujarFilaDorso(e.cartasRivalEnMano, 80);
       }
 
       // Sexagésimo primer/segundo pase — punto 1 ("jerarquía visual y
@@ -1874,8 +2639,33 @@ _renderizarEstado(animarReparto) {
       // el bloque quedaba un poco arriba del centro de la mesa — bajado de
       // 242 a 262. Sexagésimo quinto pase: se pasó de largo, quedó un poco
       // abajo del centro — subido de 262 a 250 (captura del usuario).
-      this._dibujarDueloCartas(e.jugadasRival, e.misJugadas, 250, 0.66, 60);
-            this._dibujarManoJugador(e.misCartas, 490, e.turno === 'mio' && !hayCantoSinResolver, animarReparto);
+      // Pase siguiente: con la mesa nueva (asset e integración distintos a
+      // la mesa vieja con la que se afinó el 250 de arriba), el usuario
+      // pidió bajar LIGERAMENTE el centro para que el par de cartas quede
+      // en el centro geométrico real del paño — 250→260. Nonagésimo
+      // primer pase: el usuario pidió subirlas de nuevo ~15px porque
+      // ahora chocaban visualmente con los botones de Envido de la fila
+      // superior nueva — 260→245. Nonagésimo segundo pase: 25px más
+      // arriba (245→220) para que queden alineadas al centro geométrico
+      // real del paño (la fila de botones ahora vive en una sola línea
+      // más abajo, dentro del panel agrandado, así que hay más aire).
+      this._dibujarDueloCartas(e.jugadasRival, e.misJugadas, 220, 0.66, 60);
+            // Pase siguiente (feedback del usuario: "deben nacer y apoyarse
+            // directamente desde el marco de madera de la botonera
+            // inferior, sin invadir la zona verde") — bajada 15px (490→505)
+            // para que se hunda más adentro del panel de madera (que
+            // arranca en Y=500, ver _crearElementosDeTexto) en vez de
+            // asomar tan poco. Nonagésimo primer pase: 10px más (505→515)
+            // para que queden justo detrás/debajo de los botones de la
+            // fila superior nueva (Envido/Real Envido/Falta Envido).
+            // Nonagésimo segundo pase: 10px más (515→525), pedido explícito
+            // del usuario para que nazcan desde atrás del panel de madera
+            // en vez de solaparse sobre la tira de remaches superior.
+            // Nonagésimo tercer pase: marcha atrás parcial — 30px hacia
+            // ARRIBA (525→495), pedido explícito del usuario porque los
+            // remaches de la botonera (agrandada en el pase anterior) ya
+            // tapaban los números/índices de las cartas.
+            this._dibujarManoJugador(e.misCartas, 495, e.turno === 'mio' && !hayCantoSinResolver, animarReparto);
     }
 
     this._dibujarBotonesCanto(e);
@@ -1996,7 +2786,13 @@ _renderizarEquipos(e, animarReparto, hayCantoSinResolver) {
     // rivales viven junto a cada asiento, ver _dibujarJugador), así que
     // sigue siendo una fila simple, sin DueloCartas.
     this._dibujarFilaCartas(e.misJugadas, 340, false, false, 0.60, false, 30);
-    this._dibujarManoJugador(e.misCartas, 490, e.turno === 'mio' && !hayCantoSinResolver, animarReparto);
+    // Pase siguiente: mismo ajuste que en 1v1 (ver el otro call site,
+    // dentro del bloque no-equipos de _renderizarEstado) — la mano
+    // propia comparte la misma barra de botonera en cualquier modo.
+    // Nonagésimo primer pase: mismo +10px (505→515) que el otro call site.
+    // Nonagésimo segundo pase: mismo +10px (515→525) que el otro call site.
+    // Nonagésimo tercer pase: mismo -30px (525→495) que el otro call site.
+    this._dibujarManoJugador(e.misCartas, 495, e.turno === 'mio' && !hayCantoSinResolver, animarReparto);
 }
 
 _calcularAsientos(companeros, rivales) {
@@ -2019,18 +2815,213 @@ _calcularAsientos(companeros, rivales) {
     }));
 }
 
-// Pase siguiente: dibuja el anillo de tiempo que se va vaciando alrededor
-// de `rect` ({x,y,w,h,r}) — paridad visual con el anillo SVG del nativo
-// (AnilloTiempoRival, juego.tsx), pero armado a mano con Graphics: Phaser
-// no tiene un equivalente a stroke-dasharray/dashoffset, así que en vez de
-// reproducir ese truco se recorre el perímetro completo (arrancando en la
-// mitad del borde superior, sentido horario) y se dibuja solo la porción
-// que corresponde al `porcentaje` de tiempo restante — mismo resultado
-// visual (un anillo que se va achicando en sentido horario). Las esquinas
-// redondeadas se aproximan con una polilínea corta (8 segmentos por
-// cuarto de círculo, de sobra para un radio tan chico) en vez de usar
-// `Graphics.arc()`, para no depender de cómo cada renderer (Canvas/WebGL)
-// mezcla arcos con líneas dentro de un mismo path.
+// Nonagésimo quinto pase: `_dibujarBadgeTurno` (el glow de 3 capas +
+// placa oscura dibujados a mano con Graphics, detrás de "● Tu turno")
+// se SACÓ de acá — reemplazada por la imagen `turnoPlaca`, el asset
+// ilustrado de la placa/faja de madera que mandó el usuario.
+// Nonagésimo séptimo pase: `turnoPlaca` también se sacó (pedido
+// explícito: "el panel de madera detrás del tu turno lo sacamos") — no
+// quedó ningún badge/fondo detrás del texto, en ninguna de las dos
+// versiones. `this._anilloRect` (calculado en _renderizarEstado) sigue
+// existiendo sin cambios — lo sigue usando el anillo de tiempo que se
+// dibuja alrededor del texto, que es un indicador distinto del badge de
+// fondo que se sacó acá.
+
+// Nonagésimo cuarto pase: marco de madera biselada con remaches de
+// bronce para el panel grande de la pantalla de resultado
+// (_mostrarPantallaFinal) — pedido explícito del usuario: "usar el
+// mismo marco de madera biselada con remaches de bronce que usamos en
+// el Lobby" en vez del anillo dorado macizo + tarjeta crema plana de
+// antes. Mismo lenguaje de capas que `_dibujarPlacaMarcador` (gradiente
+// madera aproximado con rects apilados + remaches de 5 capas), pero con
+// la paleta OSCURA que usa el marco de Lobby.js (`accesoCardExterior`:
+// maderaClara/Media/Oscura + negroPulido + remache/remacheClaro/
+// remacheOscuro) en vez de la paleta terracota que usa la placa del
+// marcador (esa se calibró a mano contra el asset de la botonera, no
+// contra este marco). `x,y` es la esquina superior-izquierda (no el
+// centro, a diferencia de `_dibujarPlacaMarcador`) para no tener que
+// recalcular todo el layout de `_mostrarPantallaFinal`, que ya trabaja
+// con `px,py` como esquina.
+_dibujarMarcoMaderaConRemaches(g, x, y, w, h, rExterior = 20, rInterior = 14, padInterior = 9) {
+  g.clear();
+
+  // "Grosor" de la placa — sombra sólida asomando por debajo, mismo
+  // truco que el `0 8px 0 negroPulido` del boxShadow de
+  // `accesoCardExterior` (da sensación de objeto con canto real, no un
+  // rectángulo plano pegado a la pantalla).
+  g.fillStyle(0x1a1410, 1); // negroPulido
+  g.fillRoundedRect(x, y + h - 2, w, 8, rExterior * 0.4);
+
+  // Marco exterior: gradiente madera (maderaClara→maderaMedia→
+  // maderaOscura, 160deg en el CSS) aproximado con 3 capas apiladas,
+  // igual criterio que `_dibujarPlacaMarcador` porque Graphics no tiene
+  // gradiente confiable entre Canvas/WebGL.
+  g.fillStyle(0x2a1c14, 1); // maderaOscura (base)
+  g.fillRoundedRect(x, y, w, h, rExterior);
+  g.fillStyle(0x4a3226, 1); // maderaMedia
+  g.fillRoundedRect(x, y, w, h * 0.85, rExterior);
+  g.fillStyle(0x6b4a34, 0.55); // maderaClara (bisel superior)
+  g.fillRoundedRect(x + 3, y + 3, w - 6, h * 0.3, rExterior * 0.7);
+
+  // Nonagésimo sexto pase: 3→4px — pedido explícito del usuario para
+  // esta pantalla ("contorno negro grueso exterior, stroke 3-4px, estilo
+  // pegatina") — un poco más grueso que el 3px que usa `accesoCardExterior`
+  // en Lobby.js, a propósito: ahí es un marco chico repetido 3 veces en
+  // pantalla, acá es LA tarjeta protagonista de toda la pantalla de
+  // resultado, así que un trazo apenas más pesado tiene sentido.
+  g.lineStyle(4, 0x1a1410, 1);
+  g.strokeRoundedRect(x, y, w, h, rExterior);
+
+  // Filete claro fino en el semi-perímetro superior — mismo truco que
+  // `_dibujarPlacaMarcador` para simular el canto recibiendo luz.
+  g.lineStyle(1.5, 0xc9973e, 0.4);
+  g.beginPath();
+  g.moveTo(x + rExterior, y + 2);
+  g.lineTo(x + w - rExterior, y + 2);
+  g.strokePath();
+
+  // Tarjeta interior de pergamino, inset `padInterior` px — mismo
+  // degradé sutil cremaSutil→crema que usa `accesoCard` en Lobby.js, con
+  // una sombra interna fina arriba (sugiere que el marco de madera "tapa"
+  // un poco el borde del pergamino, como un hueco, no una hoja suelta
+  // encima).
+  const ix = x + padInterior, iy = y + padInterior;
+  const iw = w - padInterior * 2, ih = h - padInterior * 2;
+  g.fillStyle(0xFFF8ED, 1); // crema
+  g.fillRoundedRect(ix, iy, iw, ih, rInterior);
+  g.fillStyle(0xFFFCF6, 0.6); // cremaSutil
+  g.fillRoundedRect(ix, iy, iw, ih * 0.45, rInterior);
+  g.fillStyle(0x4A2C2A, 0.08); // chocolate, sombra interior arriba
+  g.fillRoundedRect(ix, iy, iw, 12, rInterior);
+
+  // 4 remaches de bronce en las esquinas del marco EXTERIOR — mismo
+  // criterio de 5 capas que `_dibujarPlacaMarcador`, reescalado (casi el
+  // doble de radio: este panel es mucho más grande que la placa del
+  // marcador).
+  const margenRemache = padInterior * 0.85;
+  [
+    { rx: x + margenRemache, ry: y + margenRemache },
+    { rx: x + w - margenRemache, ry: y + margenRemache },
+    { rx: x + margenRemache, ry: y + h - margenRemache },
+    { rx: x + w - margenRemache, ry: y + h - margenRemache },
+  ].forEach(({ rx, ry }) => {
+    g.fillStyle(0x000000, 0.4); // sombra proyectada
+    g.fillCircle(rx + 1.2, ry + 1.6, 7.5);
+    g.fillStyle(0x7a5322, 1); // remacheOscuro (anillo de base)
+    g.fillCircle(rx, ry, 6.5);
+    g.fillStyle(0xc9973e, 1); // remache (cuerpo bronce)
+    g.fillCircle(rx, ry, 5);
+    g.fillStyle(0x5a3d18, 0.55); // sombra interna (esfericidad)
+    g.fillCircle(rx + 1, ry + 1, 3.5);
+    g.fillStyle(0xf0d9a0, 0.95); // remacheClaro (brillo especular)
+    g.fillCircle(rx - 1.5, ry - 1.5, 2);
+  });
+}
+
+// Pase siguiente (placa doble): las placas de "Vos"/Rival son de ancho
+// FIJO — un nombre de usuario largo se trunca acá en vez de estirarlas
+// (que empujaría el resto del HUD o invadiría el centro de la pantalla).
+_truncarNombre(nombre) {
+  if (!nombre) return null;
+  return nombre.length > 8 ? `${nombre.slice(0, 7)}…` : nombre;
+}
+
+// Marcha atrás pedida por el usuario sobre el pase anterior (asset de
+// cuero+bronce para el fondo del marcador de puntaje): vuelve a ser una
+// placa dibujada por código, mismo lenguaje "madera+bronce" que ya usan
+// los paneles de Lobby/Torneos/Ranking en CSS (gradiente madera,
+// borde negro pulido, 4 remaches de bronce en las esquinas) — acá
+// reproducido con Graphics porque este panel vive en el canvas de Phaser,
+// no en el DOM. `cx,cy` es el CENTRO de la placa (mismo criterio que
+// `add.image`, al que reemplaza, para no tener que tocar el punto de
+// llamada). Se llama una sola vez por placa, en `create()` — a diferencia
+// del anillo de tiempo o el badge de turno, estas placas no cambian
+// durante la partida, así que no hace falta volver a dibujarlas en cada
+// estado.
+//
+// Pase siguiente (placa doble, pedido del usuario: "mostrar los nombres
+// de los jugadores con sus puntos"): antes esta función solo dibujaba
+// dentro de `this.scoreBg` (un único parámetro implícito) — ahora recibe
+// el Graphics de destino (`g`) como primer parámetro, para poder
+// reutilizarla tal cual en la placa del rival (`this.fondoInfoRival`) sin
+// duplicar todo el dibujo.
+_dibujarPlacaMarcador(g, cx, cy, w, h) {
+  g.clear();
+  const x = cx - w / 2;
+  const y = cy - h / 2;
+  const r = 6;
+
+  // Sombra de caída, apenas desplazada hacia abajo — mismo truco que el
+  // boxShadow con capas oscuras del CSS, para dar sensación de placa con
+  // volumen en vez de un rectángulo plano.
+  g.fillStyle(0x000000, 0.35);
+  g.fillRoundedRect(x, y + 2, w, h, r);
+
+  // Cuerpo: Graphics no tiene un gradiente confiable entre Canvas/WebGL,
+  // así que el degradé madera del CSS (maderaClara→maderaMedia→
+  // maderaOscura, 160deg) se aproxima con 3 capas sólidas apiladas: base
+  // oscura, cuerpo medio, y una franja clara arriba a modo de bisel.
+  // Nonagésimo pase: colores re-calibrados a mano (con el cuentagotas)
+  // sobre el asset nuevo de la placa de la botonera, para que el
+  // marcador use "la misma textura" que pidió el usuario — el tono
+  // viejo (marrón casi negro, 0x2a1c14/0x4a3226/0x6b4a34) era el mismo
+  // lenguaje que Lobby/Torneos/Ranking, pero más oscuro y menos rojizo
+  // que la madera terracota del asset nuevo.
+  g.fillStyle(0x431c10, 1); // maderaOscura
+  g.fillRoundedRect(x, y, w, h, r);
+  g.fillStyle(0xa84e31, 1); // maderaMedia
+  g.fillRoundedRect(x, y, w, h * 0.72, r);
+  g.fillStyle(0xd37a4a, 0.55); // maderaClara (bisel superior)
+  g.fillRoundedRect(x + 2, y + 2, w - 4, h * 0.32, r * 0.7);
+
+  // Borde — mismo tono (sampleado directo del PNG de la botonera) en vez
+  // del negro pulido viejo.
+  g.lineStyle(2, 0x6b271d, 1);
+  g.strokeRoundedRect(x, y, w, h, r);
+
+  // Pase siguiente (feedback: "fondo marrón oscuro muy simple"): una
+  // sola línea de borde + 3 rectángulos apilados se leía plano a este
+  // tamaño chico — se agrega un filete claro fino, apenas adentro del
+  // borde negro, solo en el semi-perímetro superior (mismo truco que un
+  // `border-top`/`border-left` más claro en CSS para simular el canto
+  // recibiendo luz de una placa con volumen real).
+  g.lineStyle(1, 0xc98a5e, 0.5);
+  g.beginPath();
+  g.moveTo(x + r, y + 1);
+  g.lineTo(x + w - r, y + 1);
+  g.strokePath();
+
+  // 4 remaches de bronce en las esquinas, mismo criterio que los <span>
+  // circulares del CSS (radial-gradient remacheClaro→remache→
+  // remacheOscuro). Pase siguiente (feedback del usuario: "se ven como
+  // círculos agregados sin sombra ni relieve 3D") — la versión anterior
+  // era 3 círculos concéntricos con el MISMO centro, que a este tamaño se
+  // leen como un solo punto plano. Ahora cada remache es una composición
+  // de 5 capas con luz viniendo de arriba-izquierda (mismo criterio que
+  // el resto de esta escena): sombra blanda proyectada hacia abajo-
+  // derecha (lo despega de la madera), anillo oscuro de base, cuerpo
+  // bronce, una sombra interna hacia abajo-derecha (da volumen esférico,
+  // no solo un disco) y un brillo especular arriba-izquierda.
+  const margen = 7.5;
+  [
+    { rx: x + margen, ry: y + margen },
+    { rx: x + w - margen, ry: y + margen },
+    { rx: x + margen, ry: y + h - margen },
+    { rx: x + w - margen, ry: y + h - margen },
+  ].forEach(({ rx, ry }) => {
+    g.fillStyle(0x000000, 0.35); // sombra proyectada
+    g.fillCircle(rx + 0.9, ry + 1.3, 4.8);
+    g.fillStyle(0x3a1a0a, 1); // remacheOscuro (anillo de base)
+    g.fillCircle(rx, ry, 4.2);
+    g.fillStyle(0xe3a94a, 1); // remache (cuerpo bronce, sampleado del PNG de la botonera)
+    g.fillCircle(rx, ry, 3.2);
+    g.fillStyle(0x8a5a28, 0.6); // remacheOscuro (sombra interna, da esfericidad)
+    g.fillCircle(rx + 0.7, ry + 0.7, 2.3);
+    g.fillStyle(0xf2d587, 0.95); // remacheClaro (brillo especular)
+    g.fillCircle(rx - 1, ry - 1, 1.3);
+  });
+}
+
 _dibujarAnilloTiempo(rect, porcentaje) {
   const g = this.anilloTiempo;
   g.clear();
@@ -2317,6 +3308,33 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
     }
 }
 
+// Pedido del usuario: "falta el fino borde blanco exterior tipo sticker
+// UI" que ya usan las cartas en el resto de la app — acá son PNG sin ese
+// borde horneado en el arte, así que se agrega por código: una capa de
+// Graphics blanca (con un filete negro suave) apenas más grande que la
+// carta, siempre detrás de ella. Se dibuja en espacio LOCAL del propio
+// Graphics (el rect es relativo al (0,0) de ESE objeto, no a la escena) y
+// recién después se posiciona/rota el objeto entero en (x,y) — por eso
+// funciona igual de bien con cartas rotadas (dorso en abanico, mano) sin
+// tener que rotar puntos a mano. `ox,oy` (0 a 1) replican el mismo
+// `setOrigin` con el que se dibuja la carta a la que acompaña (la
+// mayoría usa 0.5,0.5; la mano del jugador usa 0.5,0.85), para que el
+// borde quede centrado exactamente igual. 100% Graphics — no toca ningún
+// PNG de carta.
+_dibujarBordeSticker(x, y, w, h, rotacion, ox, oy, depth) {
+  const margen = 3;
+  const g = this.add.graphics().setPosition(x, y).setRotation(rotacion).setDepth(depth);
+  const left = -w * ox - margen;
+  const top = -h * oy - margen;
+  const ancho = w + margen * 2;
+  const alto = h + margen * 2;
+  g.fillStyle(0xffffff, 1);
+  g.fillRoundedRect(left, top, ancho, alto, 6);
+  g.lineStyle(1.2, 0x000000, 0.3);
+  g.strokeRoundedRect(left, top, ancho, alto, 6);
+  return g;
+}
+
 _dibujarManoJugador(cartas, yBase, jugable, animar = false) {
     if (!cartas || cartas.length === 0) return;
 
@@ -2343,8 +3361,11 @@ _dibujarManoJugador(cartas, yBase, jugable, animar = false) {
     // de madera que arranca en Y=500 — como el panel se dibuja con depth
     // mayor que las cartas, ese solape queda tapado por la textura, dando
     // la sensación de que la mano "nace" desde adentro de la barra).
-    const anchoCarta = 73;
-    const altoCarta  = 100;
+    // Nonagésimo tercer pase: +18% de tamaño (73x100 → 86x118, misma
+    // proporción), pedido explícito del usuario para que se lean mejor
+    // los números/índices de cada naipe.
+    const anchoCarta = 86;
+    const altoCarta  = 118;
     const cantidad   = cartas.length;
 
     const anguloTotalMax = 26;
@@ -2408,6 +3429,15 @@ _dibujarManoJugador(cartas, yBase, jugable, animar = false) {
         this._sprites.push(sombraMano);
       }
 
+      // El borde sticker se crea ANTES de la carta (para quedar detrás, a
+      // 10+i-0.5) y se mete en los mismos `targets` de cada tween/posición
+      // que ya mueve a `img` (animación de reparto, hover al jugar) — así
+      // los dos quedan siempre pegados, sin código de sincronización aparte.
+      const borde = this._dibujarBordeSticker(
+        animar ? 400 : destinoX, animar ? 300 : destinoY,
+        anchoCarta, altoCarta, animar ? 0 : radCarta, 0.5, 0.85, 10 + i - 0.5
+      ).setAlpha(animar ? 0 : 1);
+
       const img = this.add.image(animar ? 400 : destinoX, animar ? 300 : destinoY, keyMano)
         .setOrigin(0.5, 0.85)
         .setDepth(10 + i)
@@ -2422,8 +3452,9 @@ _dibujarManoJugador(cartas, yBase, jugable, animar = false) {
         this.time.delayedCall(i * 130, () => {
           if (!img.scene) return;
           img.setAlpha(1);
+          borde.setAlpha(1);
           this.tweens.add({
-            targets: img, x: destinoX, y: destinoY, rotation: radCarta,
+            targets: [img, borde], x: destinoX, y: destinoY, rotation: radCarta,
             duration: 300, ease: 'Power2.easeOut'
           });
         });
@@ -2432,12 +3463,14 @@ _dibujarManoJugador(cartas, yBase, jugable, animar = false) {
       if (jugable) {
         img.setInteractive({ useHandCursor: true });
         img.on('pointerover', () => {
-          this.tweens.add({ targets: img, y: destinoY - 25, duration: 120, ease: 'Power2' });
+          this.tweens.add({ targets: [img, borde], y: destinoY - 25, duration: 120, ease: 'Power2' });
           img.setDepth(100 + i);
+          borde.setDepth(100 + i - 0.5);
         });
         img.on('pointerout', () => {
-          this.tweens.add({ targets: img, y: destinoY, duration: 120, ease: 'Power2' });
+          this.tweens.add({ targets: [img, borde], y: destinoY, duration: 120, ease: 'Power2' });
           img.setDepth(10 + i);
+          borde.setDepth(10 + i - 0.5);
         });
         img.on('pointerdown', () => {
           try { this.sound.play('jugar-carta', { volume: 0.6 }); } catch (err) {}
@@ -2446,6 +3479,7 @@ _dibujarManoJugador(cartas, yBase, jugable, animar = false) {
       }
 
       this._sprites.push(img);
+      this._sprites.push(borde);
     });
 }
 
@@ -2676,7 +3710,13 @@ _dibujarFilaDorso(cantidad, y) {
     // que apoyen limpiamente contra ese borde en vez de quedar en el aire.
     const anguloPorCarta = 11;
     const anguloTotal = (cantidad - 1) * anguloPorCarta;
-    const espacio = 52;
+    // Pase siguiente (feedback del usuario: "se ven planas y muy
+    // juntas"): un poco más de separación horizontal (52→58) y una sombra
+    // proyectada sobre el paño por cada dorso (mismo criterio que ya
+    // tienen las cartas de la mano propia en _dibujarManoJugador) — antes
+    // esta fila no tenía ninguna sombra, de ahí la sensación de "pegadas"
+    // al fondo sin profundidad física.
+    const espacio = 58;
     const inicioX = 400 - ((cantidad - 1) * espacio) / 2;
     const bulto = 9;
     const anchoCarta = 63;
@@ -2686,12 +3726,24 @@ _dibujarFilaDorso(cantidad, y) {
       const anguloCarta = -anguloTotal / 2 + i * anguloPorCarta;
       const centro = (cantidad - 1) / 2;
       const factorCentro = cantidad > 1 ? 1 - Math.abs((i - centro) / centro) : 0;
+      const destinoX = inicioX + i * espacio;
       const destinoY = y - factorCentro * bulto;
+      const rotRad = anguloCarta * Math.PI / 180;
 
-      const img = this.add.image(inicioX + i * espacio, destinoY, this._claveDorsoGrandeActual || 'cardBackGrande')
+      const sombra = this.add.ellipse(
+        destinoX, destinoY + altoCarta * 0.38,
+        anchoCarta * 0.8, altoCarta * 0.2,
+        0x000000, 0.22
+      ).setRotation(rotRad).setDepth(9 + i);
+      this._sprites.push(sombra);
+
+      const borde = this._dibujarBordeSticker(destinoX, destinoY, anchoCarta, altoCarta, rotRad, 0.5, 0.5, 10 + i - 0.3);
+      this._sprites.push(borde);
+
+      const img = this.add.image(destinoX, destinoY, this._claveDorsoGrandeActual || 'cardBackGrande')
         .setDisplaySize(anchoCarta, altoCarta)
         .setDepth(10 + i)
-        .setRotation(anguloCarta * Math.PI / 180);
+        .setRotation(rotRad);
       this._sprites.push(img);
     }
 }
@@ -2739,9 +3791,16 @@ _dibujarDueloCartas(cartasRivalArr, cartasMiasArr, yCentro, escala, depthBase) {
     const cantidad = Math.max(cartasRival.length, cartasMias.length);
     if (cantidad === 0) return;
 
-    const anchoBase = 90 * escala;
-    const altoBase  = 135 * escala;
-    const espacio   = Math.max(anchoBase + 15, 80);
+    // Pedido del usuario: +10% de tamaño en las cartas jugadas del
+    // centro (el "duelo" 1v1), para que los puntos/pinta de cada naipe
+    // se lean sin esfuerzo. Único call site de esta función — ver más
+    // abajo en _renderizarEstado (e.jugadasRival/e.misJugadas).
+    const anchoBase = 90 * 1.1 * escala;
+    const altoBase  = 135 * 1.1 * escala;
+    // Nonagésimo tercer pase: +12px de separación entre bazas/rondas
+    // (pedido explícito del usuario, las 3 columnas de cartas jugadas se
+    // veían apretadas) — antes anchoBase+15, ahora anchoBase+27.
+    const espacio   = Math.max(anchoBase + 27, 80);
     const inicioX   = 400 - ((cantidad - 1) * espacio) / 2;
     const factor = this._factorEscalaTextura();
 
@@ -2782,33 +3841,39 @@ _dibujarDueloCartas(cartasRivalArr, cartasMiasArr, yCentro, escala, depthBase) {
     // perdedora, sombra ganadora, imagen ganadora) tiene su propio nivel,
     // sin ningún empate posible.
 
-    const dibujarUna = (carta, x, y, depth) => {
+    // Pase siguiente (feedback del usuario: "en lugar de apilarlas
+    // verticalmente en una línea recta rígida, dale a la carta del rival
+    // un ligero ángulo hacia la izquierda y a tu carta jugada un ángulo
+    // hacia la derecha, offseteadas unos 10px, para simular un tiro real
+    // sobre el paño") — `dibujarUna` ahora recibe `rotDeg`/`xOffset`
+    // (0 por defecto, para no romper ningún otro call site si apareciera
+    // uno nuevo) y los aplica a sombra+borde+imagen por igual, así los
+    // tres quedan siempre alineados entre sí. Se pasan siempre los MISMOS
+    // valores para cada lado (rival: -3°/-5px: mía: +3°/+5px) sea cual
+    // sea la rama del `for` de más abajo (ronda completa o con una sola
+    // carta todavía) — para que la carta no "salte" de ángulo/posición
+    // cuando llega la segunda.
+    const dibujarUna = (carta, x, y, depth, rotDeg = 0, xOffset = 0) => {
       const keyOriginal = `${carta.valor}_${carta.palo}`;
       const anchoBaseR = Math.round(anchoBase * factor);
       const altoBaseR = Math.round(altoBase * factor);
       const keyEscalada = `${keyOriginal}_${anchoBaseR}x${altoBaseR}`;
       this._crearTexturaEscalada(keyOriginal, keyEscalada, anchoBaseR, altoBaseR);
 
-      // Sexagésimo cuarto pase: se saca la inclinación al azar que tenían
-      // las cartas jugadas (el usuario la probó y pidió que queden derechas
-      // sobre la mesa). Sexagésimo sexto pase: también se saca el jitter en
-      // X (ver comentario más arriba) — solo quedaba el de Y.
-      // Septuagésimo pase — el usuario reportó que a veces las cartas del
-      // duelo "no llegan correctamente al centro" y que el resultado era
-      // inconsistente ("a veces queda bien, a veces no") — se encontró la
-      // causa: el jitter de Y todavía quedaba acá, calculado por
-      // `carta.id` (¡distinto para cada una de las dos cartas del par!),
-      // y como `_calcularPerspectiva` cambia la ESCALA según la posición Y,
-      // dos cartas con jitters distintos terminaban con tamaños/posiciones
-      // levemente distintos entre sí — la ganadora y la perdedora ya no
-      // quedaban usando exactamente la misma referencia, así que el
-      // solape se veía bien o mal según qué tan parecido le tocaba el
-      // jitter a esa pareja de ids en particular (pura suerte). Ahora que
-      // el objetivo es un apilado prolijo y confiable (yRival/yMia fijos,
-      // ver más arriba), ya no tiene sentido este jitter — se saca del
-      // todo, las dos cartas de cada ronda quedan exactamente en su Y fija.
-      const destinoX = x;
+      // Sexagésimo cuarto pase: se había sacado la inclinación AL AZAR que
+      // tenían las cartas jugadas (el usuario la probó y pidió que queden
+      // derechas sobre la mesa) — este pase reintroduce una inclinación,
+      // pero fija (no al azar) y distinta para cada lado, a pedido
+      // explícito del usuario (ver comentario de arriba). Sexagésimo
+      // sexto/Septuagésimo pase: el jitter de X/Y por `carta.id` se había
+      // sacado del todo porque rompía la referencia compartida entre la
+      // ganadora y la perdedora de una ronda — el offset de acá NO es
+      // jitter (no depende del id de la carta, es fijo por lado), así que
+      // no reintroduce ese problema: las dos cartas de una ronda siguen
+      // usando exactamente la misma Y base, solo se abren un poco en X.
+      const destinoX = x + xOffset;
       const destinoY = y;
+      const rotRad = rotDeg * Math.PI / 180;
 
       const persp = this._calcularPerspectiva(destinoY);
       const anchoFinal = anchoBase * persp.scale;
@@ -2819,12 +3884,22 @@ _dibujarDueloCartas(cartasRivalArr, cartasMiasArr, yCentro, escala, depthBase) {
         destinoX + SOMBRA_OFFSET_X, destinoY + altoFinal * 0.4 + persp.sombraOffsetY,
         anchoFinal * 0.8, altoFinal * 0.22,
         0x000000, persp.sombraAlpha
-      ).setDepth(depth - 1);
+      ).setRotation(rotRad).setDepth(depth - 1);
       this._sprites.push(sombra);
 
+      // Nonagésimo segundo pase (pedido explícito del usuario): se saca el
+      // borde blanco "sticker" (`_dibujarBordeSticker`) de las cartas
+      // jugadas en el centro — quedan solo con su propio contorno negro
+      // cel-shading (ya horneado en el PNG de cada carta) para mimetizarse
+      // directo sobre el paño verde, en vez de la placa blanca redondeada
+      // detrás. Las cartas en mano y los dorsos del rival SÍ conservan su
+      // borde (no estaban en el pedido) — ver `_dibujarManoJugador`/
+      // `_dibujarFilaDorso`, que llaman a `_dibujarBordeSticker` por su
+      // cuenta, sin pasar por esta función.
       const img = this.add.image(destinoX, destinoY, keyEscalada)
         .setDisplaySize(anchoFinal, altoFinal)
-        .setDepth(depth);
+        .setDepth(depth)
+        .setRotation(rotRad);
       this._sprites.push(img);
     };
 
@@ -2845,12 +3920,16 @@ _dibujarDueloCartas(cartasRivalArr, cartasMiasArr, yCentro, escala, depthBase) {
       // Ronda todavía incompleta: la única carta jugada va directo a SU
       // lugar fijo definitivo (el del rival, arriba; el mío, abajo) — no a
       // yCentro — así no se mueve más cuando llegue la otra.
+      // Nonagésimo segundo pase: ángulo subido de ±3° a ±4° (pedido
+      // explícito del usuario) en los 6 call sites de `dibujarUna` de esta
+      // función — mismo criterio de siempre, mismos valores fijos por
+      // lado (no jitter), solo más pronunciado.
       if (cartaRival && !cartaMia) {
-        dibujarUna(cartaRival, x, yCentro - desplazamientoComun / 2, depthRonda);
+        dibujarUna(cartaRival, x, yCentro - desplazamientoComun / 2, depthRonda, -4, -5);
         continue;
       }
       if (cartaMia && !cartaRival) {
-        dibujarUna(cartaMia, x, yCentro + desplazamientoComun / 2, depthRonda);
+        dibujarUna(cartaMia, x, yCentro + desplazamientoComun / 2, depthRonda, 4, 5);
         continue;
       }
       if (!cartaRival && !cartaMia) continue;
@@ -2885,11 +3964,11 @@ _dibujarDueloCartas(cartasRivalArr, cartasMiasArr, yCentro, escala, depthBase) {
       // ganador definido (parda), el orden es arbitrario (el solape es
       // chico, no se nota cuál queda "arriba").
       if (hayGanador && rivalGana) {
-        dibujarUna(cartaMia,   x, yMia,   depthRonda);
-        dibujarUna(cartaRival, x, yRival, depthRonda + 2);
+        dibujarUna(cartaMia,   x, yMia,   depthRonda,     4, 5);
+        dibujarUna(cartaRival, x, yRival, depthRonda + 2, -4, -5);
       } else {
-        dibujarUna(cartaRival, x, yRival, depthRonda);
-        dibujarUna(cartaMia,   x, yMia,   depthRonda + 2);
+        dibujarUna(cartaRival, x, yRival, depthRonda,     -4, -5);
+        dibujarUna(cartaMia,   x, yMia,   depthRonda + 2, 4, 5);
       }
     }
 }
@@ -3043,30 +4122,86 @@ _calcularPerspectiva(y) {
     return alto * (tex.width / tex.height);
   }
 
+  // Ducentésimo septuagésimo pase: ancho real para el botón "Tengo [N]" —
+  // a diferencia del resto (texto horneado, ancho fijo por archivo), acá el
+  // texto es dinámico (varía entre "Tengo 0" y "Tengo 33") y la tablita de
+  // fondo es de 3 franjas (tengoIzq/tengoCentro/tengoDer, ver _crearBoton),
+  // así que el ancho correcto es "lo que el texto necesite" en vez de un
+  // número fijo (130) que antes dejaba la píldora estirada/distinta según
+  // cuántos dígitos tuviera el puntaje. Se mide con un Text descartable
+  // (misma tipografía/grosor que el label real, para que el ancho medido
+  // coincida con el que después se dibuja).
+  _anchoBotonTengo(texto, tamanoFuente, alto) {
+    const medidor = this.add.text(0, 0, texto, {
+      fontFamily: 'Nunito, Arial', fontSize: `${tamanoFuente}px`, fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 4,
+    });
+    const anchoTexto = medidor.width;
+    medidor.destroy();
+
+    const PAD_X = 20;
+    const texIzq = this.textures.get('tengoIzq').getSourceImage();
+    const texDer = this.textures.get('tengoDer').getSourceImage();
+    const capIzq = texIzq.width * (alto / texIzq.height);
+    const capDer = texDer.width * (alto / texDer.height);
+    // Igual que el "anchoSeguro" de `_crearBotonOverlay`: nunca más angosto
+    // que las dos puntas juntas + un tramo recto mínimo, para que no
+    // degenere en forma de almendra con puntajes de 1 dígito.
+    return Math.max(anchoTexto + PAD_X * 2, capIzq + capDer + 20);
+  }
+
   _crearBoton({ x, y, ancho, alto = 44, texto, colorFondo, colorTexto, imagen = null,
               colorBorde = 0x4A2C2A, grosorBorde = 3, radio = 12, tamanoFuente = 15,
               onClick, deshabilitado = false }) {
   const contenedor = this.add.container(x, y).setDepth(200);
   const hijos = [];
 
-  if (imagen) {
+  if (imagen === 'Tengo') {
+    // Ducentésimo septuagésimo pase: "Tengo [N]" es la ÚNICA tablita de
+    // este set sin texto horneado (el número lo dibuja el bloque `texto`
+    // más abajo) — por eso, a diferencia de todos los demás botones-imagen
+    // (Quiero/Truco/etc., que sí tienen texto horneado y no se pueden
+    // recortar en franjas sin deformarlo, ver pase 269), ACÁ sí se puede
+    // aplicar la técnica de 3 franjas (misma idea que `_crearBannerTexto`/
+    // `_crearBotonOverlay`): dos puntas fijas (tengoIzq/tengoDer, recortadas
+    // de la imagen que mandó el usuario, mantienen su proporción real según
+    // `alto`) y un tramo recto del medio que se estira al ancho que haga
+    // falta — así la píldora nunca se deforma, sin importar si el ancho
+    // pedido (que ya sale medido del texto real, ver `_anchoBotonTengo`)
+    // es chico ("Tengo 7") o grande ("Tengo 33").
+    const texIzqTengo = this.textures.get('tengoIzq').getSourceImage();
+    const texDerTengo = this.textures.get('tengoDer').getSourceImage();
+    const capIzqTengo = Math.round(texIzqTengo.width * (alto / texIzqTengo.height));
+    const capDerTengo = Math.round(texDerTengo.width * (alto / texDerTengo.height));
+    const midWTengo = Math.max(1, ancho - capIzqTengo - capDerTengo);
+    // Ducentésimo septuagésimo segundo pase: el usuario reportó una línea
+    // de costura visible justo donde el tramo recto del medio se pega con
+    // la punta derecha — artefacto típico de WebGL al apoyar dos imágenes
+    // separadas borde a borde (el filtrado lineal deja ver un hilo de 1px
+    // en el límite de cada textura). Fix: `tengoCentro` se dibuja un par
+    // de px MÁS ANCHO de lo necesario, extendiéndose por DEBAJO de
+    // `tengoDer` (que se agrega después, encima) — como los dos tramos son
+    // del mismo verde liso ahí, el solape no se nota, y la punta derecha
+    // (dibujada arriba) tapa cualquier artefacto de borde de `tengoCentro`.
+    const SOLAPE_COSTURA = 3;
+    const imgIzqTengo = this.add.image(-ancho / 2 + capIzqTengo / 2, 0, 'tengoIzq').setDisplaySize(capIzqTengo, alto);
+    const imgCentroTengo = this.add.image(-ancho / 2 + capIzqTengo + midWTengo / 2 + SOLAPE_COSTURA / 2, 0, 'tengoCentro').setDisplaySize(midWTengo + SOLAPE_COSTURA, alto);
+    const imgDerTengo = this.add.image(ancho / 2 - capDerTengo / 2, 0, 'tengoDer').setDisplaySize(capDerTengo, alto);
+    if (deshabilitado) { imgIzqTengo.setAlpha(0.4); imgCentroTengo.setAlpha(0.4); imgDerTengo.setAlpha(0.4); }
+    hijos.push(imgIzqTengo, imgCentroTengo, imgDerTengo);
+  } else if (imagen) {
     // Vigésimo noveno pase: sombra detrás de cada botón-imagen para que
     // tengan aspecto de "botón" real (despegado del fondo) en vez de una
     // calcomanía plana pegada al panel — un rectángulo redondeado oscuro
-    // semitransparente, desplazado apenas hacia abajo-derecha (misma
-    // dirección de luz "desde arriba-izquierda" que ya usan las sombras
-    // de las cartas jugadas y de la mano). Se dibuja ANTES que la imagen
-    // (primero en `hijos`) para quedar detrás. El radio es proporcional al
-    // alto del botón porque acá no siempre llega un `radio` explícito (los
-    // botones-imagen no lo pasan) y el redondeo real del arte varía con el
-    // tamaño de cada botón.
-    if (!deshabilitado) {
-      const radioSombra = alto * 0.17;
-      const sombraBoton = this.add.graphics();
-      sombraBoton.fillStyle(0x000000, 0.35);
-      sombraBoton.fillRoundedRect(-ancho / 2 + 3, -alto / 2 + 4, ancho, alto, radioSombra);
-      hijos.push(sombraBoton);
-    }
+    // semitransparente, desplazado apenas hacia abajo-derecha. Hacía
+    // falta porque esos botones-imagen viejos eran planos, sin sombra
+    // propia horneada.
+    // Nonagésimo tercer pase: SACADA — el set nuevo de botones (Truco,
+    // Quiero, Ir al mazo, etc., ver CLAVE_IMAGEN_BOTON) ya trae su propia
+    // sombra "sticker" horneada en el PNG, así que esta sombra de código
+    // quedaba duplicada/difusa encima de la del asset (pedido explícito
+    // del usuario: "sin sombras externas difusas o duplicadas"). Solo
+    // queda el contorno negro vectorial que ya traen las imágenes.
 
     // Botón con el texto ya horneado en la imagen (rediseño Canva, Fase 2)
     // — una sola imagen a su aspecto natural, sin slices ni texto encima.
@@ -3147,14 +4282,48 @@ _calcularPerspectiva(y) {
 // marrón de siempre) para poder reusar este mismo marco en el título de la
 // sala de espera con letra más grande/clara (pedido del usuario: "cambiar
 // el estilo... muy chiquito y apenas se lee" — ver _actualizarBannerEsperaTitulo).
-_crearBannerTexto(x, y, texto, depth = 200, { tamanoFuente = 14, colorTexto = '#4A2C2A', anchoWrap = 620 } = {}) {
+// Pase 267, punto 1: dos opciones nuevas, las DOS por defecto apagadas
+// (`strokeTexto: null`, `conRemaches: false`) — los 5 llamados existentes
+// (cantos de Envido/Flor/Truco en partida) no pasan estos parámetros y
+// siguen viendo exactamente el mismo banner de siempre. Se activan solo
+// para el título de la sala de espera (ver _actualizarBannerEsperaTitulo),
+// que pidió explícitamente "texto en negrita dorada/blanca con contorno
+// negro marcado" y "remaches de bronce en los extremos" — mismo criterio
+// de "placa más vistosa" que ya se le dio al marco del avatar en el pase
+// 266 (`marcoAvatar`: 3 círculos concéntricos), pero en versión chica para
+// las puntas de un banner rectangular en vez de un círculo entero.
+_crearBannerTexto(x, y, texto, depth = 200, { tamanoFuente = 14, colorTexto = '#4A2C2A', anchoWrap = 620, strokeTexto = null, conRemaches = false, iconoAnimado = false } = {}) {
   const label = this.add.text(0, 0, texto, {
     fontFamily: 'Nunito, Arial', fontSize: `${tamanoFuente}px`, fontStyle: 'bold', color: colorTexto,
     align: 'center', wordWrap: { width: anchoWrap },
+    ...(strokeTexto ? { stroke: strokeTexto, strokeThickness: 4 } : {}),
   }).setOrigin(0.5);
 
+  // Pase 267, punto 1: ícono de reloj de arena, animado con un vaivén de
+  // rotación (no una vuelta completa — un reloj de arena girando 360°
+  // todo el tiempo se lee raro; el tilt de -18° a 18° se lee más como "se
+  // está dando vuelta" de forma ambigua/continua). Se arma como un Text
+  // SEPARADO del label (no baked adentro del string) para poder rotarlo
+  // solo a él — si el ícono va adentro del mismo Text que el título, no
+  // hay forma de animar solo el emoji sin mover todo el texto junto.
+  // Por eso el ancho del banner tiene que contemplar el icono + el gap
+  // además del label (si no, el icono se sale del marco de pergamino).
+  let icono = null;
+  let labelOffsetX = 0;
+  let anchoContenido = label.width;
+  if (iconoAnimado) {
+    icono = this.add.text(0, 0, '⏳', { fontSize: `${Math.round(tamanoFuente * 0.9)}px` }).setOrigin(0.5);
+    const gapIcono = 10;
+    anchoContenido = icono.width + gapIcono + label.width;
+    const inicioX = -anchoContenido / 2;
+    icono.setPosition(inicioX + icono.width / 2, 0);
+    labelOffsetX = inicioX + icono.width + gapIcono + label.width / 2;
+    label.setPosition(labelOffsetX, 0);
+    this.tweens.add({ targets: icono, angle: { from: -18, to: 18 }, duration: 500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+  }
+
   const padX = 26, padY = 14;
-  const anchoBanner = Math.max(200, label.width + padX * 2);
+  const anchoBanner = Math.max(200, anchoContenido + padX * 2);
   const altoBanner = Math.max(40, label.height + padY * 2);
 
   const texIzq = this.textures.get('banner_izq').getSourceImage();
@@ -3167,7 +4336,27 @@ _crearBannerTexto(x, y, texto, depth = 200, { tamanoFuente = 14, colorTexto = '#
   const centro = this.add.image(-anchoBanner / 2 + capW + midW / 2, 0, 'banner_centro').setDisplaySize(midW, altoBanner);
   const der = this.add.image(anchoBanner / 2 - capWDer / 2, 0, 'banner_der').setDisplaySize(capWDer, altoBanner);
 
-  const contenedor = this.add.container(x, y, [izq, centro, der, label]).setDepth(depth);
+  const hijos = icono ? [izq, centro, der, icono, label] : [izq, centro, der, label];
+
+  if (conRemaches) {
+    // 4 remaches de bronce, uno cerca de cada esquina — mismas 3 capas
+    // concéntricas (negroPulido/remache/remacheClaro) que `marcoAvatar`
+    // en _mostrarPantallaFinal, a una escala bien chica (radio 5).
+    const remaches = this.add.graphics();
+    const rx = anchoBanner / 2 - 14;
+    const ry = altoBanner / 2 - 11;
+    [[-rx, -ry], [rx, -ry], [-rx, ry], [rx, ry]].forEach(([dx, dy]) => {
+      remaches.lineStyle(3, 0x1a1410, 1);
+      remaches.strokeCircle(dx, dy, 5);
+      remaches.fillStyle(0xc9973e, 1);
+      remaches.fillCircle(dx, dy, 4);
+      remaches.fillStyle(0xf0d9a0, 0.85);
+      remaches.fillCircle(dx - 1, dy - 1, 1.4);
+    });
+    hijos.splice(3, 0, remaches); // detrás del label, encima de las 3 franjas
+  }
+
+  const contenedor = this.add.container(x, y, hijos).setDepth(depth);
   this._sprites.push(contenedor);
   return contenedor;
 }
@@ -3210,30 +4399,82 @@ _ocultarCanto() {
 // depth más alto, y devuelve las referencias internas (no solo el
 // contenedor) para poder actualizar el texto/color dinámicamente después
 // de crearlo — necesario para el botón de "Pedir revancha".
-_crearBotonOverlay({ x, y, ancho, alto = 44, texto, colorFondo, colorTexto = '#4A2C2A', tamanoFuente = 15, onClick }) {
+// Nonagésimo sexto pase: `colorFondo`/`colorTexto` (relleno plano +
+// borde chocolate de 3px, sin relieve) se reemplazan por `variante`
+// ('verde'|'dorado') — en vez de dibujar el botón a mano, se reutilizan
+// los MISMOS PNG de botón-píldora-3D (relieve + brillo horneados) que ya
+// usa Tienda.js para sus botones de precio. Pedido explícito del
+// usuario: "mismo lenguaje de volumen 3D cartoon... para dar simetría y
+// peso táctil" entre "Pedir revancha" y "Volver al lobby" — al ser la
+// misma función para los dos, la simetría queda garantizada sola.
+// Pase 266, punto 3: antes se armaba con UNA sola imagen estirada vía
+// `setDisplaySize(ancho, alto)` sobre el PNG completo de la píldora — el
+// usuario reportó que esto "achataba/estiraba" el botón porque `ancho`
+// cambia según el largo del texto ("Pedir revancha" vs "🏆 Ver bracket")
+// mientras la imagen fuente tiene proporciones fijas, lo que deformaba
+// las puntas redondeadas. Se reemplaza por el mismo truco de "3 franjas"
+// (nine-slice horizontal) que ya usa `_crearBannerTexto` para el cartel
+// de madera: cada PNG de píldora quedó cortado en 3 slices (punta
+// izquierda / centro liso / punta derecha, ver preload) — ahora solo el
+// centro se estira para llenar el ancho que pida el texto, mientras las
+// puntas solo se re-escalan en vertical (si `alto` cambia) y mantienen su
+// proporción horizontal intacta, sin perder el relieve/brillo horneado
+// de los bordes.
+_crearBotonOverlay({ x, y, ancho, alto = 44, texto, variante = 'dorado', tamanoFuente = 15, onClick }) {
   const contenedor = this.add.container(x, y).setDepth(902);
 
-  // Septuagésimo sexto pase: relleno plano + borde chocolate de 3px, sin
-  // degradé ni sombra ni acento interior — mismo trazo que
-  // `botonVolverLobby` en el nativo (un View con `backgroundColor`
-  // sólido y `borderWidth:3` nomás, nada de relieve). Fuente Fredoka
-  // (tituloSemiBold), no Nunito — igual que `botonAccionTexto` nativo.
-  const grafico = this.add.graphics();
-  grafico.fillStyle(colorFondo, 1);
-  grafico.fillRoundedRect(-ancho / 2, -alto / 2, ancho, alto, 14);
-  grafico.lineStyle(3, 0x4A2C2A, 1);
-  grafico.strokeRoundedRect(-ancho / 2, -alto / 2, ancho, alto, 14);
+  const prefijo = variante === 'verde' ? 'botonVerde' : 'botonAmarillo';
+  const texIzq = this.textures.get(`${prefijo}Izq`).getSourceImage();
+  const texDer = this.textures.get(`${prefijo}Der`).getSourceImage();
+  // Las puntas se escalan solo según `alto` (mantienen su ancho nativo
+  // proporcional, no se estiran horizontalmente) — mismo cálculo que
+  // `capW`/`capWDer` en `_crearBannerTexto`.
+  const capIzq = Math.round(texIzq.width * (alto / texIzq.height));
+  const capDer = Math.round(texDer.width * (alto / texDer.height));
+  // Ancho mínimo para que las dos puntas no terminen pegadas sin tramo
+  // recto en el medio — eso degenera en una forma de "ojo/almendra" en
+  // vez de píldora (pasa si `ancho` pedido es menor que la suma de las
+  // dos puntas, caso límite con textos muy cortos).
+  const anchoSeguro = Math.max(ancho, capIzq + capDer + 20);
+  const midW = anchoSeguro - capIzq - capDer;
 
+  // Ducentésimo septuagésimo segundo pase: mismo fix de costura que
+  // `_crearBoton` (rama 'Tengo') — `imgCentro` se dibuja un poco más
+  // ancho de lo necesario, solapándose por DEBAJO de `imgDer` (que se
+  // agrega después, encima), para tapar la línea de 1px que WebGL deja
+  // ver en el límite entre dos texturas separadas puestas borde a borde.
+  const SOLAPE_COSTURA = 3;
+
+  const imgIzq = this.add.image(-anchoSeguro / 2 + capIzq / 2, 0, `${prefijo}Izq`).setDisplaySize(capIzq, alto);
+  const imgCentro = this.add.image(-anchoSeguro / 2 + capIzq + midW / 2 + SOLAPE_COSTURA / 2, 0, `${prefijo}Centro`).setDisplaySize(midW + SOLAPE_COSTURA, alto);
+  const imgDer = this.add.image(anchoSeguro / 2 - capDer / 2, 0, `${prefijo}Der`).setDisplaySize(capDer, alto);
+
+  // Mismos colores de texto que ya usa Tienda.js para cada variante
+  // (chocolate sobre el amarillo, blanco sobre el verde) — el contorno
+  // negro en el verde es un agregado puntual pedido para ESTE botón
+  // ("tipografía blanca bold con contorno negro"), Tienda.js no lo usa.
+  const colorTexto = variante === 'verde' ? '#FFFFFF' : '#4A2C2A';
   const label = this.add.text(0, 0, texto, {
-  fontFamily: 'Fredoka, Arial',
-  fontSize: `${tamanoFuente}px`,
-  fontStyle: '600',
-  color: colorTexto
-}).setOrigin(0.5);
+    fontFamily: 'Fredoka, Arial',
+    fontSize: `${tamanoFuente}px`,
+    fontStyle: '600',
+    color: colorTexto,
+    ...(variante === 'verde' ? { stroke: '#000000', strokeThickness: 3 } : {}),
+  }).setOrigin(0.5);
 
-  contenedor.add([grafico, label]);
-  contenedor.setSize(ancho, alto);
+  contenedor.add([imgIzq, imgCentro, imgDer, label]);
+  contenedor.setSize(anchoSeguro, alto);
   contenedor.setInteractive({ useHandCursor: true });
+
+  // `imgRevancha` (ver _mostrarPantallaFinal) necesita poder atenuar el
+  // botón con `.setTint(...)` cuando se agota el tiempo de revancha
+  // (pase 265) — ahora que son 3 imágenes en vez de 1, se devuelve esta
+  // fachada liviana que reenvía `setTint` a las 3 por igual, para no
+  // tener que tocar `_mostrarAlertaRevancha`.
+  const img = {
+    setTint: (color) => { imgIzq.setTint(color); imgCentro.setTint(color); imgDer.setTint(color); },
+    clearTint: () => { imgIzq.clearTint(); imgCentro.clearTint(); imgDer.clearTint(); },
+  };
 
   contenedor.on('pointerdown', () => {
     this.tweens.add({ targets: contenedor, scale: 0.94, duration: 80, ease: 'Quad.easeOut' });
@@ -3247,37 +4488,99 @@ _crearBotonOverlay({ x, y, ancho, alto = 44, texto, colorFondo, colorTexto = '#4
   });
 
   this._sprites.push(contenedor);
-  return { contenedor, grafico, label };
+  return { contenedor, img, label };
 }
 
 _dibujarBotonesCanto(e) {
   const CENTRO_X = 400;
   const GAP = 30;
 
-  const centrarFila = (specs, y) => {
-    const anchoTotal = specs.reduce((acc, s) => acc + s.ancho, 0) + GAP * (specs.length - 1);
+  // Nonagésimo séptimo pase (resumen histórico — ver el pase 269 más abajo
+  // para el esquema actual): el usuario pidió que el TAMAÑO no cambiara de
+  // mano en mano según cuántos botones hubiera, y de ahí salió un
+  // ANCHO_BOTON_FIJO único para todos. Ducentésimo sexagésimo noveno pase:
+  // ese ancho único (76px) resultó mucho más angosto que el dibujo real de
+  // estos PNG (aspecto ~2.0-2.1, ver abajo) y los deformaba (puntas
+  // "aplastadas") — se mantiene la altura fija (ALTO_BOTON_FIJO), pero el
+  // ancho vuelve a salir del aspecto real de cada archivo.
+  const ALTO_BOTON_FIJO = 44;
+
+  // Ducentésimo sexagésimo noveno pase: el usuario reportó que los botones
+  // se ven "aplastados" (las puntas redondeadas de la píldora pierden su
+  // curva) — causa real: cada PNG de este set mide ~248×118/120/125 (aspecto
+  // real ≈2.0-2.1) pero `ANCHO_BOTON_FIJO=76` los forzaba a un cajón de
+  // aspecto 76/44≈1.73, bastante más angosto que el dibujo original, así
+  // que CADA botón se estiraba de forma no uniforme (ver `_crearBoton`,
+  // `setDisplaySize`) para entrar ahí. No se puede arreglar con Nine-Slice
+  // "clásico" (estirar solo el centro) como pidió el usuario porque estos
+  // PNG tienen el TEXTO horneado por el diseñador de punta a punta de la
+  // imagen (ver comentario de CLAVE_IMAGEN_BOTON más arriba) — estirar el
+  // centro deformaría el texto exactamente igual que ahora. La solución
+  // real es no forzar ningún ancho fijo: cada botón mide su propio ancho a
+  // partir de SU proporción real de archivo (ver `_anchoBotonImagen`,
+  // existía pero no se usaba acá desde el pase 97) a una altura fija común
+  // — eso es lo que saca el achatamiento sin generar el problema que el
+  // pase 97 vino a resolver (ahí el reclamo era que el TAMAÑO DE TODOS
+  // LOS BOTONES cambiaba de mano en mano, por una fila que se reajustaba
+  // dinámicamente al ancho disponible cada vez según cuántos botones
+  // hubiera). Esto es distinto: el ancho de CADA botón es siempre una
+  // función fija de SU PROPIO archivo (nunca de la cantidad de hermanos en
+  // la fila), así que el mismo botón mide siempre lo mismo en cualquier
+  // fila donde aparezca — `centrarFila`, más abajo, solo interviene con un
+  // freno de emergencia (reducir TODOS por igual, nunca solo uno) si la
+  // fila con más botones a la vez no entrara a ancho nativo.
+  const centrarFila = (specs, y, gap = GAP) => {
+    const anchoNatural = specs.reduce((acc, s) => acc + s.ancho, 0) + gap * (specs.length - 1);
+    const anchoDisponible = this.anchoBotonera - 40;
+    // Freno de emergencia: la única fila donde el ancho nativo de verdad no
+    // entra es la fusionada de 5 (Truco+Envido+RealEnvido+FaltaEnvido+
+    // IrAlMazo, gap 8 — ver pase 97). Si no entra, se achica TODA la fila
+    // (ancho Y alto por igual, nunca solo el ancho) por el mismo factor fijo
+    // — a diferencia de `filaAjustadaAlAncho` (el mecanismo viejo que el
+    // pase 97 sacó), esto no se recalcula "para llenar el espacio" en cada
+    // fila: en las filas de 2/3/4 botones (que ya entran de sobra a su
+    // ancho nativo) el factor es siempre 1, nunca se activa, así que esos
+    // botones miden siempre lo mismo sin importar la mano.
+    const factor = anchoNatural > anchoDisponible ? anchoDisponible / anchoNatural : 1;
+    const gapFinal = gap * factor;
+    const anchoTotal = anchoNatural * factor;
     let cursorX = CENTRO_X - anchoTotal / 2;
     specs.forEach((s) => {
-      cursorX += s.ancho / 2;
-      this._crearBoton({ ...s, x: cursorX, y });
-      cursorX += s.ancho / 2 + GAP;
+      const anchoFinal = s.ancho * factor;
+      const altoFinal = s.alto * factor;
+      cursorX += anchoFinal / 2;
+      this._crearBoton({ ...s, ancho: anchoFinal, alto: altoFinal, x: cursorX, y });
+      cursorX += anchoFinal / 2 + gapFinal;
     });
   };
 
   // Spec de un botón-imagen (rediseño Canva, Fase 2): a partir del id
   // semántico interno (ej. 'quiero', 'real-envido') resuelve la clave de
-  // archivo vía CLAVE_IMAGEN_BOTON y calcula el ancho real preservando el
-  // aspecto natural del PNG para el alto pedido — cada botón tiene su
-  // propio ancho relativo porque el texto horneado varía de largo, así
-  // que no hay un ratio único para todos.
+  // archivo vía CLAVE_IMAGEN_BOTON. Ducentésimo sexagésimo noveno pase:
+  // vuelve a calcular el ancho a partir del aspecto real del PNG (ver
+  // `_anchoBotonImagen` y el comentario de `centrarFila` arriba) en vez de
+  // un ANCHO_BOTON_FIJO único — el alto sigue siendo siempre el mismo
+  // (ALTO_BOTON_FIJO), eso no cambió.
   // Vigésimo octavo pase: el halo dorado detrás de Truco/Retruco/Vale Cuatro
   // (agregado en el decimonoveno pase) se sacó a pedido del usuario — quedó
   // el parámetro `opciones` genérico por si hace falta pasar algo más a
   // futuro, pero ya no se usa para destacar nada.
-  const specImagen = (idSemantico, alto, onClick, opciones = {}) => {
+  const specImagen = (idSemantico, onClick, opciones = {}) => {
     const clave = CLAVE_IMAGEN_BOTON[idSemantico];
-    return { alto, imagen: clave, ancho: this._anchoBotonImagen(clave, alto), onClick, ...opciones };
+    return { alto: ALTO_BOTON_FIJO, imagen: clave, ancho: this._anchoBotonImagen(clave, ALTO_BOTON_FIJO), onClick, ...opciones };
   };
+
+  // Ducentésimo sexagésimo noveno pase: `yCentroBotonera` (ver create()) es
+  // el centro vertical REAL de la placa de madera (hoy 565, a partir de su
+  // alto real de 130px) — reemplaza los números sueltos 550/525/575 que
+  // quedaron pegados a la placa vieja de 100px (pase 73, antes de que el
+  // pase 92 agrandara la placa sin tocar estos números), causa real del
+  // "los botones quedaron corridos hacia arriba" reportado por el usuario.
+  const Y_FILA_UNICA = this.yCentroBotonera;
+  const GAP_FILAS = 6;
+  const OFFSET_FILAS = (ALTO_BOTON_FIJO + GAP_FILAS) / 2;
+  const Y_FILA_SUPERIOR = Y_FILA_UNICA - OFFSET_FILAS;
+  const Y_FILA_INFERIOR = Y_FILA_UNICA + OFFSET_FILAS;
 
   // Botones de respuesta a un Envido pendiente (Quiero/No quiero/subir).
   // Se usa desde la rama normal (nadie más tiene nada pendiente) Y desde
@@ -3289,25 +4592,19 @@ _dibujarBotonesCanto(e) {
     const nivelesDisponibles = ENVIDO_NIVELES.slice(idxActual + 1);
 
     const specs = [
-      specImagen('quiero', 56, () => this._responderEnvido('quiero')),
-      specImagen('no-quiero', 56, () => this._responderEnvido('no-quiero')),
+      specImagen('quiero', () => this._responderEnvido('quiero')),
+      specImagen('no-quiero', () => this._responderEnvido('no-quiero')),
     ];
     nivelesDisponibles.forEach(nivel => {
-      specs.push(specImagen(nivel, 56, () => this._subirEnvido(nivel)));
+      specs.push(specImagen(nivel, () => this._subirEnvido(nivel)));
     });
     // Esta fila nunca convive con otra fila de botones (siempre es la única
-    // que se muestra en pantalla), así que puede usar un alto grande (56)
-    // sin riesgo de chocar con nada — a diferencia de las ramas "apiladas"
-    // más abajo, que tienen que repartirse una banda vertical mucho más chica.
-    // Septuagésimo tercer pase: el usuario reportó que las filas de un solo
-    // renglón (2-3 botones) quedaban "un poco/muy abajo, no centradas en la
-    // botonera" — la banda de botones real es 500 a 600 (100px, ver
-    // Metodología/comentarios de más abajo), así que el centro vertical
-    // real es 550, no 564 (14px más abajo del centro real, con margen de
-    // sobra hacia el piso pero casi nada hacia arriba). Bajado a 550 en las
-    // 3 filas "sin competencia" de esta función (dibujarRespuestaEnvido,
-    // Flor sin Truco pendiente, declaración de Envido).
-    centrarFila(specs, 550);
+    // que se muestra en pantalla) — mismo tamaño fijo que el resto, no hace
+    // falta nada especial por tener de sobra la banda vertical para ella sola.
+    // Ducentésimo sexagésimo noveno pase: Y_FILA_UNICA (centro real de la
+    // placa, hoy 565) reemplaza el 550 viejo — ver comentario junto a su
+    // definición más arriba.
+    centrarFila(specs, Y_FILA_UNICA);
   };
 
   if (e.flor.pendienteDeRespuesta) {
@@ -3319,17 +4616,16 @@ _dibujarBotonesCanto(e) {
     const nivelesDisponiblesFlor = NIVELES_FLOR.slice(idxActualFlor + 1);
 
     const specsFlor = [
-      specImagen('quiero', 56, () => this._responderFlor('quiero')),
-      specImagen('con-flor-me-achico', 56, () => this._responderFlor('no-quiero')),
+      specImagen('quiero', () => this._responderFlor('quiero')),
+      specImagen('con-flor-me-achico', () => this._responderFlor('no-quiero')),
     ];
     nivelesDisponiblesFlor.forEach(nivel => {
-      specsFlor.push(specImagen(nivel, 56, () => this._subirFlor(nivel)));
+      specsFlor.push(specImagen(nivel, () => this._subirFlor(nivel)));
     });
-    // Fila sin competencia (única que se muestra), mismo criterio que
-    // dibujarRespuestaEnvido: alto grande (56). Septuagésimo tercer pase:
-    // recentrada a 550 (centro real de la banda 500-600) — ver comentario
-    // completo en dibujarRespuestaEnvido, más arriba.
-    centrarFila(specsFlor, 550);
+    // Fila sin competencia (única que se muestra), mismo tamaño fijo que
+    // el resto. Ducentésimo sexagésimo noveno pase: Y_FILA_UNICA en vez de
+    // 550 — ver comentario completo en dibujarRespuestaEnvido.
+    centrarFila(specsFlor, Y_FILA_UNICA);
     return;
   }
 
@@ -3347,20 +4643,34 @@ _dibujarBotonesCanto(e) {
     this._crearBannerTexto(400, 491, textoPregunta);
 
     const specs = [
-      specImagen('son-buenas', 56, () => this._declararSonBuenas()),
+      specImagen('son-buenas', () => this._declararSonBuenas()),
     ];
     if (e.declaracionEnvido.puedoMostrar) {
       // Octogésimo sexto pase: mismo fondo ilustrado que el resto (la
       // tablita en blanco de "Quiero", ver Tengo.png) con el número
       // dibujado encima — el número cambia en cada mano, no puede ser una
-      // imagen fija horneada por el diseñador. `ancho` fijo (en vez del
-      // natural de `_anchoBotonImagen`, más angosto) para que "Tengo 33"
-      // entre cómodo — mismo ancho que ya usaba el pipeline viejo.
-      specs.push({ ancho: 175, alto: 56, tamanoFuente: 16, imagen: 'Tengo', colorTexto: '#FFFFFF', texto: `Tengo ${e.declaracionEnvido.misPuntos}`, onClick: () => this._declararMostrar() });
+      // imagen fija horneada por el diseñador. Nonagésimo séptimo pase: el
+      // alto pasa a ALTO_BOTON_FIJO (alinea con "Son buenas", misma fila).
+      // Ducentésimo septuagésimo pase: el ancho fijo de 130 (pensado para
+      // el peor caso "Tengo 33") hacía que la píldora se viera siempre
+      // estirada de más con puntajes de un dígito ("Tengo 7") — el usuario
+      // lo reportó como "el botón cambia de tamaño y queda estirado" al
+      // variar el texto. Ahora la tablita de fondo es de 3 franjas
+      // (tengoIzq/tengoCentro/tengoDer, recortadas de la misma imagen que
+      // mandó el usuario — es un fondo liso sin texto horneado, así que acá
+      // SÍ se puede estirar solo el tramo recto del medio sin deformar nada,
+      // a diferencia de Quiero/Truco/etc.) y el ancho sale de medir el
+      // texto real (`_anchoBotonTengo`) en vez de un número fijo — la
+      // píldora siempre queda ajustada a su propio número, nunca más ancha
+      // de lo necesario.
+      const textoTengo = `Tengo ${e.declaracionEnvido.misPuntos}`;
+      const tamanoFuenteTengo = 14;
+      const anchoTengo = this._anchoBotonTengo(textoTengo, tamanoFuenteTengo, ALTO_BOTON_FIJO);
+      specs.push({ ancho: anchoTengo, alto: ALTO_BOTON_FIJO, tamanoFuente: tamanoFuenteTengo, imagen: 'Tengo', colorTexto: '#FFFFFF', texto: textoTengo, onClick: () => this._declararMostrar() });
     }
     // Fila sin competencia (única que se muestra), mismo criterio de arriba.
-    // Septuagésimo tercer pase: recentrada a 550, mismo motivo.
-    centrarFila(specs, 550);
+    // Ducentésimo sexagésimo noveno pase: Y_FILA_UNICA, mismo motivo.
+    centrarFila(specs, Y_FILA_UNICA);
     return;
   }
 
@@ -3397,38 +4707,42 @@ _dibujarBotonesCanto(e) {
     // sin ninguna indicación de a qué nivel estabas respondiendo.
     this._crearBannerTexto(400, puedeCantarEnvido ? 479 : 491, `${nombreNivel}: ¿Querés?`);
 
-    // Zona de botones: 500 (línea divisoria) a 600 (borde del canvas) = 100px
-    // (antes 79px, ver _crearElementosDeTexto). Fila de Envido chica arriba
-    // (28 de alto, antes 20) y fila principal de respuesta abajo (52, antes
-    // 44) — con 6px de margen arriba, 8px de aire entre las dos filas y 6px
-    // de margen abajo: 6+28+8+52+6 = 100, exacto.
+    // Zona de botones: 500 (línea divisoria) a 600 (borde del canvas) =
+    // 100px. Nonagésimo séptimo pase: las dos filas (Envido chica arriba,
+    // respuesta principal abajo) pasaron a compartir el mismo
+    // ALTO_BOTON_FIJO (antes 28 arriba / 52 abajo, dos tamaños distintos,
+    // justo lo que el usuario pidió sacar) — con 3px de margen arriba, 6px
+    // de aire entre filas y 3px de margen abajo entran justo las dos:
+    // 3+44+6+44+3 = 100.
     if (puedeCantarEnvido) {
+      // Nonagésimo primer pase: separación 9px entre los 3 amarillos de
+      // tanto, pedido explícito del usuario (8-10px) en vez del GAP
+      // general de 30 que usa el resto de las filas.
       centrarFila([
-        specImagen('envido', 28, () => this._cantarEnvido('envido')),
-        specImagen('real-envido', 28, () => this._cantarEnvido('real-envido')),
-        specImagen('falta-envido', 28, () => this._cantarEnvido('falta-envido')),
-      ], 520);
+        specImagen('envido', () => this._cantarEnvido('envido')),
+        specImagen('real-envido', () => this._cantarEnvido('real-envido')),
+        specImagen('falta-envido', () => this._cantarEnvido('falta-envido')),
+      ], Y_FILA_SUPERIOR, 9);
     }
 
     const specs = [
-      specImagen('quiero', 52, () => this._responderTruco('quiero')),
-      specImagen('no-quiero', 52, () => this._responderTruco('no-quiero')),
+      specImagen('quiero', () => this._responderTruco('quiero')),
+      specImagen('no-quiero', () => this._responderTruco('no-quiero')),
     ];
     if (e.truco.nivel !== 'vale-cuatro') {
-      specs.push(specImagen(proximoNivelTruco(e.truco.nivel), 52, () => this._cantarTruco()));
+      specs.push(specImagen(proximoNivelTruco(e.truco.nivel), () => this._cantarTruco()));
     }
     if (puedeCantarFlorAca) {
-      specs.push(specImagen('flor', 52, () => this._cantarFlor()));
+      specs.push(specImagen('flor', () => this._cantarFlor()));
     }
-    // Septuagésimo tercer pase: este y=568 solo tiene sentido cuando la fila
-    // de Envido chica de arriba (520) también está — juntas reparten la
-    // banda 500-600 como documenta el comentario de arriba (6+28+8+52+6=100).
-    // Pero `puedeCantarEnvido` puede ser false (ya no se puede cantar
-    // Envido en esta mano) y ahí esta fila queda SOLA en toda la banda —
-    // seguía fija en 568 igual, quedando notablemente abajo (el usuario lo
-    // reportó justo con 2-3 botones sueltos, sin la fila de Envido arriba).
-    // Sin competencia, el centro real de la banda es 550.
-    centrarFila(specs, puedeCantarEnvido ? 568 : 550);
+    // Ducentésimo sexagésimo noveno pase: Y_FILA_INFERIOR (antes 575) solo
+    // tiene sentido cuando la fila de Envido chica de arriba (Y_FILA_SUPERIOR,
+    // antes 525) también está — juntas quedan centradas en la placa real
+    // (Y_FILA_UNICA ± OFFSET_FILAS, ver definición más arriba). Pero
+    // `puedeCantarEnvido` puede ser false (ya no se puede cantar Envido en
+    // esta mano) y ahí esta fila queda SOLA en toda la banda — sin
+    // competencia, usa directamente el centro real Y_FILA_UNICA.
+    centrarFila(specs, puedeCantarEnvido ? Y_FILA_INFERIOR : Y_FILA_UNICA);
 
   } else if (e.envido.pendienteDeRespuesta) {
     dibujarRespuestaEnvido();
@@ -3441,73 +4755,43 @@ _dibujarBotonesCanto(e) {
       (!!e.flor.nivel && !e.flor.resuelto);
     const hayEnvido = e.etapa === 'envido' && !e.envido.tipo && e.turno === 'mio' && !e.florYaCantada && !e.tengoFlor && !hayCantoPropioPendiente;
     const hayFlorPendiente = e.flor.pendienteDeRespuesta;
-
-    // El canvas de Phaser mide 800x600 (ver gameConfigOnline.js) — aunque la
-    // barra de acciones se dibuja como un rectángulo centrado en y=555 (de
-    // 500 a 610), todo lo que cae más allá de y=600 queda recortado por el
-    // borde del canvas. La banda vertical realmente visible para botones es
-    // entonces de 500 (línea divisoria) a 600 (borde del canvas) = 100px
-    // (antes 79px, con la divisoria en 521 — se subió a 500 achicando y
-    // subiendo las cartas propias, ver _dibujarManoJugador, para ganarle
-    // ~21px a la mesa y dárselos a esta barra).
-    //
-    // Cuando hay una sola fila (specsAbajo sin la fila de Envido arriba) esa
-    // banda entera está libre y el botón puede ser grande (alto=56, igual
-    // que las filas "sin competencia" de más arriba). Cuando hay DOS filas
-    // apiladas (Envido arriba + specsAbajo abajo) hay que repartir esos
-    // 100px entre ambas — con ALTO_BOTON_APILADO=42 (antes 34) entran las
-    // dos con margen: 5px arriba, 6px de aire entre las dos filas, 5px
-    // abajo (5+42+6+42+5 = 100, exacto).
-    const ALTO_BOTON_APILADO = 42;
-    const ALTO_BOTON_SOLO = 56;
-
-    if (hayEnvido) {
-      // y=526: fila de arriba, spans 505-547 (5px de margen contra la
-      // divisoria en 500).
-      centrarFila([
-        specImagen('envido', ALTO_BOTON_APILADO, () => this._cantarEnvido('envido')),
-        specImagen('real-envido', ALTO_BOTON_APILADO, () => this._cantarEnvido('real-envido')),
-        specImagen('falta-envido', ALTO_BOTON_APILADO, () => this._cantarEnvido('falta-envido')),
-      ], 526);
-    }
-
     const esEquiposActual = Array.isArray(e.companeros);
     const yaCante = esEquiposActual ? e.truco.cantadoPorMiEquipo : e.truco.cantadoPorMi;
 
-    // Cuando hayEnvido es true, specsAbajo comparte la banda con la fila de
-    // arriba y tiene que quedarse chico; cuando es false, specsAbajo es la
-    // única fila en pantalla y puede ser grande.
-    const altoAbajo = hayEnvido ? ALTO_BOTON_APILADO : ALTO_BOTON_SOLO;
-
-    const specsAbajo = [];
+    // Nonagésimo segundo pase: fila fusionada (Truco, Envido, Real Envido,
+    // Falta Envido, Ir al mazo — Flor en vez de Truco si corresponde),
+    // gap:8px. Nonagésimo séptimo pase: se sacó `filaAjustadaAlAncho` (el
+    // alto ya no se resolvía según cuántos botones entraban, que era
+    // justo el comportamiento que el usuario pidió sacar) y el +6 de
+    // jerarquía que tenía Truco — ahora cada item mapea derecho a
+    // `specImagen`, con el mismo ANCHO_BOTON_FIJO/ALTO_BOTON_FIJO que usa
+    // toda la botonera, Truco incluido.
+    const itemsFila = [];
     if (puedoCantarFlor && !hayCantoPropioPendiente) {
-      specsAbajo.push(specImagen('flor', altoAbajo, () => this._cantarFlor()));
+      itemsFila.push({ id: 'flor', onClick: () => this._cantarFlor() });
     }
     if (e.truco.nivel !== 'vale-cuatro' && !yaCante && e.turno === 'mio' && !hayFlorPendiente && !hayCantoPropioPendiente) {
-      // Punto 4 de la crítica de la mesa (pase 61): "darle más presencia
-      // visual a Truco" — el halo dorado que tenía antes se sacó a pedido
-      // del usuario (vigésimo octavo pase), así que se destaca por TAMAÑO
-      // en vez de color: unos px más de alto que sus vecinos de fila
-      // (`_anchoBotonImagen` escala el ancho en proporción, así que
-      // también queda un poco más ancho, no solo más alto).
-      specsAbajo.push(specImagen(proximoNivelTruco(e.truco.nivel), altoAbajo + 6, () => this._cantarTruco()));
+      itemsFila.push({ id: proximoNivelTruco(e.truco.nivel), onClick: () => this._cantarTruco() });
+    }
+    if (hayEnvido) {
+      itemsFila.push({ id: 'envido', onClick: () => this._cantarEnvido('envido') });
+      itemsFila.push({ id: 'real-envido', onClick: () => this._cantarEnvido('real-envido') });
+      itemsFila.push({ id: 'falta-envido', onClick: () => this._cantarEnvido('falta-envido') });
     }
     if (e.turno === 'mio' && !hayFlorPendiente && !hayCantoPropioPendiente) {
-      specsAbajo.push(specImagen('ir-al-mazo', altoAbajo, () => this._irseAlMazo()));
+      itemsFila.push({ id: 'ir-al-mazo', onClick: () => this._irseAlMazo() });
     }
-    // Bajada 3px a pedido del usuario (Truco/Ir al mazo se veían muy pegados
-    // a la fila de Envido de arriba).
-    // hayEnvido true: y=577, fila de abajo, spans 556-598 — quedan solo 2px
-    // de margen contra el borde real del canvas en 600 (ver el límite duro
-    // documentado en Metodología: nada calculado más allá de ese borde se
-    // ve). Si se vuelve a tocar este valor, OJO con no pasarse de ahí.
-    // hayEnvido false: ESTA es la fila que el usuario reportó como "no
-    // centrada, queda abajo" (con 2 o 3 botones — Flor/próximo nivel de
-    // Truco/Ir al mazo, según cuáles apliquen). y=567 nunca fue el centro
-    // real de la banda 500-600 (eso es 550) — quedaba con margen de sobra
-    // hacia el piso pero casi nada hacia el techo, más notorio cuanto menos
-    // botones hay. Septuagésimo tercer pase: recentrado a 550.
-    centrarFila(specsAbajo, hayEnvido ? 577 : 550);
+    // Centro vertical de la fila: dentro del panel agrandado (borde
+    // superior fijo en Y=500, ver create()), con margen seguro contra el
+    // límite duro de Y=600 (nada calculado más allá de ese borde se ve, ver
+    // Metodología) — con el tamaño ya fijo (ver arriba) no hace falta nada
+    // extra para evitar que la fila crezca de más con pocos botones.
+    const specsFila = itemsFila.map(it => specImagen(it.id, it.onClick));
+    // Ducentésimo sexagésimo noveno pase: Y_FILA_UNICA en vez del 565 suelto
+    // (coincidía por casualidad con el centro real de la placa — ahora es
+    // la misma constante que usan todas las demás filas, en vez de un
+    // número que había que mantener sincronizado a mano con `yBotonera`).
+    centrarFila(specsFila, Y_FILA_UNICA, 8);
   }
 }
 

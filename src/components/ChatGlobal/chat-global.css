@@ -8,6 +8,37 @@
    app-shell.css para el nav). El corte de 900px es el mismo que ya usa el
    resto de la app (nav de escritorio vs. barra inferior mobile). */
 
+/* Ducentesimo quincuagesimo septimo pase: se abandona el marco de madera
+   por border-image (marco-chat.png) despues de varios pases peleando con
+   costuras verdes que nunca se resolvieron del todo (interior, despues
+   exterior -- ver el comentario grande de estilos.pagina en
+   ChatGlobal.js) -- el usuario pidio reemplazarlo directamente por el
+   mismo panel de madera armado 100% en CSS que ya usa Historial.js (sin
+   PNG de por medio, sin costuras posibles). De paso se saca el
+   "full-bleed" del pase anterior (.cg-pagina ocupando el 100% del ancho
+   de la ventana): esa franja verde que se queria tapar dejo de existir
+   junto con el border-image, asi que ya no hace falta que el panel
+   llegue al borde real de la pantalla -- el usuario ademas reporto que
+   verlo ocupar todo el ancho no se veia bien. .cg-pagina vuelve a su
+   ancho normal (el de .ts-content-inner, como cualquier otra pantalla).
+   El grosor del borde y el padding SI varian por breakpoint -- viven aca
+   y no en el estilo inline de JS porque un estilo inline siempre le gana
+   a una regla de una hoja de estilos externa (con o sin media query), asi
+   que puestos inline la version de mobile nunca podria pisarlos. */
+.cg-pagina {
+  border: 3px solid #1a1410;
+  padding: 14px;
+}
+
+/* Ducentesimo cuadragesimo sexto pase: color del placeholder del buscador
+   de "Jugadores en linea" -- el fondo paso de blanco a cuero oscuro, pero
+   el placeholder del navegador no sigue el `color` del input (ese solo
+   aplica al texto que el usuario tipea), asi que sin esto quedaba con el
+   gris por defecto, casi invisible sobre el fondo oscuro nuevo. */
+.cg-buscador::placeholder {
+  color: rgba(255, 248, 237, 0.5);
+}
+
 .cg-boton-usuarios {
   display: none;
 }
@@ -27,6 +58,11 @@
 }
 
 @media (max-width: 899px) {
+  .cg-pagina {
+    border-width: 2px;
+    padding: 8px;
+  }
+
   .cg-boton-usuarios {
     display: inline-flex;
   }

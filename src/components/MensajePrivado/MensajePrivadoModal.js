@@ -130,9 +130,11 @@ export default function MensajePrivadoModal({ username, token, onCerrar }) {
               style={estilos.input}
               disabled={!!error}
             />
-            <button type="submit" style={estilos.botonEnviar} disabled={!!error}>
-              <img src="/assets/images/icono-enviar.png" alt="" style={{ width: 26, height: 26, objectFit: 'contain' }} />
-            </button>
+            {/* Ducentésimo cuadragésimo noveno pase: mismo botón ilustrado
+                nuevo que ya usan Chat Global/ChatMesa (pill verde con el
+                avioncito ya dibujado adentro) — el usuario pidió este botón
+                en todos los espacios de enviar mensaje de la app. */}
+            <button type="submit" style={estilos.botonEnviar} disabled={!!error} />
           </form>
         </div>
       </div>
@@ -182,9 +184,13 @@ const estilos = {
     flex: 1, background: C.cremaSutil, border: `2px solid ${C.chocolate}`, borderRadius: 12,
     padding: '9px 12px', fontSize: 14, color: C.chocolate, outline: 'none', minWidth: 0,
   },
+  // Ducentésimo cuadragésimo noveno pase: mismo asset combinado (pill +
+  // avioncito) que Chat Global/ChatMesa, mismo tamaño que ChatMesa (panel
+  // angosto, tipo similar).
   botonEnviar: {
-    background: C.chocolate, border: `2px solid ${C.dorado}`, borderRadius: 10,
-    padding: '0 10px', cursor: 'pointer', flexShrink: 0,
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    width: 48, height: 34, flexShrink: 0,
+    backgroundImage: 'url(/assets/images/boton-enviar-chat.png)',
+    backgroundSize: '100% 100%', backgroundRepeat: 'no-repeat', backgroundColor: 'transparent',
+    border: 'none', borderRadius: 0, cursor: 'pointer',
   },
 };

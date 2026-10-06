@@ -18,6 +18,14 @@ import React from 'react';
 // solo el engranaje (mismo archivo que usa el título del panel de
 // configuración) — sigue sin marco propio, la sombra por drop-shadow es lo
 // único que le da presencia de botón.
+// Nonagésimo quinto pase: el usuario mandó un asset nuevo que ya trae el
+// botón COMPLETO horneado (círculo de madera + tuerca dorada + contorno
+// negro vectorial, todo en un solo PNG) — reemplaza el engranaje suelto
+// de antes. Pedido explícito: "sin sombras difusas en CSS, utilizando
+// únicamente el contorno negro del propio asset", así que se saca el
+// `filter: drop-shadow(...)` que era lo único que le daba presencia al
+// engranaje plano anterior — ya no hace falta, el asset nuevo tiene su
+// propio relieve/contorno horneado.
 export default function ConfiguracionMesaBoton({ onAbrir }) {
   return (
     <button
@@ -25,7 +33,7 @@ export default function ConfiguracionMesaBoton({ onAbrir }) {
       style={estilos.boton}
       title="Configuración de la partida"
     >
-      <img src="/assets/images/icono-engranaje.png" alt="Configuración" style={estilos.icono} />
+      <img src="/assets/images/boton-configuracion-madera.png" alt="Configuración" style={estilos.icono} />
     </button>
   );
 }
@@ -36,7 +44,6 @@ const estilos = {
     width: 48, height: 48, padding: 0, border: 'none', background: 'none',
     cursor: 'pointer', zIndex: 1000,
     display: 'flex', alignItems: 'center', justifyContent: 'center',
-    filter: 'drop-shadow(0 3px 5px rgba(0,0,0,0.4))',
   },
   icono: { width: '100%', height: '100%', objectFit: 'contain' },
 };

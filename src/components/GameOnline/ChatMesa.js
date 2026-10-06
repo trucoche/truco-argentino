@@ -31,7 +31,12 @@ export default function ChatMesa({ codigoSala, esEquipos, personaje = 'gaucho', 
     })();
   }, [token]);
   const [texto, setTexto] = useState('');
-  const [abierto, setAbierto] = useState(true);
+  // Nonagésimo segundo pase: arranca cerrado por defecto (pedido explícito
+  // del usuario) — antes abría de entrada y "contaminaba" visualmente el
+  // costado del rival. El botón de abrir (ícono bocadillo/madera, estado
+  // colapsado) ya existía para este caso — ver el branch de abajo donde
+  // `abierto` es false.
+  const [abierto, setAbierto] = useState(false);
   const [tab, setTab] = useState('todos'); // 'todos' | 'equipo'
   const [hayNuevoTodos, setHayNuevoTodos] = useState(false);
   const [hayNuevoEquipo, setHayNuevoEquipo] = useState(false);
@@ -153,6 +158,24 @@ export default function ChatMesa({ codigoSala, esEquipos, personaje = 'gaucho', 
 
   return (
     <>
+    {/* Pedido del usuario: "mini-tarjeta de pergamino con marco de
+        madera fina" — capa exterior de madera envolviendo el panel de
+        pergamino que ya existía. Nada de esto toca los PNGs del chat
+        (ícono de abrir, stickers, botón de enviar) — son los mismos de
+        siempre.
+        Nonagésimo primer pase: el usuario pidió explícitamente que este
+        marco use "la misma textura de madera y remaches rústicos" que la
+        placa nueva de la botonera — antes este marco era deliberadamente
+        "sin remaches" (ver pase anterior, "widget chico y flotante,
+        saturaría"); ahora se agregan los 4, mismo criterio/`estilos.remache`
+        que ya usan Lobby/Torneos/Ranking, con la paleta nueva (más
+        terracota, sampleada del PNG de la botonera) en vez de la madera
+        casi negra vieja. */}
+    <div style={estilos.marcoExterior}>
+    <span style={{ ...estilos.remache, top: 4, left: 4 }} />
+    <span style={{ ...estilos.remache, top: 4, right: 4 }} />
+    <span style={{ ...estilos.remache, bottom: 4, left: 4 }} />
+    <span style={{ ...estilos.remache, bottom: 4, right: 4 }} />
     <div style={estilos.contenedor}>
       <div style={estilos.header}>
         <span>Chat de la mesa</span>
@@ -243,18 +266,18 @@ export default function ChatMesa({ codigoSala, esEquipos, personaje = 'gaucho', 
         maxLength={200}
         style={estilos.input}
       />
-      {/* Pase siguiente: el avión de papel se agranda mucho más (18→30) —
-          seguía quedando chico para el botón. Como este botón no lleva
-          texto (solo el ícono), el fondo dorado plano hacía que el avión
-          (papel claro, contorno oscuro) se notara poco — se cambia a
-          fondo chocolate con anillo dorado, mismo criterio de contraste
-          "ícono claro sobre fondo oscuro" que ya resolvió el bug del
-          botón "vacío" original (pases 166-167). */}
-      <button type="submit" style={estilos.botonEnviar} aria-label="Enviar mensaje">
-        <img src="/assets/images/icono-enviar.png" alt="" style={{ width: 30, height: 30, display: 'block' }} />
-      </button>
+      {/* Ducentésimo cuadragésimo noveno pase: se saca el botón chocolate+
+          anillo dorado + avioncito suelto (icono-enviar.png) — el usuario
+          pidió el mismo botón ilustrado nuevo (pill verde con el avioncito
+          ya dibujado adentro) en TODOS los espacios de enviar mensaje de la
+          app, no solo en Chat Global. Mismo archivo que usa esa pantalla
+          (`boton-enviar-chat.png`, ver estilos.botonEnviar) — un solo
+          asset, reusado, en vez de uno por pantalla. */}
+      <button type="submit" style={estilos.botonEnviar} aria-label="Enviar mensaje" />
     </form>
         </div>
+    </div>
+    {/* ← cierre de marcoExterior (madera fina) */}
 
     {perfilAbierto && token && (
       <PerfilRivalModal
@@ -282,13 +305,56 @@ export default function ChatMesa({ codigoSala, esEquipos, personaje = 'gaucho', 
 // "abrir chat" (`botonAbrirChat`, más abajo) recibe el mismo trato para
 // que el estado colapsado y el abierto se vean consistentes.
 const estilos = {
-  contenedor: {
+  // Pedido del usuario: marco de madera fina alrededor de la ventana de
+  // chat. `position:absolute` vive acá ahora (antes en `contenedor`);
+  // `contenedor` pasa a ser la capa interior de pergamino.
+  // Nonagésimo primer pase: paleta re-calibrada (con el cuentagotas)
+  // sobre el PNG nuevo de la placa de la botonera, para que este marco
+  // "use la misma textura" que pidió el usuario — antes era la madera
+  // casi negra de Lobby/Torneos/Ranking (#6b4a34/#4a3226/#2a1c14), ahora
+  // es la terracota más rojiza del asset nuevo.
+  marcoExterior: {
     position: 'absolute', top: 12, right: 12, width: 250, maxHeight: 320,
+    background: 'linear-gradient(160deg, #d37a4a 0%, #a84e31 55%, #431c10 100%)',
+    border: '2px solid #6b271d', borderRadius: 18, padding: 3,
+    // Pase siguiente (feedback del usuario: "esquina superior derecha
+    // completamente recta que choca con los bordes redondeados del
+    // marco") — antes solo `contenedor` (la capa de pergamino de
+    // adentro) tenía `overflow:hidden`; este marco exterior de madera no
+    // lo tenía, así que cualquier contenido que no calzara pixel-perfecto
+    // contra el padding de 3px (o el propio scrollbar nativo de
+    // `mensajes`, que el navegador dibuja recto sin respetar el
+    // `border-radius` de sus ancestros) podía asomar como una esquina
+    // cuadrada por fuera del borde redondeado. Con `overflow:hidden` acá
+    // también, TODO lo de adentro queda recortado a esta forma, sin
+    // depender de que las medidas internas coincidan exacto.
+    overflow: 'hidden',
+    boxShadow: [
+      'inset 0 1px 0 rgba(255,255,255,0.10)',
+      'inset 0 -2px 6px rgba(0,0,0,0.45)',
+      '0 4px 10px rgba(0,0,0,0.35)'
+    ].join(', '),
+    zIndex: 1000
+  },
+  // Nonagésimo primer pase: mismo criterio que `estilos.remache` de
+  // Lobby/Torneos/Ranking (radial-gradient de 3 tonos + boxShadow), pero
+  // más chico (9px en vez de 13px) porque este marco es fino y el widget
+  // es chico y flotante — un remache del mismo tamaño que en una placa
+  // grande se vería desproporcionado. Paleta: la misma terracota nueva
+  // de `marcoExterior`.
+  remache: {
+    position: 'absolute', width: 9, height: 9, borderRadius: '50%',
+    background: 'radial-gradient(circle at 35% 30%, #f2d587 0%, #e3a94a 45%, #8a5a28 78%, #3a1a0a 100%)',
+    boxShadow: '0 1px 2px rgba(0,0,0,0.65), inset 0 1px 1px rgba(255,255,255,0.4)',
+    zIndex: 2,
+  },
+  contenedor: {
+    width: '100%', maxHeight: '100%',
     background: 'linear-gradient(160deg, #FFFCF5, #FAEBD2)',
-    border: '2.5px solid #4A2C2A', borderRadius: 16,
+    border: '1.5px solid rgba(26,20,16,0.35)', borderRadius: 15,
     display: 'flex', flexDirection: 'column', overflow: 'hidden',
     fontFamily: "'Nunito', Arial, sans-serif", color: '#4A2C2A',
-    boxShadow: '0 0 0 2px rgba(255,248,237,0.6), 0 4px 10px rgba(0,0,0,0.35)', zIndex: 1000
+    boxShadow: 'inset 0 1px 4px rgba(0,0,0,0.12)'
   },
   // Pase siguiente (Fase 4 — dirección "pergamino con marco de madera"):
   // el fondo dorado fuerte del header quedaba como el último resabio del
@@ -335,13 +401,16 @@ const estilos = {
     flex: 1, minWidth: 0, background: '#fff', border: '2px solid #4A2C2A', borderRadius: 8,
     padding: '6px 8px', color: '#4A2C2A', fontSize: 13, outline: 'none'
   },
+  // Ducentésimo cuadragésimo noveno pase: mismo botón ilustrado nuevo que
+  // Chat Global (pill verde + avioncito dorado ya combinados en un solo
+  // PNG) — tamaño más chico acá (panel angosto, 250px) que en Chat
+  // Global (62x44), misma proporción real del asset (~1.41:1) para no
+  // deformarlo.
   botonEnviar: {
-    // Pase siguiente: fondo chocolate + anillo dorado (era dorado plano)
-    // para que el avión de papel (claro, contorno oscuro) resalte bien —
-    // ver comentario junto al <img>.
-    background: '#4A2C2A', border: '2px solid #FFB627', borderRadius: 8, color: '#4A2C2A',
-    padding: '0 8px', cursor: 'pointer', fontWeight: '700',
-    display: 'flex', alignItems: 'center', justifyContent: 'center'
+    width: 48, height: 34, flexShrink: 0,
+    backgroundImage: 'url(/assets/images/boton-enviar-chat.png)',
+    backgroundSize: '100% 100%', backgroundRepeat: 'no-repeat', backgroundColor: 'transparent',
+    border: 'none', borderRadius: 0, cursor: 'pointer',
   },
   tabs: { display: 'flex', gap: 4, padding: '6px 10px 0' },
   tab: {
@@ -366,10 +435,13 @@ const estilos = {
   // a halo crema (punto 3 de la crítica de la mesa, pase 61) para que el
   // chat colapsado y el abierto (`contenedor`, más arriba) se vean
   // consistentes entre sí.
+  // Mismo tono de borde que el nuevo marco de madera de `marcoExterior`
+  // (antes chocolate plano), para que el estado colapsado y el abierto
+  // se lean como la misma familia de marco.
   botonAbrir: {
     position: 'absolute', top: 12, right: 12,
     background: 'linear-gradient(160deg, #FFFCF5, #FAEBD2)', color: '#4A2C2A',
-    border: '2.5px solid #4A2C2A', borderRadius: 20, padding: '8px 14px',
+    border: '2.5px solid #2a1c14', borderRadius: 20, padding: '8px 14px',
     cursor: 'pointer', fontSize: 13, fontWeight: '700', zIndex: 1000,
     display: 'flex', alignItems: 'center', gap: 6,
     boxShadow: '0 0 0 2px rgba(255,248,237,0.6), 0 3px 6px rgba(0,0,0,0.35)'

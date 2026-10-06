@@ -745,4 +745,4 @@ if (typeof document !== 'undefined' && !document.getElementById('config-slider-g
     }
   `;
   document.head.appendChild(style);
-}
+}

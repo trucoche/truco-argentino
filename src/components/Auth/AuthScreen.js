@@ -9,7 +9,15 @@ const C = {
   verde: '#2D9B4F', verdeOscuro: '#1f7a3c',
   crimson: '#E8483A', crimsonOscuro: '#c2352a',
   dorado: '#FFB627', doradoClaro: '#FFD668', doradoOscuro: '#C9860E',
-  crema: '#FFF8ED', chocolate: '#4A2C2A'
+  crema: '#FFF8ED', chocolate: '#4A2C2A',
+  cremaSutil: '#FFFCF6',
+  // Pase de rediseño de la pantalla de login/registro — mismos tonos de
+  // madera+bronce que el resto de la app (Ranking/Historial/Lobby/etc.),
+  // para que la placa del formulario pase a ser "Placa de Madera de
+  // Caoba" con remaches en vez de la caja crema plana que tenía.
+  maderaClara: '#6b4a34', maderaMedia: '#4a3226', maderaOscura: '#2a1c14',
+  remacheClaro: '#f0d9a0', remache: '#c9973e', remacheOscuro: '#7a5322',
+  negroPulido: '#1a1410',
 };
 
 function Filigrana() {
@@ -37,6 +45,8 @@ export default function AuthScreen({ onLoginExitoso, onOlvidoPassword, musicaMut
   const [form, setForm] = useState({ username: '', email: '', password: '' });
   const [error, setError] = useState('');
   const [cargando, setCargando] = useState(false);
+  // Pase 313: aceptación de Términos de Servicio + Política de Privacidad al registrarse.
+  const [aceptaTerminos, setAceptaTerminos] = useState(false);
   const botonGoogleRef = useRef(null);
 
   const handleChange = (e) => {
@@ -46,6 +56,10 @@ export default function AuthScreen({ onLoginExitoso, onOlvidoPassword, musicaMut
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    if (modo === 'registro' && !aceptaTerminos) {
+      setError('Para registrarte tenés que aceptar los Términos de Servicio y la Política de Privacidad');
+      return;
+    }
     setCargando(true);
 
     const endpoint = modo === 'login' ? '/login' : '/registro';
@@ -230,6 +244,14 @@ useEffect(() => {
           <div style={estilos.logoSub}>che, ¿un truquito?</div>
         </div>
 
+        {/* Pase de rediseño: placa de madera de caoba con remaches de
+            bronce en las 4 esquinas envolviendo el pergamino interior
+            (antes era una sola caja crema plana con borde chocolate). */}
+        <div style={estilos.panelExterior}>
+          <span style={{ ...estilos.remache, top: 10, left: 10 }} />
+          <span style={{ ...estilos.remache, top: 10, right: 10 }} />
+          <span style={{ ...estilos.remache, bottom: 10, left: 10 }} />
+          <span style={{ ...estilos.remache, bottom: 10, right: 10 }} />
         <div style={estilos.panel}>
           <Filigrana />
 
@@ -292,6 +314,23 @@ useEffect(() => {
               />
             </div>
 
+            {modo === 'registro' && (
+              <label style={estilos.aceptaFila}>
+                <input
+                  type="checkbox"
+                  checked={aceptaTerminos}
+                  onChange={(e) => { setAceptaTerminos(e.target.checked); setError(''); }}
+                  style={estilos.aceptaCheckbox}
+                />
+                <span>
+                  Acepto los{' '}
+                  <a href="/terminos" target="_blank" rel="noopener noreferrer" style={estilos.aceptaLink}>Términos de Servicio</a>
+                  {' '}y la{' '}
+                  <a href="/privacidad" target="_blank" rel="noopener noreferrer" style={estilos.aceptaLink}>Política de Privacidad</a>
+                </span>
+              </label>
+            )}
+
             {error && <div style={estilos.errorBox}>{error}</div>}
 
           <button type="submit" disabled={cargando} style={estilos.btnPrimary}>
@@ -319,13 +358,23 @@ useEffect(() => {
             <img src="/assets/facebook-icon.png" alt="Facebook" style={{ width: 20, height: 20 }} />
             Continuar con Facebook
           </button>
+          <div style={estilos.avisoSocial}>
+            Al continuar con Google o Facebook aceptás los{' '}
+            <a href="/terminos" target="_blank" rel="noopener noreferrer" style={estilos.aceptaLink}>Términos de Servicio</a>
+            {' '}y la{' '}
+            <a href="/privacidad" target="_blank" rel="noopener noreferrer" style={estilos.aceptaLink}>Política de Privacidad</a>.
+          </div>
           </div>
           {/* ← este es el cierre del div panel, que antes quedaba antes del botón FB */}
+        </div>
+        {/* ← cierre de panelExterior (marco de madera) */}
 
           <div style={estilos.footerHint}>
             Un juego de truco argentino
           </div>
           <div style={estilos.footerLinkWrap}>
+            <a href="/terminos" style={estilos.footerLink}>Términos de Servicio</a>
+            <span style={estilos.footerSeparador}>·</span>
             <a href="/privacidad" style={estilos.footerLink}>Política de privacidad</a>
           </div>
 
@@ -335,26 +384,73 @@ useEffect(() => {
 }
 
 const estilos = {
+  // A pedido del usuario: mismo fondo que usa el resto de la app después
+  // del login (Lobby/Torneos/Ranking/Historial/Config, vía `.ts-shell` en
+  // AppShell.js) — `fondo-lobby.jpeg` con el mismo velo oscuro (0.38) —
+  // en vez del fondo propio que tenía esta pantalla (`fondo-login.jpeg`,
+  // con cartas/monedas flotantes y un velo más oscuro, 0.55).
   pagina: {
     minHeight: '100vh',
-    backgroundImage: 'linear-gradient(rgba(20,20,15,0.55), rgba(20,20,15,0.55)), url(/assets/images/fondo-login.jpeg)',
+    backgroundImage: 'linear-gradient(rgba(20,20,15,0.38), rgba(20,20,15,0.38)), url(/assets/images/fondo-lobby.jpeg)',
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     backgroundRepeat: 'no-repeat',
     display: 'flex', justifyContent: 'center', alignItems: 'center',
     padding: '30px 12px', fontFamily: "'Nunito', sans-serif"
   },
-  app: { width: '100%', maxWidth: 400 },
+  // Ajuste fino: +18% de ancho máximo (400→472) para que la placa
+  // respire mejor en pantallas anchas — a pedido del usuario.
+  app: { width: '100%', maxWidth: 472 },
   logoWrap: { textAlign: 'center', marginBottom: 22 },
-  logoCompleto: { width: '100%', maxWidth: 320, height: 'auto', display: 'block', margin: '0 auto' },
+  // Pase de rediseño: +15% de tamaño (320→368). Ajuste fino: +20%
+  // adicional (368→442) a pedido del usuario, para que sea el elemento
+  // que capture la atención de inmediato al entrar. Sombra proyectada
+  // dura sin cambios.
+  logoCompleto: {
+    width: '100%', maxWidth: 442, height: 'auto', display: 'block', margin: '0 auto',
+    filter: 'drop-shadow(0 8px 12px rgba(0,0,0,0.55))'
+  },
   logoSub: { fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontStyle: 'italic', fontSize: 20, color: C.crema, marginTop: -6 },
+  // Exterior de madera de caoba con remaches — contorno negro grueso
+  // (3px) + un aro blanco fino tipo sticker por fuera del contorno negro
+  // (mismo recurso que el logo, para que la placa se sienta parte del
+  // mismo "universo sticker" que el resto de la pantalla).
+  panelExterior: {
+    position: 'relative',
+    background: `linear-gradient(160deg, ${C.maderaClara} 0%, ${C.maderaMedia} 55%, ${C.maderaOscura} 100%)`,
+    border: `3px solid ${C.negroPulido}`, borderRadius: 24, padding: 12,
+    boxShadow: [
+      '0 0 0 4px #fff',
+      'inset 0 2px 0 rgba(255,255,255,0.10)',
+      'inset 0 -4px 10px rgba(0,0,0,0.5)',
+      `0 10px 0 ${C.negroPulido}`,
+      '0 20px 32px rgba(0,0,0,0.45)'
+    ].join(', ')
+  },
+  remache: {
+    position: 'absolute', width: 12, height: 12, borderRadius: '50%',
+    background: `radial-gradient(circle at 35% 30%, ${C.remacheClaro} 0%, ${C.remache} 45%, ${C.remacheOscuro} 78%, #3a2610 100%)`,
+    boxShadow: '0 1px 2px rgba(0,0,0,0.6)', zIndex: 2
+  },
+  // Interior de pergamino cálido — antes era la caja de nivel superior
+  // (fondo crema plano); ahora vive adentro del marco de madera.
   panel: {
-    background: C.crema, border: `4px solid ${C.chocolate}`, borderRadius: 20,
-    boxShadow: '0 6px 0 rgba(0,0,0,0.25)', padding: '20px 20px 24px',
+    background: [
+      'radial-gradient(ellipse at 18% 18%, rgba(210,182,130,0.35) 0%, transparent 50%)',
+      'radial-gradient(ellipse at 82% 82%, rgba(190,160,115,0.3) 0%, transparent 55%)',
+      `linear-gradient(180deg, ${C.cremaSutil}, ${C.crema})`
+    ].join(', '),
+    border: `2px solid rgba(26,20,16,0.3)`, borderRadius: 16,
+    boxShadow: 'inset 0 2px 6px rgba(0,0,0,0.15)', padding: '24px 24px 28px',
     position: 'relative', overflow: 'hidden'
   },
+  // Barra de pestañas — ahuecada, estilo cuero/madera oscura (antes un
+  // tostado claro plano sin relieve).
   tabs: {
-    display: 'flex', background: '#eee2d0', border: `2.5px solid ${C.chocolate}`,
+    display: 'flex',
+    background: 'linear-gradient(180deg, #2a1c12, #1a100a)',
+    border: `2px solid ${C.negroPulido}`,
+    boxShadow: 'inset 0 3px 6px rgba(0,0,0,0.6), inset 0 -1px 0 rgba(255,255,255,0.05)',
     borderRadius: 14, padding: 4, marginBottom: 18, gap: 4
   },
   botonMusica: {
@@ -373,38 +469,63 @@ const estilos = {
   justifyContent: 'center',
   zIndex: 10,
 },
+  // Inactiva: tono cuero/madera oscura hundida, opacidad reducida.
+  // Activa: madera clara/dorado brillante con relieve 3D (abajo).
   tab: {
     flex: 1, textAlign: 'center', padding: 9, fontFamily: "'Fredoka', sans-serif",
-    fontWeight: 600, fontSize: 14, borderRadius: 10, color: C.chocolate,
-    cursor: 'pointer', border: 'none', background: 'none'
+    fontWeight: 700, fontSize: 14, borderRadius: 10, color: 'rgba(255,248,237,0.55)',
+    cursor: 'pointer', border: 'none', background: 'none', opacity: 0.85
   },
   tabActivo: {
-    background: `linear-gradient(180deg, ${C.doradoClaro}, ${C.dorado})`,
-    boxShadow: `0 3px 0 ${C.doradoOscuro}`
+    background: `linear-gradient(160deg, ${C.doradoClaro} 0%, ${C.dorado} 100%)`,
+    color: C.chocolate, border: '2px solid #000',
+    boxShadow: '0 3px 0 #000, inset 0 1px 0 rgba(255,255,255,0.5)',
+    opacity: 1
   },
   field: { marginBottom: 14 },
-  label: { display: 'block', fontWeight: 700, fontSize: 12, color: C.chocolate, marginBottom: 5, textTransform: 'uppercase' },
+  // Ajuste fino: +1pt de tamaño (12→13), ya en negrita marrón oscuro.
+  label: { display: 'block', fontWeight: 800, fontSize: 13, color: C.chocolate, marginBottom: 5, textTransform: 'uppercase' },
+  // Pergamino/cuero ahuecado — sombra interior + contorno negro bien
+  // definido (antes un rectángulo blanco plano con borde chocolate).
+  // Ajuste fino: +15% de tamaño de fuente (15→17) y más padding vertical
+  // para que el texto tipeado se centre mejor y no se vea chico.
   input: {
-    width: '100%', fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 15,
-    color: C.chocolate, background: '#fff', border: `2.5px solid ${C.chocolate}`,
-    borderRadius: 12, padding: '11px 12px'
+    width: '100%', fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 17,
+    color: C.chocolate, background: 'linear-gradient(180deg, #f2e6c8, #e9d8ae)',
+    border: `2.5px solid ${C.negroPulido}`,
+    borderRadius: 12, padding: '14px 12px',
+    boxShadow: 'inset 0 2px 5px rgba(0,0,0,0.25)'
   },
   errorBox: {
     background: '#ffe0dd', border: `2px solid ${C.crimson}`, color: C.crimsonOscuro,
     borderRadius: 10, padding: '8px 12px', marginBottom: 12, fontWeight: 700, fontSize: 13
   },
+  // Botón 3D pill dorado — brillo superior + sombra dura inferior, texto
+  // centrado con un leve relieve (antes un rectángulo redondeado chico,
+  // sin bisel real). Ajuste fino: más alto (padding 14→17) y tipografía
+  // más gruesa (800→900) para reforzar que es la acción principal.
   btnPrimary: {
-    fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 16,
+    fontFamily: "'Fredoka', sans-serif", fontWeight: 900, fontSize: 17,
     background: `linear-gradient(180deg, ${C.doradoClaro}, ${C.dorado})`, color: C.chocolate,
-    border: `3px solid ${C.chocolate}`, borderRadius: 14, padding: 13,
-    width: '100%', boxShadow: `0 5px 0 ${C.doradoOscuro}`, marginTop: 4, cursor: 'pointer'
+    textShadow: '0 1px 0 rgba(255,255,255,0.35)',
+    border: '2.5px solid #000', borderRadius: 999, padding: 17,
+    width: '100%', textAlign: 'center',
+    boxShadow: 'inset 0 2px 0 rgba(255,255,255,0.55), 0 5px 0 #000',
+    marginTop: 4, cursor: 'pointer'
   },
+  // Botón 3D azul con bisel + sombra dura inferior (antes un rectángulo
+  // azul plano sin relieve).
+  // Ajuste fino: el margen con el botón de Google ahora lo da
+  // `googleBox.marginBottom` (10px) en vez de este `marginTop` (que se
+  // suma al padding propio del botón de Google y terminaba viéndose
+  // más pegado de lo que parece en el código) — ver `googleBox`.
   btnFacebook: {
-  fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 15,
-  background: '#0866ff', color: '#fff',
-  border: `3px solid ${C.chocolate}`, borderRadius: 14, padding: 12,
+  fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 15,
+  background: 'linear-gradient(180deg, #2f7dff, #0857e0)', color: '#fff',
+  border: '2.5px solid #000', borderRadius: 14, padding: 12,
   width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-  cursor: 'pointer', marginTop: 12
+  cursor: 'pointer', marginTop: 0,
+  boxShadow: 'inset 0 2px 0 rgba(255,255,255,0.35), 0 5px 0 #000'
 },
 botonGoogle: {
   backgroundColor: '#fff',
@@ -424,14 +545,44 @@ botonGoogleTexto: {
   color: C.chocolate,
 },
   divider: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, margin: '20px 0 16px' },  dividerTexto: { fontWeight: 800, fontSize: 12, color: '#a09085', textTransform: 'uppercase' },
-  googleBox: { display: 'flex', justifyContent: 'center' },
-  footerHint: { textAlign: 'center', marginTop: 16, fontSize: 12, color: 'rgba(255,248,237,0.75)', fontWeight: 700 },
+  // Contorno negro marcado de 2px + esquinas redondeadas alrededor del
+  // botón de Google (que renderiza su propio SDK), a pedido del usuario —
+  // se mantiene el fondo blanco original del botón.
+  // Ajuste fino: +10px de margen inferior explícito para separarlo bien
+  // del botón de Facebook (antes dependía solo del `marginTop` del botón
+  // de FB, que se sentía pegado).
+  googleBox: {
+    display: 'flex', justifyContent: 'center',
+    background: '#fff', border: `2px solid ${C.negroPulido}`, borderRadius: 14,
+    padding: 4, boxShadow: '0 3px 0 rgba(0,0,0,0.3)', marginBottom: 10
+  },
+  // Ajuste fino: de un gris crema semitransparente a un amarillo cálido
+  // suave con sombra sutil, para que se lea bien sobre el paño verde.
+  footerHint: {
+    textAlign: 'center', marginTop: 16, fontSize: 12, color: C.doradoClaro,
+    fontWeight: 700, textShadow: '0 1px 3px rgba(0,0,0,0.6)'
+  },
   footerLinkWrap: { textAlign: 'center', marginTop: 6 },
-  footerLink: { fontSize: 11, color: 'rgba(255,248,237,0.65)', fontWeight: 700, textDecoration: 'underline' },
+  footerLink: {
+    fontSize: 11, color: C.doradoClaro, fontWeight: 700, textDecoration: 'underline',
+    textShadow: '0 1px 3px rgba(0,0,0,0.6)'
+  },
 linkOlvide: {
     fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 13,
     background: 'none', color: C.chocolate, border: 'none',
     width: '100%', textAlign: 'center', marginTop: 12, cursor: 'pointer',
     textDecoration: 'underline', opacity: 0.85
   },
+  aceptaFila: {
+    display: 'flex', alignItems: 'flex-start', gap: 10, marginTop: 14,
+    fontSize: 12.5, lineHeight: 1.45, fontWeight: 700, color: C.chocolate, cursor: 'pointer',
+    textAlign: 'left',
+  },
+  aceptaCheckbox: { width: 18, height: 18, marginTop: 1, flexShrink: 0, accentColor: '#2D9B4F', cursor: 'pointer' },
+  aceptaLink: { color: '#8a4b0f', fontWeight: 800, textDecoration: 'underline' },
+  avisoSocial: {
+    marginTop: 12, textAlign: 'center', fontSize: 11.5, lineHeight: 1.4,
+    fontWeight: 700, color: '#6b4a34',
+  },
+  footerSeparador: { margin: '0 8px', fontSize: 11, color: C.doradoClaro, textShadow: '0 1px 3px rgba(0,0,0,0.6)' },
 };

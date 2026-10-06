@@ -29,6 +29,13 @@ const C = {
   dorado: '#FFB627', doradoClaro: '#FFD668', doradoOscuro: '#C9860E',
   celeste: '#4FB3E8', celesteOscuro: '#2f8dbf',
   crema: '#FFF8ED', chocolate: '#4A2C2A', cremaSutil: '#FFFCF6',
+  // Ducentésimo quincuagésimo séptimo pase: paleta de madera+bronce del
+  // panel exterior nuevo (mismos tonos que ya usa `estilos.panelExterior`
+  // de Historial.js, para que los dos módulos compartan una sola
+  // identidad visual "pulpería" en vez de dos recetas de madera distintas).
+  maderaClara: '#6b4a34', maderaMedia: '#4a3226', maderaOscura: '#2a1c14',
+  bronce: '#c9973e', bronceClaro: '#f0d9a0', bronceOscuro: '#7a5322',
+  negroPulido: '#1a1410',
 };
 
 // Pase del backend real de Chat Global: mismo criterio de avatar que ya
@@ -40,6 +47,43 @@ function avatarSrcDe(u) {
   return u?.avatar_tipo === 'foto' && u?.foto_perfil_url
     ? u.foto_perfil_url
     : `/assets/${u?.personaje || 'gaucho'}-avatar.png`;
+}
+
+// Ducentésimo quincuagésimo tercer pase: para la tarjeta chica de
+// "Jugadores en línea" (32x32) el cuerpo completo del personaje no se
+// distingue — mismo criterio que ya usa el botón de stickers (ver más
+// abajo, `expresionesGaucho/${personaje}_victorioso.png`): en ese tamaño
+// se lee mejor la cara sola. Si el usuario eligió foto real, se sigue
+// mostrando la foto (no tiene sentido reemplazar una foto real por un
+// dibujo) — solo cambia la rama ilustrada.
+function caraSrcDe(u) {
+  return u?.avatar_tipo === 'foto' && u?.foto_perfil_url
+    ? u.foto_perfil_url
+    : `/assets/expresionesGaucho/${u?.personaje || 'gaucho'}_victorioso.png`;
+}
+
+// Ducentésimo quincuagésimo tercer pase: primer paso del sistema de
+// "bordes de avatar según rango" (a futuro, también customizables) que
+// pidió el usuario — arranca acá, en la lista de "Jugadores en línea".
+// El backend (`rangos.js`, única fuente de verdad de los 10 escalones)
+// manda el rango ya como texto armado ("Mancebo III", "Martín Fierro",
+// sin división en el escalón tope) — no hay un campo separado con el
+// nombre del escalón solo, así que se le saca la división romana del
+// final acá (si tiene) para llegar al nombre del escalón, y de ahí a un
+// slug de archivo (sin acentos/espacios). Todavía no existe NINGÚN
+// asset de borde — el `onError` de la `<img>` (ver el JSX) hace que
+// simplemente no se muestre nada hasta que el archivo real exista, en
+// vez de romper con el ícono de imagen rota. Así se puede ir sumando un
+// borde por escalón (o más adelante, un borde elegido por el usuario)
+// sin tocar este código de nuevo, solo agregando el PNG correspondiente.
+function bordeSrcDe(rangoTexto) {
+  if (!rangoTexto) return null;
+  const nombreEscalon = rangoTexto.replace(/\s+(III|II|I)$/, '').trim();
+  const slug = nombreEscalon
+    .toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/\s+/g, '-');
+  return `/assets/images/bordes/borde-${slug}.png`;
 }
 
 const FRASES_RAPIDAS = [
@@ -387,7 +431,16 @@ export default function ChatGlobal({ token, usuario, abrirSolicitudesSenial }) {
   ];
 
   return (
-    <div style={estilos.pagina}>
+    <div className="cg-pagina" style={estilos.pagina}>
+      {/* Ducentésimo quincuagésimo séptimo pase: 4 remaches de bronce en
+          las esquinas del panel — mismo recurso que ya usa Historial.js
+          (`estilos.remache`), acá también sin asset nuevo (`radial-gradient`
+          bronce armado en CSS). */}
+      <span style={{ ...estilos.remache, top: 8, left: 8 }} />
+      <span style={{ ...estilos.remache, top: 8, right: 8 }} />
+      <span style={{ ...estilos.remache, bottom: 8, left: 8 }} />
+      <span style={{ ...estilos.remache, bottom: 8, right: 8 }} />
+
       {/* A. Header */}
       <div style={estilos.header}>
         <div style={estilos.headerIzquierda}>
@@ -456,13 +509,22 @@ export default function ChatGlobal({ token, usuario, abrirSolicitudesSenial }) {
         </button>
       )}
 
+      {/* Ducentésimo quincuagésimo tercer pase: el usuario confirmó que
+          achicar el contenido (pase anterior, `estilos.contenidoMarco`) fue
+          en la dirección equivocada — ahora se veía todo más chico y
+          aparecían "recuadros chicos" con verde asomando detrás. Se saca
+          ese wrapper por completo y en cambio se prueba agrandar el marco
+          de madera en sí (ver `estilos.pagina` más abajo: `borderWidth` y
+          `borderImageSlice` subieron juntos, misma proporción, para que la
+          madera se vea más gruesa/grande sin desdibujar el grabado) a ver
+          si un marco más grueso alcanza a tapar el verde que se filtra. */}
       {/* B. Zona principal */}
       <div style={estilos.cuerpo}>
         <div style={estilos.columnaChat}>
         {tab === 'global' ? (
           <>
           <div style={estilos.mensajesLista}>
-            {mensajes.map((m) => {
+            {mensajes.map((m, i) => {
               // Pase del backend real: el servidor ya no manda un flag
               // "propio" (no sabe quién está mirando) — se calcula acá
               // comparando contra el usuario logueado. VIP no existe
@@ -470,12 +532,28 @@ export default function ChatGlobal({ token, usuario, abrirSolicitudesSenial }) {
               // que ese badge simplemente no aparece por ahora — no es un
               // campo que el backend mande.
               const propio = !m.sistema && m.usuario === usuarioActual;
+              // Ducentésimo quincuagésimo pase: "agrupar mensajes seguidos
+              // del mismo usuario, achicando el margen entre ellos" — se
+              // compara contra el mensaje anterior (no system, mismo
+              // usuario) para decidir un marginTop más chico. `gap` del
+              // contenedor (`mensajesLista`) se saca y pasa a marginTop acá
+              // porque `gap` es uniforme para TODOS los pares — no hay forma
+              // de variarlo por par de elementos sin tocar el margen de
+              // cada uno individualmente.
+              const anterior = mensajes[i - 1];
+              const agrupado = i > 0 && anterior && !anterior.sistema && !m.sistema
+                && anterior.usuario === m.usuario;
+              const margenSuperior = i === 0 ? 0 : (agrupado ? 4 : 14);
               return m.sistema ? (
-                <div key={m.id} style={estilos.mensajeSistema}>⚡ {m.texto}</div>
+                <div key={m.id} style={{ ...estilos.mensajeSistema, marginTop: margenSuperior }}>⚡ {m.texto}</div>
               ) : (
                 <div
                   key={m.id}
-                  style={{ ...estilos.filaMensaje, ...(propio ? estilos.filaMensajePropio : {}) }}
+                  style={{
+                    ...estilos.filaMensaje,
+                    ...(propio ? estilos.filaMensajePropio : {}),
+                    marginTop: margenSuperior,
+                  }}
                 >
                   {!propio && (
                     <img
@@ -559,14 +637,19 @@ export default function ChatGlobal({ token, usuario, abrirSolicitudesSenial }) {
                 maxLength={200}
                 style={estilos.input}
               />
-              {/* Pase siguiente: se saca el texto "Enviar" y el fondo dorado
-                  — quedaba como la última excepción a la convención de
-                  botón de enviar (ícono solo, fondo chocolate + anillo
-                  dorado) que ya usan los chats de mesa/partida (ver
-                  ChatMesa.js/juego.tsx). Se unifica acá también. */}
-              <button type="submit" style={estilos.botonEnviar} aria-label="Enviar mensaje">
-                <img src="/assets/images/icono-enviar.png" alt="" style={estilos.iconoEnviar} />
-              </button>
+              {/* Ducentésimo cuadragésimo séptimo pase: botón + avioncito
+                  ilustrados nuevos (ver estilos.botonEnviar) — reemplaza el
+                  botón chocolate+dorado que unificaba con ChatMesa.js/
+                  juego.tsx; esta pantalla ya tiene su propio look "pulpería"
+                  aparte desde el marco de madera, tiene sentido que este
+                  botón también sea distinto acá.
+                  Ducentésimo cuadragésimo noveno pase: el pill verde y el
+                  avioncito dorado eran dos imágenes separadas superpuestas
+                  (`boton-enviar-chat.png` + `icono-avioncito-chat.png`) —
+                  llegó un asset nuevo con las dos cosas ya combinadas en un
+                  solo dibujo, así que se saca el <img> del avioncito de
+                  encima (ya viene dibujado adentro del botón). */}
+              <button type="submit" style={estilos.botonEnviar} aria-label="Enviar mensaje" />
             </form>
           </div>
           </>
@@ -661,13 +744,28 @@ export default function ChatGlobal({ token, usuario, abrirSolicitudesSenial }) {
               ))}
             </div>
           )}
-          <input
-            type="text"
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            placeholder="Buscar jugador..."
-            style={estilos.buscador}
-          />
+          {/* Ducentésimo cuadragésimo sexto pase: "campo estilo madera
+              ahuecada/cuero oscuro con ícono de lupa dorada" — la lupa se
+              dibuja en SVG (stroke dorado) en vez de pedir un asset nuevo,
+              no hacía falta imagen para esto. */}
+          <div style={estilos.buscadorContenedor}>
+            <svg
+              width="14" height="14" viewBox="0 0 24 24" fill="none"
+              stroke={C.dorado} strokeWidth="3" strokeLinecap="round"
+              style={estilos.iconoLupa} aria-hidden="true"
+            >
+              <circle cx="10" cy="10" r="7" />
+              <line x1="20" y1="20" x2="15.5" y2="15.5" />
+            </svg>
+            <input
+              type="text"
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              placeholder="Buscar jugador..."
+              className="cg-buscador"
+              style={estilos.buscador}
+            />
+          </div>
           <div style={estilos.listaUsuarios}>
             {usuariosFiltrados.map((u) => {
               // Igual que en los mensajes: "esUnoMismo"/"vip" ya no vienen
@@ -677,10 +775,45 @@ export default function ChatGlobal({ token, usuario, abrirSolicitudesSenial }) {
               return (
               <div
                 key={u.username}
-                style={{ ...estilos.filaUsuario, ...(esUnoMismo ? estilos.filaUsuarioPropia : {}) }}
+                style={estilos.filaUsuario}
                 onClick={() => abrirPerfilDe(u.username)}
               >
-                <img src={avatarSrcDe(u)} alt="" style={estilos.avatarChico} />
+                {/* Ducentésimo quincuagésimo pase: tarjeta de "vos" — para
+                    diferenciarla a simple vista, se tiñe el pergamino
+                    interior de un tono manteca/dorado suave. La tarjeta en
+                    sí es un `border-image` con `fill` (el PNG pinta TODO el
+                    fondo, no solo el borde), así que no hay un `background`
+                    plano al que cambiarle el color — se logra con un overlay
+                    semitransparente encima (mismo criterio que ya usa esta
+                    pantalla en otros lados: CSS puro, sin asset nuevo). */}
+                {esUnoMismo && <div style={estilos.overlayTarjetaPropia} />}
+                {/* Ducentésimo cuadragésimo sexto pase: "punto verde neón
+                    tipo gema brillante para indicar En línea" — se dibuja
+                    en CSS (radial-gradient + glow), no hacía falta asset
+                    para esto. Todos en esta lista están en línea por
+                    definición, pero el brief lo pide igual como marca
+                    visual consistente por tarjeta. */}
+                {/* Ducentésimo quincuagésimo tercer pase: (1) cara sola en
+                    vez de cuerpo completo — a este tamaño (32x32) el
+                    cuerpo entero no se distinguía; (2) primer borde de
+                    avatar según rango (ver `bordeSrcDe` arriba) — todavía
+                    no hay assets de borde, así que por ahora el `onError`
+                    hace que no se vea nada hasta que existan (se van
+                    sumando de a uno, sin tocar este código de nuevo). */}
+                <div style={estilos.avatarChicoContenedor}>
+                  <img src={caraSrcDe(u)} alt="" style={estilos.avatarChico} />
+                  {/* El borde va ANTES que el puntito verde en el DOM (a
+                      pesar de dibujarse "por fuera") para que el puntito
+                      siempre quede por encima del marco de rango — nunca
+                      tapado por él — cuando el asset real exista. */}
+                  <img
+                    src={bordeSrcDe(u.rango)}
+                    alt=""
+                    style={estilos.bordeRangoChico}
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  />
+                  <span style={estilos.puntoOnlineChico} />
+                </div>
                 <div style={estilos.usuarioInfo}>
                   <div style={estilos.usuarioNombre}>
                     {u.username}{esUnoMismo && ' (vos)'}
@@ -801,16 +934,64 @@ const estilos = {
   // colapsaría la columna de mensajes. `min()` deja que en mobile el chat
   // ocupe casi toda la pantalla (pedido explícito del brief) sin pasarse
   // de una altura cómoda en desktop.
+  // Ducentésimo cuadragésimo sexto pase: primer paso del rediseño "pulpería"
+  // de Chat Global — el usuario pasó un marco de madera+bronce con paño
+  // verde (ver marco-chat.png) para envolver todo el módulo en una sola
+  // placa en vez de dos cajas sueltas. Se aplicó como `border-image`
+  // durante varios pases (246-254), pero el marco tenía una costura de
+  // subpíxel entre la madera ilustrada y el fondo verde propio de la
+  // pantalla que NUNCA se resolvió del todo pese a 5 intentos distintos
+  // (radio, box-shadow, igualar colores, agrandar el marco, agrandar
+  // también el recorte de la imagen) — cada intento tapaba una costura y
+  // dejaba asomar otra (interior, luego exterior).
+  // Ducentésimo quincuagésimo séptimo pase: el usuario pidió cambiar de
+  // estrategia por completo — en vez de seguir peleando con las costuras
+  // de un `border-image`, reemplazar el marco entero por la MISMA técnica
+  // ya probada (y sin ningún problema de costuras) que se usó para el
+  // panel de Historial.js: un panel de madera armado 100% en CSS (degradé
+  // + bisel simulado con `boxShadow` en capas + remaches de bronce como
+  // `<span>`s con `radial-gradient`), sin ningún PNG de por medio. Al no
+  // haber una imagen con colores horneados adentro, no hay forma de que
+  // aparezca una costura de un verde "equivocado" — el único verde que
+  // existe es el propio degradé CSS de `cuerpo`, no hay una segunda fuente
+  // de verde con la que pueda desentonar.
   pagina: {
     display: 'flex', flexDirection: 'column', height: 'min(760px, calc(100vh - 190px))', minHeight: 460,
-    background: `linear-gradient(180deg, ${C.verdeProfundo}, ${C.verdeOscuro})`,
-    borderRadius: 18, overflow: 'hidden',
-    border: `2px solid ${C.chocolate}33`,
+    position: 'relative', overflow: 'hidden',
+    background: `linear-gradient(160deg, ${C.maderaClara} 0%, ${C.maderaMedia} 55%, ${C.maderaOscura} 100%)`,
+    borderRadius: 14,
+    boxShadow: [
+      'inset 0 2px 0 rgba(255,255,255,0.10)',
+      'inset 0 -4px 10px rgba(0,0,0,0.5)',
+      `0 8px 0 ${C.negroPulido}`,
+      '0 16px 26px rgba(0,0,0,0.4)',
+    ].join(', '),
   },
+  // El grosor del borde y el padding SÍ tienen que variar por breakpoint
+  // (mobile vs. escritorio) — por eso viven en `chat-global.css` (clase
+  // `.cg-pagina`) y no acá adentro: un estilo puesto inline por JS siempre
+  // le gana a cualquier regla de una hoja de estilos externa, media query
+  // o no, así que si se pusiera un `border`/`padding` inline acá arriba,
+  // la media query de mobile de `chat-global.css` NUNCA podría pisarlo.
+  remache: {
+    position: 'absolute', width: 13, height: 13, borderRadius: '50%',
+    background: `radial-gradient(circle at 35% 30%, ${C.bronceClaro} 0%, ${C.bronce} 45%, ${C.bronceOscuro} 78%, #3a2610 100%)`,
+    boxShadow: '0 1px 2px rgba(0,0,0,0.65), inset 0 1px 1px rgba(255,255,255,0.4)',
+    zIndex: 2,
+  },
+  // Ducentésimo cuadragésimo sexto pase: "mini placa de madera" para el
+  // encabezado — antes era una franja plana semitransparente sin
+  // identidad propia, ahora un degradé de madera con filete dorado abajo,
+  // mismo criterio de "panel premium" que ya usan las tarjetas de
+  // Configuracion.js. El ícono de bocadillo estilizado en 3D que pide el
+  // brief todavía no llegó como asset — sigue con icono-chat.png por
+  // ahora.
   header: {
     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
     gap: 12, padding: '14px 18px', flexWrap: 'wrap',
-    background: 'rgba(0,0,0,0.15)', borderBottom: `2px solid ${C.chocolate}44`,
+    background: 'linear-gradient(180deg, #6b4534 0%, #4a2c2a 100%)',
+    borderBottom: `3px solid ${C.doradoOscuro}`,
+    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.14)',
   },
   headerIzquierda: { display: 'flex', alignItems: 'center', gap: 12 },
   headerIcono: { width: 32, height: 32, objectFit: 'contain' },
@@ -885,12 +1066,29 @@ const estilos = {
     padding: '4px 8px', cursor: 'pointer',
   },
 
-  cuerpo: { display: 'flex', flex: 1, minHeight: 0, position: 'relative' },
+  // Ducentésimo cuadragésimo noveno pase: el degradé verde vive acá ahora
+  // (antes vivía en `.pagina`, ver el comentario grande de `pagina` más
+  // arriba) — este contenedor ya está adentro del marco de madera, así
+  // que el verde queda "puertas adentro" del borde en vez de por detrás.
+  // Ducentésimo quincuagésimo séptimo pase: `boxShadow` interior nuevo —
+  // ahora que `.pagina` es un panel de madera sin `border-image` (ver más
+  // arriba), este paño verde necesita su propio bisel "hundido" para leer
+  // como fieltro encajado adentro del marco, mismo criterio que
+  // `estilos.interiorFieltro` de Historial.js.
+  cuerpo: {
+    display: 'flex', flex: 1, minHeight: 0, position: 'relative',
+    background: `linear-gradient(180deg, ${C.verdeProfundo}, ${C.verdeOscuro})`,
+    boxShadow: 'inset 0 3px 10px rgba(0,0,0,0.45)',
+  },
   columnaChat: { display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, minHeight: 0 },
 
+  // Ducentésimo quincuagésimo pase: el `gap: 14` de acá se saca — el
+  // espaciado entre mensajes ahora lo pone cada fila con su propio
+  // `marginTop` (ver el `.map()` de mensajes), que varía según si el
+  // mensaje está agrupado con el anterior del mismo usuario.
   mensajesLista: {
     flex: 1, overflowY: 'auto', padding: '18px 20px', display: 'flex',
-    flexDirection: 'column', gap: 14, minHeight: 0,
+    flexDirection: 'column', minHeight: 0,
   },
   mensajeSistema: {
     alignSelf: 'center', fontSize: 12.5, fontStyle: 'italic', color: C.doradoClaro,
@@ -899,15 +1097,31 @@ const estilos = {
   },
   filaMensaje: { display: 'flex', alignItems: 'flex-start', gap: 10, maxWidth: '78%' },
   filaMensajePropio: { alignSelf: 'flex-end', flexDirection: 'row-reverse' },
+  // Ducentésimo cuadragésimo sexto pase: "encástralos en marcos circulares
+  // con borde de madera/bronce" — borde dorado oscuro más grueso (era
+  // chocolate 2px) + un anillo chocolate por afuera vía box-shadow, para
+  // que se lea como un marco de dos capas (bronce adentro, madera afuera)
+  // en vez de un borde plano de un solo color.
   avatar: {
     width: 38, height: 38, borderRadius: '50%', objectFit: 'cover', flexShrink: 0,
-    border: `2px solid ${C.chocolate}`, cursor: 'pointer', marginTop: 2,
+    border: `3px solid ${C.doradoOscuro}`, boxShadow: `0 0 0 2px ${C.chocolate}, 0 2px 4px rgba(0,0,0,0.35)`,
+    cursor: 'pointer', marginTop: 2,
   },
+  // Ducentésimo cuadragésimo sexto pase: "paneles de pergamino... sombra
+  // dura y contorno negro grueso" (rival) / "tono dorado cálido con bisel
+  // 3D" (propio) — antes las dos burbujas solo diferían en el fondo, sin
+  // contorno ni sombra "dura" (era un blur suave). El contorno casi-negro
+  // (no chocolate puro) imita la línea de tinta gruesa que ya tienen los
+  // íconos ilustrados nuevos del resto del juego.
   burbuja: {
     background: C.cremaSutil, borderRadius: 16, padding: '10px 14px',
-    boxShadow: '0 2px 6px rgba(0,0,0,0.18)', minWidth: 0,
+    border: '2.5px solid #2a1a14', boxShadow: '3px 3px 0 rgba(0,0,0,0.25)', minWidth: 0,
   },
-  burbujaPropia: { background: `linear-gradient(160deg, ${C.doradoClaro}, ${C.dorado})` },
+  burbujaPropia: {
+    background: `linear-gradient(160deg, ${C.doradoClaro}, ${C.dorado})`,
+    border: `2.5px solid ${C.doradoOscuro}`,
+    boxShadow: '3px 3px 0 rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.55)',
+  },
   filaNombre: { display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 },
   nombreUsuario: { fontSize: 12.5, fontWeight: 800, color: C.doradoOscuro, cursor: 'pointer' },
   nombreVip: { color: '#B8860B', textShadow: '0 0 6px rgba(255,182,39,0.5)' },
@@ -917,7 +1131,12 @@ const estilos = {
   },
   hora: { fontSize: 10.5, color: '#a09085', marginLeft: 2 },
   textoMensaje: { fontSize: 15, color: C.chocolate, lineHeight: 1.4, wordBreak: 'break-word' },
-  horaPropia: { fontSize: 10, color: C.doradoOscuro, textAlign: 'right', marginTop: 3, opacity: 0.75 },
+  // Ducentésimo quincuagésimo primer pase: casi invisible antes
+  // (`C.doradoOscuro` sobre el degradé dorado claro de `burbujaPropia` —
+  // dos tonos cálidos muy cercanos entre sí, sin contraste real). Pasa a
+  // chocolate (mismo color que ya usa `textoMensaje`, con buen contraste
+  // comprobado sobre este mismo fondo dorado).
+  horaPropia: { fontSize: 10, color: C.chocolate, textAlign: 'right', marginTop: 3, opacity: 0.65 },
 
   escribiendo: {
     display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, fontStyle: 'italic',
@@ -925,7 +1144,12 @@ const estilos = {
   },
   puntosEscribiendo: { display: 'inline-flex', gap: 3 },
 
-  inputContenedor: { position: 'relative', borderTop: `2px solid ${C.chocolate}44`, background: 'rgba(0,0,0,0.15)' },
+  // Ducentésimo cuadragésimo noveno pase: el usuario pidió cambiar el
+  // fondo verdoso de esta franja (el que envolvía los botones auxiliares +
+  // el campo de texto + el botón de enviar) por un crema, igual al tono
+  // que ya usan esos mismos controles (`C.cremaSutil`) — mismo criterio de
+  // "una sola franja clara" que muestra la imagen de referencia que pasó.
+  inputContenedor: { position: 'relative', borderTop: `2px solid ${C.chocolate}44`, background: C.cremaSutil },
   form: { display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px' },
   botonAuxiliar: {
     // Pase siguiente: padding a 0 (antes no tenía, pero con el ícono nuevo
@@ -938,19 +1162,37 @@ const estilos = {
   },
   iconoCaraBotonAuxiliar: { width: 36, height: 36, borderRadius: 8, objectFit: 'cover' },
   iconoChatBotonAuxiliar: { width: 30, height: 30, objectFit: 'contain' },
+  // Ducentésimo cuadragésimo sexto pase: "panel de pergamino biselado hacia
+  // adentro" — se suma un inset shadow (antes no tenía ninguna sombra).
   input: {
     flex: 1, background: C.cremaSutil, border: `2px solid ${C.chocolate}`, borderRadius: 12,
     padding: '11px 14px', fontSize: 15, color: C.chocolate, outline: 'none', minWidth: 0,
+    boxShadow: 'inset 0 2px 5px rgba(0,0,0,0.18)',
   },
   // Pase siguiente: fondo chocolate + anillo dorado (era dorado plano con
   // texto "Enviar") — mismo criterio de contraste "ícono claro sobre fondo
   // oscuro" que ya usa el botón de enviar de ChatMesa.js/juego.tsx.
+  //
+  // Ducentésimo cuadragésimo séptimo pase: llegó el asset ilustrado del
+  // botón (pill verde brillante) + el avioncito de papel por separado —
+  // se arma igual que el switch/slider de Configuración: el botón como
+  // imagen de fondo a tamaño fijo (no es un elemento que necesite estirarse
+  // a un ancho arbitrario, así que no hace falta 9-slice acá) y el
+  // avioncito como <img> propio encima, centrado. Nombres de archivo
+  // propios (no `icono-enviar.png`) para no tocar el botón de enviar de
+  // ChatMesa.js/juego.tsx, que sigue con su convención chocolate+dorado.
+  //
+  // Ducentésimo cuadragésimo noveno pase: nuevo asset combinado (pill +
+  // avioncito dorado en un solo dibujo, proporción real ~1.41:1) — ya no
+  // hace falta el <img> del avioncito por separado (ver el JSX). Tamaño
+  // ajustado a esa proporción para no deformar el dibujo (antes era
+  // 106x44, ratio ~2.4:1, muy distinto al del asset nuevo).
   botonEnviar: {
-    background: C.chocolate, border: `2px solid ${C.dorado}`, borderRadius: 12,
-    padding: '0 16px', cursor: 'pointer', flexShrink: 0,
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    width: 62, height: 44,
+    backgroundImage: 'url(/assets/images/boton-enviar-chat.png)',
+    backgroundSize: '100% 100%', backgroundRepeat: 'no-repeat', backgroundColor: 'transparent',
+    border: 'none', borderRadius: 0, cursor: 'pointer', flexShrink: 0,
   },
-  iconoEnviar: { width: 30, height: 30, objectFit: 'contain', display: 'block' },
   panelEmojis: {
     position: 'absolute', bottom: '100%', left: 16, marginBottom: 6,
     display: 'flex', flexWrap: 'wrap', gap: 6, maxWidth: 260,
@@ -969,22 +1211,38 @@ const estilos = {
     border: 'none', borderRadius: 8, padding: '8px 10px', cursor: 'pointer',
   },
 
+  // Ducentésimo cuadragésimo sexto pase: "reemplaza el contenedor blanco
+  // puro por un tablero de cuero curtido... más oscuro que la zona de chat"
+  // — de cremaSutil (casi blanco) a un degradé de cuero oscuro, con un
+  // filete dorado en vez del borde chocolate translúcido que casi no se
+  // notaba contra el blanco anterior.
   sidebar: {
-    display: 'flex', flexDirection: 'column', background: C.cremaSutil,
-    borderLeft: `2px solid ${C.chocolate}44`,
+    display: 'flex', flexDirection: 'column',
+    background: 'linear-gradient(180deg, #3b2a20, #2a1c15)',
+    borderLeft: `3px solid ${C.doradoOscuro}`,
   },
   sidebarHeader: {
     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
     padding: '14px 16px 8px',
   },
-  sidebarTitulo: { fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 14.5, color: C.chocolate },
+  // Ducentésimo cuadragésimo sexto pase: texto claro (era chocolate) — el
+  // fondo de la columna pasó de casi-blanco a cuero oscuro.
+  sidebarTitulo: { fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 14.5, color: C.crema },
   botonCerrarSidebar: {
     background: C.crema, border: `2px solid ${C.chocolate}`, borderRadius: 8,
     width: 26, height: 26, cursor: 'pointer', fontSize: 12, color: C.chocolate,
   },
+  // Ducentésimo cuadragésimo sexto pase: "campo estilo madera ahuecada/
+  // cuero oscuro con ícono de lupa dorada" — de un input blanco plano a un
+  // hueco oscuro con sombra hacia adentro; el padding-left le hace lugar a
+  // la lupa dibujada en SVG (ver JSX), posicionada con `buscadorContenedor`.
+  buscadorContenedor: { position: 'relative', margin: '0 16px 10px' },
+  iconoLupa: { position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' },
   buscador: {
-    margin: '0 16px 10px', background: '#fff', border: `2px solid ${C.chocolate}22`,
-    borderRadius: 10, padding: '8px 10px', fontSize: 13, color: C.chocolate, outline: 'none',
+    width: '100%', boxSizing: 'border-box',
+    background: 'rgba(0,0,0,0.35)', border: `1.5px solid ${C.doradoOscuro}66`,
+    borderRadius: 10, padding: '8px 10px 8px 30px', fontSize: 13, color: C.crema, outline: 'none',
+    boxShadow: 'inset 0 2px 5px rgba(0,0,0,0.4)',
   },
   panelSolicitudes: { margin: '0 16px 10px', display: 'flex', flexDirection: 'column', gap: 4 },
   botonSolicitudesToggle: {
@@ -1001,20 +1259,111 @@ const estilos = {
     flexShrink: 0, width: 24, height: 24, borderRadius: 7, border: 'none',
     background: `${C.crimson}22`, color: C.crimsonOscuro, fontSize: 12, fontWeight: 800, cursor: 'pointer',
   },
-  listaUsuarios: { flex: 1, overflowY: 'auto', padding: '0 10px 12px', display: 'flex', flexDirection: 'column', gap: 4 },
+  listaUsuarios: { flex: 1, overflowY: 'auto', padding: '0 10px 12px', display: 'flex', flexDirection: 'column', gap: 6 },
+  // Ducentésimo cuadragésimo séptimo pase: llegó el asset real de la
+  // "mini tarjeta de madera/pergamino" (tarjeta-jugador.png) — reemplaza
+  // el parche de CSS del pase anterior (fondo cremaSutil + borde). Se
+  // mide igual en los 4 lados (~22 de sus 250x132px), así que se aplica
+  // con `border-image` + `fill` (a diferencia del marco grande, acá SÍ
+  // hace falta que se dibuje el centro — es toda la tarjeta, no un marco
+  // alrededor de otro fondo) — mismo motivo que el slider de música: la
+  // columna tiene un ancho que varía un poco (260px en desktop, hasta
+  // 320px en el drawer mobile), y separando bordes de centro esa
+  // variación no deforma el grabado de madera de los bordes.
+  // Ducentésimo cuadragésimo octavo pase: había un aro de brillo dorado
+  // (`boxShadow`) para destacar la fila de "vos" en la lista — el usuario
+  // pidió sacarlo ("el detalle que agregaste de la línea dorada que rodea
+  // la tarjeta del usuario saquemosla"). Se elimina `filaUsuarioPropia` por
+  // completo: la fila propia queda visualmente igual al resto de las filas
+  // de jugadores.
+  // Ducentésimo quincuagésimo primer pase: BUG REAL encontrado — el menú
+  // de opciones (⋮) dejó de abrirse (el click SÍ disparaba `abrirMenuAccion`,
+  // pero el popup quedaba invisible). Causa: `estilos.tooltipAccionUsuario`
+  // se posiciona `absolute, top:'100%'` respecto de esta fila (su ancestro
+  // posicionado más cercano) — es decir, se dibuja JUSTO DEBAJO del borde
+  // inferior de la fila, totalmente por FUERA de su propia caja. El pase
+  // anterior le agregó `overflow:'hidden'` a esta fila (para contener el
+  // overlay de tinte de "vos") sin necesitarlo de verdad — ese overlay ya
+  // queda perfectamente contenido solo con su propio `inset:12`, no hace
+  // falta recortar nada acá — y ese `overflow:hidden` de más terminaba
+  // recortando el popup entero. Se saca.
   filaUsuario: {
-    display: 'flex', alignItems: 'center', gap: 10, padding: '8px 6px',
-    borderRadius: 10, cursor: 'pointer', position: 'relative',
+    display: 'flex', alignItems: 'center', gap: 10, padding: '6px 10px',
+    cursor: 'pointer', position: 'relative',
+    borderStyle: 'solid', borderColor: 'transparent', borderWidth: 12,
+    borderImageSource: 'url(/assets/images/tarjeta-jugador.png)',
+    borderImageSlice: '22 fill',
+    borderImageRepeat: 'stretch',
   },
-  filaUsuarioPropia: { background: 'rgba(255,182,39,0.18)' },
-  avatarChico: { width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', border: `1.5px solid ${C.chocolate}33`, flexShrink: 0 },
-  usuarioInfo: { flex: 1, minWidth: 0 },
-  usuarioNombre: { fontSize: 13, fontWeight: 700, color: C.chocolate, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
-  usuarioRango: { fontSize: 10.5, color: '#8a7267' },
+  // Ducentésimo quincuagésimo pase: overlay de tinte para la tarjeta de
+  // "vos" (ver el comentario grande en el JSX). `inset` coincide con el
+  // borderWidth de `filaUsuario` (12) para teñir solo el pergamino
+  // interior, no el marco de madera. `pointerEvents:none` para no tapar
+  // el click de la fila.
+  overlayTarjetaPropia: {
+    position: 'absolute', inset: 12,
+    background: 'linear-gradient(160deg, rgba(255,214,104,0.38), rgba(255,182,39,0.22))',
+    pointerEvents: 'none', zIndex: 0,
+  },
+  // Ducentésimo quincuagésimo pase: "marco circular de madera/bronce con
+  // contorno negro limpio" — antes era un borde finito de 1.5px casi
+  // invisible. Mismo criterio de anillo de dos capas que ya usa el avatar
+  // grande de los mensajes (`estilos.avatar`, más arriba): borde dorado
+  // oscuro (bronce) + un aro chocolate por afuera vía box-shadow.
+  avatarChicoContenedor: { position: 'relative', flexShrink: 0, zIndex: 1 },
+  avatarChico: {
+    width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', display: 'block',
+    border: `2px solid ${C.doradoOscuro}`, boxShadow: `0 0 0 1.5px ${C.chocolate}, 0 1px 3px rgba(0,0,0,0.35)`,
+  },
+  // Ducentésimo quincuagésimo tercer pase: marco de rango — se dibuja
+  // ENCIMA del aro dorado/chocolate de `avatarChico` (mismo criterio de
+  // "anillo de dos capas" que ya usa el resto de la pantalla), un poco
+  // más grande que el avatar para que lo enmarque en vez de taparlo.
+  // `pointerEvents:'none'` para no robarle el click al avatar/fila.
+  bordeRangoChico: {
+    position: 'absolute', top: -6, left: -6, width: 44, height: 44,
+    pointerEvents: 'none', objectFit: 'contain',
+  },
+  // Ducentésimo cuadragésimo sexto pase: "punto verde neón tipo gema
+  // brillante" — mismo criterio que `puntoSinLeer` (tarjetas de amigos),
+  // posicionado sobre la esquina del avatar chico.
+  // Ducentésimo quincuagésimo pase: el usuario reportó que se veía como un
+  // "resplandor blanquecino difuminado" en vez de una gema — el aro color
+  // crema + el glow difuso (`0 0 5px`) eran la causa. Se cambia a un aro
+  // OSCURO fino (imita un engaste/contorno negro) y una sombra dura y
+  // chica (no blur) en vez del glow, para que lea como una gema 3D
+  // engastada, no como un halo de luz.
+  puntoOnlineChico: {
+    position: 'absolute', bottom: -1, right: -1, width: 10, height: 10, borderRadius: '50%',
+    background: 'radial-gradient(circle at 32% 28%, #eafff0 0%, #4CE07A 32%, #1f9a55 65%, #0c4a28 100%)',
+    border: '1.5px solid rgba(0,0,0,0.55)',
+    boxShadow: '0 1px 2px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.55), inset 0 -1px 1px rgba(0,0,0,0.35)',
+  },
+  usuarioInfo: { flex: 1, minWidth: 0, position: 'relative', zIndex: 1 },
+  usuarioNombre: { fontSize: 13, fontWeight: 800, color: C.chocolate, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
+  // Ducentésimo quincuagésimo pase: contraste muy bajo antes (#8a7267,
+  // beige/naranja claro sobre el pergamino claro de la tarjeta) — pasa a
+  // un marrón madera medio bien legible, con una mini-cinta de fondo
+  // (mismo criterio de "badge" que ya usa `badgeVip` en los mensajes) en
+  // vez de texto suelto.
+  usuarioRango: {
+    fontSize: 10, fontWeight: 700, color: '#5c3a26',
+    background: 'rgba(74,44,42,0.12)', borderRadius: 5,
+    padding: '1px 6px', display: 'inline-block', marginTop: 2,
+  },
+  // Ducentésimo quincuagésimo pase: "botón cuadrado/circular de madera
+  // oscura/bronce con relieve 3D" — antes era una píldora beige casi
+  // transparente (se notaba lavada contra el pergamino). Se cambia a un
+  // botón de madera oscura con bisel (mismo criterio "3D" que ya usan los
+  // botones circulares del header, `.ts-icon-btn`: fondo sólido + un
+  // box-shadow duro hacia abajo que simula el relieve) y los puntos pasan
+  // a dorado claro para leerse sobre el fondo oscuro nuevo.
   botonAccionUsuario: {
-    flexShrink: 0, width: 26, height: 26, borderRadius: 8, border: 'none',
-    background: 'rgba(74,44,42,0.08)', color: C.chocolate, fontSize: 15,
-    fontWeight: 800, cursor: 'pointer', lineHeight: 1,
+    flexShrink: 0, width: 26, height: 26, borderRadius: 7, border: `1.5px solid ${C.doradoOscuro}`,
+    background: `linear-gradient(180deg, #5a3a30, ${C.chocolate})`,
+    boxShadow: '0 2px 0 rgba(0,0,0,0.4)',
+    color: C.doradoClaro, fontSize: 15,
+    fontWeight: 800, cursor: 'pointer', lineHeight: 1, position: 'relative', zIndex: 1,
   },
   // Pase siguiente: era un tooltip de texto fijo ("Muy pronto..."), ahora
   // es un menú real de botones — se cambia a columna con gap y se le saca

@@ -267,7 +267,8 @@ const estilos = {
   contenedor: { maxWidth: 720, margin: '0 auto', padding: '24px 16px' },
   btnVolver: {
     background: 'none', border: 'none', cursor: 'pointer',
-    fontSize: 14, fontWeight: 700, color: C.chocolate, marginBottom: 16, padding: 0,
+    fontSize: 14, fontWeight: 700, color: C.crema, marginBottom: 16, padding: 0,
+    textShadow: '0 1px 3px rgba(0,0,0,0.6)',
   },
   panel: {
     background: C.crema, border: `2px solid ${C.chocolate}22`, borderRadius: 18,

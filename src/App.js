@@ -26,6 +26,18 @@ import { ToastProvider } from './contexts/ToastContext';
 import { getSocket } from './services/socket';
 import AvisosGlobales from './components/Desafio/AvisosGlobales';
 
+// Pase 313: las páginas públicas de Política de Privacidad y Términos de
+// Servicio (sin login, fuera del AppShell) no tenían fondo. Mismo fondo que el
+// resto de la web (AuthScreen / AppShell): `fondo-lobby.jpeg` con velo 0.38.
+const FONDO_PAGINA_PUBLICA = {
+  minHeight: '100vh',
+  backgroundImage: 'linear-gradient(rgba(20,20,15,0.38), rgba(20,20,15,0.38)), url(/assets/images/fondo-lobby.jpeg)',
+  backgroundSize: 'cover',
+  backgroundPosition: 'center',
+  backgroundAttachment: 'fixed',
+  backgroundRepeat: 'no-repeat',
+};
+
 function App() {
   const CLAVE_MUSICA_MUTEADA = 'truco_musica_muteada';
   const CLAVE_MUSICA_VOLUMEN = 'truco_musica_volumen';
@@ -476,6 +488,7 @@ function App() {
     contenido = <OlvidePassword onVolverLogin={() => setPantalla('auth')} />;
   } else if (pantalla === 'privacidad-publica') {
     contenido = (
+      <div style={FONDO_PAGINA_PUBLICA}>
       <PoliticaPrivacidad
         textoVolver="← Volver al inicio"
         onVolver={() => {
@@ -488,9 +501,11 @@ function App() {
           window.scrollTo(0, 0);
         }}
       />
+      </div>
     );
   } else if (pantalla === 'terminos-publica') {
     contenido = (
+      <div style={FONDO_PAGINA_PUBLICA}>
       <TerminosServicio
         textoVolver="← Volver al inicio"
         onVolver={() => {
@@ -503,6 +518,7 @@ function App() {
           window.scrollTo(0, 0);
         }}
       />
+      </div>
     );
   } else if (pantalla === 'reset-password') {
     contenido = (

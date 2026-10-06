@@ -9,7 +9,13 @@ const C = {
   celeste: '#4FB3E8',
   crema: '#FFF8ED', chocolate: '#4A2C2A',
   // Cuadragésimo octavo pase — mismo valor que Lobby.js, ver ese archivo.
-  cremaSutil: '#FFFCF6'
+  cremaSutil: '#FFFCF6',
+  // Pase de rediseño estructural de Lobby.js — mismos tonos de madera+
+  // bronce que el resto de la pantalla, para que esta tarjeta comparta el
+  // mismo marco que "Crear sala"/"Unirse con código"/"Torneo en curso".
+  maderaClara: '#6b4a34', maderaMedia: '#4a3226', maderaOscura: '#2a1c14',
+  remacheClaro: '#f0d9a0', remache: '#c9973e', remacheOscuro: '#7a5322',
+  negroPulido: '#1a1410',
 };
 
 // Pase 202: a pedido del usuario, se saca la imagen del personaje
@@ -99,7 +105,17 @@ export default function MisionesCard({ token, onMisionReclamada }) {
   const esUltima = paginaSegura === totalPaginas - 1;
 
   return (
-    <div style={estilos.panel}>
+    // Pase de rediseño estructural (siguiendo el mismo criterio ya
+    // aplicado al resto de Lobby.js): exterior de madera con remaches en
+    // las esquinas envolviendo la "minitabla de pergamino" — antes era
+    // una sola caja crema plana, ahora comparte el mismo marco que
+    // "Crear sala"/"Unirse con código"/"Torneo en curso".
+    <div style={estilos.panelExterior}>
+      <span style={{ ...estilos.remache, top: 8, left: 8 }} />
+      <span style={{ ...estilos.remache, top: 8, right: 8 }} />
+      <span style={{ ...estilos.remache, bottom: 8, left: 8 }} />
+      <span style={{ ...estilos.remache, bottom: 8, right: 8 }} />
+      <div style={estilos.panel}>
       <div style={estilos.header}>
         <img
           src="/assets/images/icono-misiones.png"
@@ -136,8 +152,18 @@ export default function MisionesCard({ token, onMisionReclamada }) {
                       </span>
                       <span style={estilos.progresoTexto}>{m.progreso}/{m.objetivo}</span>
                   </div>
-                <div style={estilos.barraFondo}>
-                  <div style={{ ...estilos.barraRelleno, width: `${porcentaje}%` }} />
+                {/* Pase de rediseño estructural: barra 3D verde neón (antes
+                    un degradé dorado plano) + recompensa en monedas de oro
+                    al extremo, visible siempre (no solo dentro del botón
+                    de reclamar) — pedido explícito del usuario. */}
+                <div style={estilos.filaBarra}>
+                  <div style={estilos.barraFondo}>
+                    <div style={{ ...estilos.barraRelleno, width: `${porcentaje}%` }} />
+                  </div>
+                  <span style={estilos.recompensaChip}>
+                    <img src="/assets/images/moneda.png" alt="" style={estilos.iconoMonedaChip} />
+                    +{datos.recompensa}
+                  </span>
                 </div>
 
                 {m.reclamada ? (
@@ -148,7 +174,12 @@ export default function MisionesCard({ token, onMisionReclamada }) {
                     disabled={reclamando === m.tipo}
                     style={estilos.btnReclamar}
                   >
-                    {reclamando === m.tipo ? 'Reclamando...' : `🪙 Reclamar +${datos.recompensa}`}
+                    {reclamando === m.tipo ? 'Reclamando...' : (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                        <img src="/assets/images/moneda.png" alt="" style={estilos.iconoMonedaChico} />
+                        {`Reclamar +${datos.recompensa}`}
+                      </span>
+                    )}
                   </button>
                 ) : null}
               </div>
@@ -174,19 +205,44 @@ export default function MisionesCard({ token, onMisionReclamada }) {
           ))}
         </div>
       )}
+      </div>
     </div>
   );
 }
 
 const estilos = {
+  // Pase de rediseño estructural — exterior de madera con 4 remaches de
+  // bronce, mismo criterio que `accesoCardExterior` en Lobby.js: esta
+  // tarjeta ahora comparte marco con "Crear sala"/"Unirse con
+  // código"/"Torneo en curso" en vez de flotar suelta en cuadro crema.
+  panelExterior: {
+    background: `linear-gradient(160deg, ${C.maderaClara} 0%, ${C.maderaMedia} 55%, ${C.maderaOscura} 100%)`,
+    border: `3px solid ${C.negroPulido}`, borderRadius: 20, padding: 9,
+    boxShadow: [
+      'inset 0 2px 0 rgba(255,255,255,0.10)',
+      'inset 0 -4px 10px rgba(0,0,0,0.5)',
+      `0 8px 0 ${C.negroPulido}`,
+      '0 16px 26px rgba(0,0,0,0.4)'
+    ].join(', '),
+    position: 'relative'
+  },
+  remache: {
+    position: 'absolute', width: 11, height: 11, borderRadius: '50%',
+    background: `radial-gradient(circle at 35% 30%, ${C.remacheClaro} 0%, ${C.remache} 45%, ${C.remacheOscuro} 78%, #3a2610 100%)`,
+    boxShadow: '0 1px 2px rgba(0,0,0,0.6)', zIndex: 2
+  },
   // Cuadragésimo octavo pase — punto 2: mismo criterio que el resto de los
   // paneles de Lobby.js (borde más fino, radio unificado a 18, fondo más
   // sutil, sombra menos marcada).
+  // Pase de rediseño estructural — ahora es la capa interior de pergamino
+  // dentro de `panelExterior` (antes era la caja de nivel superior);
+  // el borde/sombra pasan a una versión más sutil, tipo "asentado" dentro
+  // del marco de madera en vez de flotar con su propio relieve.
   panel: {
     backgroundColor: C.cremaSutil,
     backgroundImage: 'url(/assets/images/textura-tarjeta.png)', backgroundRepeat: 'repeat',
-    border: `2px solid ${C.chocolate}`, borderRadius: 18,
-    boxShadow: '0 3px 0 rgba(0,0,0,0.15)', padding: '16px 18px 18px',
+    border: `1.5px solid rgba(26,20,16,0.35)`, borderRadius: 14,
+    boxShadow: 'inset 0 1px 4px rgba(0,0,0,0.12)', padding: '16px 18px 18px',
     position: 'relative', overflow: 'hidden'
   },
   header: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 },
@@ -226,16 +282,38 @@ const estilos = {
   tituloMision: { fontSize: 13, fontWeight: 700, color: C.chocolate },
   check: { color: C.verdeOscuro, fontWeight: 800, marginRight: 2 },
   progresoTexto: { fontSize: 12, fontWeight: 800, color: C.doradoOscuro },
-  // Quincuagésimo segundo pase — punto 4: barra más delgada (8→5px) y con
-  // más contraste (el fondo pasó de un tostado claro a un tinte chocolate
-  // translúcido, que se nota más contra la tarjeta blanca).
+  // Pase de rediseño estructural — barra "3D verde neón" a pedido del
+  // usuario (antes era un degradé dorado plano sin relieve). El fondo pasa
+  // a un canal hundido oscuro (misma idea que el "cuero hundido" del resto
+  // de la pantalla) y el relleno a un verde neón con brillo superior +
+  // sombra de borde, para que se note como una barra con volumen real.
+  // Ahora vive dentro de `filaBarra`, junto al chip de recompensa.
   barraFondo: {
-    height: 5, background: 'rgba(74,44,42,0.16)', borderRadius: 4, overflow: 'hidden', marginBottom: 8
+    flex: 1, minWidth: 0, height: 9,
+    background: 'linear-gradient(180deg, #0f0a06, #1c130c)',
+    borderRadius: 6, overflow: 'hidden',
+    boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.6), inset 0 0 0 1px rgba(0,0,0,0.4)'
   },
   barraRelleno: {
-    height: '100%', background: `linear-gradient(90deg, ${C.doradoClaro}, ${C.dorado})`,
-    borderRadius: 4, transition: 'width 0.3s ease'
+    height: '100%',
+    background: 'linear-gradient(180deg, #7CFF9B 0%, #2ECC71 55%, #17A54A 100%)',
+    borderRadius: 6, transition: 'width 0.3s ease',
+    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.55), inset 0 -2px 3px rgba(0,0,0,0.3), 0 0 6px rgba(46,204,113,0.55)'
   },
+  // Fila que alinea la barra de progreso con el chip de recompensa "al
+  // extremo" — pedido explícito del usuario, visible siempre y no solo
+  // dentro del botón de reclamar.
+  filaBarra: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 },
+  recompensaChip: {
+    flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 3,
+    fontSize: 11.5, fontWeight: 800, color: C.chocolate,
+    background: `linear-gradient(180deg, ${C.doradoClaro}, ${C.dorado})`,
+    border: `1.5px solid ${C.doradoOscuro}`, borderRadius: 999,
+    padding: '2px 8px 2px 4px',
+    boxShadow: '0 2px 0 rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.5)'
+  },
+  iconoMonedaChip: { width: 14, height: 14, objectFit: 'contain' },
+  iconoMonedaChico: { width: 14, height: 14, objectFit: 'contain' },
   // Quincuagésimo segundo pase — punto 4: botón más chico (menos padding/
   // fuente) y alineado a la derecha en vez de ocupar todo el ancho —
   // `width:'fit-content'` + `marginLeft:'auto'` alcanza sin tener que

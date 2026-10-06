@@ -3,7 +3,14 @@ import { API_URL } from '../../config';
 
 const C = {
   verde: '#2D9B4F', verdeOscuro: '#1f7a3c',
-  crimson: '#E8483A', crimsonOscuro: '#c2352a',
+  // Ducentésimo trigésimo primer pase: variantes "vibrante" agregadas para
+  // el botón de precio de los dos packs destacados (Mejor Valor/
+  // Inauguración) — pedido explícito del usuario en su brief de rediseño
+  // ("verde más vibrante", "rojo fuerte"). Los tonos base (`verde`/
+  // `crimson`) siguen usándose para el marco del cartelito y el resto de
+  // la paleta, sin cambios.
+  verdeVibrante: '#3DDD6B',
+  crimson: '#E8483A', crimsonOscuro: '#c2352a', crimsonVibrante: '#FF4433',
   dorado: '#FFB627', doradoClaro: '#FFD668', doradoOscuro: '#C9860E',
   celeste: '#4FB3E8', celesteOscuro: '#2f8dbf',
   crema: '#FFF8ED', chocolate: '#4A2C2A',
@@ -158,19 +165,171 @@ export default function Tienda({ usuario, token }) {
     }
   };
 
+  // Ducentésimo trigésimo primer pase: rediseño de vidriera pedido por el
+  // usuario (brief detallado tipo Clash Royale) — se extrae el renderizado
+  // de cada tarjeta a esta función (antes vivía inline dentro de un solo
+  // `.map()`) porque ahora se arma en DOS filas fijas en vez de una grilla
+  // `auto-fill` (ver `estilos.fila`/`tc-fila` y el `<style>` inyectado al
+  // final del archivo): fila de arriba = Inauguración | Mejor Valor | 500
+  // Monedas, fila de abajo = 200 | 100 | 50 — mismo orden que ya tenía
+  // `PACKS`, no hizo falta reordenar el array. `Mejor Valor` (única con
+  // `tag==='mejorPrecio'`) recibe la clase `tc-card-hero` — esa clase le
+  // da ~18% más ancho DENTRO de su fila (`flex-grow` más alto, ver el
+  // CSS) — como la tarjeta es cuadrada (`aspectRatio:'1/1'`), crece en
+  // ancho Y alto a la vez, y al ser más alta que sus compañeras de fila
+  // con `align-items:'flex-end'` en el contenedor, sobresale hacia arriba
+  // (efecto "héroe"). Las zonas internas (`zonaNombre`/`zonaContenido`/
+  // `zonaPrecio`) siguen siendo porcentajes de la propia tarjeta, así que
+  // escalan solas sin necesitar ningún ajuste especial para el pack más
+  // grande.
+  // Ducentésimo trigésimo segundo pase: segunda revisión del usuario — "al
+  // poner el Mejor Valor más grande y centrado, los packs de los costados
+  // (Inauguración y 500) se ven desbalanceados" — se agrega un tercer nivel
+  // intermedio, `tc-card-secundario` (~9% más ancho que los normales, menos
+  // que el héroe), SOLO para las 2 compañeras de fila del héroe. `fila`
+  // (1 o 2) es lo que decide si un pack sin tag usa `tc-card-secundario`
+  // (fila 1: Inauguración/500) o `tc-card-normal` (fila 2: 200/100/50).
+  // Ducentésimo trigésimo tercer pase: `descuentoPct` — el % real de rebaja
+  // (calculado contra el propio `precioOriginal` del pack, no inventado) que
+  // ahora se muestra como etiqueta en la tarjeta de Inauguración en vez de
+  // repetirse en el banner de texto de arriba (ver `ribbonDescuento` más
+  // abajo, y el punto 1 del brief del usuario: "esa información de
+  // descuento debe estar integrada dentro del banner/tarjeta de la oferta
+  // mediante etiquetas, ej. '-65%'").
+  const renderPack = (pack, fila) => {
+    const total = pack.monedas + pack.bono;
+    const destacado = pack.tag === 'mejorPrecio';
+    const inauguracion = pack.tag === 'inauguracion';
+    const descuentoPct = pack.precioOriginal ? Math.round((1 - pack.precio / pack.precioOriginal) * 100) : null;
+    const claseTamano = destacado ? 'tc-card-hero' : fila === 1 ? 'tc-card-secundario' : 'tc-card-normal';
+    return (
+      <div
+        key={pack.id}
+        className={`tc-card ${claseTamano} tc-card-${pack.id}`}
+        style={estilos.card}
+      >
+        {/* Badge extra pedido por el usuario ("debe tener un badge claro:
+            Mejor Valor o Mejor precio por moneda") además del nombre que ya
+            muestra el letrero de madera — se agrega como una píldora
+            flotando por ENCIMA del cartelito (top negativo) para no tocar
+            ninguna de las zonas ya medidas a pixel. */}
+        {destacado && (
+          <div style={estilos.badgeHero}>⭐ MEJOR PRECIO POR MONEDA</div>
+        )}
+        {/* Ducentésimo trigésimo tercer pase: cinta diagonal de descuento,
+            SOLO en la tarjeta de Inauguración — reemplaza al banner de texto
+            que estaba arriba de todo el panel (ver el JSX del `return`
+            principal más abajo, ya no existe). */}
+        {inauguracion && descuentoPct != null && (
+          <div style={estilos.ribbonDescuento}>
+            <span style={estilos.ribbonDescuentoTexto}>-{descuentoPct}% OFF</span>
+          </div>
+        )}
+        <img src={CARTELES[pack.tipoCartel]} alt="" style={estilos.cartelFondo} />
+
+        {/* Centésimo trigésimo pase: el usuario pidió centrar mejor
+            el texto del letrero en TODAS las tarjetas salvo la de
+            Inauguración (esa ya se ve bien, y de hecho sobra lugar
+            para agrandarla un poco — el cartelito rojo tiene más
+            aire libre arriba del texto que el resto de los
+            colores). */}
+        <div style={{
+          ...estilos.zonaNombre,
+          color: pack.tipoCartel === 'base' ? C.chocolate : '#fff',
+          ...(inauguracion ? estilos.zonaNombreTextoGrande : null),
+        }}>
+          {pack.nombrePack}
+        </div>
+
+        {/* Centésimo trigésimo tercer pase: `zonaContenido` y
+            `zonaPrecio` vuelven a ser UN SOLO bloque (el pase 129
+            las había separado en 2 cajas fijas con un hueco fijo
+            entre ellas — eso fue lo que generó el "espacio de más"
+            que reportó el usuario en Inauguración/100/200, porque
+            ese hueco es SIEMPRE el mismo tamaño sin importar cuánto
+            contenido tenga cada pack). Con un solo bloque
+            `justifyContent:'center'` y una caja bien grande (ver
+            `zonaContenido` más abajo), el contenido se centra solo
+            según lo que tenga cada pack — ni deja hueco de más en
+            los packs livianos (Inauguración/100/200/50), ni se
+            desborda en el pack más cargado (Mejor Valor, con badge
+            Y precio tachado). */}
+        <div style={estilos.zonaContenido}>
+          <img
+            src={pack.icono}
+            alt=""
+            style={pack.id === 'pack-200' || pack.id === 'pack-100' ? estilos.iconoGrande : estilos.icono}
+          />
+          {/* Centésimo vigésimo octavo pase: cantidad + "monedas"
+              agrupados en su propio div, sin espacio entre ellos —
+              el `gap` de `zonaContenido` (el padre) separa GRUPOS
+              (ícono / este par / badge / precio), no cada línea
+              suelta, para que el número y su etiqueta se sigan
+              leyendo pegados. */}
+          <div style={estilos.cantidadGrupo}>
+            <div style={estilos.cantidad}>{total.toLocaleString('es-AR')}</div>
+            <div style={estilos.cantidadLabel}>monedas</div>
+          </div>
+
+          {pack.bono > 0 ? (
+            <div style={estilos.bonoTag}>+{pack.bono} de regalo</div>
+          ) : pack.notaEspecial ? (
+            <div style={estilos.notaEspecialTag}>{pack.notaEspecial}</div>
+          ) : null}
+
+          <div style={estilos.zonaPrecio}>
+            {pack.precioOriginal != null ? (
+              <div style={estilos.precioOriginal}>{formatearPrecio(pack.precioOriginal)}</div>
+            ) : (
+              // Centésimo trigésimo cuarto pase: "50 Monedas" es el
+              // ÚNICO pack sin `precioOriginal` — con todo centrado
+              // en un solo bloque (pase 133), eso lo hace más corto
+              // que los demás y su botón terminaba un poco más
+              // arriba que el resto ("como referencia... la
+              // tarjeta de Mejor Valor" quedó bien). Un placeholder
+              // invisible (mismo tamaño que el texto real, pero sin
+              // mostrarse) ocupa el mismo lugar sin agregar texto
+              // fantasma, así el botón cae a la misma altura que
+              // en las demás tarjetas.
+              <div style={{ ...estilos.precioOriginal, visibility: 'hidden' }}>$0</div>
+            )}
+            <button
+              className="tc-precio-boton"
+              style={{
+                ...estilos.precioBoton,
+                ...(destacado ? estilos.precioBotonVerde : inauguracion ? estilos.precioBotonRojo : estilos.precioBotonDorado),
+                // Ducentésimo trigésimo séptimo pase: el usuario reportó que
+                // al comprar un pack, TODOS los botones de las demás tarjetas
+                // se transparentaban también (no solo el que se está
+                // comprando). La comparación estaba mal: usaba el valor
+                // truthy de `comprandoPackId` en vez de compararlo contra
+                // `pack.id` de esta tarjeta puntual — se corrige para que
+                // solo se atenúe el botón del pack que realmente se compra.
+                ...(comprandoPackId === pack.id ? estilos.precioBotonDeshabilitado : null),
+              }}
+              disabled={comprandoPackId === pack.id}
+              onClick={() => comprar(pack.id)}
+            >
+              {comprandoPackId === pack.id ? 'Redirigiendo…' : formatearPrecio(pack.precio)}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <>
       <div style={estilos.sectionTitle}>🛒 Comprá monedas</div>
       <div style={estilos.sectionSubtitle}>Se acreditan al instante en tu cuenta</div>
 
-      {/* Centésimo décimo cuarto pase: banner promocional, punto 1 de la
-          lista del usuario — usa el descuento real del pack de inauguración
-          ($990 vs $2.800, ya existente en esta misma tienda) en vez de
-          inventar una promo ("primera compra", rotación semanal) sin lógica
-          de backend detrás. */}
-      <div style={estilos.bannerPromo}>
-        🔥 Pack Inauguración: $990 en vez de $2.800 — edición limitada
-      </div>
+      {/* Ducentésimo trigésimo tercer pase: se retira el banner rojo de
+          texto que iba acá ("🔥 Pack Inauguración: $990 en vez de $2.800 —
+          edición limitada") — el usuario lo marcó como "exceso de texto
+          descriptivo e informativo" redundante con la propia tarjeta. Ese
+          mismo descuento ahora se muestra como una etiqueta "-65% OFF"
+          integrada en la tarjeta de Inauguración (ver `ribbonDescuento` en
+          `renderPack`), no como un cartel aparte. */}
 
       {avisoVisible && (
         <div style={estilos.aviso}>
@@ -186,99 +345,41 @@ export default function Tienda({ usuario, token }) {
             centrar y agrandar un poco las tarjetas — SOLO en web, en
             nativo se mantiene (pedido explícito: "en el nativo no saquemos
             el texto de saldo actual"). */}
-        <div style={estilos.grid}>
-          {PACKS.map((pack) => {
-            const total = pack.monedas + pack.bono;
-            const destacado = pack.tag === 'mejorPrecio';
-            const inauguracion = pack.tag === 'inauguracion';
-            return (
-              <div key={pack.id} style={estilos.card}>
-                <img src={CARTELES[pack.tipoCartel]} alt="" style={estilos.cartelFondo} />
-
-                {/* Centésimo trigésimo pase: el usuario pidió centrar mejor
-                    el texto del letrero en TODAS las tarjetas salvo la de
-                    Inauguración (esa ya se ve bien, y de hecho sobra lugar
-                    para agrandarla un poco — el cartelito rojo tiene más
-                    aire libre arriba del texto que el resto de los
-                    colores). */}
-                <div style={{
-                  ...estilos.zonaNombre,
-                  color: pack.tipoCartel === 'base' ? C.chocolate : '#fff',
-                  ...(inauguracion ? estilos.zonaNombreTextoGrande : null),
-                }}>
-                  {pack.nombrePack}
-                </div>
-
-                {/* Centésimo trigésimo tercer pase: `zonaContenido` y
-                    `zonaPrecio` vuelven a ser UN SOLO bloque (el pase 129
-                    las había separado en 2 cajas fijas con un hueco fijo
-                    entre ellas — eso fue lo que generó el "espacio de más"
-                    que reportó el usuario en Inauguración/100/200, porque
-                    ese hueco es SIEMPRE el mismo tamaño sin importar cuánto
-                    contenido tenga cada pack). Con un solo bloque
-                    `justifyContent:'center'` y una caja bien grande (ver
-                    `zonaContenido` más abajo), el contenido se centra solo
-                    según lo que tenga cada pack — ni deja hueco de más en
-                    los packs livianos (Inauguración/100/200/50), ni se
-                    desborda en el pack más cargado (Mejor Valor, con badge
-                    Y precio tachado). */}
-                <div style={estilos.zonaContenido}>
-                  <img src={pack.icono} alt="" style={estilos.icono} />
-                  {/* Centésimo vigésimo octavo pase: cantidad + "monedas"
-                      agrupados en su propio div, sin espacio entre ellos —
-                      el `gap` de `zonaContenido` (el padre) separa GRUPOS
-                      (ícono / este par / badge / precio), no cada línea
-                      suelta, para que el número y su etiqueta se sigan
-                      leyendo pegados. */}
-                  <div style={estilos.cantidadGrupo}>
-                    <div style={estilos.cantidad}>{total.toLocaleString('es-AR')}</div>
-                    <div style={estilos.cantidadLabel}>monedas</div>
-                  </div>
-
-                  {pack.bono > 0 ? (
-                    <div style={estilos.bonoTag}>+{pack.bono} de regalo</div>
-                  ) : pack.notaEspecial ? (
-                    <div style={estilos.notaEspecialTag}>{pack.notaEspecial}</div>
-                  ) : null}
-
-                  <div style={estilos.zonaPrecio}>
-                    {pack.precioOriginal != null ? (
-                      <div style={estilos.precioOriginal}>{formatearPrecio(pack.precioOriginal)}</div>
-                    ) : (
-                      // Centésimo trigésimo cuarto pase: "50 Monedas" es el
-                      // ÚNICO pack sin `precioOriginal` — con todo centrado
-                      // en un solo bloque (pase 133), eso lo hace más corto
-                      // que los demás y su botón terminaba un poco más
-                      // arriba que el resto ("como referencia... la
-                      // tarjeta de Mejor Valor" quedó bien). Un placeholder
-                      // invisible (mismo tamaño que el texto real, pero sin
-                      // mostrarse) ocupa el mismo lugar sin agregar texto
-                      // fantasma, así el botón cae a la misma altura que
-                      // en las demás tarjetas.
-                      <div style={{ ...estilos.precioOriginal, visibility: 'hidden' }}>$0</div>
-                    )}
-                    <button
-                      className="tc-precio-boton"
-                      style={{
-                        ...estilos.precioBoton,
-                        ...(destacado ? estilos.precioBotonVerde : inauguracion ? estilos.precioBotonRojo : estilos.precioBotonDorado),
-                        ...(comprandoPackId ? estilos.precioBotonDeshabilitado : null),
-                      }}
-                      disabled={!!comprandoPackId}
-                      onClick={() => comprar(pack.id)}
-                    >
-                      {comprandoPackId === pack.id ? 'Redirigiendo…' : formatearPrecio(pack.precio)}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+        {/* Ducentésimo trigésimo primer pase: la grilla `auto-fill` de una
+            sola pieza se reemplaza por DOS filas fijas (mismo criterio que
+            ya usaba nativo desde el pase 127, ver tienda.tsx) — es lo que
+            permite que la fila de arriba tenga un pack más grande que sus
+            compañeras sin afectar el tamaño de la fila de abajo. En mobile
+            (`@media max-width:680px` en el `<style>` de más abajo) cada
+            fila pasa a apilarse en columna y las tarjetas ocupan el ancho
+            completo — el pedido explícito del usuario de "lista vertical,
+            no una sola tarjeta con dots". */}
+        <div className="tc-filas" style={estilos.filas}>
+          <div className="tc-fila" style={estilos.fila}>
+            {PACKS.slice(0, 3).map((pack) => renderPack(pack, 1))}
+          </div>
+          {/* Ducentésimo trigésimo octavo pase: clase extra `tc-fila-inferior`
+              (ver el CSS inyectado al final del archivo) — el usuario notó
+              que esta fila se ve "más separada y con más aire" que la de
+              arriba; como sus 3 tarjetas son todas del mismo tamaño chico
+              (`tc-card-normal`), el mismo gap de 14px en px absolutos pesa
+              proporcionalmente más que en la fila de arriba (con tarjetas
+              más grandes) — se achica un poco solo para esta fila. */}
+          <div className="tc-fila tc-fila-inferior" style={estilos.fila}>
+            {PACKS.slice(3, 6).map((pack) => renderPack(pack, 2))}
+          </div>
         </div>
       </div>
 
+      {/* Ducentésimo trigésimo octavo pase: "el texto legal sigue siendo
+          bastante largo y se lee con dificultad" — se parte en 2 líneas
+          más cortas (en el guion medio, un corte natural de la oración) en
+          vez de un solo párrafo largo, y se achica/atenúa un poco más
+          (ver `estilos.notaPie`). */}
       <div style={estilos.notaPie}>
-        Las monedas son de uso exclusivo dentro de TrucoChe (mesas, torneos y futuros cosméticos) — no representan dinero real y no se pueden retirar ni transferir.
+        Las monedas son de uso exclusivo dentro de TrucoChe (mesas, torneos y futuros cosméticos)
+        <br />
+        No representan dinero real y no se pueden retirar ni transferir.
       </div>
     </>
   );
@@ -299,8 +400,16 @@ const estilos = {
     marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer',
     fontSize: 14, fontWeight: 800, color: C.chocolate, flexShrink: 0, padding: 4
   },
+  // Ducentésimo trigésimo tercer pase: el fondo crema plano se reemplaza
+  // por la textura de fieltro/madera oscura que pasó el usuario ("el fondo
+  // crema... apaga el estilo gaucho/taberna que venimos trabajando con
+  // madera y cuero") — mismo marco chocolate y misma sombra de antes,
+  // `backgroundColor` queda como color de respaldo mientras carga la
+  // imagen (tono oscuro de la propia textura, no crema).
   panel: {
-    background: C.crema, border: `4px solid ${C.chocolate}`, borderRadius: 20,
+    backgroundImage: 'url(/assets/images/fondo-panel-tienda.jpg)',
+    backgroundSize: 'cover', backgroundPosition: 'center', backgroundColor: '#1f3d2c',
+    border: `4px solid ${C.chocolate}`, borderRadius: 20,
     boxShadow: '0 6px 0 rgba(0,0,0,0.25)', padding: '18px 18px 20px'
   },
   // Centésimo trigésimo cuarto pase: `saldoActual`/`saldoIcono` (el
@@ -321,9 +430,23 @@ const estilos = {
   // de columna 300px→320px (tarjetas un poco más grandes, ya que son
   // cuadradas — `aspectRatio: '1 / 1'` en `card` — el ancho de columna
   // determina también su alto).
-  grid: {
-    display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 14, justifyContent: 'center',
+  // Ducentésimo trigésimo primer pase: reemplaza a la vieja `grid` de una
+  // sola pieza (`display:'grid'` con `auto-fill`) — `filas` es el
+  // contenedor columna de las 2 filas fijas, `fila` es cada fila en sí.
+  // Las propiedades que necesitan cambiar en mobile (`flex-direction`,
+  // `align-items`, el `flex-grow` de cada tarjeta) NO van acá — un estilo
+  // inline de React siempre le gana a una media query de un `<style>`
+  // inyectado, así que esas viven SOLO en el CSS del final del archivo
+  // (clases `tc-filas`/`tc-fila`/`tc-card-normal`/`tc-card-hero`). Acá
+  // queda nada más el `gap` vertical entre las 2 filas, que no cambia con
+  // el ancho de pantalla.
+  // Ducentésimo trigésimo segundo pase: "reducir el espacio vertical entre
+  // la fila superior y la inferior, que se sienta más compacta" — gap
+  // 14→9.
+  filas: {
+    display: 'flex', flexDirection: 'column', gap: 9,
   },
+  fila: {},
   // Centésimo décimo noveno pase: la tarjeta deja de ser un rectángulo de
   // color con cinta diagonal — ahora ES el cartelito de madera (imagen de
   // fondo, `cartelFondo`) con el contenido superpuesto en las dos zonas
@@ -332,10 +455,56 @@ const estilos = {
   // misma proporción es lo que hace que el fondo se vea completo y sin
   // deformarse, sea cual sea el ancho real de columna que le toque en el
   // grid.
+  // Ducentésimo trigésimo primer pase: `width:'100%'` sacado a propósito —
+  // ahora el ancho de cada tarjeta lo determina el `flex-grow` de su clase
+  // CSS (`tc-card-normal`/`tc-card-hero`, ver el `<style>` del final), no
+  // un porcentaje fijo del contenedor. `aspectRatio` se mantiene: sigue
+  // siendo lo que hace que, sea cual sea el ancho que le toque a cada
+  // tarjeta (normal o héroe), el cartelito de fondo se vea completo y sin
+  // deformarse.
   card: {
     position: 'relative',
-    width: '100%',
     aspectRatio: '1 / 1',
+  },
+  // Ducentésimo trigésimo primer pase: badge flotante del pack héroe
+  // ("Mejor Valor"), pedido explícito del usuario en su brief además del
+  // nombre que ya muestra el letrero de madera. Vive por ENCIMA del borde
+  // superior de la tarjeta (`top` negativo) para no invadir ninguna de las
+  // zonas ya medidas a pixel sobre el cartelito.
+  badgeHero: {
+    position: 'absolute', top: -12, left: '50%', transform: 'translateX(-50%)',
+    zIndex: 3, whiteSpace: 'nowrap',
+    background: `linear-gradient(180deg, ${C.doradoClaro}, ${C.dorado})`,
+    color: C.chocolate, fontFamily: "'Fredoka', sans-serif", fontWeight: 800,
+    fontSize: 11, letterSpacing: 0.2, padding: '4px 11px', borderRadius: 999,
+    border: `2px solid ${C.doradoOscuro}`, boxShadow: '0 3px 0 rgba(0,0,0,0.25)',
+  },
+  // Ducentésimo trigésimo tercer pase: cinta diagonal de descuento (SOLO
+  // Inauguración) — reemplaza al banner de texto que iba arriba de todo el
+  // panel. Clavada en la esquina superior izquierda de la propia tarjeta
+  // (no flotando por fuera, como `badgeHero`) con un `left` negativo chico
+  // para que la rotación de -45° quede centrada justo sobre el vértice.
+  // Ducentésimo trigésimo quinto pase: el usuario reportó el texto "-65%
+  // OFF" muy chico dentro de la cinta — 11→15px, con un poco más de padding
+  // para que la cinta lo acompañe sin apretarlo.
+  // Ducentésimo trigésimo octavo pase: el usuario reportó que la cinta "se
+  // superpone un poco con el borde de la placa". Medido con PIL sobre
+  // `cartelito-madera-rojo.png`: el vértice achaflanado real de la placa
+  // (el corte a 45° donde termina el borde de madera) va de (110,50) a
+  // (75,98) sobre el lienzo de 500×500 — es decir, empieza recién a ~10-15%
+  // de inset, más adentro de lo que dejaba la cinta en su posición vieja.
+  // Se la corre un poco hacia arriba/izquierda (top 14→9, left -6→-11) para
+  // que quede apoyada sobre el vértice sin pisar el trazo del marco.
+  ribbonDescuento: {
+    position: 'absolute', top: 9, left: -11, zIndex: 4,
+    transform: 'rotate(-45deg)', transformOrigin: 'center',
+    background: `linear-gradient(180deg, ${C.crimsonVibrante}, ${C.crimsonOscuro})`,
+    border: `2px solid ${C.crimsonOscuro}`, padding: '4px 28px',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.35)',
+  },
+  ribbonDescuentoTexto: {
+    color: '#fff', fontFamily: "'Fredoka', sans-serif", fontWeight: 800,
+    fontSize: 15, letterSpacing: 0.3, whiteSpace: 'nowrap',
   },
   cartelFondo: {
     position: 'absolute', inset: 0, width: '100%', height: '100%',
@@ -525,7 +694,19 @@ const estilos = {
   // el mismo tamaño real de dibujo); `height` baja 55%→35% para que el
   // dibujo mantenga prácticamente el mismo tamaño real de antes (~22% de
   // la tarjeta) sobre la caja nueva, más alta — no se achica.
-  icono: { width: '76%', height: '35%', objectFit: 'contain' },
+  // Ducentésimo trigésimo primer pase: "agrandar monedas y cofres" (punto
+  // explícito del brief) — 76%→84% / 35%→40%, mismo criterio de siempre
+  // (porcentaje relativo a `zonaContenido`, no un px fijo).
+  // Ducentésimo trigésimo segundo pase: segunda revisión — "siguen
+  // viéndose un poco pequeñas... se pueden agrandar un 15-20% más" —
+  // 84%→92% / 40%→46%.
+  icono: { width: '92%', height: '46%', objectFit: 'contain' },
+  // Ducentésimo trigésimo octavo pase: el usuario notó que los packs 200 y
+  // 100 (los dos únicos con ilustración de "bolsa", vs. los cofres del
+  // resto de las tarjetas con tag/destacadas) se sienten "más pobres"
+  // visualmente al lado de esos cofres — se les da a esos dos, puntualmente,
+  // un poco más de tamaño de ícono para compensar sin tocar el resto.
+  iconoGrande: { width: '100%', height: '52%', objectFit: 'contain' },
   cantidadGrupo: { display: 'flex', flexDirection: 'column', alignItems: 'center' },
   // Centésimo vigésimo quinto pase: el usuario pidió agrandar "los textos
   // de los valores" ya que sobraba lugar — cantidad 22→24, etiqueta 12→13
@@ -605,8 +786,10 @@ const estilos = {
   // de los "textos de los valores" — con el fix de `zonaContenido` de
   // arriba este texto ya cae dentro del papel claro, así que agrandarlo no
   // lo empeora.
+  // Ducentésimo trigésimo octavo pase: "el precio tachado ($2.800) se lee
+  // un poco chico" — 15→16.5px.
   precioOriginal: {
-    fontSize: 15, fontWeight: 700, color: '#a89a90',
+    fontSize: 16.5, fontWeight: 700, color: '#a89a90',
     textDecoration: 'line-through', marginBottom: 3
   },
   // Centésimo décimo noveno pase: el precio final ES el botón de compra
@@ -618,35 +801,70 @@ const estilos = {
   // vigésimo primer pase: seguimos agrandando, pedido explícito del
   // usuario ("sigamos agrandando todo"). Centésimo vigésimo quinto pase:
   // 19→20px, último toque de la ronda de "agrandar los textos de valores".
+  // Ducentésimo trigésimo primer pase: "botones más altos y con más
+  // padding" (punto explícito del brief) — padding '8px 18px'→'12px 24px'.
+  // Ducentésimo trigésimo segundo pase: "en los packs chicos se sienten un
+  // poco pequeños... más altos y con más presencia" — padding
+  // '12px 24px'→'14px 28px', fontSize 20→21.
+  // Ducentésimo trigésimo cuarto pase: el botón de precio deja de ser un
+  // degradé CSS — usa los 3 botones ilustrados (píldora con relieve/brillo)
+  // que pasó el usuario, uno por color de tarjeta. El marco/sombra propios
+  // se sacan (el dibujo ya trae su propio relieve 3D) — solo queda el
+  // padding, que sigue determinando el ancho real del botón según el largo
+  // del precio (`backgroundSize:'100% 100%'` estira el dibujo para llenar
+  // esa caja, sea cual sea su ancho).
+  // Ducentésimo trigésimo quinto pase: segunda vuelta — el botón seguía
+  // "un poco achatado". Dos ajustes juntos: (1) el PNG en sí se recortó
+  // (ver boton-verde/rojo/amarillo.png) sacándole el aro blanco de
+  // sticker que traía alrededor de la píldora — el usuario pidió no
+  // agrandar ese aro blanco (achicarlo si se podía), así que en vez de
+  // agrandar la caja entera se achica primero la imagen fuente para que
+  // el aro ocupe menos del dibujo; (2) con esa imagen más ajustada
+  // (relación real ahora ~1.73:1), se sube el padding vertical otra vez
+  // (24→32) para terminar de acercar la caja a esa proporción, sin tocar
+  // el horizontal (ancho confirmado OK).
+  // Ducentésimo trigésimo sexto pase: tercera vuelta — (1) quedó un poco
+  // alto de más, se baja el padding vertical promedio (32→24); (2) el
+  // texto se veía por debajo del centro visual del botón (el dibujo de la
+  // píldora, con su bisel 3D, tiene el centro "óptico" más arriba que el
+  // centro geométrico de la caja) — en vez de padding simétrico, ahora
+  // arriba es más chico que abajo (18 vs 30) para correr el texto hacia
+  // arriba dentro de la misma caja.
   precioBoton: {
-    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 20,
-    border: `2px solid ${C.chocolate}`, borderRadius: 11, padding: '8px 18px',
-    cursor: 'pointer', boxShadow: '0 3px 0 rgba(0,0,0,0.2)',
+    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 21,
+    border: 'none', borderRadius: 999, padding: '18px 28px 30px',
+    cursor: 'pointer', backgroundSize: '100% 100%', backgroundRepeat: 'no-repeat',
+    backgroundPosition: 'center',
   },
   precioBotonDorado: {
-    background: `linear-gradient(180deg, ${C.doradoClaro}, ${C.dorado})`, color: C.chocolate,
+    backgroundImage: 'url(/assets/images/boton-amarillo.png)', color: C.chocolate,
   },
+  // Ducentésimo trigésimo octavo pase: "el botón del Mejor Valor podría
+  // tener un poco más de peso o un leve brillo para que invite más al
+  // clic" — un resplandor verde suave por fuera de la píldora (el
+  // `border-radius:999` de `precioBoton` ya hace que el box-shadow lo seep
+  // en forma de aro, no de caja).
   precioBotonVerde: {
-    background: `linear-gradient(180deg, ${C.verde}, ${C.verdeOscuro})`, color: '#fff',
+    backgroundImage: 'url(/assets/images/boton-verde.png)', color: '#fff',
+    boxShadow: `0 0 14px rgba(61,221,107,0.65), 0 3px 0 rgba(0,0,0,0.15)`,
   },
   precioBotonRojo: {
-    background: `linear-gradient(180deg, ${C.crimson}, ${C.crimsonOscuro})`, color: '#fff',
+    backgroundImage: 'url(/assets/images/boton-rojo.png)', color: '#fff',
   },
   precioBotonDeshabilitado: {
     opacity: 0.6, cursor: 'default',
   },
-  bannerPromo: {
-    background: `linear-gradient(180deg, ${C.crimson}, ${C.crimsonOscuro})`, color: '#fff',
-    border: `2px solid ${C.crimsonOscuro}`, borderRadius: 14,
-    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 13.5,
-    textAlign: 'center', padding: '10px 12px', marginBottom: 12,
-    boxShadow: '0 3px 0 rgba(0,0,0,0.2)'
-  },
   // Centésimo décimo cuarto pase: disclaimer más chico y menos protagonista,
   // punto 7 de la lista del usuario (antes: 11.5px, opacity 0.85).
+  // Ducentésimo trigésimo primer pase: "el texto legal debe ser más
+  // pequeño y discreto" (brief nuevo) — 10px→9px, opacity 0.65→0.55, mismo
+  // criterio que ya usa la versión nativa (ver tienda.tsx, notaPie).
+  // Ducentésimo trigésimo octavo pase: "sigue siendo bastante largo y se
+  // lee con dificultad" — 9→8.5px, opacity 0.55→0.5 (ver también el `<br/>`
+  // en el JSX que lo parte en 2 líneas).
   notaPie: {
-    fontSize: 10, color: C.crema, opacity: 0.65, textAlign: 'center',
-    margin: '12px 10px 0', lineHeight: 1.35
+    fontSize: 8.5, color: C.crema, opacity: 0.5, textAlign: 'center',
+    margin: '12px 10px 0', lineHeight: 1.5
   },
 };
 
@@ -664,4 +882,67 @@ if (typeof document !== 'undefined' && !document.getElementById('tienda-hover-bo
     .tc-precio-boton:active { transform: translateY(0); filter: brightness(0.95); }
   `;
   document.head.appendChild(style);
+}
+
+// Ducentésimo trigésimo primer pase: layout responsivo de las 2 filas de
+// tarjetas (ver `estilos.filas`/`estilos.fila`/`estilos.card` y el JSX más
+// arriba) — vive en un `<style>` inyectado, mismo patrón que el hover de
+// arriba, porque un estilo inline de React siempre gana por sobre una
+// media query externa: si `flex-grow`/`flex-direction` se hubieran puesto
+// inline, la versión mobile no podría pisarlos.
+// - Desktop (por defecto): cada fila es una fila flex de 3 tarjetas.
+//   `tc-card-hero` (Mejor Valor) tiene más `flex-grow` que sus compañeras
+//   — como la tarjeta es cuadrada, ese ~18% de ancho de más también la
+//   hace más alta; con `align-items:flex-end` en la fila, las tarjetas
+//   sin ese `flex-grow` extra quedan alineadas por abajo y la héroe
+//   sobresale hacia arriba. El `filter: drop-shadow` le da el "más
+//   sombra/brillo" pedido sin dibujar un borde rectangular sobre un
+//   cartelito que no lo es.
+//   Ducentésimo trigésimo segundo pase: `tc-card-secundario` (SOLO
+//   Inauguración/500, las 2 compañeras de fila del héroe) agregado con un
+//   `flex-grow` intermedio (1.09, entre el 1 de `tc-card-normal` y el
+//   1.18 del héroe) — el usuario reportó que esas 2 se sentían
+//   "achicadas y desbalanceadas" al lado del héroe; ahora crecen un poco
+//   también, sin competir con el protagonismo del héroe.
+// - Mobile (`max-width:680px`, mismo breakpoint que ya usa el resto de la
+//   app en otras pantallas): cada fila pasa a apilarse en columna y las
+//   tarjetas ocupan el ancho completo — pedido explícito del usuario
+//   ("lista vertical, no una sola tarjeta con dots"). El `order` en la
+//   fila de arriba reordena SOLO esos 3 hijos (Mejor Valor primero,
+//   Inauguración segundo, 500 Monedas queda tercero sin necesidad de
+//   `order` propio) — la fila de abajo (200/100/50) ya estaba en el orden
+//   correcto y sigue después de la fila de arriba en el flujo normal, así
+//   que juntando las 2 filas el orden final en mobile queda exactamente:
+//   Mejor Valor → Inauguración → 500 → 200 → 100 → 50.
+if (typeof document !== 'undefined' && !document.getElementById('tienda-grid-responsive')) {
+  const styleGrid = document.createElement('style');
+  styleGrid.id = 'tienda-grid-responsive';
+  styleGrid.textContent = `
+    .tc-fila { display: flex; gap: 14px; align-items: flex-end; }
+    .tc-fila.tc-fila-inferior { gap: 10px; }
+    .tc-card-normal { flex: 1 1 0; min-width: 0; }
+    .tc-card-secundario { flex: 1.09 1.09 0; min-width: 0; }
+    .tc-card-hero {
+      flex: 1.18 1.18 0; min-width: 0; position: relative; z-index: 2;
+      filter: drop-shadow(0 10px 18px rgba(0,0,0,0.4)) drop-shadow(0 0 12px rgba(255,182,39,0.55));
+    }
+    /* Ducentesimo cuadragesimo primer pase: a un ancho de ventana angosto
+       (justo por encima de 680px) la grilla de 3 columnas seguia activa
+       pero las tarjetas no tienen un ancho minimo propio (a proposito, ver
+       tc-card-normal arriba), asi que se seguian achicando sin limite y el
+       contenido interno (fuentes/paddings en px fijos) dejaba de entrar,
+       todo se veia superpuesto. En vez de rehacer las medidas a pixel para
+       que escalen fluido en cualquier ancho intermedio, se sube el punto de
+       corte (680 a 900px) para que la vista de lista apilada de abajo (que
+       ya funciona bien) entre en juego antes de esa zona angosta. */
+    @media (max-width: 900px) {
+      .tc-filas { gap: 14px; }
+      .tc-fila { flex-direction: column; align-items: stretch; gap: 14px; }
+      .tc-card-normal, .tc-card-secundario, .tc-card-hero { flex: 1 1 auto; width: 100%; }
+      .tc-card-pack-800 { order: -2; }
+      .tc-card-pack-inauguracion { order: -1; }
+      .tc-fila.tc-fila-inferior { gap: 14px; }
+    }
+  `;
+  document.head.appendChild(styleGrid);
 }

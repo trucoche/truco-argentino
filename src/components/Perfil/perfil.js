@@ -3,6 +3,7 @@ import CambiarFondoModal from './CambiarFondoModal';
 import PantallaCarga from '../PantallaCarga/PantallaCarga';
 import { useToast } from '../../contexts/ToastContext';
 import { API_URL as BASE_URL } from '../../config';
+import { rangoUi } from './rangosUi';
 
 const API_BASE = `${BASE_URL}/api`;
 
@@ -114,6 +115,13 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
     'Authorization': `Bearer ${token}`
   };
   const { mostrarToast } = useToast();
+
+  // Pase 313: anillo ilustrado del rango alrededor de la foto de perfil. El aro
+  // mide siempre TAM_ANILLO (el layout no cambia entre rangos) y la foto se
+  // ajusta al agujero de cada aro (`hueco`, ver rangosUi.js).
+  const rangoAssets = rangoUi(usuario?.rango);
+  const TAM_ANILLO = 140;
+  const diamAvatar = Math.round(TAM_ANILLO * rangoAssets.hueco) + 2;
 
   // Centésimo pase: fondo de perfil personalizable (foto propia, cuesta
   // monedas). El modal hace todo el trabajo (recorte + POST) y solo avisa
@@ -290,7 +298,7 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
                   ...(usuario?.fondo_perfil_url ? estilos.encabezadoFilaConFondo : {}),
                 }}
               >
-                <div style={estilos.avatarWrap}>
+                <div style={{ ...estilos.avatarWrap, width: TAM_ANILLO, height: TAM_ANILLO }}>
                   {/* Centésimo cuarto pase: si el usuario tiene un fondo de
                       perfil comprado, se ve también detrás del avatar (los
                       personajes ilustrados tienen fondo transparente en el
@@ -298,6 +306,9 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
                   <div
                     style={{
                       ...estilos.avatarCirculo,
+                      position: 'absolute',
+                      left: (TAM_ANILLO - diamAvatar) / 2, top: (TAM_ANILLO - diamAvatar) / 2,
+                      width: diamAvatar, height: diamAvatar, border: 'none',
                       ...(usuario?.fondo_perfil_url ? {
                         backgroundImage: `url(${usuario.fondo_perfil_url})`,
                         backgroundSize: 'cover',
@@ -307,6 +318,11 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
                   >
                     <img src={avatarSrcDe(usuario)} alt="Avatar" style={estilos.avatarImg} />
                   </div>
+                  <img
+                    src={rangoAssets.anillo}
+                    alt=""
+                    style={{ position: 'absolute', left: 0, top: 0, width: TAM_ANILLO, height: TAM_ANILLO, pointerEvents: 'none' }}
+                  />
                   {/* Centésimo cuadragésimo séptimo pase: el emoji 📷 se
                       reemplaza por el ícono de cámara ilustrado. */}
                   <button
@@ -508,7 +524,7 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
               que además va a ir reemplazando el emoji 🎖️ por logos
               propios de cada rango a futuro. */}
           <div style={estilos.panelRango}>
-            <div style={estilos.rangoIcono}>🎖️</div>
+            <img src={rangoAssets.logo} alt={usuario?.rango?.nombre || 'Rango'} style={estilos.rangoLogo} />
             <div style={estilos.rangoTitulo}>
               {usuario?.rango?.esTop500
                 ? `${usuario.rango.nombre} · #${usuario.rango.posicion ?? '—'}`
@@ -685,7 +701,7 @@ const estilos = {
     alignItems: 'center', textAlign: 'center', gap: 6,
     boxShadow: '0 4px 0 rgba(0,0,0,0.18)'
   },
-  rangoIcono: { fontSize: 46, lineHeight: 1 },
+  rangoLogo: { width: 84, height: 84, objectFit: 'contain', display: 'block' },
   rangoTitulo: { fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 15.5, color: C.chocolate, marginTop: 4 },
   rangoSubtitulo: { fontSize: 12.5, color: C.chocolate, opacity: 0.85, lineHeight: 1.4 },
   rangoProgresoBloque: { width: '100%', marginTop: 6 },

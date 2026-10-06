@@ -47,7 +47,7 @@ const TIEMPO_OPCIONES = [
 ];
 
 const C = {
-  verde: '#2D9B4F', verdeOscuro: '#1f7a3c',
+  verde: '#2D9B4F', verdeOscuro: '#1f7a3c', verdeProfundo: '#163f24',
   crimson: '#E8483A', crimsonOscuro: '#c2352a',
   dorado: '#FFB627', doradoClaro: '#FFD668', doradoOscuro: '#C9860E',
   celeste: '#4FB3E8',
@@ -55,7 +55,14 @@ const C = {
   // Cuadragésimo octavo pase — punto 2 del feedback de diseño ("sistema de
   // tarjetas más limpio"): fondo de tarjeta más sutil que el crema
   // saturado de antes, para que las tarjetas no compitan tanto entre sí.
-  cremaSutil: '#FFFCF6'
+  cremaSutil: '#FFFCF6',
+  // Pase de rediseño estructural (siguiendo el mismo criterio ya aplicado
+  // en Torneos/Ranking/Historial/Chat Global): tonos de madera+bronce
+  // "de taberna" para reemplazar las cajas blancas/crema planas de esta
+  // pantalla, que es la pantalla central del juego.
+  maderaClara: '#6b4a34', maderaMedia: '#4a3226', maderaOscura: '#2a1c14',
+  remacheClaro: '#f0d9a0', remache: '#c9973e', remacheOscuro: '#7a5322',
+  negroPulido: '#1a1410',
 };
 
 function Filigrana() {
@@ -348,7 +355,20 @@ useEffect(() => {
               <span className="ts-banner-texto">{bannerTexto}</span>
             </button>
           )}
-          <div style={{ ...estilos.panelJugarYa, margin: 0, flex: '2 1 320px' }}>
+          {/* Pase de rediseño estructural: "Jugar ya" — el CTA principal de
+              la pantalla central del juego — pasa a vivir dentro de una
+              gran placa de madera de caoba con marco biselado oscuro y
+              remaches de bronce en las esquinas (mismo criterio que
+              `destacadoPanelExterior` de Torneos.js), envolviendo el fondo
+              de paño/cuero que ya tenía. Antes era una sola caja con borde
+              chocolate fino — ahora tiene la misma "unidad estructural" de
+              placa de taberna que el resto de la app. */}
+          <div style={{ ...estilos.panelJugarYaExterior, margin: 0, flex: '2 1 320px' }}>
+            <span style={{ ...estilos.remache, top: 10, left: 10 }} />
+            <span style={{ ...estilos.remache, top: 10, right: 10 }} />
+            <span style={{ ...estilos.remache, bottom: 10, left: 10 }} />
+            <span style={{ ...estilos.remache, bottom: 10, right: 10 }} />
+            <div style={estilos.panelJugarYa}>
             <div style={{ ...estilos.panelTitleClaro, display: 'flex', alignItems: 'center', gap: 8 }}>
               <img src="/assets/images/icono-rayo.png" alt="" style={estilos.iconoRayo} />
               Jugar ya
@@ -372,7 +392,15 @@ useEffect(() => {
                     <img
                       src={modoRapido === m ? ICONOS_MODO_SELECTOR[m].activo : ICONOS_MODO_SELECTOR[m].inactivo}
                       alt=""
-                      style={estilos.iconoModoCompacto}
+                      style={{
+                        ...estilos.iconoModoCompacto,
+                        // El ícono "inactivo" está pintado en verde oscuro
+                        // (pensado para el fondo claro semitransparente de
+                        // antes) — contra el cuero casi negro nuevo se
+                        // perdía por completo; este filtro lo levanta sin
+                        // necesitar una 4ta variante de ícono por modo.
+                        ...(modoRapido !== m ? { filter: 'brightness(2.4) saturate(0.7)' } : {}),
+                      }}
                     />
                     {m}
                   </button>
@@ -387,11 +415,23 @@ useEffect(() => {
                 </span>
               )}
             </button>
+            </div>
           </div>
           </div>
 
-      <div style={estilos.panelesGrid}>
-      <div ref={panelCrearSalaRef} style={{ ...estilos.panel, marginBottom: 0 }}>
+      {/* Pase de rediseño estructural: "Crear sala"/"Unirse con
+          código"/"Torneo en curso" pasan a ser 3 placas de madera+
+          pergamino de idéntica proporción (mismo marco, mismo padding,
+          remaches en las 4 esquinas) en vez de 3 cajas blancas/crema
+          desalineadas de distinto tamaño — antes "Torneo en curso" era
+          notablemente más chica (variante "compacta") que las otras 2. */}
+      <div style={estilos.filaAccesosRapidos}>
+      <div ref={panelCrearSalaRef} style={estilos.accesoCardExterior}>
+        <span style={{ ...estilos.remache, top: 8, left: 8 }} />
+        <span style={{ ...estilos.remache, top: 8, right: 8 }} />
+        <span style={{ ...estilos.remache, bottom: 8, left: 8 }} />
+        <span style={{ ...estilos.remache, bottom: 8, right: 8 }} />
+        <div style={estilos.accesoCard}>
         <Filigrana />
         {/* Centésimo cuadragésimo séptimo pase: el emoji 🃏 (joker) que
             acompañaba "Crear sala" se reemplaza por el ícono ilustrado
@@ -401,7 +441,7 @@ useEffect(() => {
         </div>
 
         {!creandoSala ? (
-          <button onClick={() => setCreandoSala(true)} style={estilos.btnSecondary}>+ Nueva sala</button>
+          <button onClick={() => setCreandoSala(true)} style={estilos.btnNuevaSala}>+ Nueva sala</button>
         ) : (
           <form onSubmit={handleCrearSala}>
             <div style={estilos.fieldRow}>
@@ -496,26 +536,36 @@ useEffect(() => {
             </div>
           </form>
         )}
+        </div>
       </div>
 
       {/* Cuadragésimo octavo pase — punto 2: "Unirse con código" se movió
           para quedar justo al lado de "Crear sala" (antes estaba después
           de Torneo/Preview) — agrupa las dos formas de entrar a una
           partida en la misma zona lógica de la grilla. */}
-      <div style={{ ...estilos.panelSecundario, marginBottom: 0 }}>
+      <div style={estilos.accesoCardExterior}>
+        <span style={{ ...estilos.remache, top: 8, left: 8 }} />
+        <span style={{ ...estilos.remache, top: 8, right: 8 }} />
+        <span style={{ ...estilos.remache, bottom: 8, left: 8 }} />
+        <span style={{ ...estilos.remache, bottom: 8, right: 8 }} />
+        <div style={estilos.accesoCard}>
       {/* Centésimo cuadragésimo séptimo pase: el emoji 🔑 se reemplaza por
           la llave ilustrada — mismo criterio en "Sala privada creada" más
           abajo. */}
       <div style={estilos.panelTitle}>
         <img src="/assets/images/icono-sala-privada.png" alt="" style={estilos.iconoPanelTitle} /> Unirse con código
       </div>
+        {/* Pase de rediseño estructural: campo "ahuecado" estilo cuero
+            oscuro (antes blanco liso, igual que cualquier <input> de la
+            app) — mismo criterio "hundido" que `tabInactiva` de
+            Torneos.js (sombra interior en vez de relieve). */}
         <div style={{ display: 'flex', gap: 10 }}>
           <input
             type="text"
             placeholder="Código de sala"
             value={codigoUnirse}
             onChange={(e) => setCodigoUnirse(e.target.value.toUpperCase())}
-            style={{ ...estilos.input, flex: 1 }}
+            style={{ ...estilos.inputCuero, flex: 1 }}
           />
           <button
             onClick={() => codigoUnirse && handleUnirse(codigoUnirse)}
@@ -524,16 +574,29 @@ useEffect(() => {
             Unirse
           </button>
         </div>
+        </div>
       </div>
 
-      {/* Cuadragésimo octavo pase — punto 2: "Torneo en curso" y "Preview
-          de mesa" pasan a la variante compacta (panelCompacto/
-          panelTitleCompacta) para sentirse más secundarios frente a
-          "Crear sala"/"Unirse con código". */}
-      <div style={{ ...estilos.panelSecundario, ...estilos.panelCompacto, marginBottom: 0 }}>
-      <div style={estilos.panelTitleCompacta}>
-        <img src="/assets/images/trofeo.png" alt="" style={estilos.iconoPanelTitleCompacta} /> Torneo en curso
+      {/* Cuadragésimo octavo pase — punto 2 (superado por el pase de
+          rediseño estructural siguiente): "Torneo en curso" pasa a usar la
+          misma placa de idéntica proporción que "Crear sala"/"Unirse con
+          código" — antes era la variante "compacta", notablemente más
+          chica. Se agrega un indicador "Partida esperando" (reloj de
+          arena) para que se entienda de un vistazo qué hace este botón
+          antes de leer el texto de ayuda. */}
+      <div style={estilos.accesoCardExterior}>
+        <span style={{ ...estilos.remache, top: 8, left: 8 }} />
+        <span style={{ ...estilos.remache, top: 8, right: 8 }} />
+        <span style={{ ...estilos.remache, bottom: 8, left: 8 }} />
+        <span style={{ ...estilos.remache, bottom: 8, right: 8 }} />
+        <div style={estilos.accesoCard}>
+      <div style={estilos.panelTitle}>
+        <img src="/assets/images/trofeo.png" alt="" style={estilos.iconoPanelTitle} /> Torneo en curso
       </div>
+        <div style={estilos.indicadorEsperando}>
+          <img src="/assets/images/reloj-arena.png" alt="" style={estilos.iconoIndicadorEsperando} />
+          Partida esperando
+        </div>
         <div style={estilos.hint}>¿Tenés una partida de torneo esperando? Buscala acá.</div>
         {/* Pase siguiente: el emoji 🔍 se reemplaza por la lupa ilustrada
             que pasó el usuario — mismo criterio que iconoRayoBoton (alto
@@ -547,14 +610,15 @@ useEffect(() => {
           <img src="/assets/images/icono-lupa.png" alt="" style={estilos.iconoLupaBoton} />
           <span style={estilos.textoBtnCrimson}>Buscar mi partida activa</span>
         </button>
+        </div>
+      </div>
       </div>
 
+      <div style={estilos.filaSecundaria}>
       {/* Nonagésimo noveno pase: achicada más todavía que el resto de los
-          paneles "compactos" (Torneo en curso usa el mismo panelCompacto
-          pero se dejó como está — esto es solo dev, nunca lo ve un usuario
-          real) — padding, título y botones más chicos, estilos propios en
-          vez de reusar panelTitleCompacta/btnCard para no afectar a
-          "Torneo en curso". */}
+          paneles "compactos" — esto es solo dev, nunca lo ve un usuario
+          real, así que se deja con su propio estilo neutro de siempre en
+          vez del rediseño de arriba. */}
       {process.env.NODE_ENV === 'development' && (
         <div style={{ ...estilos.panelSecundario, ...estilos.panelCompacto, ...estilos.panelPreviewDev, marginBottom: 0 }}>
           <div style={estilos.panelTitlePreviewDev}>🛠️ Preview de mesa (dev)</div>
@@ -569,13 +633,30 @@ useEffect(() => {
           <MisionesCard token={token} personaje={usuario?.personaje} onMisionReclamada={onMisionReclamada} />
 </div>
 
+      {/* Pase de rediseño estructural: "Salas disponibles" pasa a vivir
+          dentro de una placa de madera alargada tipo "tablero de anuncios
+          de pulpería" (mismo criterio que `panelExterior` de Torneos.js)
+          en vez de vivir suelta sobre el fondo verde — mismo marco que ya
+          envuelve el resto de los módulos de esta pantalla. */}
+      <div style={estilos.tableroExterior}>
+        <span style={{ ...estilos.remache, top: 10, left: 10 }} />
+        <span style={{ ...estilos.remache, top: 10, right: 10 }} />
+        <span style={{ ...estilos.remache, bottom: 10, left: 10 }} />
+        <span style={{ ...estilos.remache, bottom: 10, right: 10 }} />
+      <div style={estilos.tableroInterior}>
       <div style={estilos.sectionTitle}>🎲 Salas disponibles</div>
       {cargando ? (
   // Centésimo cuadragésimo sexto pase: ver PantallaCarga.
   <PantallaCarga completa={false} conLogo={false} />
 ) : salas.length === 0 ? (
+  // Pase de rediseño estructural: se saca el marco punteado plano y se
+  // pone al personaje chibi (mismo estilo ilustrado que ya usa la tarjeta
+  // de Misiones — no hay todavía un dibujo de personaje saludando/en pose
+  // amigable dedicado, así que se reusa el más parecido que existe) en
+  // vez del ícono del libro, que ya se usa como ícono de "Crear sala" más
+  // arriba.
   <div style={estilos.emptyState}>
-    <img src="/assets/images/icono-crear-sala.png" alt="" style={estilos.emptyStateIconoImg} />
+    <img src="/assets/images/mision-gaucho.png" alt="" style={estilos.emptyStatePersonaje} />
     <div style={estilos.emptyStateTitulo}>Todavía no hay salas abiertas</div>
     <div style={estilos.emptyStateTexto}>Sé el primero en armar una mesa — elegí el modo y esperá rivales.</div>
     <button onClick={irACrearSala} style={estilos.btnPrimary}>+ Crear sala</button>
@@ -586,7 +667,8 @@ useEffect(() => {
           const completa = sala.jugadores_count >= sala.jugadores_totales;
           const iconoModoSrc = ICONOS_MODO[sala.modo];
           return (
-            <div key={sala.id} style={estilos.salaCard}>
+            <div key={sala.id} style={estilos.salaCardExterior}>
+              <div style={estilos.salaCard}>
               <div style={estilos.salaHeader}>
                 <div style={estilos.salaTitulo}>
                   {iconoModoSrc
@@ -619,11 +701,14 @@ useEffect(() => {
               >
                 {completa ? 'Completa' : 'Unirse'}
               </button>
+              </div>
             </div>
           );
               })}
         </div>
       )}
+      </div>
+      </div>
 
       {codigoPrivadoCreado && (
         <div style={estilos.modalOverlay}>
@@ -726,6 +811,70 @@ const estilos = {
     background: '#ffe0dd', border: `2px solid ${C.crimson}`, color: C.crimsonOscuro,
     borderRadius: 10, padding: '8px 12px', marginBottom: 12, fontWeight: 700, fontSize: 15
   },
+  // Pase de rediseño estructural: remache de bronce (mismo `radial-gradient`
+  // que ya usan Torneos/Ranking/Historial/Chat Global) — un solo punto de
+  // luz reusado en las esquinas de todos los marcos de madera nuevos de
+  // esta pantalla.
+  remache: {
+    position: 'absolute', width: 13, height: 13, borderRadius: '50%',
+    background: `radial-gradient(circle at 35% 30%, ${C.remacheClaro} 0%, ${C.remache} 45%, ${C.remacheOscuro} 78%, #3a2610 100%)`,
+    boxShadow: '0 1px 2px rgba(0,0,0,0.65), inset 0 1px 1px rgba(255,255,255,0.4)',
+    zIndex: 2,
+  },
+  // Placa de madera exterior (mismo criterio que `panelExterior`/
+  // `destacadoPanelExterior` de Torneos.js) para "Crear sala"/"Unirse con
+  // código"/"Torneo en curso" — las 3 comparten exactamente el mismo
+  // marco/padding para que se vean como 3 placas de idéntica proporción,
+  // a diferencia de antes (Torneo en curso usaba una variante "compacta"
+  // visiblemente más chica que las otras 2).
+  accesoCardExterior: {
+    position: 'relative',
+    background: `linear-gradient(160deg, ${C.maderaClara} 0%, ${C.maderaMedia} 55%, ${C.maderaOscura} 100%)`,
+    border: `3px solid ${C.negroPulido}`, borderRadius: 20, padding: 9,
+    boxShadow: [
+      'inset 0 2px 0 rgba(255,255,255,0.10)',
+      'inset 0 -4px 10px rgba(0,0,0,0.5)',
+      `0 8px 0 ${C.negroPulido}`,
+      '0 16px 26px rgba(0,0,0,0.4)',
+    ].join(', '),
+  },
+  accesoCard: {
+    position: 'relative', overflow: 'hidden',
+    background: [
+      'radial-gradient(ellipse at 20% 25%, rgba(210,182,130,0.4) 0%, transparent 50%)',
+      'radial-gradient(ellipse at 82% 75%, rgba(190,160,115,0.35) 0%, transparent 55%)',
+      `linear-gradient(180deg, ${C.cremaSutil}, ${C.crema})`,
+    ].join(', '),
+    borderRadius: 13, padding: '16px 16px 18px', height: '100%', boxSizing: 'border-box',
+    boxShadow: 'inset 0 4px 14px rgba(74,44,42,0.28), inset 0 -3px 10px rgba(74,44,42,0.22), inset 0 0 0 2px rgba(0,0,0,0.08)',
+  },
+  filaAccesosRapidos: {
+    display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+    gap: 16, marginBottom: 16, alignItems: 'stretch',
+  },
+  filaSecundaria: {
+    display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+    gap: 16, marginBottom: 16, alignItems: 'start',
+  },
+  // "Campo ahuecado estilo cuero oscuro" para el código de sala — mismo
+  // criterio "hundido" (sombra interior en vez de relieve) que
+  // `tabInactiva` de Torneos.js, en vez del input blanco liso genérico.
+  inputCuero: {
+    width: '100%', fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 16,
+    letterSpacing: 1, color: C.crema, background: 'linear-gradient(180deg, #2a1c12, #1a100a)',
+    border: `2px solid ${C.negroPulido}`, borderRadius: 12, padding: '9px 11px',
+    boxShadow: 'inset 0 3px 6px rgba(0,0,0,0.6), inset 0 -1px 0 rgba(255,255,255,0.05)',
+  },
+  // Indicador "Partida esperando" — mismo criterio visual que los chips
+  // de las tarjetas de sala más abajo, para anticipar de un vistazo qué
+  // hace el botón de "Torneo en curso" sin tener que leer el texto.
+  indicadorEsperando: {
+    display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 10,
+    fontSize: 12.5, fontWeight: 800, color: C.doradoOscuro, textTransform: 'uppercase',
+    background: '#f5ead9', border: `1.5px solid ${C.doradoOscuro}55`, borderRadius: 8,
+    padding: '4px 10px',
+  },
+  iconoIndicadorEsperando: { width: 15, height: 15, objectFit: 'contain' },
   // Cuadragésimo octavo pase — punto 2: bordes más finos (4→2px), radio
   // unificado (20→18, mismo valor que salaCard/modalBox más abajo), fondo
   // más sutil (crema→cremaSutil) y sombra menos marcada (6px/0.25 alpha →
@@ -734,13 +883,11 @@ const estilos = {
   // Quincuagésimo tercer pase — punto 2, continuación: textura de papel
   // sutil tileada en vez del cremaSutil llano — `backgroundColor` queda
   // como respaldo (se ve un instante mientras carga la imagen).
-  panel: {
-    backgroundColor: C.cremaSutil,
-    backgroundImage: 'url(/assets/images/textura-tarjeta.png)', backgroundRepeat: 'repeat',
-    border: `2px solid ${C.chocolate}`, borderRadius: 18,
-    boxShadow: '0 3px 0 rgba(0,0,0,0.15)', padding: '18px 18px 20px',
-    marginBottom: 16, position: 'relative', overflow: 'hidden'
-  },
+  // Pase de rediseño estructural: `panel` (usado antes solo por "Crear
+  // sala") quedó sin uso — "Crear sala"/"Unirse con código"/"Torneo en
+  // curso" ahora comparten `accesoCardExterior`/`accesoCard`. Se deja
+  // `panelSecundario`/`panelCompacto`/`panelPreviewDev` porque "Preview de
+  // mesa (dev)" todavía los usa.
   panelSecundario: {
     backgroundColor: C.cremaSutil,
     backgroundImage: 'url(/assets/images/textura-tarjeta.png)', backgroundRepeat: 'repeat',
@@ -755,18 +902,16 @@ const estilos = {
   panelCompacto: {
     padding: '12px 14px 14px'
   },
-  panelTitleCompacta: { fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 18, color: C.chocolate, marginBottom: 8 },
-  // Ícono del trofeo en el título de "Torneo en curso" (mismo asset que ya
-  // usa la pestaña "Torneos" del menú) — más chico que iconoPanelTitle
-  // porque acompaña el título compacto (18 vs 22px).
-  iconoPanelTitleCompacta: { width: 24, height: 24, objectFit: 'contain', verticalAlign: 'middle', marginRight: 4, marginBottom: 4 },
   // Centésimo cuadragésimo séptimo pase: íconos ilustrados que reemplazan
   // los emojis 🃏/🔑/🔒 en los títulos de "Crear sala"/"Unirse con
   // código"/"Sala privada creada".
   // Pase siguiente: agrandados otra vez a pedido del usuario ("hay que
   // agrandarlas para que se noten un poco más los detalles").
+  // Pase de rediseño estructural: "Torneo en curso" pasa a usar el mismo
+  // `panelTitle`/`iconoPanelTitle` que "Crear sala"/"Unirse con código"
+  // (antes la variante compacta) — las 3 tarjetas ya comparten el mismo
+  // marco/proporción, así que comparten también el mismo tamaño de título.
   iconoPanelTitle: { width: 34, height: 34, objectFit: 'contain', verticalAlign: 'middle', marginRight: 5, marginBottom: 5 },
-  emptyStateIconoImg: { width: 64, height: 64, objectFit: 'contain' },
   // Nonagésimo noveno pase — "Preview de mesa (dev)" se achica más todavía
   // que panelCompacto (nunca lo ve un usuario real, así que gana espacio
   // sin afectar a "Torneo en curso", que sigue usando panelCompacto solo).
@@ -813,25 +958,26 @@ const estilos = {
   opcionBtnRecomendada: {
     borderColor: C.doradoOscuro
   },
-  // Cuadragésimo séptimo pase: variante compacta del selector de modo,
-  // solo para el selector de "Jugar ya" (más chico + con ícono, a pedido
-  // del punto 1 del feedback de diseño) — no toca el selector de Modo/
-  // Puntos/Tiempo de "Crear sala", que sigue usando opcionBtn normal.
+  // Pase de rediseño estructural: selector de modo de "Jugar ya" con
+  // relieve 3D real — el inactivo pasa de un semitransparente plano a
+  // "cuero oscuro hundido" (sombra interior, mismo criterio que
+  // `tabInactiva` de Torneos.js) y el activo pasa a madera clara/dorado
+  // con borde negro grueso y escalón duro, en vez del dorado plano con
+  // solo un aro de brillo — pedido explícito: que los 3 botones "transmitan
+  // la sensación de botones de juego en relieve", no una caja con bordes
+  // grises simples.
   opcionBtnCompacta: {
     flex: 1, minWidth: 44,
     fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 13,
-    color: C.crema, background: 'rgba(255,255,255,0.14)', border: '2px solid rgba(255,248,237,0.5)',
-    borderRadius: 10, padding: '6px 4px', cursor: 'pointer', textAlign: 'center',
-    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1
+    color: 'rgba(255,248,237,0.6)', background: 'linear-gradient(180deg, #2a1c12, #1a100a)',
+    border: `2px solid ${C.negroPulido}`, borderRadius: 10, padding: '6px 4px', cursor: 'pointer', textAlign: 'center',
+    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1,
+    boxShadow: 'inset 0 3px 6px rgba(0,0,0,0.6), inset 0 -1px 0 rgba(255,255,255,0.05)',
   },
-  // Sexagésimo pase — "leve brillo interior o borde interno suave más
-  // claro" pedido por el usuario para el estado activo: se agrega un
-  // inset con un aro blanco translúcido pegado al borde + un brillo
-  // superior más difuso, además del "escalón" de siempre (0 2px 0 dorado
-  // oscuro) que ya tenían todos los botones activos de la app.
   opcionBtnCompactaActiva: {
-    background: C.dorado, color: C.chocolate, borderColor: C.doradoOscuro,
-    boxShadow: `0 2px 0 ${C.doradoOscuro}, inset 0 0 0 1.5px rgba(255,255,255,0.4), inset 0 2px 4px rgba(255,255,255,0.55)`
+    background: `linear-gradient(160deg, ${C.doradoClaro} 0%, ${C.dorado} 100%)`, color: C.chocolate,
+    border: '2px solid #000',
+    boxShadow: `0 3px 0 #000, inset 0 1px 0 rgba(255,255,255,0.5)`,
   },
   badgeRecomendada: {
     fontSize: 10, fontWeight: 800, color: C.doradoOscuro, textTransform: 'uppercase',
@@ -878,11 +1024,17 @@ const estilos = {
   },
   checkboxRow: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 },
   checkbox: { width: 20, height: 20, accentColor: C.crimson },
+  // Pase de rediseño estructural: pill 3D plano en vez de la caja
+  // redondeada con borde chocolate de antes — mismo criterio ya aplicado
+  // en Torneos.js (degradé vertical simple + contorno negro grueso +
+  // sombra dura inferior). Se usa para "Unirse" (Unirse con código),
+  // "✓ Crear sala"/"Crear por 1 🪙" (Crear sala), "+ Crear sala" (estado
+  // vacío) y los botones del modal de sala creada.
   btnPrimary: {
-    fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 17,
-    background: `linear-gradient(180deg, ${C.doradoClaro}, ${C.dorado})`, color: C.chocolate,
-    border: `3px solid ${C.chocolate}`, borderRadius: 14, padding: '12px 20px',
-    boxShadow: `0 5px 0 ${C.doradoOscuro}`, cursor: 'pointer'
+    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 17,
+    background: 'linear-gradient(180deg, #FFD147 0%, #E69D00 100%)', color: C.chocolate,
+    border: '2.5px solid #000', borderRadius: 999, padding: '12px 20px',
+    boxShadow: '0 5px 0 #000', cursor: 'pointer'
   },
   btnSecondary: {
     fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 17,
@@ -890,11 +1042,37 @@ const estilos = {
     borderRadius: 14, padding: '12px 20px', boxShadow: '0 5px 0 rgba(74,44,42,0.35)',
     cursor: 'pointer', width: '100%'
   },
+  // "+ Nueva sala" — verde esmeralda, mismo criterio que `btnNuevoTorneo`
+  // de Torneos.js (antes reusaba `btnSecondary`, neutro/crema — el pedido
+  // explícito es que sea un botón 3D de acción, no una caja neutra).
+  btnNuevaSala: {
+    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 17, color: '#fff',
+    background: 'linear-gradient(180deg, #2ECC71 0%, #179B4A 100%)',
+    border: '2.5px solid #000', borderRadius: 999, padding: '12px 20px',
+    boxShadow: '0 5px 0 #000', cursor: 'pointer', width: '100%',
+    textAlign: 'center', display: 'block', marginLeft: 'auto', marginRight: 'auto'
+  },
   btnCrimson: {
-    fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 17,
-    background: `linear-gradient(180deg, #f06052, ${C.crimson})`, color: C.crema,
-    border: `3px solid ${C.chocolate}`, borderRadius: 14, padding: '12px 20px',
-    boxShadow: `0 5px 0 ${C.crimsonOscuro}`, cursor: 'pointer', width: '100%'
+    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 17,
+    background: 'linear-gradient(180deg, #F0584A 0%, #c2352a 100%)', color: '#fff',
+    border: '2.5px solid #000', borderRadius: 999, padding: '12px 20px',
+    boxShadow: '0 5px 0 #000', cursor: 'pointer', width: '100%'
+  },
+  // Pase de rediseño estructural: "Jugar ya" — el CTA principal de la
+  // pantalla — pasa a vivir dentro de una placa de madera de caoba (marco
+  // biselado oscuro + remaches de bronce, mismo criterio que
+  // `destacadoPanelExterior` de Torneos.js) en vez de flotar suelta con
+  // un simple borde chocolate fino.
+  panelJugarYaExterior: {
+    position: 'relative',
+    background: `linear-gradient(160deg, ${C.maderaClara} 0%, ${C.maderaMedia} 55%, ${C.maderaOscura} 100%)`,
+    border: `3px solid ${C.negroPulido}`, borderRadius: 22, padding: 10,
+    boxShadow: [
+      'inset 0 2px 0 rgba(255,255,255,0.10)',
+      'inset 0 -4px 10px rgba(0,0,0,0.5)',
+      `0 8px 0 ${C.negroPulido}`,
+      '0 16px 26px rgba(0,0,0,0.4)',
+    ].join(', '),
   },
   // Cuadragésimo séptimo pase — punto 1 del feedback de diseño: fondo
   // verde oscuro→medio (en vez del mismo crema que todos los otros
@@ -907,26 +1085,30 @@ const estilos = {
   // clara de la imagen (mismo criterio que el overlay del fondo general
   // del lobby, ver .ts-shell en AppShell.js).
   panelJugarYa: {
-  backgroundImage: 'linear-gradient(rgba(20,20,15,0.22), rgba(20,20,15,0.22)), url(/assets/images/jugar-ya-fondo.jpg)',
+  backgroundImage: 'linear-gradient(rgba(20,20,15,0.3), rgba(20,20,15,0.3)), url(/assets/images/jugar-ya-fondo.jpg)',
   backgroundSize: 'cover', backgroundPosition: 'center',
   backgroundColor: C.verdeOscuro,
-  // Cuadragésimo octavo pase — punto 2: mismo borde fino/radio/sombra que
-  // el resto de los paneles (antes 4px/20/0.25 alpha), para no reintroducir
-  // la inconsistencia que el punto 2 pide corregir.
-  border: `2px solid ${C.chocolate}`, borderRadius: 18,
-  boxShadow: '0 3px 0 rgba(0,0,0,0.15)', padding: '18px 18px 20px',
+  // Pase de rediseño estructural: ahora es el interior DENTRO del marco
+  // de madera de arriba, con su propio bisel "hundido" (mismo criterio
+  // que `interiorFieltro` de Historial.js) en vez de un borde/sombra
+  // propios que competían con el marco nuevo.
+  borderRadius: 14,
+  boxShadow: 'inset 0 3px 10px rgba(0,0,0,0.45)', padding: '18px 18px 20px',
   position: 'relative', overflow: 'hidden'
 },
 // Pasa de celeste a dorado (mismo color que "Crear sala"/"Unirse con
 // código") para que el rol de color quede consistente: dorado = CTA
 // principal, celeste queda libre para acciones neutras (ver "Unirse"
-// dentro de cada tarjeta de sala). Más grande y con un brillo sutil
-// agregado al boxShadow, además del "escalón" de siempre.
+// dentro de cada tarjeta de sala). Pase de rediseño estructural: pill
+// completo (antes `borderRadius:14`, una caja redondeada no una píldora)
+// con contorno negro (antes chocolate) — mismo criterio 3D que el resto
+// de los botones grandes de la app — manteniendo el brillo/glow dorado
+// que ya tenía.
 btnJugarYa: {
-  fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 20,
+  fontFamily: "'Fredoka', sans-serif", fontWeight: 800, fontSize: 20,
   background: `linear-gradient(180deg, ${C.doradoClaro}, ${C.dorado})`, color: C.chocolate,
-  border: `3px solid ${C.chocolate}`, borderRadius: 14, padding: '16px 20px',
-  boxShadow: `0 6px 0 ${C.doradoOscuro}, 0 0 22px rgba(255,182,39,0.55)`,
+  border: '3px solid #000', borderRadius: 999, padding: '16px 20px',
+  boxShadow: '0 6px 0 #000, 0 0 22px rgba(255,182,39,0.55)',
   cursor: 'pointer', width: '100%'
 },
   // Quincuagésimo séptimo pase — punto 5: título reforzado (18.5→19.5 +
@@ -937,43 +1119,103 @@ btnJugarYa: {
     fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 19.5, color: C.crema,
     margin: '4px 0 12px 4px', paddingBottom: 8, borderBottom: '2px solid rgba(255,248,237,0.22)'
   },
-  // Quincuagésimo séptimo pase — punto 5: estado vacío de "Salas
-  // disponibles" — antes un <p> centrado sin jerarquía; ahora una tarjeta
-  // con borde punteado (para diferenciarla de las tarjetas de sala reales,
-  // mismo criterio "placeholder" que usan otros sistemas de diseño),
-  // ícono, texto amigable y un CTA grande que lleva directo al panel de
-  // "Crear sala".
+  // Pase de rediseño estructural: "Salas disponibles" pasa a vivir dentro
+  // de una placa de madera alargada tipo "tablero de anuncios de
+  // pulpería" — exterior de madera con remaches (mismo criterio que
+  // `panelExterior` de Torneos.js) envolviendo un interior de fieltro
+  // verde (mismo criterio que `cuerpo`/`interiorFieltro` de ChatGlobal.js/
+  // Historial.js), para que las tarjetas de sala se lean como avisos
+  // clavados en el tablero en vez de flotar sueltas sobre el fondo verde
+  // general de toda la pantalla.
+  tableroExterior: {
+    position: 'relative',
+    background: `linear-gradient(160deg, ${C.maderaClara} 0%, ${C.maderaMedia} 55%, ${C.maderaOscura} 100%)`,
+    border: `3px solid ${C.negroPulido}`, borderRadius: 22, padding: 10,
+    boxShadow: [
+      'inset 0 2px 0 rgba(255,255,255,0.10)',
+      'inset 0 -4px 10px rgba(0,0,0,0.5)',
+      `0 8px 0 ${C.negroPulido}`,
+      '0 16px 26px rgba(0,0,0,0.4)',
+    ].join(', '),
+  },
+  tableroInterior: {
+    background: `linear-gradient(180deg, ${C.verdeProfundo}, ${C.verdeOscuro})`,
+    borderRadius: 14, padding: '16px 16px 18px',
+    boxShadow: 'inset 0 3px 10px rgba(0,0,0,0.55), inset 0 0 0 2px rgba(0,0,0,0.22)',
+  },
+  // Quincuagésimo séptimo pase — punto 5 (superado por el pase de
+  // rediseño estructural siguiente): estado vacío de "Salas disponibles"
+  // — pasa de un marco punteado plano a una placa de pergamino sólida
+  // (ya no hace falta el punteado para diferenciarla de las tarjetas de
+  // sala reales: ahora vive sobre el fieltro del tablero, que ya la
+  // distingue por sí solo) con el personaje chibi en vez del ícono del
+  // libro (que además ya se usa como ícono de "Crear sala" arriba).
   emptyState: {
     backgroundColor: C.cremaSutil,
     backgroundImage: 'url(/assets/images/textura-tarjeta.png)', backgroundRepeat: 'repeat',
-    border: `2px dashed ${C.chocolate}66`, borderRadius: 18,
-    padding: '32px 20px', textAlign: 'center',
+    border: `2px solid ${C.negroPulido}`, borderRadius: 18,
+    boxShadow: 'inset 0 0 0 1px rgba(26,20,16,0.12), 0 4px 0 rgba(0,0,0,0.25)',
+    padding: '28px 20px 22px', textAlign: 'center',
     display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6
   },
   emptyStateIcono: { fontSize: 42, lineHeight: 1 },
+  emptyStatePersonaje: { width: 110, height: 'auto', objectFit: 'contain', marginBottom: 2 },
   emptyStateTitulo: { fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 19, color: C.chocolate },
   emptyStateTexto: { fontSize: 14.5, color: '#7a6660', fontWeight: 700, maxWidth: 380, lineHeight: 1.4, marginBottom: 8 },
+  // Pase de rediseño estructural: "placa nameplate" de 2 tonos (mismo
+  // criterio que `torneoCardExterior`/`torneoCard` de Torneos.js —
+  // exterior de madera, interior de pergamino — a escala chica y sin
+  // remaches, para que no se sienta recargado repetido en toda una
+  // grilla) en vez del pergamino de un solo tono que tenía antes.
+  salaCardExterior: {
+    background: `linear-gradient(160deg, ${C.maderaClara} 0%, ${C.maderaMedia} 55%, ${C.maderaOscura} 100%)`,
+    border: `2px solid ${C.negroPulido}`, borderRadius: 16,
+    padding: 6, marginBottom: 10,
+    boxShadow: [
+      'inset 0 1px 0 rgba(255,255,255,0.10)',
+      'inset 0 -3px 7px rgba(0,0,0,0.4)',
+      `0 4px 0 ${C.negroPulido}`,
+      '0 6px 10px rgba(0,0,0,0.25)',
+    ].join(', '),
+  },
   salaCard: {
     backgroundColor: C.cremaSutil,
     backgroundImage: 'url(/assets/images/textura-tarjeta.png)', backgroundRepeat: 'repeat',
-    border: `2px solid ${C.chocolate}`, borderRadius: 18,
-    padding: '12px 14px', marginBottom: 10, boxShadow: '0 2px 0 rgba(0,0,0,0.12)'
+    border: `1.5px solid rgba(26,20,16,0.35)`, borderRadius: 11,
+    padding: '12px 14px',
+    boxShadow: 'inset 0 0 0 1px rgba(26,20,16,0.12)',
   },
   salaHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
   salaNombre: { fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 17, color: C.chocolate },
-  badge: { fontSize: 12.5, fontWeight: 800, padding: '3px 9px', borderRadius: 20, textTransform: 'uppercase' },
-  badgeAbierta: { background: '#d8f0da', color: C.verdeOscuro },
-  badgeCompleta: { background: '#f0d8d8', color: '#8c3a3a' },
+  // Pase de rediseño estructural: badges 3D con contorno negro y
+  // degradé (mismo criterio que `badgeAbierta`/`badgeCurso` de
+  // Torneos.js) en vez del pill pastel plano de antes.
+  badge: {
+    fontSize: 12.5, fontWeight: 800, padding: '3px 10px', borderRadius: 12,
+    textTransform: 'uppercase', border: `1.5px solid ${C.negroPulido}`,
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+  },
+  badgeAbierta: {
+    background: 'linear-gradient(180deg, #5EE87A, #2FBD52)', color: '#fff',
+    boxShadow: '0 2px 0 #1a6b2e, inset 0 1px 0 rgba(255,255,255,0.5)', textShadow: '0 1px 1px rgba(0,0,0,0.3)',
+  },
+  badgeCompleta: {
+    background: 'linear-gradient(180deg, #f0584a, #c2352a)', color: '#fff',
+    boxShadow: '0 2px 0 #7a1f17, inset 0 1px 0 rgba(255,255,255,0.35)', textShadow: '0 1px 1px rgba(0,0,0,0.3)',
+  },
   salaInfo: { fontSize: 14.5, color: '#7a6660', fontWeight: 700, marginBottom: 10 },
+  // "Unirse" — verde esmeralda 3D, mismo criterio "verde = avanzar/unirse"
+  // que ya usa Torneos.js (antes celeste, color que queda libre para
+  // futuras acciones neutras).
   btnCard: {
-    fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 15,
-    background: C.celeste, color: C.chocolate, border: `2px solid ${C.chocolate}`,
-    borderRadius: 10, padding: '7px 14px', boxShadow: '0 3px 0 #3a91c2', cursor: 'pointer'
+    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 15, color: '#fff',
+    background: 'linear-gradient(180deg, #2ECC71 0%, #179B4A 100%)', border: '2px solid #000',
+    borderRadius: 12, padding: '7px 14px', boxShadow: '0 3px 0 #000', cursor: 'pointer'
   },
   btnCardDisabled: {
     fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 15,
     background: '#ccc', color: '#888', border: '2px solid #999',
-    borderRadius: 10, padding: '7px 14px', cursor: 'not-allowed'
+    borderRadius: 12, padding: '7px 14px', cursor: 'not-allowed'
   },
   // Nonagésimo noveno pase — versión chica de btnCard, solo para los
   // botones 1v1/2v2/3v3 de "Preview de mesa (dev)".
@@ -1039,11 +1281,5 @@ btnJugarYa: {
   display: 'grid',
   gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
   gap: 12,
-},
-panelesGrid: {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-  gap: 16,
-  marginBottom: 16,
 },
 };

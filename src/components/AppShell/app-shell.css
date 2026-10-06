@@ -120,10 +120,12 @@
    valor "grande" ya confirmado en pantallas anchas) se mantienen. Ver
    también `.ts-icon-btn` un poco más abajo (los botones circulares se
    achican un poco en celulares muy angostos, acompañando esta cuenta). */
+/* Pase 313: coordenadas recalculadas sobre el panel ilustrado por rango
+   (492x234, ver Perfil/rangosUi.js) en vez de tarjeta-perfil.png (491x226). */
 .ts-tarjeta-perfil {
   position: relative;
-  height: clamp(88px, calc((100vw - 176px) / 2.172), 128px);
-  aspect-ratio: 491 / 226;
+  height: clamp(88px, calc((100vw - 176px) / 2.103), 128px);
+  aspect-ratio: 492 / 234;
   flex-shrink: 0;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
@@ -140,7 +142,7 @@
    dentro del círculo, no está bien centrada en el arte. */
 .ts-tarjeta-perfil-avatar {
   position: absolute;
-  left: 4.8%; top: 8.85%; width: 30.55%; height: 66.37%;
+  left: 7.3%; top: 13.2%; width: 28.5%; height: 59.8%;
   border-radius: 50%;
   overflow: hidden;
   pointer-events: none;
@@ -159,26 +161,26 @@
    letra. */
 .ts-tarjeta-perfil-nombre {
   position: absolute;
-  left: 40.7%; top: 15.5%; width: 48.9%; height: 26.5%;
+  left: 43.7%; top: 17%; width: 45.7%; height: 34%;
   display: flex; align-items: center; justify-content: center;
   font-family: 'Fredoka', sans-serif; font-weight: 600; font-size: 15px;
   line-height: 1.1;
-  color: var(--ts-crema);
+  color: var(--ts-nombre-color, var(--ts-crema));
   text-shadow:
-    -1.5px -1.5px 0 var(--ts-chocolate),
-    1.5px -1.5px 0 var(--ts-chocolate),
-    -1.5px 1.5px 0 var(--ts-chocolate),
-    1.5px 1.5px 0 var(--ts-chocolate);
+    -1.5px -1.5px 0 var(--ts-nombre-halo, var(--ts-chocolate)),
+    1.5px -1.5px 0 var(--ts-nombre-halo, var(--ts-chocolate)),
+    -1.5px 1.5px 0 var(--ts-nombre-halo, var(--ts-chocolate)),
+    1.5px 1.5px 0 var(--ts-nombre-halo, var(--ts-chocolate));
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   padding: 0 6px;
   pointer-events: none;
 }
 .ts-tarjeta-perfil-saldo {
   position: absolute;
-  left: 58.7%; top: 64.2%; width: 25.5%; height: 22.1%;
+  left: 59.3%; top: 65.8%; width: 27.4%; height: 18.8%;
   display: flex; align-items: center; justify-content: center;
   font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 15px;
-  color: #FFE7B3;
+  color: var(--ts-saldo-color, #FFE7B3);
   pointer-events: none;
 }
 /* Nonagésimo primer pase: el hotspot único de "+" (que hacía lo mismo que
@@ -199,7 +201,7 @@
 }
 .ts-tarjeta-perfil-zona-moneda {
   position: absolute;
-  left: 38%; top: 42%; width: 62%; height: 58%;
+  left: 38%; top: 52%; width: 62%; height: 48%;
   z-index: 2;
   background: none; border: none; padding: 0; margin: 0; cursor: pointer;
 }
@@ -689,4 +691,4 @@
   background: radial-gradient(circle at 35% 30%, var(--ts-dorado-claro), var(--ts-dorado) 60%, var(--ts-dorado-oscuro) 100%);
   border: 2px solid var(--ts-chocolate);
   box-shadow: 0 2px 4px rgba(0,0,0,0.35);
-}
+}
