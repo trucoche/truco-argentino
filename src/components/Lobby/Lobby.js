@@ -394,12 +394,7 @@ useEffect(() => {
                       alt=""
                       style={{
                         ...estilos.iconoModoCompacto,
-                        // El ícono "inactivo" está pintado en verde oscuro
-                        // (pensado para el fondo claro semitransparente de
-                        // antes) — contra el cuero casi negro nuevo se
-                        // perdía por completo; este filtro lo levanta sin
-                        // necesitar una 4ta variante de ícono por modo.
-                        ...(modoRapido !== m ? { filter: 'brightness(2.4) saturate(0.7)' } : {}),
+                        // Pase 322: los PNG inactivos ya vienen pintados en beige (#FFFBEB), sin filtro.
                       }}
                     />
                     {m}
@@ -565,6 +560,7 @@ useEffect(() => {
             placeholder="Código de sala"
             value={codigoUnirse}
             onChange={(e) => setCodigoUnirse(e.target.value.toUpperCase())}
+            className="ts-input-codigo"
             style={{ ...estilos.inputCuero, flex: 1 }}
           />
           <button
@@ -861,9 +857,10 @@ const estilos = {
   // `tabInactiva` de Torneos.js, en vez del input blanco liso genérico.
   inputCuero: {
     width: '100%', fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 16,
-    letterSpacing: 1, color: C.crema, background: 'linear-gradient(180deg, #2a1c12, #1a100a)',
-    border: `2px solid ${C.negroPulido}`, borderRadius: 12, padding: '9px 11px',
-    boxShadow: 'inset 0 3px 6px rgba(0,0,0,0.6), inset 0 -1px 0 rgba(255,255,255,0.05)',
+    letterSpacing: 1, color: '#2C160E', background: '#F3EFE0',
+    // Pase 322: pergamino claro ahuecado (antes caja negra), marco fino café oscuro con sombra interna.
+    border: '1.5px solid #4A2C11', borderRadius: 12, padding: '9px 11px',
+    boxShadow: 'inset 0 3px 5px rgba(74,44,17,0.35), inset 2px 0 3px rgba(74,44,17,0.15)',
   },
   // Indicador "Partida esperando" — mismo criterio visual que los chips
   // de las tarjetas de sala más abajo, para anticipar de un vistazo qué
@@ -969,10 +966,11 @@ const estilos = {
   opcionBtnCompacta: {
     flex: 1, minWidth: 44,
     fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 13,
-    color: 'rgba(255,248,237,0.6)', background: 'linear-gradient(180deg, #2a1c12, #1a100a)',
+    // Pase 322: madera cálida media (#8B5A2B) con relieve ahuecado suave y texto hueso (#FFFBEB).
+    color: '#FFFBEB', background: '#8B5A2B',
     border: `2px solid ${C.negroPulido}`, borderRadius: 10, padding: '6px 4px', cursor: 'pointer', textAlign: 'center',
     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1,
-    boxShadow: 'inset 0 3px 6px rgba(0,0,0,0.6), inset 0 -1px 0 rgba(255,255,255,0.05)',
+    boxShadow: 'inset 0 3px 5px rgba(74,44,17,0.55), inset 0 -1px 0 rgba(255,255,255,0.12)',
   },
   opcionBtnCompactaActiva: {
     background: `linear-gradient(160deg, ${C.doradoClaro} 0%, ${C.dorado} 100%)`, color: C.chocolate,

@@ -727,4 +727,7 @@
   background: radial-gradient(circle at 35% 30%, var(--ts-dorado-claro), var(--ts-dorado) 60%, var(--ts-dorado-oscuro) 100%);
   border: 2px solid var(--ts-chocolate);
   box-shadow: 0 2px 4px rgba(0,0,0,0.35);
-}
+}
+
+/* Pase 322: placeholder del campo "Código de sala" en café grisáceo, negrita legible. */
+.ts-input-codigo::placeholder { color: #8D7B68; font-weight: 700; opacity: 1; }

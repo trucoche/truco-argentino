@@ -19,11 +19,13 @@ const SALDO_CLARO = '#FFE7B3';
 const BASE = '/assets/images/rangos';
 const discoEstilo = ([cx, cy, D]) => {
   const d = D - 5;
+  // Pase 323: el círculo crece 1px (crece centrado: -0.5px a izquierda/arriba, +1px de ancho/alto)
+  // para que la foto rellene del todo el hueco del aro.
   return {
-    left: `${(((cx - d / 2) / 492) * 100).toFixed(2)}%`,
-    top: `${(((cy - d / 2) / 234) * 100).toFixed(2)}%`,
-    width: `${((d / 492) * 100).toFixed(2)}%`,
-    height: `${((d / 234) * 100).toFixed(2)}%`,
+    left: `calc(${(((cx - d / 2) / 492) * 100).toFixed(2)}% - 0.5px)`,
+    top: `calc(${(((cy - d / 2) / 234) * 100).toFixed(2)}% - 0.5px)`,
+    width: `calc(${((d / 492) * 100).toFixed(2)}% + 1px)`,
+    height: `calc(${((d / 234) * 100).toFixed(2)}% + 1px)`,
   };
 };
 const ficha = (slug, hueco, nombreOscuro, saldoOscuro, disco) => ({
