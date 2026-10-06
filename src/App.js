@@ -17,7 +17,7 @@ import ResetPassword from './components/Auth/ResetPassword';
 import VerificarEmail from './components/Auth/VerificarEmail';
 import SolicitarEliminacionCuenta from './components/Auth/SolicitarEliminacionCuenta';
 import ConfirmarEliminacionCuenta from './components/Auth/ConfirmarEliminacionCuenta';
-import Perfil from './components/Perfil/perfil';
+import Perfil from './components/Perfil/Perfil';
 import Tienda from './components/Tienda/Tienda';
 import ChatGlobal from './components/ChatGlobal/ChatGlobal';
 import MonedaEasterEgg from './components/MonedaEasterEgg';

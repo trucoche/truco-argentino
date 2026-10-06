@@ -372,11 +372,6 @@ useEffect(() => {
           <div style={estilos.footerHint}>
             Un juego de truco argentino
           </div>
-          <div style={estilos.footerLinkWrap}>
-            <a href="/terminos" style={estilos.footerLink}>Términos de Servicio</a>
-            <span style={estilos.footerSeparador}>·</span>
-            <a href="/privacidad" style={estilos.footerLink}>Política de privacidad</a>
-          </div>
 
       </div>
     </div>

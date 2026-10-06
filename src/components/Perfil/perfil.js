@@ -701,7 +701,7 @@ const estilos = {
     alignItems: 'center', textAlign: 'center', gap: 6,
     boxShadow: '0 4px 0 rgba(0,0,0,0.18)'
   },
-  rangoLogo: { width: 84, height: 84, objectFit: 'contain', display: 'block' },
+  rangoLogo: { width: 112, height: 112, objectFit: 'contain', display: 'block' },
   rangoTitulo: { fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 15.5, color: C.chocolate, marginTop: 4 },
   rangoSubtitulo: { fontSize: 12.5, color: C.chocolate, opacity: 0.85, lineHeight: 1.4 },
   rangoProgresoBloque: { width: '100%', marginTop: 6 },
