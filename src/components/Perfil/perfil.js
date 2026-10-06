@@ -16,13 +16,6 @@ const C = {
   cremaSutil: '#FFFCF6'
 };
 
-const GENEROS = [
-  { value: 'masculino', label: 'Masculino' },
-  { value: 'femenino', label: 'Femenino' },
-  { value: 'neutro', label: 'Neutro' },
-  { value: 'prefiero_no_decir', label: 'Prefiero no decirlo' },
-];
-
 // Deriva la imagen de avatar de un usuario (mismo criterio que ya usa el
 // Centésimo cuadragésimo segundo pase — reemplazo del emoji de cada logro
 // (primer "token" de `titulo`, ej. "🔥 Imparable") por la medalla
@@ -229,27 +222,6 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
     }
   };
 
-  // ---------- Género ----------
-  const [guardandoGenero, setGuardandoGenero] = useState(false);
-
-  const cambiarGenero = async (nuevoGenero) => {
-    if (guardandoGenero || usuario?.genero === nuevoGenero) return;
-
-    setGuardandoGenero(true);
-    try {
-      const res = await fetch(`${API_BASE}/auth/genero`, {
-        method: 'PUT',
-        headers,
-        body: JSON.stringify({ genero: nuevoGenero })
-      });
-      if (res.ok && onPerfilActualizado) onPerfilActualizado();
-    } catch (err) {
-      console.error('Error guardando género:', err);
-    } finally {
-      setGuardandoGenero(false);
-    }
-  };
-
   const completados = logros.filter(l => l.completado).length;
 
   const partidasJugadas = Number(usuario?.partidas_jugadas || 0);
@@ -284,12 +256,18 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
                 } : {}),
               }}
             >
+              {/* Pase 324: botón circular 3D (ícono de imagen) en la esquina superior derecha. */}
               <button
-                style={estilos.btnCambiarFondo}
+                style={estilos.btnFondoCircular}
                 onClick={() => setFondoModalAbierto(true)}
-                title="Cambiar fondo de perfil"
+                title="Cambiar o eliminar fondo de perfil"
+                aria-label="Cambiar o eliminar fondo de perfil"
               >
-                🖼️ {usuario?.fondo_perfil_url ? 'Cambiar fondo' : 'Elegir fondo'}
+                <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+                  <rect x="3" y="4" width="18" height="16" rx="2.5" fill="#FFFBEB" stroke="#000" strokeWidth="1.8" />
+                  <circle cx="9" cy="9.5" r="2" fill="#F5B041" stroke="#000" strokeWidth="1.2" />
+                  <path d="M3.8 18 L9.5 12.5 L13 16 L15.5 13.5 L20.2 18 Z" fill="#10B981" stroke="#000" strokeWidth="1.4" strokeLinejoin="round" />
+                </svg>
               </button>
 
               <div
@@ -334,23 +312,19 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
 
                 <div style={estilos.identidad}>
                   <div style={estilos.username}>{usuario?.username}</div>
-                  {/* Centésimo tercer pase: se saca el email de acá (no
-                      aportaba nada de valor en esta fila, y ocupaba lugar) y
-                      en su lugar van las monedas — así el chip translúcido
-                      necesita ocupar menos espacio, dejando ver más de la
-                      foto de fondo. El botón "Comprá monedas" se muda con
-                      el saldo (antes vivía en `saldoBloque`, un bloque
-                      aparte a la derecha) pero más chico. */}
-                  <div style={estilos.saldoInlineFila}>
-                    <div style={estilos.saldoValor}>
-                      <img src="/assets/images/moneda.png" alt="" style={estilos.saldoIcono} />
-                      {Math.round(Number(usuario?.saldo) || 0)}
-                    </div>
-                    <button style={estilos.btnComprarMonedas} onClick={() => onNavegar && onNavegar('tienda')}>
-                      Comprá monedas
-                    </button>
+                  <div style={estilos.nivelTexto}>
+                    {usuario?.rango?.esTop500
+                      ? `${usuario.rango.nombre} · #${usuario.rango.posicion ?? '—'}`
+                      : `${usuario?.rango?.nombre || 'Mancebo'} ${usuario?.rango?.division || 'III'}`}
                   </div>
                 </div>
+              </div>
+
+              {/* Pase 324: monedas fijas abajo a la derecha del banner (sin "Comprá monedas":
+                  la compra vive en la pestaña Tienda). */}
+              <div style={estilos.monedasChip}>
+                <img src="/assets/images/moneda.png" alt="" style={estilos.saldoIcono} />
+                {Math.round(Number(usuario?.saldo) || 0)}
               </div>
             </div>
 
@@ -392,26 +366,6 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
                   <span style={estilos.lapiz}>✏️</span>
                 </div>
               )}
-            </div>
-
-            <div style={estilos.campo}>
-              <div style={estilos.campoEtiqueta}>ℹ️ Género</div>
-              {/* Mismo criterio ya establecido en el proyecto (cuadragésimo
-                  séptimo pase): nada de <select> nativo del navegador,
-                  botones simples tipo chip — acá con 4 opciones en vez de
-                  un desplegable. */}
-              <div style={estilos.chipsFila}>
-                {GENEROS.map(g => (
-                  <button
-                    key={g.value}
-                    style={{ ...estilos.chip, ...(usuario?.genero === g.value ? estilos.chipActivo : {}) }}
-                    disabled={guardandoGenero}
-                    onClick={() => cambiarGenero(g.value)}
-                  >
-                    {g.label}
-                  </button>
-                ))}
-              </div>
             </div>
           </div>
 
@@ -549,6 +503,7 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
         <CambiarFondoModal
           token={token}
           saldoActual={usuario?.saldo}
+          tieneFondo={!!usuario?.fondo_perfil_url}
           onCerrar={() => setFondoModalAbierto(false)}
           onFondoActualizado={() => { if (onPerfilActualizado) onPerfilActualizado(); }}
         />
@@ -575,7 +530,7 @@ const estilos = {
 
   panel: {
     background: C.crema, border: `4px solid ${C.chocolate}`, borderRadius: 20,
-    boxShadow: '0 6px 0 rgba(0,0,0,0.25)', padding: '18px 18px 20px'
+    boxShadow: '0 6px 0 rgba(0,0,0,0.25)', padding: '18px 18px 20px', boxSizing: 'border-box'
   },
 
   // Centésimo pase: contenedor nuevo que envuelve la fila de encabezado —
@@ -587,6 +542,19 @@ const estilos = {
   encabezadoFilaContenedor: {
     position: 'relative', borderRadius: 16, marginBottom: 16,
     padding: 12, overflow: 'hidden', minHeight: 150
+  },
+  // Pase 324: botón circular 3D del fondo + chip de monedas fijo + línea de nivel.
+  btnFondoCircular: {
+    position: 'absolute', top: 8, right: 8, zIndex: 2, width: 40, height: 40, borderRadius: '50%',
+    background: '#8B5A2B', border: '3px solid #000', boxShadow: '0 3px 0 #000',
+    display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0
+  },
+  nivelTexto: { fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 14, color: C.chocolate, marginTop: 2 },
+  monedasChip: {
+    position: 'absolute', right: 10, bottom: 10, zIndex: 2,
+    display: 'flex', alignItems: 'center', gap: 6,
+    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 17, color: '#FFC93C',
+    background: '#2C160E', border: '2px solid #000', borderRadius: 999, padding: '4px 12px'
   },
   btnCambiarFondo: {
     position: 'absolute', top: 8, right: 8, zIndex: 2,
@@ -656,15 +624,18 @@ const estilos = {
   campoEtiqueta: { fontSize: 13, fontWeight: 800, color: C.chocolate, marginBottom: 6 },
   bioTexto: {
     display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10,
-    background: '#fff', border: `2px solid ${C.chocolate}22`, borderRadius: 12,
-    padding: '10px 12px', fontSize: 13.5, color: C.chocolate, cursor: 'pointer', lineHeight: 1.4
+    // Pase 324: pergamino ahuecado claro con marco fino café y sombra interna.
+    background: '#F3EFE0', border: '1.5px solid #4A2C11', borderRadius: 12,
+    boxShadow: 'inset 0 3px 5px rgba(74,44,17,0.3)',
+    padding: '10px 12px', fontSize: 13.5, fontWeight: 800, color: '#2C160E', cursor: 'pointer', lineHeight: 1.4
   },
-  bioPlaceholder: { color: '#a09085', fontStyle: 'italic' },
+  bioPlaceholder: { color: '#8D7B68', fontWeight: 800 },
   lapiz: { flexShrink: 0, fontSize: 13, opacity: 0.6 },
   bioTextarea: {
     width: '100%', minHeight: 70, resize: 'vertical',
-    background: '#fff', border: `2px solid ${C.chocolate}`, borderRadius: 12,
-    padding: '10px 12px', fontSize: 13.5, color: C.chocolate, fontFamily: 'inherit',
+    background: '#F3EFE0', border: '1.5px solid #4A2C11', borderRadius: 12,
+    boxShadow: 'inset 0 3px 5px rgba(74,44,17,0.3)',
+    padding: '10px 12px', fontSize: 13.5, fontWeight: 800, color: '#2C160E', fontFamily: 'inherit',
     boxSizing: 'border-box'
   },
   bioFooter: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 },
@@ -696,10 +667,12 @@ const estilos = {
   // desbloqueado (ícono grande arriba, texto centrado debajo).
   panelRango: {
     background: `linear-gradient(135deg, ${C.doradoClaro}, ${C.dorado})`,
-    border: `3px solid ${C.chocolate}`, borderRadius: 18,
-    padding: '18px 18px 16px', display: 'flex', flexDirection: 'column',
-    alignItems: 'center', textAlign: 'center', gap: 6,
-    boxShadow: '0 4px 0 rgba(0,0,0,0.18)'
+    // Pase 324: mismo borde (4px), radio (20) y sombra que `panel` para que Rendimiento y
+    // Rango no se vean desfasados en la columna lateral. `boxSizing` explícito en ambos.
+    border: `4px solid ${C.chocolate}`, borderRadius: 20,
+    padding: '18px 18px 20px', display: 'flex', flexDirection: 'column',
+    alignItems: 'center', textAlign: 'center', gap: 6, boxSizing: 'border-box',
+    boxShadow: '0 6px 0 rgba(0,0,0,0.25)'
   },
   rangoLogo: { width: 112, height: 112, objectFit: 'contain', display: 'block' },
   rangoTitulo: { fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 15.5, color: C.chocolate, marginTop: 4 },

@@ -44,7 +44,7 @@ async function recortarImagen(imagenSrc, areaRecortadaPx) {
   return canvas.toDataURL('image/jpeg', 0.88);
 }
 
-export default function CambiarFondoModal({ token, saldoActual, onCerrar, onFondoActualizado }) {
+export default function CambiarFondoModal({ token, saldoActual, onCerrar, onFondoActualizado, tieneFondo = false }) {
   const [archivoSrc, setArchivoSrc] = useState(null);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
@@ -73,6 +73,31 @@ export default function CambiarFondoModal({ token, saldoActual, onCerrar, onFond
     const reader = new FileReader();
     reader.onload = () => setArchivoSrc(reader.result);
     reader.readAsDataURL(archivo);
+  };
+
+  // Pase 324: "Eliminar fondo" — restablece el fondo por defecto (gratis).
+  const eliminarFondo = async () => {
+    if (enviando) return;
+    setEnviando(true);
+    setError('');
+    try {
+      const res = await fetch(`${API_BASE}/usuarios/fondo-perfil`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error || 'No se pudo eliminar el fondo');
+        return;
+      }
+      if (onFondoActualizado) onFondoActualizado(null);
+      onCerrar();
+    } catch (err) {
+      console.error('Error eliminando fondo de perfil:', err);
+      setError('No se pudo conectar con el servidor');
+    } finally {
+      setEnviando(false);
+    }
   };
 
   const puedeAceptar = archivoSrc && areaRecortadaPx && aceptaNormas && aceptaCosto && !enviando;
@@ -143,6 +168,12 @@ export default function CambiarFondoModal({ token, saldoActual, onCerrar, onFond
               style={estilos.zoomSlider}
             />
           </div>
+        )}
+
+        {tieneFondo && !archivoSrc && (
+          <button style={estilos.btnEliminarFondo} onClick={eliminarFondo} disabled={enviando}>
+            {enviando ? 'Eliminando...' : 'Eliminar fondo (restablecer por defecto)'}
+          </button>
         )}
 
         {error && <div style={estilos.errorBox}>{error}</div>}
@@ -240,4 +271,9 @@ const estilos = {
     background: '#ccc', color: '#888', border: '2px solid #999', boxShadow: 'none', cursor: 'not-allowed'
   },
   monedaIcono: { width: 16, height: 16, objectFit: 'contain' },
+  btnEliminarFondo: {
+    width: '100%', marginTop: 12, fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 14,
+    background: '#E74C3C', color: '#fff', border: '3px solid #000', borderRadius: 12,
+    padding: '10px 14px', boxShadow: '0 3px 0 #78281F', cursor: 'pointer'
+  },
 };

@@ -10,6 +10,14 @@ const C = {
   crema: '#FFF8ED', cremaSutil: '#FFFCF6', chocolate: '#4A2C2A'
 };
 
+// Pase 324: opciones de género (movidas desde el Perfil).
+const GENEROS = [
+  { value: 'masculino', label: 'Masculino' },
+  { value: 'femenino', label: 'Femenino' },
+  { value: 'neutro', label: 'Neutro' },
+  { value: 'prefiero_no_decir', label: 'Prefiero no decirlo' },
+];
+
 const CLAVE_MODO_OSCURO = 'truco_modo_oscuro';
 const CLAVE_BARAJA = 'truco_baraja';
 
@@ -24,6 +32,25 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
   const [modoOscuro, setModoOscuro] = useState(false);
   const [guardandoAvatar, setGuardandoAvatar] = useState(false);
   const [enviandoEliminacion, setEnviandoEliminacion] = useState(false);
+  const [guardandoGenero, setGuardandoGenero] = useState(false);
+
+  // Pase 324: el selector de Género se mudó del Perfil a Ajustes (misma lógica).
+  const cambiarGenero = async (nuevoGenero) => {
+    if (guardandoGenero || usuario?.genero === nuevoGenero) return;
+    setGuardandoGenero(true);
+    try {
+      const res = await fetch(`${API_BASE}/auth/genero`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ genero: nuevoGenero })
+      });
+      if (res.ok && onPersonajeCambiado) onPersonajeCambiado();
+    } catch (err) {
+      console.error('Error guardando género:', err);
+    } finally {
+      setGuardandoGenero(false);
+    }
+  };
 
   // Pase 312: "Eliminar mi cuenta" manda directo el mail de confirmación a la
   // casilla registrada (POST /api/auth/solicitar-eliminacion-propia) en vez de
@@ -255,6 +282,23 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
         personajeActual={usuario?.personaje || 'gaucho'}
         onPersonajeCambiado={onPersonajeCambiado}
       />
+
+      {/* Pase 324: Género (antes vivía en el Perfil). */}
+      <div style={estilos.panel}>
+        <div style={estilos.panelTitulo}>ℹ️ Género</div>
+        <div style={estilos.chipsFila}>
+          {GENEROS.map(g => (
+            <button
+              key={g.value}
+              style={{ ...estilos.chipGenero, ...(usuario?.genero === g.value ? estilos.chipGeneroActivo : {}) }}
+              disabled={guardandoGenero}
+              onClick={() => cambiarGenero(g.value)}
+            >
+              {g.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div style={estilos.panel}>
         {/* Ducentésimo cuadragésimo pase: el usuario pasó iconos ilustrados
@@ -546,6 +590,13 @@ const estilos = {
     display: 'flex', alignItems: 'center', gap: 8,
   },
   panelTituloIcono: { width: 26, height: 26, objectFit: 'contain', flexShrink: 0 },
+  chipsFila: { display: 'flex', flexWrap: 'wrap', gap: 8 },
+  chipGenero: {
+    fontSize: 12.5, fontWeight: 700, color: C.chocolate,
+    background: '#fff', border: `2px solid ${C.chocolate}33`, borderRadius: 20,
+    padding: '8px 14px', cursor: 'pointer'
+  },
+  chipGeneroActivo: { color: '#fff', background: '#4FB3E8', borderColor: '#2f8dbf' },
   opcionesAvatar: { display: 'flex', gap: 12 },
   opcionAvatar: {
     flex: 1, background: '#fff',
