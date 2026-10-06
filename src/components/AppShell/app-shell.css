@@ -153,8 +153,8 @@
 }
 /* Pase 318: la imagen baja unos píxeles para quedar apoyada en el círculo.
    La foto además se agranda un poco para que no quede franja vacía arriba. */
-.ts-tarjeta-perfil-avatar img.ts-avatar-personaje { transform: translateY(4%); }
-.ts-tarjeta-perfil-avatar img.ts-avatar-foto { transform: translateY(4%) scale(1.08); }
+.ts-tarjeta-perfil-avatar img.ts-avatar-personaje { transform: translateY(7%); }
+.ts-tarjeta-perfil-avatar img.ts-avatar-foto { transform: translateY(6%) scale(1.14); }
 /* Nonagésimo pase: letra más grande (12→15px, acompañando el +23% de la
    tarjeta) y color aclarado — el usuario reportó que el marrón chocolate
    no se lee bien contra el fondo de madera (la veta tiene zonas más
