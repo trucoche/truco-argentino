@@ -23,6 +23,33 @@ function avatarSrcDe(u) {
 export default function Configuracion({ token, usuario, onPersonajeCambiado, musicaVolumen, onCambiarMusicaVolumen, onNavegar }) {
   const [modoOscuro, setModoOscuro] = useState(false);
   const [guardandoAvatar, setGuardandoAvatar] = useState(false);
+  const [enviandoEliminacion, setEnviandoEliminacion] = useState(false);
+
+  // Pase 312: "Eliminar mi cuenta" manda directo el mail de confirmación a la
+  // casilla registrada (POST /api/auth/solicitar-eliminacion-propia) en vez de
+  // abrir otra página. La cuenta recién se desactiva al hacer clic en el link.
+  const pedirEliminacionCuenta = async () => {
+    if (enviandoEliminacion) return;
+    if (!window.confirm('Te vamos a enviar un mail para confirmar la eliminación de tu cuenta. Recién cuando abras el enlace del mail se desactiva, y tenés 30 días para arrepentirte volviendo a iniciar sesión. ¿Enviar el mail?')) return;
+    setEnviandoEliminacion(true);
+    try {
+      const res = await fetch(`${API_URL}/solicitar-eliminacion-propia`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        window.alert(`Te enviamos un mail a ${data.email || 'tu casilla registrada'} para confirmar la eliminación. Abrilo y entrá al enlace dentro de la próxima hora. Si no lo ves, revisá la carpeta de spam.`);
+      } else {
+        window.alert(data.error || 'No pudimos enviar el mail. Probá de nuevo en un rato.');
+      }
+    } catch (err) {
+      console.error('Error pidiendo eliminación de cuenta:', err);
+      window.alert('No pudimos comunicarnos con el servidor. Probá de nuevo en un rato.');
+    } finally {
+      setEnviandoEliminacion(false);
+    }
+  };
   const [baraja, setBaraja] = useState('clasica');
 
   useEffect(() => {
@@ -446,32 +473,31 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
         </div>
       )}
 
-      {/* Pase 311: "Mi cuenta" — acceso a eliminar la cuenta (pide el email y
-          manda un mail de confirmación; 30 días de arrepentimiento). */}
+      {/* Pase 311/312: "Mi cuenta" — acceso a eliminar la cuenta. Manda un mail
+          de confirmación al email registrado; 30 días de arrepentimiento. */}
       <div style={estilos.panel}>
         <div style={estilos.panelTitulo}>👤 Mi cuenta</div>
         <p style={{ ...estilos.hintBaraja, marginTop: 0 }}>
-          Si querés eliminar tu cuenta, te pedimos tu email y te mandamos un mensaje para confirmarlo. Tenés 30 días para arrepentirte volviendo a iniciar sesión.
+          Si querés eliminar tu cuenta, te mandamos un mail a tu casilla registrada para confirmarlo. Tenés 30 días para arrepentirte volviendo a iniciar sesión.
         </p>
         <button
           style={estilos.btnEliminarCuenta}
-          onClick={() => {
-            if (window.confirm('Se va a abrir una página para pedir la eliminación de tu cuenta. Te vamos a mandar un email para confirmarlo. ¿Continuar?')) {
-              window.open('/eliminar-cuenta', '_blank', 'noopener');
-            }
-          }}
+          disabled={enviandoEliminacion}
+          onClick={pedirEliminacionCuenta}
         >
-          Eliminar mi cuenta
+          {enviandoEliminacion ? 'Enviando…' : 'Eliminar mi cuenta'}
         </button>
       </div>
 
-      {/* Pase siguiente: link a la Política de Privacidad, pedido explícito
-          del usuario, abajo de todo. El texto real todavía no existe (lo
-          va a mandar el usuario después) — PoliticaPrivacidad.js muestra un
-          placeholder mientras tanto. */}
+      {/* Links legales abajo de todo (Política de Privacidad y, desde el pase
+          312, Términos de Servicio — se enlazan entre sí). */}
       <div style={estilos.footerLegal}>
         <button style={estilos.linkLegal} onClick={() => onNavegar && onNavegar('privacidad')}>
           Política de Privacidad
+        </button>
+        <span style={estilos.separadorLegal}>·</span>
+        <button style={estilos.linkLegal} onClick={() => onNavegar && onNavegar('terminos')}>
+          Términos de Servicio
         </button>
       </div>
       </div>
@@ -614,6 +640,7 @@ const estilos = {
   denunciaFecha: { fontSize: 11, color: '#a09085', marginTop: 3 },
 
   footerLegal: { textAlign: 'center', padding: '18px 0 8px' },
+  separadorLegal: { margin: '0 10px', color: C.crema, opacity: 0.65 },
   // Pase siguiente: el usuario reportó que el link se veía "muy oscuro"
   // (antes #7a6660, gris apagado sobre el mismo fondo crema del panel) —
   // pasa a dorado oscuro, mismo color de acento que ya usa el resto de la

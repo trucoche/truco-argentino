@@ -241,7 +241,7 @@ function Seccion({ seccion }) {
   );
 }
 
-export default function PoliticaPrivacidad({ onVolver, textoVolver = '← Volver a Ajustes' }) {
+export default function PoliticaPrivacidad({ onVolver, textoVolver = '← Volver a Ajustes', onVerTerminos }) {
   return (
     <div style={estilos.contenedor}>
       <button style={estilos.btnVolver} onClick={onVolver}>{textoVolver}</button>
@@ -251,6 +251,13 @@ export default function PoliticaPrivacidad({ onVolver, textoVolver = '← Volver
         {SECCIONES.map((seccion, i) => (
           <Seccion key={i} seccion={seccion} />
         ))}
+        {onVerTerminos && (
+          <div style={estilos.enlaceCruzado}>
+            <button style={estilos.btnEnlaceCruzado} onClick={onVerTerminos}>
+              Leer los Términos de Servicio →
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -283,4 +290,9 @@ const estilos = {
   tablaProveedor: { fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 14.5, color: C.chocolate, marginBottom: 3 },
   tablaFuncion: { fontSize: 13, color: '#a5928a', marginBottom: 3 },
   tablaDatos: { fontSize: 13, color: '#7a6660' },
+  enlaceCruzado: { marginTop: 26, paddingTop: 16, borderTop: `1.5px solid ${C.chocolate}18`, textAlign: 'center' },
+  btnEnlaceCruzado: {
+    background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 700,
+    color: C.doradoOscuro, textDecoration: 'underline',
+  },
 };

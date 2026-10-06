@@ -11,9 +11,12 @@ import AppShell from './components/AppShell/AppShell';
 import Historial from './components/Historial/Historial';
 import Configuracion from './components/Configuracion/Configuracion';
 import PoliticaPrivacidad from './components/Configuracion/PoliticaPrivacidad';
+import TerminosServicio from './components/Configuracion/TerminosServicio';
 import OlvidePassword from './components/Auth/OlvidePassword';
 import ResetPassword from './components/Auth/ResetPassword';
 import VerificarEmail from './components/Auth/VerificarEmail';
+import SolicitarEliminacionCuenta from './components/Auth/SolicitarEliminacionCuenta';
+import ConfirmarEliminacionCuenta from './components/Auth/ConfirmarEliminacionCuenta';
 import Perfil from './components/Perfil/perfil';
 import Tienda from './components/Tienda/Tienda';
 import ChatGlobal from './components/ChatGlobal/ChatGlobal';
@@ -35,6 +38,7 @@ function App() {
   const [torneoDestacado, setTorneoDestacado] = useState(null);
   const [resetToken, setResetToken] = useState(null);
   const [verificarToken, setVerificarToken] = useState(null);
+  const [eliminacionToken, setEliminacionToken] = useState(null);
   const [codigoParaUnirse, setCodigoParaUnirse] = useState('');
   // Pase siguiente: logros recién desbloqueados en la última partida (ver
   // LogroDesbloqueadoPopup.js) — se llena desde GameOnlinePhaser justo
@@ -175,6 +179,24 @@ function App() {
     // podía ver logueado, dentro de Ajustes).
     if (path === '/privacidad') {
       setPantalla('privacidad-publica');
+      return;
+    }
+    // Rutas públicas (sin login) para la autoeliminación de cuenta — la
+    // pide la Play Console (Seguridad de los datos → "URL de eliminación
+    // de cuenta"), mismo criterio que el resto de las rutas públicas de
+    // arriba.
+    // Pase 312: Términos de Servicio, también público (enlazado con /privacidad).
+    if (path === '/terminos') {
+      setPantalla('terminos-publica');
+      return;
+    }
+    if (path === '/eliminar-cuenta') {
+      setPantalla('eliminar-cuenta-publica');
+      return;
+    }
+    if (path === '/confirmar-eliminacion') {
+      setEliminacionToken(params.get('token'));
+      setPantalla('confirmar-eliminacion');
       return;
     }
 
@@ -460,6 +482,26 @@ function App() {
           setPantalla('auth');
           window.history.replaceState({}, '', '/');
         }}
+        onVerTerminos={() => {
+          setPantalla('terminos-publica');
+          window.history.replaceState({}, '', '/terminos');
+          window.scrollTo(0, 0);
+        }}
+      />
+    );
+  } else if (pantalla === 'terminos-publica') {
+    contenido = (
+      <TerminosServicio
+        textoVolver="← Volver al inicio"
+        onVolver={() => {
+          setPantalla('auth');
+          window.history.replaceState({}, '', '/');
+        }}
+        onVerPrivacidad={() => {
+          setPantalla('privacidad-publica');
+          window.history.replaceState({}, '', '/privacidad');
+          window.scrollTo(0, 0);
+        }}
       />
     );
   } else if (pantalla === 'reset-password') {
@@ -484,7 +526,27 @@ function App() {
         }}
       />
     );
-  } else if (['lobby', 'torneos', 'ranking', 'historial', 'perfil', 'config', 'tienda', 'chat', 'privacidad', 'bracket'].includes(pantalla)) {
+  } else if (pantalla === 'eliminar-cuenta-publica') {
+    contenido = (
+      <SolicitarEliminacionCuenta
+        onVolverLogin={() => {
+          setPantalla('auth');
+          window.history.replaceState({}, '', '/');
+        }}
+      />
+    );
+  } else if (pantalla === 'confirmar-eliminacion') {
+    contenido = (
+      <ConfirmarEliminacionCuenta
+        token={eliminacionToken}
+        onIrALogin={() => {
+          setEliminacionToken(null);
+          setPantalla('auth');
+          window.history.replaceState({}, '', '/');
+        }}
+      />
+    );
+  } else if (['lobby', 'torneos', 'ranking', 'historial', 'perfil', 'config', 'tienda', 'chat', 'privacidad', 'terminos', 'bracket'].includes(pantalla)) {
     contenido = (
       <>
         {/* Pase de la plaqueta de trofeo: se saca el emoji 🏆 del texto de
@@ -583,7 +645,16 @@ function App() {
             />
           )}
           {pantalla === 'privacidad' && (
-            <PoliticaPrivacidad onVolver={() => setPantalla('config')} />
+            <PoliticaPrivacidad
+              onVolver={() => setPantalla('config')}
+              onVerTerminos={() => { setPantalla('terminos'); window.scrollTo(0, 0); }}
+            />
+          )}
+          {pantalla === 'terminos' && (
+            <TerminosServicio
+              onVolver={() => setPantalla('config')}
+              onVerPrivacidad={() => { setPantalla('privacidad'); window.scrollTo(0, 0); }}
+            />
           )}
           {pantalla === 'bracket' && (
             <BracketView
