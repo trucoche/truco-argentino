@@ -24,7 +24,7 @@ const C = {
   crema: '#FFF8ED', chocolate: '#4A2C2A',
 };
 
-const FECHA_ACTUALIZACION = '19/09/2025';
+const FECHA_ACTUALIZACION = '06/10/2026';
 
 const SECCIONES = [
   {
@@ -60,7 +60,8 @@ const SECCIONES = [
           'Historial de partidas jugadas',
           'Saldo de moneda virtual dentro del juego',
           'Logros y misiones completadas',
-          'Mensajes de chat (stickers) enviados dentro de las salas de juego',
+          'Mensajes de texto del chat global y mensajes privados entre jugadores',
+          'Stickers y mensajes enviados en el chat de las salas de juego (solo se transmiten durante la partida, no se guardan)',
         ],
       },
       {
@@ -103,16 +104,17 @@ const SECCIONES = [
       { proveedor: 'Google / Facebook', funcion: 'Inicio de sesión social', datos: 'Nombre, email, foto de perfil (si autorizás)' },
       { proveedor: 'Daily.co', funcion: 'Chat de voz en salas privadas', datos: 'Audio en tiempo real (no almacenado)' },
       { proveedor: 'Resend', funcion: 'Envío de emails transaccionales (ej. recuperación de contraseña)', datos: 'Dirección de email' },
-      { proveedor: 'Mercado Pago', funcion: 'Procesamiento de pagos para compra de créditos (a completar cuando esté integrado)', datos: 'Datos de pago (procesados directamente por Mercado Pago, no almacenamos datos de tarjetas)' },
+      { proveedor: 'Mercado Pago', funcion: 'Procesamiento de pagos para la compra de monedas', datos: 'Datos de pago (procesados directamente por Mercado Pago, no almacenamos datos de tarjetas)' },
     ],
     parrafos: [
+      'También usamos proveedores de infraestructura (alojamiento de los servidores, de la base de datos y del sitio web), que procesan datos únicamente para que el servicio funcione.',
       'Cada uno de estos proveedores tiene su propia política de privacidad, que rige el tratamiento que ellos hacen de los datos que procesan en nuestro nombre.',
     ],
   },
   {
     titulo: '5. Moneda virtual — aclaración importante',
     parrafos: [
-      'TrucoChe utiliza un sistema de moneda virtual propia, sin valor monetario fuera de la aplicación. Esta moneda se puede obtener de forma gratuita (bonos diarios, misiones, logros) y, en el futuro, mediante compra directa dentro de la app.',
+      'TrucoChe utiliza un sistema de moneda virtual propia, sin valor monetario fuera de la aplicación. Esta moneda se puede obtener de forma gratuita (bonos diarios, misiones, logros) y también mediante compra directa dentro de la app, a través de Mercado Pago.',
       'TrucoChe no aloja ni administra apuestas de dinero real ni juegos de azar con dinero real. Cualquier actividad de dinero real entre usuarios que pudiera organizarse por fuera de la aplicación (por ejemplo, a través de grupos externos de mensajería) es completamente ajena a TrucoChe, no es operada, supervisada ni respaldada por nosotros, y no está cubierta por esta Política de Privacidad ni por los Términos de Servicio de la aplicación.',
     ],
   },
@@ -121,7 +123,7 @@ const SECCIONES = [
     parrafos: [
       'TrucoChe tiene espacios de interacción entre jugadores: chat con stickers y, en salas privadas, chat de voz. Para que el juego sea un lugar cómodo para todos, no se permite el uso de estos espacios para expresiones de odio, discriminación (por raza, género, orientación sexual, nacionalidad, religión u otra condición), acoso hacia otros jugadores, ni contenido que incite a la violencia.',
       'El incumplimiento de esta norma puede derivar en la suspensión temporal o permanente de la cuenta, según la gravedad. En los casos que correspondan, colaboraremos con las autoridades competentes si la conducta reportada constituye un delito.',
-      'Como el chat de voz funciona en tiempo real y no se graba (ver punto 2.4), la moderación de voz depende principalmente de los reportes que hagan los propios jugadores dentro de la sala. Los mensajes de chat con stickers, en cambio, sí quedan registrados en nuestros servidores por un tiempo, ya que son el principal medio con el que contamos para revisar un reporte de mal comportamiento y decidir si corresponde una sanción.',
+      'Como el chat de voz funciona en tiempo real y no se graba (ver punto 2.4), la moderación de voz depende principalmente de los reportes que hagan los propios jugadores dentro de la sala. Lo mismo ocurre con los stickers y mensajes del chat de las salas, que solo se transmiten durante la partida y no se guardan. En cambio, los mensajes del chat global y los mensajes privados sí quedan registrados en nuestros servidores: conservamos únicamente los más recientes de cada conversación y los más antiguos se eliminan automáticamente. Esos registros son el principal medio con el que contamos para revisar un reporte de mal comportamiento y decidir si corresponde una sanción.',
     ],
   },
   {
@@ -143,7 +145,7 @@ const SECCIONES = [
       'Acceder a los datos que tenemos sobre vos',
       'Solicitar la corrección de datos incorrectos',
       'Solicitar la eliminación de tu cuenta y datos asociados',
-      'Retirar el permiso de inicio de sesión social (desconectando Google/Facebook desde la configuración de tu cuenta)',
+      'Retirar el permiso de inicio de sesión social desde la configuración de tu cuenta de Google o de Facebook',
     ],
     parrafos: [
       'Para ejercer cualquiera de estos derechos, escribinos a trucoargentino.dev@gmail.com.',
@@ -158,7 +160,7 @@ const SECCIONES = [
   {
     titulo: '10. Qué pasa cuando eliminás tu cuenta',
     parrafos: [
-      'Cuando solicitás la eliminación de tu cuenta desde la aplicación, el proceso funciona en dos etapas:',
+      'Podés solicitar la eliminación de tu cuenta desde Ajustes → Mi cuenta → "Eliminar mi cuenta" en la aplicación, o desde la página trucoche.com.ar/eliminar-cuenta. Te enviamos un email para confirmar el pedido, y el proceso funciona en dos etapas:',
       'Etapa 1 — Desactivación inmediata. Tu cuenta deja de estar visible para otros jugadores (no aparece en rankings, búsquedas ni salas) y ya no podés iniciar sesión con normalidad.',
       'Etapa 2 — Período de arrepentimiento (30 días). Durante los 30 días posteriores a la desactivación, conservamos tus datos por si querés recuperar la cuenta. Si volvés a iniciar sesión dentro de ese plazo, tu cuenta y toda tu información (estadísticas, personaje, historial) se restauran automáticamente. Pasados los 30 días sin que vuelvas a ingresar, eliminamos de forma definitiva y sin posibilidad de recuperación tus datos personales (nombre de usuario, foto de perfil, estadísticas e historial de partidas).',
       'Podés pedirnos también una eliminación inmediata y definitiva, sin pasar por el período de 30 días, escribiéndonos a trucoargentino.dev@gmail.com. En ese caso, podemos pedirte alguna verificación para confirmar que sos el titular de la cuenta.',
