@@ -114,7 +114,7 @@ export default function AppShell({
               }}
             >
               <img src={rangoUi(usuario?.rango).panel} alt="" className="ts-tarjeta-perfil-fondo" />
-              <div className="ts-tarjeta-perfil-avatar">
+              <div className="ts-tarjeta-perfil-avatar" style={rangoUi(usuario?.rango).discoEstilo}>
                 <img
                   src={
                     usuario?.avatar_tipo === 'foto' && usuario?.foto_perfil_url

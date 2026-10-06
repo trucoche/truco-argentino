@@ -351,7 +351,8 @@ useEffect(() => {
           <div style={estilos.divider}><span style={estilos.dividerTexto}>o</span></div>
 
           <div style={estilos.googleBox}>
-            <div ref={botonGoogleRef} />
+            {/* Pase 316: clip-path de 2px para ocultar el borde gris propio del botón de Google (queda solo el marco negro de la caja). */}
+            <div ref={botonGoogleRef} style={{ clipPath: 'inset(2px)' }} />
           </div>
 
           <button type="button" onClick={iniciarSesionFacebook} style={estilos.btnFacebook} disabled={cargando}>

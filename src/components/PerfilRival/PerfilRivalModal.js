@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ICONOS_LOGRO, nombreLogroSinEmoji } from '../Perfil/perfil';
+import { ICONOS_LOGRO, nombreLogroSinEmoji } from '../Perfil/Perfil';
 import { getSocket } from '../../services/socket';
 import { useToast } from '../../contexts/ToastContext';
 import MensajePrivadoModal from '../MensajePrivado/MensajePrivadoModal';

@@ -12,6 +12,7 @@ import Historial from './components/Historial/Historial';
 import Configuracion from './components/Configuracion/Configuracion';
 import PoliticaPrivacidad from './components/Configuracion/PoliticaPrivacidad';
 import TerminosServicio from './components/Configuracion/TerminosServicio';
+import RangosPrueba from './components/Perfil/RangosPrueba';
 import OlvidePassword from './components/Auth/OlvidePassword';
 import ResetPassword from './components/Auth/ResetPassword';
 import VerificarEmail from './components/Auth/VerificarEmail';
@@ -200,6 +201,11 @@ function App() {
     // Pase 312: Términos de Servicio, también público (enlazado con /privacidad).
     if (path === '/terminos') {
       setPantalla('terminos-publica');
+      return;
+    }
+    // Pase 316: página de prueba de assets de rangos (panel/anillo/logo de los 10 rangos).
+    if (path === '/rangos-prueba') {
+      setPantalla('rangos-prueba');
       return;
     }
     if (path === '/eliminar-cuenta') {
@@ -502,6 +508,15 @@ function App() {
         }}
       />
       </div>
+    );
+  } else if (pantalla === 'rangos-prueba') {
+    contenido = (
+      <RangosPrueba
+        onVolver={() => {
+          setPantalla('auth');
+          window.history.replaceState({}, '', '/');
+        }}
+      />
     );
   } else if (pantalla === 'terminos-publica') {
     contenido = (

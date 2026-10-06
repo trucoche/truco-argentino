@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ICONOS_LOGRO, nombreLogroSinEmoji } from '../Perfil/perfil';
+import { ICONOS_LOGRO, nombreLogroSinEmoji } from '../Perfil/Perfil';
 
 // Pase siguiente: popup de "logro desbloqueado" — a pedido del usuario,
 // aparece cuando vuelve al Lobby después de una partida en la que se
