@@ -32,14 +32,14 @@ export default function RangosPrueba({ onVolver }) {
               >
                 <img src={ui.panel} alt="" className="ts-tarjeta-perfil-fondo" />
                 <div className="ts-tarjeta-perfil-avatar" style={ui.discoEstilo}>
-                  <img src="/assets/gaucho-avatar.png" alt="Avatar" />
+                  <img src="/assets/gaucho-avatar-cara.png" alt="Avatar" />
                 </div>
                 <div className="ts-tarjeta-perfil-nombre">jugador_{id}</div>
                 <div className="ts-tarjeta-perfil-saldo">1593</div>
               </div>
               <div style={{ position: 'relative', width: TAM_ANILLO, height: TAM_ANILLO }}>
                 <div style={{ position: 'absolute', left: (TAM_ANILLO - diam) / 2, top: (TAM_ANILLO - diam) / 2, width: diam, height: diam, borderRadius: '50%', overflow: 'hidden', background: '#fff' }}>
-                  <img src="/assets/gaucho-avatar.png" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                  <img src="/assets/gaucho-avatar-cara.png" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                 </div>
                 <img src={ui.anillo} alt="" style={{ position: 'absolute', left: 0, top: 0, width: TAM_ANILLO, height: TAM_ANILLO, pointerEvents: 'none' }} />
               </div>

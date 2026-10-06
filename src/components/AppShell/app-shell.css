@@ -141,6 +141,7 @@
    usuario pidió correr la foto "muy pero muy poquitito" hacia la derecha
    dentro del círculo, no está bien centrada en el arte. */
 .ts-tarjeta-perfil-avatar {
+  background: #fff;
   position: absolute;
   left: 5.6%; top: 13.2%; width: 28.5%; height: 59.8%;
   border-radius: 50%;
@@ -253,7 +254,14 @@
    celeste neutro no compite con ningún otro botón cercano ni evoca
    "peligro" como el rojo viejo. Sin override de color: esta clase queda
    solo como hook para el tamaño específico del ícono (ver AppShell.js). */
-.ts-icon-logout:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--ts-chocolate); }
+/* Pase 317: botón de salir 3D carmesí con contorno negro y sombra dura inferior
+   (reemplaza al cuadrado celeste plano). */
+.ts-icon-btn.ts-icon-logout {
+  background: #E74C3C;
+  border: 3px solid #000;
+  box-shadow: 0 4px 0 #78281F, 0 5px 0 #000;
+}
+.ts-icon-btn.ts-icon-logout:active { transform: translateY(3px); box-shadow: 0 1px 0 #78281F, 0 2px 0 #000; }
 
 /* Octogésimo séptimo pase: el botón de bono diario, cuando está
    disponible, tenía fondo dorado (#FFB627) — el mismo tono que el regalo
@@ -274,6 +282,14 @@
   border-color: var(--ts-chocolate);
   animation: pulso-bonus 1.2s ease-in-out infinite;
   cursor: pointer;
+}
+/* Pase 317: botón de bono como en el nativo — círculo de madera oscura con borde negro
+   grueso, sombra dura y resplandor rojo detrás del regalo dorado. */
+.ts-icon-btn.ts-icon-bonus-activo {
+  border-radius: 50%;
+  border: 3px solid #1A1410;
+  background: linear-gradient(135deg, #6B4A34 0%, #4A3226 55%, #2A1C14 100%);
+  box-shadow: 0 4px 0 #000, 0 0 20px 9px rgba(232, 72, 58, 0.55);
 }
 
 /* Centésimo tercer pase: se saca `.ts-icon-bonus-inactivo` — el botón de

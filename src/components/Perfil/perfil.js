@@ -87,7 +87,7 @@ export function nombreLogroSinEmoji(titulo) {
 function avatarSrcDe(u) {
   return u?.avatar_tipo === 'foto' && u?.foto_perfil_url
     ? u.foto_perfil_url
-    : `/assets/${u?.personaje || 'gaucho'}-avatar.png`;
+    : `/assets/${u?.personaje || 'gaucho'}-avatar-cara.png`;
 }
 
 function StatTile({ label, valor, color }) {
