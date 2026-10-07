@@ -297,11 +297,12 @@ useEffect(() => {
               ya ocupa el sobrante de la línea, así que `justify-content`
               nunca llega a entrar en juego. */}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
+          <div style={{ flex: '1 1 300px', maxWidth: 340, display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
           {bannerTexto && (
             <button
               className="ts-banner"
               onClick={onBannerClick}
-              style={{ margin: 0, flex: '1 1 260px', maxWidth: 320 }}
+              style={{ margin: 0 }}
             >
               {/* Bug real encontrado (pase siguiente): el texto vivía
                   directo como contenido del botón, posicionado con
@@ -357,26 +358,19 @@ useEffect(() => {
               <span className="ts-banner-texto">{bannerTexto}</span>
             </button>
           )}
-          {/* Pase de rediseño estructural: "Jugar ya" — el CTA principal de
-              la pantalla central del juego — pasa a vivir dentro de una
-              gran placa de madera de caoba con marco biselado oscuro y
-              remaches de bronce en las esquinas (mismo criterio que
-              `destacadoPanelExterior` de Torneos.js), envolviendo el fondo
-              de paño/cuero que ya tenía. Antes era una sola caja con borde
-              chocolate fino — ahora tiene la misma "unidad estructural" de
-              placa de taberna que el resto de la app. */}
-          <div style={{ flex: '2 1 320px', display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
           {onIrARanked && (() => {
             const r = usuario?.rango;
             const ui = rangoUi(r);
             const titulo = r ? (r.esTop500 ? r.nombre : `${r.nombre} ${r.division}`) : 'Sin rango';
             return (
-              <PlacaMadera colorInterior="#4A3226" interiorStyle={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px', flexWrap: 'wrap' }}>
-                <img src={ui.logo} alt="" style={{ width: 56, height: 56, objectFit: 'contain' }} />
-                <div style={{ flex: '1 1 140px', minWidth: 0 }}>
-                  <div style={{ fontFamily: "'Fredoka', sans-serif", fontWeight: 800, fontSize: 18, color: '#F5B041', letterSpacing: 0.5 }}>MODO RANKED</div>
-                  <div style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 12.5, color: '#FFF3D6' }}>
-                    {r ? `${titulo} · ${r.puntos} pts` : titulo}
+              <PlacaMadera colorInterior="#4A3226" interiorStyle={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '12px 14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <img src={ui.logo} alt="" style={{ width: 56, height: 56, objectFit: 'contain', flex: '0 0 auto' }} />
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontFamily: "'Fredoka', sans-serif", fontWeight: 800, fontSize: 18, color: '#F5B041', letterSpacing: 0.5 }}>MODO RANKED</div>
+                    <div style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 12.5, color: '#FFF3D6' }}>
+                      {r ? `${titulo} · ${r.puntos} pts` : titulo}
+                    </div>
                   </div>
                 </div>
                 <button
@@ -385,7 +379,7 @@ useEffect(() => {
                   style={{
                     fontFamily: "'Fredoka', sans-serif", fontWeight: 800, fontSize: 16, color: '#4A2C2A',
                     background: '#F5B041', border: '2px solid #000', borderRadius: 999, padding: '10px 20px',
-                    boxShadow: '0 3px 0 #B9770E, 0 5px 0 #000', cursor: 'pointer', flex: '0 0 auto',
+                    boxShadow: '0 3px 0 #B9770E, 0 5px 0 #000', cursor: 'pointer', width: '100%',
                   }}
                 >
                   JUGAR RANKED
@@ -393,7 +387,16 @@ useEffect(() => {
               </PlacaMadera>
             );
           })()}
-          <div style={{ ...estilos.panelJugarYaExterior, margin: 0 }}>
+          </div>
+          {/* Pase de rediseño estructural: "Jugar ya" — el CTA principal de
+              la pantalla central del juego — pasa a vivir dentro de una
+              gran placa de madera de caoba con marco biselado oscuro y
+              remaches de bronce en las esquinas (mismo criterio que
+              `destacadoPanelExterior` de Torneos.js), envolviendo el fondo
+              de paño/cuero que ya tenía. Antes era una sola caja con borde
+              chocolate fino — ahora tiene la misma "unidad estructural" de
+              placa de taberna que el resto de la app. */}
+          <div style={{ ...estilos.panelJugarYaExterior, margin: 0, flex: '1 1 320px', maxWidth: 500 }}>
             <span style={{ ...estilos.remache, top: 10, left: 10 }} />
             <span style={{ ...estilos.remache, top: 10, right: 10 }} />
             <span style={{ ...estilos.remache, bottom: 10, left: 10 }} />
@@ -441,7 +444,6 @@ useEffect(() => {
               )}
             </button>
             </div>
-          </div>
           </div>
           </div>
 

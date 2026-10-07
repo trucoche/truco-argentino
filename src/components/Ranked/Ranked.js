@@ -20,7 +20,7 @@ const C = {
   verdeOscuro: '#1f7a3c', crimsonOscuro: '#c2352a',
 };
 
-export default function Ranked({ token, onEntrarAPartida }) {
+export default function Ranked({token, onEntrarAPartida, usuario }) {
   const [resumen, setResumen] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [modo, setModo] = useState('1v1');
@@ -62,7 +62,7 @@ export default function Ranked({ token, onEntrarAPartida }) {
     }
   };
 
-  const rango = resumen?.rango;
+  const rango = resumen?.rango || usuario?.rango;
   const ui = rangoUi(rango);
   const tituloRango = rango ? (rango.esTop500 ? rango.nombre : `${rango.nombre} ${rango.division}`) : '';
   const progreso = rango && !rango.esTop500 ? Math.max(0, Math.min(1, rango.progreso || 0)) : 1;
@@ -73,8 +73,10 @@ export default function Ranked({ token, onEntrarAPartida }) {
   return (
     <div style={estilos.pagina}>
       <div style={estilos.columna}>
+        {/* Fila 1: rango (angosta) + modalidad y búsqueda */}
+        <div style={estilos.fila}>
         {/* A. Rango actual */}
-        <PlacaMadera colorInterior="#4A3226" interiorStyle={estilos.rangoInterior}>
+        <PlacaMadera style={{ display: 'flex', flexDirection: 'column', flex: '0 1 300px', minWidth: 240 }} colorInterior="#4A3226" interiorStyle={estilos.rangoInterior}>
           <img src={ui.logo} alt="" style={estilos.rangoLogo} />
           {rango && (
             <div style={{ width: '100%', textAlign: 'center' }}>
@@ -91,7 +93,7 @@ export default function Ranked({ token, onEntrarAPartida }) {
         </PlacaMadera>
 
         {/* B + C. Modalidad y búsqueda */}
-        <PlacaMadera interiorStyle={{ padding: 18 }}>
+        <PlacaMadera style={{ display: 'flex', flexDirection: 'column', flex: '1 1 340px', minWidth: 0 }} interiorStyle={{ padding: 18, flex: 1 }}>
           <div style={estilos.panelTitulo}>Elegí la modalidad</div>
           <div style={estilos.filaModos}>
             {MODOS.map((m) => (
@@ -124,9 +126,12 @@ export default function Ranked({ token, onEntrarAPartida }) {
               : `Nadie esperando en ${modo} ahora: serás el primero en la cola`}
           </div>
         </PlacaMadera>
+        </div>
 
+        {/* Fila 2: temporada + cómo se suma */}
+        <div style={estilos.fila}>
         {/* D. Stats */}
-        <PlacaMadera interiorStyle={{ padding: 18 }}>
+        <PlacaMadera style={{ display: 'flex', flexDirection: 'column', flex: '1 1 300px', minWidth: 0 }} interiorStyle={{ padding: 18, flex: 1 }}>
           <div style={estilos.panelTitulo}>Tu temporada</div>
           <div style={estilos.statsGrid}>
             <Stat label="Jugadas" valor={resumen?.jugadas ?? 0} />
@@ -140,7 +145,7 @@ export default function Ranked({ token, onEntrarAPartida }) {
         </PlacaMadera>
 
         {/* Cómo se puntúa */}
-        <PlacaMadera interiorStyle={{ padding: 18 }}>
+        <PlacaMadera style={{ display: 'flex', flexDirection: 'column', flex: '1 1 300px', minWidth: 0 }} interiorStyle={{ padding: 18, flex: 1 }}>
           <div style={estilos.panelTitulo}>Cómo se suma</div>
           <ul style={estilos.lista}>
             <li>Ganarle a alguien de mayor rango suma más; ganarle a uno de menor rango suma menos.</li>
@@ -151,6 +156,7 @@ export default function Ranked({ token, onEntrarAPartida }) {
             <li>Solo las partidas clasificatorias mueven tu rango: las salas casuales no.</li>
           </ul>
         </PlacaMadera>
+        </div>
       </div>
     </div>
   );
@@ -169,10 +175,11 @@ const CONTORNO_TEXTO = '-1.5px -1.5px 0 #000, 0 -1.5px 0 #000, 1.5px -1.5px 0 #0
 
 const estilos = {
   pagina: { width: '100%', padding: '8px 12px 40px', boxSizing: 'border-box' },
-  columna: { maxWidth: 560, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 18 },
+  columna: { maxWidth: 940, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 18 },
+  fila: { display: 'flex', flexWrap: 'wrap', gap: 18, alignItems: 'stretch' },
   cargando: { textAlign: 'center', color: C.crema, fontFamily: "'Fredoka', sans-serif", padding: 40 },
-  rangoInterior: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, padding: '20px 18px' },
-  rangoLogo: { width: 140, height: 140, objectFit: 'contain' },
+  rangoInterior: { flex: 1, justifyContent: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, padding: '20px 18px' },
+  rangoLogo: { width: 110, height: 110, objectFit: 'contain' },
   rangoNombre: {
     fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 28, color: C.doradoClaro,
     textShadow: '1px 2px 0 #000',

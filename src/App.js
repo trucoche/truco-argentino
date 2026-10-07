@@ -666,6 +666,7 @@ function AppInterna() {
           {pantalla === 'ranked' && (
             <Ranked
               token={token}
+              usuario={usuario}
               onEntrarAPartida={(codigoSala) => {
                 setCodigoSalaActual(codigoSala);
                 setPantalla('juego');
