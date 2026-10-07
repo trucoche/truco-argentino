@@ -1790,76 +1790,51 @@ _dibujarTileEspera(cx, cy, radio, jugador, pendientes) {
   // usan las filas de la pantalla final (pase 265) para que se lea
   // "3D"/ahuecada y no plana — más los 3 puntitos parpadeantes pedidos.
   const pillY = cy + radio + 30;
-  const pillAlto = 32;
+  const pillAlto = 30;
+
+  // Pase 349: las dos píldoras ("✓ Conectado" verde / "Conectando..." crema) se dibujan por
+  // código, planas y con relieve duro — igual que en el nativo — en vez de los PNG nine-slice
+  // de la pantalla final (que dejaban los bordes cortados). Las dos miden lo mismo (ancho
+  // fijo, calculado con el texto más largo) y NO cambian al aparecer los puntitos.
+  const ESTILO_PILL = { fontFamily: 'Fredoka, Arial', fontSize: '15px', fontStyle: '600' };
+  const medA = this.add.text(0, 0, '✓ Conectado', ESTILO_PILL);
+  const medB = this.add.text(0, 0, 'Conectando...', ESTILO_PILL);
+  const anchoPill = Math.max(Math.ceil(Math.max(medA.width, medB.width)) + 36, 120);
+  const anchoConectando = medB.width;
+  medA.destroy();
+  medB.destroy();
+
+  const dibujarPill = (relleno, borde) => {
+    const g = this.add.graphics().setDepth(413);
+    const px = cx - anchoPill / 2;
+    const py = pillY - pillAlto / 2;
+    g.fillStyle(0x000000, 0.5); // relieve duro inferior
+    g.fillRoundedRect(px, py + 3, anchoPill, pillAlto, pillAlto / 2);
+    g.fillStyle(relleno, 1);
+    g.fillRoundedRect(px, py, anchoPill, pillAlto, pillAlto / 2);
+    g.lineStyle(2, borde, 1);
+    g.strokeRoundedRect(px, py, anchoPill, pillAlto, pillAlto / 2);
+    this._avataresEsperaSprites.push(g);
+    this._sprites.push(g);
+  };
 
   if (conectado) {
-    const pillTextoBase = '✓ Conectado';
-    const medidor = this.add.text(0, 0, pillTextoBase, { fontFamily: 'Fredoka, Arial', fontSize: '14px', fontStyle: '600' });
-    const anchoTexto = medidor.width;
-    medidor.destroy();
-
-    const texIzqPill = this.textures.get('botonVerdeIzq').getSourceImage();
-    const texDerPill = this.textures.get('botonVerdeDer').getSourceImage();
-    const capIzqPill = Math.round(texIzqPill.width * (pillAlto / texIzqPill.height));
-    const capDerPill = Math.round(texDerPill.width * (pillAlto / texDerPill.height));
-    const pillAncho = Math.max(anchoTexto + 36, capIzqPill + capDerPill + 20);
-    const midPill = pillAncho - capIzqPill - capDerPill;
-
-    const pIzq = this.add.image(cx - pillAncho / 2 + capIzqPill / 2, pillY, 'botonVerdeIzq').setDisplaySize(capIzqPill, pillAlto).setDepth(413);
-    const pCentro = this.add.image(cx - pillAncho / 2 + capIzqPill + midPill / 2, pillY, 'botonVerdeCentro').setDisplaySize(midPill, pillAlto).setDepth(413);
-    const pDer = this.add.image(cx + pillAncho / 2 - capDerPill / 2, pillY, 'botonVerdeDer').setDisplaySize(capDerPill, pillAlto).setDepth(413);
-    this._avataresEsperaSprites.push(pIzq, pCentro, pDer);
-    this._sprites.push(pIzq, pCentro, pDer);
-
-    const pillTexto = this.add.text(cx, pillY, pillTextoBase, {
-      fontFamily: 'Fredoka, Arial', fontSize: '14px', fontStyle: '600', color: '#FFFFFF',
-      stroke: '#000000', strokeThickness: 3,
+    dibujarPill(0x3E8E5A, 0x1F5C38);
+    const pillTexto = this.add.text(cx, pillY, '✓ Conectado', {
+      ...ESTILO_PILL, color: '#FFFFFF', stroke: '#14391f', strokeThickness: 3,
     }).setOrigin(0.5).setDepth(414);
     this._avataresEsperaSprites.push(pillTexto);
     this._sprites.push(pillTexto);
   } else {
-    // "Conectando" fijo + puntitos separados que van y vienen cada 400ms
-    // — separados en 2 Text para que el ancho del texto no cambie cada
-    // vez que cambia la cantidad de puntos (se mide con los 3 puntos
-    // puestos, "Conectando...", y el texto base se ancla a la izquierda
-    // de ESE ancho fijo en vez de quedar centrado y bailando).
-    // Ducentésimo septuagésimo segundo pase: el usuario reportó que
-    // "Conectando..." se veía chico al lado de "✓ Conectado" — en código
-    // los dos ya estaban en 14px, pero "✓ Conectado" usa Fredoka bold
-    // (más ancha/pesada) mientras este texto usa Nunito, que a igual
-    // tamaño en px se lee más fino/chico. Sube a 17px (+21%, dentro del
-    // 20-25% pedido) para equipararlos a simple vista.
-    const FUENTE_CONECTANDO = 'bold 17px Nunito, Arial';
-    const base = 'Conectando';
-    const medidorTotal = this.add.text(0, 0, `${base}...`, { font: FUENTE_CONECTANDO });
-    const anchoTotal = medidorTotal.width;
-    medidorTotal.destroy();
-
-    // El ancho de la píldora venía fijo en `radio*2+22` (pensado para el
-    // 14px viejo) — con el texto más grande, en salas de 3+ asientos
-    // (`tamano`/`radio` más chicos, ver _redibujarFilaEspera) el texto ya
-    // no entraba y se salía de la píldora. Ahora el ancho es el máximo
-    // entre ese mínimo de siempre y lo que el texto real necesita (mismo
-    // criterio que ya usa la píldora "✓ Conectado" unas líneas arriba).
-    const pillAncho = Math.max(radio * 2 + 22, anchoTotal + 36);
-    const px = cx - pillAncho / 2, py = pillY - pillAlto / 2;
-    const pill = this.add.graphics().setDepth(413);
-    pill.fillStyle(0x3a2412, 0.18); // sombra sutil, da el "hueco" ahuecado
-    pill.fillRoundedRect(px, py, pillAncho, pillAlto, pillAlto / 2);
-    pill.fillStyle(0xE9D9B0, 1); // madera clara / beige
-    pill.fillRoundedRect(px + 1.5, py + 1.5, pillAncho - 3, pillAlto - 5, pillAlto / 2 - 1.5);
-    pill.fillStyle(0xFFFFFF, 0.4); // brillo superior sutil — mismo criterio que las filas del pase 265
-    pill.fillRoundedRect(px + 1.5, py + 1.5, pillAncho - 3, pillAlto * 0.45, pillAlto / 2 - 1.5);
-    pill.lineStyle(2, 0x4A2C2A, 1);
-    pill.strokeRoundedRect(px, py, pillAncho, pillAlto, pillAlto / 2);
-    this._avataresEsperaSprites.push(pill);
-    this._sprites.push(pill);
-
-    const textoBase = this.add.text(cx - anchoTotal / 2, pillY, base, {
-      font: FUENTE_CONECTANDO, fill: '#4A2C2A',
+    dibujarPill(0xE9D9B0, 0x4A2C2A);
+    // "Conectando" fijo + puntitos separados (1→3 cada 400 ms). El texto se ancla a la izquierda
+    // del ancho de "Conectando..." para que no baile; la píldora no se redibuja.
+    const xTexto = cx - anchoConectando / 2;
+    const textoBase = this.add.text(xTexto, pillY, 'Conectando', {
+      ...ESTILO_PILL, color: '#4A2C2A',
     }).setOrigin(0, 0.5).setDepth(414);
-    const textoPuntos = this.add.text(cx - anchoTotal / 2 + textoBase.width, pillY, '.', {
-      font: FUENTE_CONECTANDO, fill: '#4A2C2A',
+    const textoPuntos = this.add.text(xTexto + textoBase.width, pillY, '.', {
+      ...ESTILO_PILL, color: '#4A2C2A',
     }).setOrigin(0, 0.5).setDepth(414);
     this._avataresEsperaSprites.push(textoBase, textoPuntos);
     this._sprites.push(textoBase, textoPuntos);
