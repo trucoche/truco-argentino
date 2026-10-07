@@ -340,9 +340,15 @@ return (
           <span style={{ ...estilos.remache, top: 10, right: 10 }} />
           <span style={{ ...estilos.remache, bottom: 10, left: 10 }} />
           <span style={{ ...estilos.remache, bottom: 10, right: 10 }} />
+          {/* Pase 351: cinta de pergamino con remaches, a caballo sobre el borde
+              superior del marco (fuera del card, que recorta con overflow). */}
+          <div style={estilos.destacadoCinta}>
+            <span style={{ ...estilos.cintaRemache, left: 9 }} />
+            PRÓXIMO TORNEO
+            <span style={{ ...estilos.cintaRemache, right: 9 }} />
+          </div>
           <div style={estilos.destacadoCard}>
             <Filigrana />
-            <div style={estilos.destacadoCinta}>PRÓXIMO TORNEO</div>
 
             <div style={estilos.destacadoHeader}>
               <img src="/assets/images/trofeo.png" alt="" style={estilos.destacadoHeaderIcono} />
@@ -351,7 +357,7 @@ return (
 
             <div style={estilos.destacadoStats}>
               <div style={estilos.destacadoStatBadge}>
-                <img src="/assets/images/icono-personaje.png" alt="" style={estilos.destacadoStatIcono} />
+                <span style={estilos.iconoSiluetaJugadores} />
                 <span style={estilos.destacadoStatValor}>
                   {torneoDestacado.entradas_actuales}/{torneoDestacado.cupo_entradas}
                 </span>
@@ -384,7 +390,7 @@ return (
               </div>
               <div style={estilos.destacadoStatBadge}>
                 <img src="/assets/images/historial-trofeo.png" alt="" style={estilos.destacadoStatIcono} />
-                <span style={estilos.destacadoStatValor}>35</span>
+                <span style={{ ...estilos.destacadoStatValor, color: '#B9770E' }}>35</span>
                 <span style={estilos.destacadoStatLabel}>Premio</span>
               </div>
             </div>
@@ -436,17 +442,21 @@ return (
           emoji con arte ilustrado en la misma pantalla. */}
       <div style={estilos.statsRow}>
         <div style={estilos.statCard}>
-          <div style={estilos.statValor}>{jugadoresParticipando}</div>
-          <div style={estilos.statLabel}>
-            <img src="/assets/images/icono-personaje.png" alt="" style={estilos.statLabelIcono} />
-            jugadores participando
+          <div style={estilos.statHueco}>
+            <div style={estilos.statValor}>{jugadoresParticipando}</div>
+            <div style={estilos.statLabel}>
+              <span style={{ ...estilos.iconoSiluetaJugadores, width: 14, height: 14, marginRight: 4 }} />
+              jugadores participando
+            </div>
           </div>
         </div>
         <div style={estilos.statCard}>
-          <div style={estilos.statValor}>{torneosEnJuego}</div>
-          <div style={estilos.statLabel}>
-            <img src="/assets/images/historial-trofeo.png" alt="" style={estilos.statLabelIcono} />
-            torneos en juego
+          <div style={estilos.statHueco}>
+            <div style={estilos.statValor}>{torneosEnJuego}</div>
+            <div style={estilos.statLabel}>
+              <img src="/assets/images/historial-trofeo.png" alt="" style={estilos.statLabelIcono} />
+              torneos en juego
+            </div>
           </div>
         </div>
       </div>
@@ -637,7 +647,7 @@ return (
                     </div>
                   </div>
                 ) : (
-                  <button onClick={() => setInscribiendoId(t.id)} style={estilos.btnCardDorado}>Inscribirse</button>
+                  <button onClick={() => setInscribiendoId(t.id)} style={estilos.btnCard}>Inscribirse</button>
                 )
               )}
 
@@ -774,19 +784,30 @@ const estilos = {
   destacadoCard: {
     position: 'relative', overflow: 'hidden', textAlign: 'center',
     background: `linear-gradient(180deg, ${C.verdeProfundo}, ${C.verdeOscuro})`,
-    borderRadius: 16, padding: '22px 20px 22px',
+    borderRadius: 16, padding: '26px 20px 22px',
     boxShadow: 'inset 0 4px 14px rgba(0,0,0,0.55), inset 0 -3px 10px rgba(0,0,0,0.35), inset 0 0 0 2px rgba(0,0,0,0.25)',
   },
-  // Insignia "PRÓXIMO TORNEO" — cinta recortada con clip-path (2 muescas
-  // en V a los costados, look de sticker) en vez del pill plano de antes.
+  // Pase 351: cinta "PRÓXIMO TORNEO" = placa sutil de pergamino con 2 remaches,
+  // montada sobre el borde superior del marco (antes: cinta dorada con muescas).
   destacadoCinta: {
-    display: 'inline-block', margin: '0 0 14px',
-    background: `linear-gradient(180deg, ${C.doradoClaro}, ${C.dorado})`,
-    color: C.chocolate, fontFamily: "'Fredoka', sans-serif", fontWeight: 800, fontSize: 12.5,
-    padding: '8px 28px', letterSpacing: 0.6,
-    border: `2.5px solid ${C.negroPulido}`,
-    clipPath: 'polygon(0 0, 100% 0, 91% 50%, 100% 100%, 0 100%, 9% 50%)',
-    boxShadow: '0 3px 0 rgba(0,0,0,0.4)',
+    position: 'absolute', top: -17, left: '50%', transform: 'translateX(-50%)', zIndex: 4,
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', whiteSpace: 'nowrap',
+    background: 'linear-gradient(180deg, #F3E6C2, #E4D1A0)',
+    color: '#3A1E0A', fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 13,
+    height: 32, padding: '0 34px', letterSpacing: 0.7, boxSizing: 'border-box',
+    border: `2px solid ${C.negroPulido}`, borderRadius: 9,
+    boxShadow: `0 3px 0 ${C.negroPulido}, inset 0 1px 0 rgba(255,255,255,0.6)`,
+  },
+  cintaRemache: {
+    position: 'absolute', top: '50%', marginTop: -4, width: 8, height: 8, borderRadius: '50%',
+    background: `radial-gradient(circle at 35% 30%, ${C.remacheClaro} 0%, ${C.remache} 55%, ${C.remacheOscuro} 100%)`,
+    border: `1px solid ${C.remacheOscuro}`, boxSizing: 'border-box',
+  },
+  // Silueta de Jugadores tintada café oscuro (para que contraste sobre pergamino).
+  iconoSiluetaJugadores: {
+    display: 'inline-block', width: 26, height: 26, flexShrink: 0, backgroundColor: C.chocolate,
+    WebkitMask: 'url(/assets/images/icono-personaje.png) center / contain no-repeat',
+    mask: 'url(/assets/images/icono-personaje.png) center / contain no-repeat',
   },
   destacadoHeader: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 18 },
   destacadoHeaderIcono: { height: 50, width: 'auto', objectFit: 'contain', flexShrink: 0 },
@@ -796,19 +817,22 @@ const estilos = {
   },
   // Pase siguiente: flexWrap agregado — con las 2 stats nuevas (Entrada/
   // Premio) ya son 5 en la fila, y sin wrap podían desbordar en mobile.
-  destacadoStats: { display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 10, marginBottom: 20 },
+  destacadoStats: { display: 'flex', flexWrap: 'nowrap', justifyContent: 'center', gap: 8, marginBottom: 20 },
   // Cada stat pasa de texto suelto a una mini placa de madera 3D (mismo
   // degradé que los paneles grandes, a escala de badge) con su ícono
   // ilustrado arriba del valor.
+  // Pase 351: fichas de pergamino ahuecado con marco de madera tostada (antes
+  // casilleros de madera casi negra). 5 en UNA sola fila.
   destacadoStatBadge: {
+    flex: '1 1 0', minWidth: 0, maxWidth: 96,
     display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-    background: `linear-gradient(160deg, ${C.maderaClara} 0%, ${C.maderaMedia} 60%, ${C.maderaOscura} 100%)`,
-    border: `2px solid ${C.negroPulido}`, borderRadius: 12,
-    padding: '9px 13px 8px', minWidth: 62,
-    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -2px 5px rgba(0,0,0,0.4), 0 3px 0 rgba(0,0,0,0.3)',
+    background: '#FFFBEB',
+    border: '2.5px solid #8B5A2B', borderRadius: 12,
+    padding: '9px 4px 8px', boxSizing: 'border-box',
+    boxShadow: 'inset 0 4px 7px rgba(74,44,17,0.38), inset 0 -2px 0 rgba(255,255,255,0.7), 0 3px 0 rgba(0,0,0,0.55)',
   },
   // Pase siguiente: +4px — el usuario los vio bien pero un poco chicos.
-  destacadoStatIcono: { width: 26, height: 26, objectFit: 'contain', filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.4))' },
+  destacadoStatIcono: { width: 26, height: 26, objectFit: 'contain' },
   // "Ficha de truco" — mismo degradé de remache (moneda/ficha de bronce)
   // dibujado en CSS, no hay un asset de ficha de truco individual todavía.
   fichaTruco: {
@@ -819,9 +843,9 @@ const estilos = {
   },
   destacadoStatValor: {
     fontFamily: "'Fredoka', sans-serif", fontWeight: 800, fontSize: 16,
-    color: C.doradoClaro, textShadow: '0 1px 2px rgba(0,0,0,0.5)',
+    color: C.chocolate,
   },
-  destacadoStatLabel: { fontSize: 9.5, color: 'rgba(255,248,237,0.75)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.3 },
+  destacadoStatLabel: { fontSize: 9.5, color: '#7A5A3A', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.3 },
   // Botón "Anotarme ahora" — pedido explícito: bajarlo a 50-60% del ancho
   // (en vez de ocupar toda la placa, que lo hacía ver desproporcionado) y
   // subirle la tipografía ~20% en negrita para que un botón más compacto y
@@ -833,8 +857,8 @@ const estilos = {
   destacadoBtn: {
     fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 19, color: '#2C160E',
     border: '2px solid #000', borderRadius: 999, cursor: 'pointer', width: '100%', maxWidth: 420,
-    height: 50, boxSizing: 'border-box', padding: '0 20px', marginBottom: 6,
-    background: '#F5B041', boxShadow: '0 3px 0 #B9770E, 0 5px 0 #000',
+    height: 58, boxSizing: 'border-box', padding: '0 20px', marginBottom: 6,
+    background: '#F5B041', boxShadow: '0 4px 0 #B9770E, 0 6px 0 #000',
   },
   destacadoYaInscripto: {
     background: 'rgba(255,248,237,0.12)', color: C.doradoClaro,
@@ -845,8 +869,9 @@ const estilos = {
   statsRow: { display: 'flex', gap: 12, marginBottom: 16 },
   // Mini placa de madera (misma receta que los paneles grandes, a escala
   // chica) en vez del rectángulo blanco plano de antes.
+  // Pase 351: contador = marco de madera biselada + hueco de pergamino (antes caja marrón casi negra).
   statCard: {
-    flex: 1, textAlign: 'center', padding: '14px 10px 12px',
+    flex: 1, textAlign: 'center', padding: 5,
     background: `linear-gradient(160deg, ${C.maderaClara} 0%, ${C.maderaMedia} 55%, ${C.maderaOscura} 100%)`,
     border: `2.5px solid ${C.negroPulido}`, borderRadius: 16,
     boxShadow: [
@@ -856,12 +881,16 @@ const estilos = {
       '0 8px 14px rgba(0,0,0,0.3)',
     ].join(', '),
   },
-  statValor: { fontFamily: "'Fredoka', sans-serif", fontWeight: 800, fontSize: 26, color: C.doradoClaro, textShadow: '0 1px 3px rgba(0,0,0,0.5)' },
+  statHueco: {
+    background: '#FFFBEB', borderRadius: 11, padding: '10px 8px 9px',
+    boxShadow: 'inset 0 4px 9px rgba(74,44,17,0.4), inset 0 -2px 0 rgba(255,255,255,0.7)',
+  },
+  statValor: { fontFamily: "'Fredoka', sans-serif", fontWeight: 800, fontSize: 26, color: '#B9770E' },
   statLabel: {
-    fontSize: 11, color: 'rgba(255,248,237,0.75)', fontWeight: 700, marginTop: 4,
+    fontSize: 11, color: '#7A5A3A', fontWeight: 700, marginTop: 4,
     display: 'flex', alignItems: 'center', justifyContent: 'center',
   },
-  statLabelIcono: { width: 13, height: 13, objectFit: 'contain', marginRight: 4, filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.35))' },
+  statLabelIcono: { width: 14, height: 14, objectFit: 'contain', marginRight: 4 },
   panelTitle: {
     fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 19, color: C.chocolate, marginBottom: 10,
     display: 'flex', alignItems: 'center',
@@ -978,15 +1007,14 @@ const estilos = {
   torneoHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, gap: 8 },
   torneoNombre: { fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 15, color: C.chocolate },
   badge: {
-    fontSize: 11, fontWeight: 800, padding: '3px 10px', borderRadius: 12,
+    fontSize: 11, fontWeight: 800, padding: '3px 10px', borderRadius: 999,
     textTransform: 'uppercase', whiteSpace: 'nowrap', border: `1.5px solid ${C.negroPulido}`,
     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
   },
-  // Cinta/badge verde neón 3D con texto blanco, en vez del pill verde
-  // clarito plano.
+  // Pase 351: insignia verde suave ahuecada con contorno fino (sin cápsula brillante).
   badgeAbierta: {
-    background: 'linear-gradient(180deg, #5EE87A, #2FBD52)', color: '#fff',
-    boxShadow: `0 2px 0 #1a6b2e, inset 0 1px 0 rgba(255,255,255,0.5)`, textShadow: '0 1px 1px rgba(0,0,0,0.3)',
+    background: '#D6F0DF', color: '#1F5C38', border: '1.5px solid #2E8B57',
+    boxShadow: 'inset 0 2px 3px rgba(31,92,56,0.25)',
   },
   badgeCurso: {
     background: `linear-gradient(180deg, ${C.doradoClaro}, ${C.dorado})`, color: C.chocolate,
