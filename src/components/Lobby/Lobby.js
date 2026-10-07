@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import MisionesCard from './MisionesCard';
 import PerfilRivalModal from '../PerfilRival/PerfilRivalModal';
 import PantallaCarga from '../PantallaCarga/PantallaCarga';
-import PopupMadera from '../Popup/PopupMadera';
+import PopupMadera, { PlacaMadera } from '../Popup/PopupMadera';
+import { rangoUi } from '../Perfil/rangosUi';
 import { useToast } from '../../contexts/ToastContext';
 import { API_URL as BASE_URL } from '../../config';
 
@@ -88,7 +89,7 @@ function Filigrana() {
 
 // Ya NO recibe onLogout/onVerRanking/onVerTorneos — esa navegación ahora
 // vive en el AppShell (header + nav), no dentro del contenido del Lobby.
-export default function Lobby({ token, usuario, onPersonajeCambiado, onEntrarAPartida, onBuscarPartidaActiva, onMisionReclamada, codigoInicial, bannerTexto, onBannerClick }) {
+export default function Lobby({ token, usuario, onPersonajeCambiado, onEntrarAPartida, onBuscarPartidaActiva, onMisionReclamada, onIrARanked, codigoInicial, bannerTexto, onBannerClick }) {
   const { mostrarToast } = useToast();
   const [salas, setSalas]           = useState([]);
   const [cargando, setCargando]     = useState(true);
@@ -364,7 +365,35 @@ useEffect(() => {
               de paño/cuero que ya tenía. Antes era una sola caja con borde
               chocolate fino — ahora tiene la misma "unidad estructural" de
               placa de taberna que el resto de la app. */}
-          <div style={{ ...estilos.panelJugarYaExterior, margin: 0, flex: '2 1 320px' }}>
+          <div style={{ flex: '2 1 320px', display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
+          {onIrARanked && (() => {
+            const r = usuario?.rango;
+            const ui = rangoUi(r);
+            const titulo = r ? (r.esTop500 ? r.nombre : `${r.nombre} ${r.division}`) : 'Sin rango';
+            return (
+              <PlacaMadera colorInterior="#4A3226" interiorStyle={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px', flexWrap: 'wrap' }}>
+                <img src={ui.logo} alt="" style={{ width: 56, height: 56, objectFit: 'contain' }} />
+                <div style={{ flex: '1 1 140px', minWidth: 0 }}>
+                  <div style={{ fontFamily: "'Fredoka', sans-serif", fontWeight: 800, fontSize: 18, color: '#F5B041', letterSpacing: 0.5 }}>MODO RANKED</div>
+                  <div style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 12.5, color: '#FFF3D6' }}>
+                    {r ? `${titulo} · ${r.puntos} pts` : titulo}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={onIrARanked}
+                  style={{
+                    fontFamily: "'Fredoka', sans-serif", fontWeight: 800, fontSize: 16, color: '#4A2C2A',
+                    background: '#F5B041', border: '2px solid #000', borderRadius: 999, padding: '10px 20px',
+                    boxShadow: '0 3px 0 #B9770E, 0 5px 0 #000', cursor: 'pointer', flex: '0 0 auto',
+                  }}
+                >
+                  JUGAR RANKED
+                </button>
+              </PlacaMadera>
+            );
+          })()}
+          <div style={{ ...estilos.panelJugarYaExterior, margin: 0 }}>
             <span style={{ ...estilos.remache, top: 10, left: 10 }} />
             <span style={{ ...estilos.remache, top: 10, right: 10 }} />
             <span style={{ ...estilos.remache, bottom: 10, left: 10 }} />
@@ -412,6 +441,7 @@ useEffect(() => {
               )}
             </button>
             </div>
+          </div>
           </div>
           </div>
 

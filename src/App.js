@@ -5,6 +5,7 @@ import AuthScreen from './components/Auth/AuthScreen';
 import Lobby from './components/Lobby/Lobby';
 import GameOnlinePhaser from './components/GameOnline/GameOnlinePhaser';
 import Ranking from './components/Ranking/Ranking';
+import Ranked from './components/Ranked/Ranked';
 import Torneos from './components/Torneos/Torneos';
 import BracketView from './components/Torneos/BracketView';
 import AppShell from './components/AppShell/AppShell';
@@ -422,7 +423,7 @@ function AppInterna() {
   };
 
   useEffect(() => {
-    if (['lobby', 'torneos', 'ranking', 'historial', 'perfil', 'config', 'tienda', 'chat', 'bracket'].includes(pantalla)) {
+    if (['lobby', 'torneos', 'ranking', 'ranked', 'historial', 'perfil', 'config', 'tienda', 'chat', 'bracket'].includes(pantalla)) {
       actualizarPerfil();
       buscarTorneoDestacado();
     }
@@ -589,7 +590,7 @@ function AppInterna() {
         }}
       />
     );
-  } else if (['lobby', 'torneos', 'ranking', 'historial', 'perfil', 'config', 'tienda', 'chat', 'privacidad', 'terminos', 'bracket'].includes(pantalla)) {
+  } else if (['lobby', 'torneos', 'ranking', 'ranked', 'historial', 'perfil', 'config', 'tienda', 'chat', 'privacidad', 'terminos', 'bracket'].includes(pantalla)) {
     contenido = (
       <>
         {/* Pase de la plaqueta de trofeo: se saca el emoji 🏆 del texto de
@@ -631,6 +632,7 @@ function AppInterna() {
                 setPantalla('juego');
               }}
               onMisionReclamada={actualizarPerfil}
+              onIrARanked={() => setPantalla('ranked')}
               codigoInicial={codigoParaUnirse}
               // Pase siguiente: el banner de torneo ahora lo dibuja el
               // propio Lobby (comparte fila con "Jugar ya") — mismos
@@ -658,6 +660,17 @@ function AppInterna() {
 
           {pantalla === 'ranking' && (
             <Ranking token={token} usuarioActual={usuario.username} />
+          )}
+
+          {/* Pase 336: Modo Ranked (clasificatorio) */}
+          {pantalla === 'ranked' && (
+            <Ranked
+              token={token}
+              onEntrarAPartida={(codigoSala) => {
+                setCodigoSalaActual(codigoSala);
+                setPantalla('juego');
+              }}
+            />
           )}
 
           {pantalla === 'historial' && (
