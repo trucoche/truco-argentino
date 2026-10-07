@@ -288,7 +288,7 @@ const estilos = {
   // `filaPrincipal`, pero en su propio color.
   placaResultado: {
     position: 'relative', flexShrink: 0,
-    height: 64,
+    height: 68,
     display: 'flex', alignItems: 'center', gap: 8,
     background: C.crema,
     borderRadius: 10,
@@ -304,7 +304,7 @@ const estilos = {
   // flujo normal de la chapita, con un `drop-shadow` liviano para que se
   // despegue un poco del fondo crema plano.
   placaIcono: {
-    width: 46, height: 46, objectFit: 'contain', flexShrink: 0,
+    width: 56, height: 56, objectFit: 'contain', flexShrink: 0,
     filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.25))',
   },
   // Ducentésimo sexagésimo primer pase: 15 → 19 — el usuario pidió
