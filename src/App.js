@@ -412,7 +412,7 @@ function AppInterna() {
 
       // Pase 325: pop-up de madera con la caja de regalo y resplandor.
       mostrarAviso({
-        titulo: '¡Bonus diario!', cinta: 'dorada', icono: '/assets/images/regalo.png', tamIcono: 96,
+        titulo: '¡Bonus diario!', cinta: 'dorada', monedaGirando: true, tamIcono: 96,
         mensaje: data.mensaje, botones: [{ texto: 'Aceptar', tipo: 'verde' }],
       });
       actualizarPerfil();

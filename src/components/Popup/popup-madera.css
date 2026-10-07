@@ -131,6 +131,16 @@
   pointer-events: none;
 }
 .pm-icono { position: relative; object-fit: contain; filter: drop-shadow(0 4px 0 rgba(0, 0, 0, 0.35)); }
+.pm-moneda-giro { position: relative; filter: drop-shadow(0 4px 0 rgba(0, 0, 0, 0.35)); }
+.pm-moneda-cara, .pm-moneda-dorso {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain;
+  backface-visibility: hidden; -webkit-backface-visibility: hidden;
+}
+.pm-moneda-cara  { animation: pm-moneda-giro 1.4s linear infinite; }
+.pm-moneda-dorso { animation: pm-moneda-giro-dorso 1.4s linear infinite; }
+@keyframes pm-moneda-giro       { from { transform: perspective(600px) rotateY(0deg); }   to { transform: perspective(600px) rotateY(360deg); } }
+@keyframes pm-moneda-giro-dorso { from { transform: perspective(600px) rotateY(180deg); } to { transform: perspective(600px) rotateY(540deg); } }
+@media (prefers-reduced-motion: reduce) { .pm-moneda-cara, .pm-moneda-dorso { animation: none; } .pm-moneda-dorso { display: none; } }
 .pm-emoji { position: relative; line-height: 1; filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.3)); }
 
 .pm-mensaje {

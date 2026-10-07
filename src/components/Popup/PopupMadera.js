@@ -68,6 +68,7 @@ export default function PopupMadera({
   titulo,
   cinta = 'dorada',
   icono,
+  monedaGirando = false,
   emojiIcono,
   tamIcono = 84,
   mensaje,
@@ -98,10 +99,15 @@ export default function PopupMadera({
         {!!titulo && <Cinta titulo={titulo} cinta={cinta} />}
         {onCerrar && <BotonX onClick={onCerrar} />}
         <PlacaMadera colorInterior={colorInterior}>
-          {(icono || emojiIcono) && (
+          {(icono || emojiIcono || monedaGirando) && (
             <div className="pm-icono-wrap" style={{ width: tamIcono, height: tamIcono }}>
               <div className="pm-resplandor" />
-              {icono ? (
+              {monedaGirando ? (
+                <div className="pm-moneda-giro" style={{ width: tamIcono, height: tamIcono }}>
+                  <img className="pm-moneda-cara" src="/assets/images/moneda.png" alt="" />
+                  <img className="pm-moneda-dorso" src="/assets/images/moneda-dorso.png" alt="" />
+                </div>
+              ) : icono ? (
                 <img className="pm-icono" src={icono} alt="" style={{ width: tamIcono, height: tamIcono }} />
               ) : (
                 <span className="pm-emoji" style={{ fontSize: tamIcono * 0.8 }}>{emojiIcono}</span>
@@ -202,6 +208,8 @@ export function AvisoMaderaHost() {
       titulo={actual.titulo}
       cinta={actual.cinta}
       icono={actual.icono}
+      monedaGirando={actual.monedaGirando}
+      tamIcono={actual.tamIcono}
       emojiIcono={actual.emojiIcono}
       mensaje={actual.mensaje}
       botones={botones}

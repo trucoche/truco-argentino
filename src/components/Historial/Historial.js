@@ -345,8 +345,9 @@ const estilos = {
   },
   cintaModoImg: { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain' },
   cintaModoTexto: {
-    position: 'relative', fontSize: 10.5, fontWeight: 800, color: C.bronceClaro,
-    textTransform: 'uppercase', letterSpacing: 0.3,
+    position: 'relative', top: -1, fontSize: 10, fontWeight: 800, color: '#fff',
+    textShadow: '-1px -1px 0 #000, 0 -1px 0 #000, 1px -1px 0 #000, -1px 0 0 #000, 1px 0 0 #000, -1px 1px 0 #000, 0 1px 0 #000, 1px 1px 0 #000',
+    textTransform: 'uppercase', letterSpacing: 0.3, fontFamily: "'Fredoka', sans-serif",
   },
   // "Detalles de partida en marrón café legible" — color oscuro (era
   // `cremaFieltro`, pensado para el fieltro verde) ahora que la fila
