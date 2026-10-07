@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { getSocket } from '../../services/socket';
 import { ANCHO_MAX_CSS } from '../config/gameConfigOnline';
 import { CARD_RANKS } from '../utils/constants';
+import { RANGOS_UI } from '../../components/Perfil/rangosUi';
 
 // Decimotercer pase: bug de fondo detrás de "el dorso del rival sigue
 // borroso aunque Ctrl+Shift+R en Edge" — el navegador cachea las imágenes
@@ -292,6 +293,9 @@ preload() {
     // relleno beige) — se usa cuando hay un jugador conectado, encima de una
     // burbuja translúcida + la foto, para que no quede fondo blanco/opaco.
     this.load.image('selloAvatarAro', conVersion('assets/images/juego/sello-avatar-aro.png'));
+    // Pase 347: aro nuevo de caoba con remaches (centro transparente). En salas ranked se
+    // reemplaza, por jugador, con el anillo de su rango (carga perezosa, ver _dibujarTileEspera).
+    this.load.image('aroAvatarEspera', conVersion('assets/images/juego/aro-avatar-espera.png'));
     // Pase 346: cara y dorso de la moneda para el spinner "Buscando rival...".
     this.load.image('monedaEsperaCara', conVersion('assets/images/moneda.png'));
     this.load.image('monedaEsperaDorso', conVersion('assets/images/moneda-dorso.png'));
@@ -1649,7 +1653,7 @@ _redibujarFilaEspera() {
   // también _dibujarTileEspera más abajo) subieron de tamaño.
   const tamano = total <= 2 ? 140 : total <= 4 ? 115 : 92;
   // Pase 346: en 1v1 el hueco crece (76) para alojar el badge VS entre los dos aros.
-  const gap = total <= 2 ? 76 : total <= 4 ? 30 : 20;
+  const gap = total <= 2 ? 96 : total <= 4 ? 30 : 20;
   const paso = tamano + gap;
   const anchoTotal = total * paso - gap;
   const inicioX = 400 - anchoTotal / 2 + tamano / 2;
@@ -1679,7 +1683,14 @@ _redibujarFilaEspera() {
       // desaparecían al recargar la página).
       if (generacionDeEstaCarga !== this._filaEsperaGeneracion) return;
       if (this._salaEnJuego) return;
-      pendientes.forEach(p => this._dibujarImagenAvatarEspera(p));
+      pendientes.forEach(p => {
+        if (p.tipo === 'aro') {
+          // Pase 347: cambia el aro genérico por el anillo del rango ya descargado.
+          if (p.img && p.img.scene && this.textures.exists(p.key)) p.img.setTexture(p.key).setDisplaySize(p.tam, p.tam);
+        } else {
+          this._dibujarImagenAvatarEspera(p);
+        }
+      });
     });
     this.load.start();
   }
@@ -1707,9 +1718,14 @@ _dibujarTileEspera(cx, cy, radio, jugador, pendientes) {
   // chica y perdida como con el 0.46×radio de antes (pensado para la
   // plaqueta vieja, con su zona lisa mucho más chica).
   const tamanoFrame = radio * 2;
-  // Pase 346: la foto llena el hueco del aro (hueco ≈ 0.75×radio) y el borde
-  // interior del aro la recorta limpio.
-  const radioFoto = radio * 0.80;
+  // Pase 347: la foto mide 0.72×radio (diámetro 1.44×radio) y el aro se escala para que su
+  // hueco la ajuste: tamaño del aro = diámetro de la foto / (hueco + 2 %). El aro nuevo de
+  // caoba tiene hueco ≈ 0.62; en salas ranked cada jugador lleva el anillo de SU rango
+  // (hueco propio, ver rangosUi.js). `jugador.rango_id` solo viene en salas ranked.
+  const radioFoto = radio * 0.72;
+  const rangoFicha = conectado && jugador.rango_id ? RANGOS_UI[Number(jugador.rango_id)] : null;
+  const hueco = rangoFicha ? rangoFicha.hueco : 0.62;
+  const tamanoAro = Math.round((radioFoto * 2) / (hueco + 0.02));
 
   if (conectado) {
     const esFoto = jugador.avatar_tipo === 'foto' && !!jugador.foto_perfil_url;
@@ -1723,36 +1739,44 @@ _dibujarTileEspera(cx, cy, radio, jugador, pendientes) {
     }
   }
 
-  // Pase 346: con jugador conectado se usa el aro SIN relleno (centro
-  // transparente) encima de una burbuja translúcida neutra + la foto — se
-  // acabó el círculo blanco opaco. El asiento vacío conserva el medallón de
-  // madera macizo con el "?" y ahora respira (pulso de opacidad).
-  const marco = this.add.image(cx, cy, conectado ? 'selloAvatarAro' : 'selloAvatarEspera')
-    .setDisplaySize(tamanoFrame, tamanoFrame)
-    .setDepth(conectado ? 412.6 : 411);
+  // Pase 347: con jugador conectado se dibuja el aro nuevo (o el anillo de su rango si la sala
+  // es ranked) SIN relleno, encima de una burbuja translúcida + la foto. El asiento vacío
+  // conserva el medallón de madera macizo con el "?", que respira.
+  let marco;
+  if (conectado) {
+    let claveAro = 'aroAvatarEspera';
+    if (rangoFicha) {
+      const claveRango = `aroRango_${jugador.rango_id}`;
+      if (this.textures.exists(claveRango)) claveAro = claveRango;
+    }
+    marco = this.add.image(cx, cy, claveAro).setDisplaySize(tamanoAro, tamanoAro).setDepth(412.6);
+    if (rangoFicha && claveAro === 'aroAvatarEspera') {
+      pendientes.push({ tipo: 'aro', key: `aroRango_${jugador.rango_id}`, url: rangoFicha.anillo, img: marco, tam: tamanoAro });
+    }
+  } else {
+    // Pase 348: el asiento vacío también lleva el aro nuevo (antes el medallón viejo de soga).
+    marco = this.add.image(cx, cy, 'aroAvatarEspera').setDisplaySize(tamanoAro, tamanoAro).setDepth(412.6);
+  }
   this._avataresEsperaSprites.push(marco);
   this._sprites.push(marco);
 
+  // Burbuja neutra semitransparente detrás de la foto (o del "?" si el asiento está vacío).
+  const burbuja = this.add.graphics().setDepth(411.6);
+  burbuja.fillStyle(0xFFFFFF, conectado ? 0.2 : 0.16);
+  burbuja.fillCircle(cx, cy, radioFoto);
+  this._avataresEsperaSprites.push(burbuja);
+  this._sprites.push(burbuja);
+
   if (!conectado) {
-    // Asiento todavía vacío — sello gris pulsando, sin foto.
-    marco.setTint(0x999999);
     const signo = this.add.text(cx, cy, '?', {
-      fontFamily: 'Fredoka, Arial', fontSize: `${Math.round(radio * 0.9 * 1.3)}px`, fontStyle: '700',
+      fontFamily: 'Fredoka, Arial', fontSize: `${Math.round(radioFoto * 1.25)}px`, fontStyle: '700',
       color: '#FFF8ED',
-    }).setOrigin(0.5).setAlpha(0.4).setDepth(412);
+    }).setOrigin(0.5).setAlpha(0.55).setDepth(412);
     this._avataresEsperaSprites.push(signo);
     this._sprites.push(signo);
-    // Respiración suave: medallón y "?" suben/bajan de opacidad juntos.
-    this.tweens.add({ targets: marco, alpha: { from: 1, to: 0.5 }, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-    this.tweens.add({ targets: signo, alpha: { from: 0.55, to: 0.2 }, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-  } else {
-    // Burbuja neutra semitransparente detrás de la foto (deja traslucir el
-    // fondo) — reemplaza al círculo blanco macizo del pase 267.
-    const burbuja = this.add.graphics().setDepth(411.6);
-    burbuja.fillStyle(0xFFFFFF, 0.2);
-    burbuja.fillCircle(cx, cy, radioFoto);
-    this._avataresEsperaSprites.push(burbuja);
-    this._sprites.push(burbuja);
+    // Respiración suave: aro, burbuja y "?" suben/bajan de opacidad juntos.
+    this.tweens.add({ targets: [marco, burbuja], alpha: { from: 1, to: 0.5 }, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    this.tweens.add({ targets: signo, alpha: { from: 0.7, to: 0.25 }, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
   }
 
   // Pase 267, punto 3: "✓ Conectado" pasa de una pill plana (Graphics,
@@ -1765,7 +1789,7 @@ _dibujarTileEspera(cx, cy, radio, jugador, pendientes) {
   // mismo criterio de capas (sombra + relleno + brillo superior) que ya
   // usan las filas de la pantalla final (pase 265) para que se lea
   // "3D"/ahuecada y no plana — más los 3 puntitos parpadeantes pedidos.
-  const pillY = cy + radio + 18;
+  const pillY = cy + radio + 30;
   const pillAlto = 32;
 
   if (conectado) {
