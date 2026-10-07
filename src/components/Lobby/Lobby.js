@@ -776,6 +776,9 @@ useEffect(() => {
   );
 }
 
+// Pase 333: contorno negro fino alrededor del texto blanco de los botones verdes.
+const CONTORNO_TEXTO = '-1.5px -1.5px 0 #000, 0 -1.5px 0 #000, 1.5px -1.5px 0 #000, -1.5px 0 0 #000, 1.5px 0 0 #000, -1.5px 1.5px 0 #000, 0 1.5px 0 #000, 1.5px 1.5px 0 #000';
+
 const estilos = {
   // Quincuagésimo pase — la imagen de fondo (antes acá, con el truco de
   // margin negativo para que "sangrara" hasta el borde de .ts-content) se
@@ -1029,7 +1032,7 @@ const estilos = {
   // de Torneos.js (antes reusaba `btnSecondary`, neutro/crema — el pedido
   // explícito es que sea un botón 3D de acción, no una caja neutra).
   btnNuevaSala: {
-    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 17, color: '#fff',
+    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 17, color: '#fff', textShadow: CONTORNO_TEXTO,
     background: 'linear-gradient(180deg, #2ECC71 0%, #179B4A 100%)',
     border: '2.5px solid #000', borderRadius: 999, padding: '12px 20px',
     boxShadow: '0 5px 0 #000', cursor: 'pointer', width: '100%',
@@ -1191,7 +1194,7 @@ btnJugarYa: {
   // que ya usa Torneos.js (antes celeste, color que queda libre para
   // futuras acciones neutras).
   btnCard: {
-    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 15, color: '#fff',
+    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 15, color: '#fff', textShadow: CONTORNO_TEXTO,
     background: 'linear-gradient(180deg, #2ECC71 0%, #179B4A 100%)', border: '2px solid #000',
     borderRadius: 12, padding: '7px 14px', boxShadow: '0 3px 0 #000', cursor: 'pointer'
   },

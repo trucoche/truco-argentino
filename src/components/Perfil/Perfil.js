@@ -256,8 +256,8 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
                       position: 'absolute',
                       left: (TAM_ANILLO - diamAvatar) / 2, top: (TAM_ANILLO - diamAvatar) / 2,
                       width: diamAvatar, height: diamAvatar, border: 'none',
-                      // Pase 331: burbuja neutra de pergamino, aislada de la imagen del banner.
-                      background: '#FFFBEB',
+                      // Pase 333: burbuja semitransparente (deja traslucir el banner), sin heredar su imagen.
+                      background: 'rgba(255,255,255,0.25)',
                     }}
                   >
                     <img src={avatarSrcDe(usuario)} alt="Avatar" style={estilos.avatarImg} />

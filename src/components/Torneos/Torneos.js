@@ -708,6 +708,9 @@ return (
 );
 }
 
+// Pase 333: contorno negro fino alrededor del texto blanco de los botones verdes.
+const CONTORNO_TEXTO = '-1.5px -1.5px 0 #000, 0 -1.5px 0 #000, 1.5px -1.5px 0 #000, -1.5px 0 0 #000, 1.5px 0 0 #000, -1.5px 1.5px 0 #000, 0 1.5px 0 #000, 1.5px 1.5px 0 #000';
+
 const estilos = {
   errorBox: {
     background: '#ffe0dd', border: `2px solid ${C.crimson}`, color: C.crimsonOscuro,
@@ -910,7 +913,7 @@ const estilos = {
     background: '#F5B041', boxShadow: '0 3px 0 #B9770E, 0 5px 0 #000',
   },
   btnConfirmar: {
-    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 16, color: '#fff',
+    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 16, color: '#fff', textShadow: CONTORNO_TEXTO,
     border: '2px solid #000', borderRadius: 999, cursor: 'pointer',
     height: 46, boxSizing: 'border-box', padding: '0 20px', marginBottom: 5,
     background: '#10B981', boxShadow: '0 3px 0 #065F46, 0 5px 0 #000',
@@ -926,7 +929,7 @@ const estilos = {
   // "Ver bracket" (ver `btnCard`), en vez de la barra blanca plana de
   // antes o del pill ilustrado que se deformaba en este ancho.
   btnNuevoTorneo: {
-    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 17, color: '#fff',
+    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 17, color: '#fff', textShadow: CONTORNO_TEXTO,
     border: '2px solid #000', borderRadius: 999, cursor: 'pointer', width: '100%',
     height: 50, boxSizing: 'border-box', padding: '0 20px', marginBottom: 5,
     background: '#10B981', boxShadow: '0 3px 0 #065F46, 0 5px 0 #000',
@@ -996,7 +999,7 @@ const estilos = {
   // inferior — el pill ilustrado se deformaba en óvalo con un anillo en
   // el medio a este tamaño.
   btnCard: {
-    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 14, color: '#fff',
+    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 14, color: '#fff', textShadow: CONTORNO_TEXTO,
     border: '2px solid #000', borderRadius: 20, cursor: 'pointer',
     height: 38, boxSizing: 'border-box', padding: '0 18px', marginBottom: 7,
     background: '#10B981', boxShadow: '0 3px 0 #065F46, 0 5px 0 #000',
