@@ -105,6 +105,7 @@ export default class GameSceneOnline extends Phaser.Scene {
     // codigoSala) el container viejo ya fue destruido por Phaser junto con
     // el resto de la escena anterior, no queremos arrastrar esa referencia.
     this._bannerEsperaTitulo = null;
+    this._centroEspera = null;
     // Pase 210 — bug real reportado: para el ÚLTIMO jugador que entra, la
     // carga de imagen de un avatar de la sala de espera (async, ver
     // _redibujarFilaEspera) podía terminar DESPUÉS de que la partida ya
@@ -287,6 +288,13 @@ preload() {
     // 'marcoAvatarEspera' se da de baja — un solo call site, ver
     // _dibujarTileEspera).
     this.load.image('selloAvatarEspera', conVersion('assets/images/juego/sello-avatar-espera.png'));
+    // Pase 346: mismo aro de madera pero con el centro TRANSPARENTE (sin el
+    // relleno beige) — se usa cuando hay un jugador conectado, encima de una
+    // burbuja translúcida + la foto, para que no quede fondo blanco/opaco.
+    this.load.image('selloAvatarAro', conVersion('assets/images/juego/sello-avatar-aro.png'));
+    // Pase 346: cara y dorso de la moneda para el spinner "Buscando rival...".
+    this.load.image('monedaEsperaCara', conVersion('assets/images/moneda.png'));
+    this.load.image('monedaEsperaDorso', conVersion('assets/images/moneda-dorso.png'));
     // Pase 267, punto 4: este tablón ya NO se usa — el botón "Volver al
     // Lobby" pasa a ser el mismo Botón 3D Pill-shaped (nine-slice) que la
     // pantalla final (ver botonVolverEspera en create()). Se deja la
@@ -939,6 +947,11 @@ _crearElementosDeTexto() {
     // Se vuelve a mostrar en el handler de 'partida-iniciada'.
     this.mesaImg.setVisible(false);
     this.sombraMesa.setVisible(false);
+    // Pase 346: las placas de puntaje ("test32 0" / "Rival 0") no tienen
+    // sentido antes de que arranque la partida — se ocultan acá y se
+    // muestran de nuevo en 'partida-iniciada', en el modo preview y al
+    // primer _renderizarEstado.
+    this._mostrarMarcadores(false);
 
     // Tarjeta de espera — tapa la mesa vacía hasta que arranca la partida.
     // Se destruye sola en el primer _limpiarSprites (primer estado-juego).
@@ -997,6 +1010,8 @@ _crearElementosDeTexto() {
     // con el resto de la sala de espera en 'partida-iniciada'/preview (ver
     // _destruirBannerEsperaTitulo en esos puntos, _conectarSocket).
     this._actualizarBannerEsperaTitulo('Conectando con la sala...');
+    // Pase 346: moneda 3D girando + "Buscando rival..." debajo del VS.
+    this._crearCentroEspera();
 
     // Pase siguiente: bug de coordenadas — `_crearBoton` crea su propio
     // `this.add.container(x, y)` posicionado en coordenadas de ESCENA
@@ -1052,7 +1067,7 @@ _crearElementosDeTexto() {
     const textoVolverEspera = 'Volver al Lobby';
     const anchoVolverEspera = this._medirAnchoTextoOverlay(textoVolverEspera, '19px') + 50;
     this.botonVolverEspera = this._crearBotonOverlay({
-      x: 400, y: 510, ancho: anchoVolverEspera, alto: 60, variante: 'dorado',
+      x: 400, y: 518, ancho: anchoVolverEspera, alto: 52, variante: 'rojo',
       texto: textoVolverEspera, tamanoFuente: 19,
       onClick: () => {
         this.socket.emit('cancelar-espera', { codigoSala: this.codigoSala });
@@ -1431,6 +1446,18 @@ _limpiarAvataresEspera() {
   this._avataresEsperaTimers = [];
 }
 
+// Pase 346: muestra/oculta las placas de puntaje del HUD (propia + rival).
+// `labelRival`/`manoIconoRival` las maneja _renderizarEstado (dependen del
+// modo), así que acá solo se tocan al ocultar; al mostrar, se deja que
+// _renderizarEstado decida su visibilidad.
+_mostrarMarcadores(visible) {
+  [this.scoreBg, this.scoreText, this.labelPropio, this.fondoInfoRival, this.scoreTextRival]
+    .forEach(o => { if (o && o.scene) o.setVisible(visible); });
+  if (!visible) {
+    [this.labelRival, this.manoIconoRival].forEach(o => { if (o && o.scene) o.setVisible(false); });
+  }
+}
+
 // Pase 210: título de la sala de espera ("2v2 — esperando jugadores"),
 // restyled con el mismo marco de pergamino de 3 slices que ya usan los
 // carteles de canto en partida (_crearBannerTexto) en vez de un simple
@@ -1440,22 +1467,132 @@ _limpiarAvataresEspera() {
 // creado), así que esta función guarda la referencia y destruye la
 // anterior antes de crear la que la reemplaza — mismo patrón que
 // _redibujarFilaEspera con los tiles de avatares.
-_actualizarBannerEsperaTitulo(texto) {
+_actualizarBannerEsperaTitulo(texto, modo = null) {
   if (this._bannerEsperaTitulo) {
     const viejo = this._bannerEsperaTitulo;
     viejo.destroy();
     this._sprites = this._sprites.filter(s => s !== viejo);
   }
-  // Pase 267, punto 1: "Placa de Madera de Caoba... con biselado oscuro y
-  // remaches de bronce en los extremos" + "texto en negrita dorada/blanca
-  // con contorno negro marcado" + ícono animado al lado del texto — las 3
-  // opciones nuevas de `_crearBannerTexto` activadas SOLO acá (el resto de
-  // los llamados de esa función, los carteles de canto en partida, siguen
-  // sin stroke/remaches/ícono).
-  this._bannerEsperaTitulo = this._crearBannerTexto(400, 130, texto, 401, {
-    tamanoFuente: 24, colorTexto: '#FFD98A', anchoWrap: 700,
-    strokeTexto: '#000000', conRemaches: true, iconoAnimado: true,
+  // Pase 346: cartel de CAOBA con remaches dorados (ya no el pergamino) y,
+  // a la izquierda del texto, una mini píldora 3D dorada con el modo
+  // ("1v1"). Se dibuja todo por código dentro de un container en (400,130).
+  const label = this.add.text(0, 0, texto, {
+    fontFamily: 'Fredoka, Arial', fontSize: '24px', fontStyle: '700', color: '#FFD98A',
+    stroke: '#2C160E', strokeThickness: 5,
+  }).setOrigin(0.5);
+
+  let pillTxt = null;
+  let pillW = 0;
+  const pillH = 30;
+  const gap = 14;
+  if (modo) {
+    pillTxt = this.add.text(0, 0, String(modo).toLowerCase(), {
+      fontFamily: 'Fredoka, Arial', fontSize: '18px', fontStyle: '700', color: '#3E2723',
+    }).setOrigin(0.5);
+    pillW = Math.round(pillTxt.width + 24);
+  }
+
+  const contenido = pillW ? pillW + gap + label.width : label.width;
+  const padX = 44;
+  const ancho = Math.max(260, Math.round(contenido + padX * 2));
+  const alto = 64;
+
+  const g = this.add.graphics();
+  // Sombra dura inferior
+  g.fillStyle(0x000000, 0.45);
+  g.fillRoundedRect(-ancho / 2, -alto / 2 + 5, ancho, alto, 14);
+  // Cuerpo de caoba
+  g.fillStyle(0x5C3317, 1);
+  g.fillRoundedRect(-ancho / 2, -alto / 2, ancho, alto, 14);
+  // Tablón superior más claro (volumen)
+  g.fillStyle(0x7A4A26, 1);
+  g.fillRoundedRect(-ancho / 2 + 3, -alto / 2 + 3, ancho - 6, alto * 0.48, { tl: 11, tr: 11, bl: 3, br: 3 });
+  // Vetas de madera
+  g.lineStyle(1.5, 0x2C160E, 0.22);
+  [-14, 2, 16].forEach(dy => {
+    g.beginPath();
+    g.moveTo(-ancho / 2 + 20, dy);
+    g.lineTo(ancho / 2 - 20, dy + 2);
+    g.strokePath();
   });
+  // Contorno negro
+  g.lineStyle(3, 0x1a0f08, 1);
+  g.strokeRoundedRect(-ancho / 2, -alto / 2, ancho, alto, 14);
+  // Remaches dorados
+  const rx = ancho / 2 - 16;
+  const ry = alto / 2 - 13;
+  [[-rx, -ry], [rx, -ry], [-rx, ry], [rx, ry]].forEach(([dx, dy]) => {
+    g.fillStyle(0x2C160E, 1);
+    g.fillCircle(dx, dy, 6);
+    g.fillStyle(0xF5B041, 1);
+    g.fillCircle(dx, dy, 4.5);
+    g.fillStyle(0xFFF1C2, 0.9);
+    g.fillCircle(dx - 1.3, dy - 1.3, 1.5);
+  });
+
+  const hijos = [g];
+  const inicioX = -contenido / 2;
+  if (pillTxt) {
+    const pg = this.add.graphics();
+    const px = inicioX;
+    const py = -pillH / 2;
+    pg.fillStyle(0xB9770E, 1);
+    pg.fillRoundedRect(px, py + 3, pillW, pillH, pillH / 2);
+    pg.fillStyle(0xF5B041, 1);
+    pg.fillRoundedRect(px, py, pillW, pillH, pillH / 2);
+    pg.fillStyle(0xFFFFFF, 0.35);
+    pg.fillRoundedRect(px + 5, py + 3, pillW - 10, pillH * 0.38, pillH * 0.19);
+    pg.lineStyle(2, 0x000000, 1);
+    pg.strokeRoundedRect(px, py, pillW, pillH, pillH / 2);
+    pillTxt.setPosition(px + pillW / 2, 0);
+    label.setPosition(inicioX + pillW + gap + label.width / 2, 0);
+    hijos.push(pg, pillTxt, label);
+  } else {
+    label.setPosition(0, 0);
+    hijos.push(label);
+  }
+
+  this._bannerEsperaTitulo = this.add.container(400, 130, hijos).setDepth(401);
+  this._sprites.push(this._bannerEsperaTitulo);
+}
+
+// Pase 346: bloque central "moneda 3D girando (44px) + Buscando rival..." —
+// se crea una sola vez (no se redibuja con cada 'jugador-unido', así el giro
+// no se reinicia) y se destruye junto con el título (ver
+// _destruirBannerEsperaTitulo).
+_crearCentroEspera() {
+  if (this._centroEspera) return;
+  const TAM = 44;
+  const cy = 418;
+  const moneda = this.add.image(400, cy, 'monedaEsperaCara').setDisplaySize(TAM, TAM).setDepth(405);
+  const texto = this.add.text(400, cy + 46, 'Buscando rival...', {
+    fontFamily: 'Fredoka, Arial', fontSize: '22px', fontStyle: '600', color: '#FFF8ED',
+    stroke: '#000000', strokeThickness: 4,
+  }).setOrigin(0.5).setDepth(405);
+  let carasActual = 'cara';
+  const giro = { ang: 0 };
+  const tween = this.tweens.add({
+    targets: giro, ang: 360, duration: 2600, repeat: -1, ease: 'Linear',
+    onUpdate: () => {
+      if (!moneda.scene) return;
+      const c = Math.cos((giro.ang * Math.PI) / 180);
+      const cara = c >= 0 ? 'cara' : 'dorso';
+      if (cara !== carasActual) {
+        carasActual = cara;
+        moneda.setTexture(cara === 'cara' ? 'monedaEsperaCara' : 'monedaEsperaDorso');
+      }
+      moneda.setDisplaySize(TAM * Math.max(Math.abs(c), 0.04), TAM);
+    },
+  });
+  this._centroEspera = { moneda, texto, tween };
+  this._sprites.push(moneda, texto);
+}
+
+_actualizarTextoBuscando() {
+  const t = this._centroEspera && this._centroEspera.texto;
+  if (!t || !t.scene) return;
+  const lleno = this._capacidadSala && this._jugadoresSala && this._jugadoresSala.length >= this._capacidadSala;
+  t.setText(lleno ? 'Iniciando partida...' : (this._capacidadSala > 2 ? 'Buscando jugadores...' : 'Buscando rival...'));
 }
 
 // Destruye (no solo oculta) el título de la sala de espera — se llama en
@@ -1464,6 +1601,13 @@ _actualizarBannerEsperaTitulo(texto) {
 // de "no dejar nada de la sala de espera en la partida" que el resto de
 // esta pantalla.
 _destruirBannerEsperaTitulo() {
+  if (this._centroEspera) {
+    const { moneda, texto, tween } = this._centroEspera;
+    if (tween && tween.stop) tween.stop();
+    [moneda, texto].forEach(o => { if (o && o.scene) o.destroy(); });
+    this._sprites = this._sprites.filter(s => s !== moneda && s !== texto);
+    this._centroEspera = null;
+  }
   if (this._bannerEsperaTitulo) {
     const viejo = this._bannerEsperaTitulo;
     viejo.destroy();
@@ -1495,20 +1639,21 @@ _redibujarFilaEspera() {
   // evento (siempre llega, es casi inmediato).
   if (!this._modoSala || !this._capacidadSala) return;
 
-  this._actualizarBannerEsperaTitulo(
-    `${this._modoSala.toUpperCase()} — esperando jugadores`
-  );
+  // Pase 346: el modo ("1v1") va en una mini píldora dorada dentro del cartel.
+  this._actualizarBannerEsperaTitulo('Esperando jugadores', this._modoSala);
+  this._actualizarTextoBuscando();
 
   const total = this._capacidadSala;
   // Pase 209: pedido del usuario ("en la pantalla nueva de carga,
   // agrandemos todo") — tiles, huecos y tipografía de toda la fila (ver
   // también _dibujarTileEspera más abajo) subieron de tamaño.
   const tamano = total <= 2 ? 140 : total <= 4 ? 115 : 92;
-  const gap = total <= 2 ? 40 : total <= 4 ? 30 : 20;
+  // Pase 346: en 1v1 el hueco crece (76) para alojar el badge VS entre los dos aros.
+  const gap = total <= 2 ? 76 : total <= 4 ? 30 : 20;
   const paso = tamano + gap;
   const anchoTotal = total * paso - gap;
   const inicioX = 400 - anchoTotal / 2 + tamano / 2;
-  const cy = 280;
+  const cy = 270;
 
   const pendientes = [];
   for (let i = 0; i < total; i++) {
@@ -1516,6 +1661,9 @@ _redibujarFilaEspera() {
     const cx = inicioX + i * paso;
     this._dibujarTileEspera(cx, cy, tamano / 2, jugador, pendientes);
   }
+
+  // Pase 346: badge "VS" amarillo 3D, centrado entre los dos avatares (solo 1v1).
+  if (total === 2) this._dibujarBadgeVsEspera(400, cy);
 
   if (pendientes.length > 0) {
     const generacionDeEstaCarga = this._filaEsperaGeneracion;
@@ -1559,7 +1707,9 @@ _dibujarTileEspera(cx, cy, radio, jugador, pendientes) {
   // chica y perdida como con el 0.46×radio de antes (pensado para la
   // plaqueta vieja, con su zona lisa mucho más chica).
   const tamanoFrame = radio * 2;
-  const radioFoto = radio * 0.90;
+  // Pase 346: la foto llena el hueco del aro (hueco ≈ 0.75×radio) y el borde
+  // interior del aro la recorta limpio.
+  const radioFoto = radio * 0.80;
 
   if (conectado) {
     const esFoto = jugador.avatar_tipo === 'foto' && !!jugador.foto_perfil_url;
@@ -1573,41 +1723,36 @@ _dibujarTileEspera(cx, cy, radio, jugador, pendientes) {
     }
   }
 
-  const marco = this.add.image(cx, cy, 'selloAvatarEspera')
+  // Pase 346: con jugador conectado se usa el aro SIN relleno (centro
+  // transparente) encima de una burbuja translúcida neutra + la foto — se
+  // acabó el círculo blanco opaco. El asiento vacío conserva el medallón de
+  // madera macizo con el "?" y ahora respira (pulso de opacidad).
+  const marco = this.add.image(cx, cy, conectado ? 'selloAvatarAro' : 'selloAvatarEspera')
     .setDisplaySize(tamanoFrame, tamanoFrame)
-    .setDepth(411);
+    .setDepth(conectado ? 412.6 : 411);
   this._avataresEsperaSprites.push(marco);
   this._sprites.push(marco);
 
   if (!conectado) {
     // Asiento todavía vacío — sello gris pulsando, sin foto.
     marco.setTint(0x999999);
-    this.tweens.add({ targets: marco, alpha: 0.55, duration: 650, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-
-    // Pase 267, punto 2: "mostrar la silueta del personaje en un todo
-    // sombreado/semi-transparente o... un signo de pregunta en estilo
-    // cartoon" — se optó por el "?" (no hay silueta de personaje
-    // disponible genérica, sería un avatar fijo que no corresponde a
-    // nadie en particular todavía) centrado donde iría la foto, bien
-    // atenuado para que se lea como placeholder y no como contenido real.
     const signo = this.add.text(cx, cy, '?', {
-      fontFamily: 'Fredoka, Arial', fontSize: `${Math.round(radioFoto * 1.3)}px`, fontStyle: '700',
+      fontFamily: 'Fredoka, Arial', fontSize: `${Math.round(radio * 0.9 * 1.3)}px`, fontStyle: '700',
       color: '#FFF8ED',
     }).setOrigin(0.5).setAlpha(0.4).setDepth(412);
     this._avataresEsperaSprites.push(signo);
     this._sprites.push(signo);
+    // Respiración suave: medallón y "?" suben/bajan de opacidad juntos.
+    this.tweens.add({ targets: marco, alpha: { from: 1, to: 0.5 }, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    this.tweens.add({ targets: signo, alpha: { from: 0.55, to: 0.2 }, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
   } else {
-    // Pase 267, punto 2: "borde blanco tipo sticker UI" — círculo blanco
-    // macizo un poco más grande que la foto, DEBAJO de ella pero ENCIMA
-    // del sello, así se ve como un borde/ribete alrededor del avatar que
-    // sobresale del marco (mismo truco que un sticker con contorno
-    // blanco: el borde es el mismo círculo relleno, apenas más grande,
-    // asomando detrás del recorte).
-    const borde = this.add.graphics().setDepth(411.6);
-    borde.fillStyle(0xFFFFFF, 1);
-    borde.fillCircle(cx, cy, radioFoto + 5);
-    this._avataresEsperaSprites.push(borde);
-    this._sprites.push(borde);
+    // Burbuja neutra semitransparente detrás de la foto (deja traslucir el
+    // fondo) — reemplaza al círculo blanco macizo del pase 267.
+    const burbuja = this.add.graphics().setDepth(411.6);
+    burbuja.fillStyle(0xFFFFFF, 0.2);
+    burbuja.fillCircle(cx, cy, radioFoto);
+    this._avataresEsperaSprites.push(burbuja);
+    this._sprites.push(burbuja);
   }
 
   // Pase 267, punto 3: "✓ Conectado" pasa de una pill plana (Graphics,
@@ -1706,23 +1851,31 @@ _dibujarTileEspera(cx, cy, radio, jugador, pendientes) {
     this._avataresEsperaTimers.push(timer);
   }
 
-  // Pase 267, punto 3: "colocar el nombre de usuario debajo de cada badge
-  // sobre una etiqueta de madera fina" — antes era un Text suelto
-  // flotando con solo stroke negro; ahora tiene una placa fina de madera
-  // clara detrás (mismo tono `maderaClara` que ya usa el resto de la app
-  // para marcos finos, ver _mostrarPantallaFinal).
-  const nombreY = pillY + 27;
-  const nombreTxt = this.add.text(cx, nombreY, conectado ? jugador.username : '—', {
-    font: 'bold 16px Nunito, Arial', fill: '#FFF8ED',
-  }).setOrigin(0.5).setDepth(416);
-  const padNombreX = 12, padNombreY = 5;
-  const etiqueta = this.add.graphics().setDepth(415);
-  etiqueta.fillStyle(0x6b4a34, 1); // maderaClara
-  etiqueta.fillRoundedRect(cx - nombreTxt.width / 2 - padNombreX, nombreY - nombreTxt.height / 2 - padNombreY, nombreTxt.width + padNombreX * 2, nombreTxt.height + padNombreY * 2, 7);
-  etiqueta.lineStyle(1.5, 0x3a2412, 1);
-  etiqueta.strokeRoundedRect(cx - nombreTxt.width / 2 - padNombreX, nombreY - nombreTxt.height / 2 - padNombreY, nombreTxt.width + padNombreX * 2, nombreTxt.height + padNombreY * 2, 7);
-  this._avataresEsperaSprites.push(etiqueta, nombreTxt);
-  this._sprites.push(etiqueta, nombreTxt);
+  // Pase 346: se saca la píldora/etiqueta con el nombre de usuario debajo de
+  // "✓ Conectado" (redundante, a pedido).
+}
+
+// Pase 346: badge "VS" — placa dorada 3D (borde negro 3px, relieve inferior
+// ocre) con "VS" en Fredoka chocolate, levemente inclinada.
+_dibujarBadgeVsEspera(x, y) {
+  const w = 58, h = 58, r = 16;
+  const g = this.add.graphics();
+  g.fillStyle(0x000000, 0.4);
+  g.fillRoundedRect(-w / 2, -h / 2 + 7, w, h, r);
+  g.fillStyle(0xB9770E, 1);
+  g.fillRoundedRect(-w / 2, -h / 2 + 5, w, h, r);
+  g.fillStyle(0xF5B041, 1);
+  g.fillRoundedRect(-w / 2, -h / 2, w, h, r);
+  g.fillStyle(0xFFFFFF, 0.35);
+  g.fillRoundedRect(-w / 2 + 6, -h / 2 + 4, w - 12, h * 0.34, r * 0.6);
+  g.lineStyle(3, 0x000000, 1);
+  g.strokeRoundedRect(-w / 2, -h / 2, w, h, r);
+  const t = this.add.text(0, 1, 'VS', {
+    fontFamily: 'Fredoka, Arial', fontSize: '26px', fontStyle: '700', color: '#3E2723',
+  }).setOrigin(0.5);
+  const cont = this.add.container(x, y, [g, t]).setDepth(414).setAngle(-6);
+  this._avataresEsperaSprites.push(cont);
+  this._sprites.push(cont);
 }
 
 // Dibuja la foto/avatar real ya cargada en la caché de texturas, recortada
@@ -1831,6 +1984,7 @@ _conectarSocket() {
       this._destruirBannerEsperaTitulo();
       if (this.mesaImg) this.mesaImg.setVisible(true);
       if (this.sombraMesa) this.sombraMesa.setVisible(true);
+      this._mostrarMarcadores(true);
     });
     this.socket.off('jugador-desconectado').on('jugador-desconectado', (data) => {
       this._actualizarMensajeEstado(data.mensaje);
@@ -2459,6 +2613,8 @@ _renderizarEstado(animarReparto) {
 
     if (this.mesaImg) this.mesaImg.setVisible(true);
     if (this.sombraMesa) this.sombraMesa.setVisible(true);
+    // Pase 346: con la partida en marcha, las placas de puntaje vuelven.
+    this._mostrarMarcadores(true);
 
     const e = this.estado;
     if (!e) return;
@@ -4422,6 +4578,41 @@ _ocultarCanto() {
 // de los bordes.
 _crearBotonOverlay({ x, y, ancho, alto = 44, texto, variante = 'dorado', tamanoFuente = 15, onClick }) {
   const contenedor = this.add.container(x, y).setDepth(902);
+
+  // Pase 346: variante 'rojo' (Rojo Carmesí #E74C3C) — píldora plana cel-shaded
+  // dibujada por código: borde negro 2px y relieve inferior granate #78281F.
+  if (variante === 'rojo') {
+    const w = Math.max(ancho, 140);
+    const prof = 5;
+    const g = this.add.graphics();
+    g.fillStyle(0x78281F, 1);
+    g.fillRoundedRect(-w / 2, -alto / 2 + prof, w, alto, alto / 2);
+    g.lineStyle(2, 0x000000, 1);
+    g.strokeRoundedRect(-w / 2, -alto / 2 + prof, w, alto, alto / 2);
+    g.fillStyle(0xE74C3C, 1);
+    g.fillRoundedRect(-w / 2, -alto / 2, w, alto, alto / 2);
+    g.lineStyle(2, 0x000000, 1);
+    g.strokeRoundedRect(-w / 2, -alto / 2, w, alto, alto / 2);
+    const labelRojo = this.add.text(0, 0, texto, {
+      fontFamily: 'Fredoka, Arial', fontSize: `${tamanoFuente}px`, fontStyle: '600',
+      color: '#FFFFFF', stroke: '#000000', strokeThickness: 3,
+    }).setOrigin(0.5);
+    contenedor.add([g, labelRojo]);
+    contenedor.setSize(w, alto + prof);
+    contenedor.setInteractive({ useHandCursor: true });
+    contenedor.on('pointerdown', () => {
+      this.tweens.add({ targets: contenedor, scale: 0.94, duration: 80, ease: 'Quad.easeOut' });
+    });
+    contenedor.on('pointerup', () => {
+      this.tweens.add({ targets: contenedor, scale: 1, duration: 140, ease: 'Quad.easeOut' });
+      onClick();
+    });
+    contenedor.on('pointerout', () => {
+      this.tweens.add({ targets: contenedor, scale: 1, duration: 140, ease: 'Quad.easeOut' });
+    });
+    this._sprites.push(contenedor);
+    return { contenedor, img: { setTint() {}, clearTint() {} }, label: labelRojo };
+  }
 
   const prefijo = variante === 'verde' ? 'botonVerde' : 'botonAmarillo';
   const texIzq = this.textures.get(`${prefijo}Izq`).getSourceImage();

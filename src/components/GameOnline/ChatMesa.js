@@ -141,12 +141,14 @@ export default function ChatMesa({ codigoSala, esEquipos, personaje = 'gaucho', 
         <button
           onClick={() => { setAbierto(true); setHayNuevoMientrasCerrado(false); }}
           style={estilos.botonAbrir}
+          title="Chat"
+          aria-label="Chat"
         >
           {/* Pase siguiente: el emoji 💬 (glyph de sistema, se ve distinto
               según plataforma) se reemplaza por el mismo ícono que ya usa
               el lobby para "Chat" en el nav (`icono-chat.png`, ver
               AppShell.js), para que sea el mismo dibujo en los dos lados. */}
-          <img src="/assets/images/icono-chat.png" alt="" style={estilos.iconoBotonAbrir} /> Chat
+          <img src="/assets/images/icono-chat.png" alt="" style={estilos.iconoBotonAbrir} />
           {hayNuevoMientrasCerrado && <span style={estilos.puntoNuevoColapsado} />}
         </button>
         {perfilAbierto && token && (
@@ -438,17 +440,20 @@ const estilos = {
   // Mismo tono de borde que el nuevo marco de madera de `marcoExterior`
   // (antes chocolate plano), para que el estado colapsado y el abierto
   // se lean como la misma familia de marco.
+  // Pase 346: chip redondo rústico (mismo lenguaje que los chips del footer
+  // del Lobby): disco de madera con borde negro 3px, relieve inferior duro y
+  // solo el ícono (sin texto). El punto rojo de "mensaje nuevo" sigue encima.
   botonAbrir: {
     position: 'absolute', top: 12, right: 12,
-    background: 'linear-gradient(160deg, #FFFCF5, #FAEBD2)', color: '#4A2C2A',
-    border: '2.5px solid #2a1c14', borderRadius: 20, padding: '8px 14px',
-    cursor: 'pointer', fontSize: 13, fontWeight: '700', zIndex: 1000,
-    display: 'flex', alignItems: 'center', gap: 6,
-    boxShadow: '0 0 0 2px rgba(255,248,237,0.6), 0 3px 6px rgba(0,0,0,0.35)'
+    width: 52, height: 52, padding: 0, borderRadius: '50%',
+    background: 'radial-gradient(circle at 35% 30%, #A9713A 0%, #8B5A2B 45%, #5C3317 100%)',
+    border: '3px solid #000', boxShadow: '0 4px 0 #2C160E',
+    cursor: 'pointer', zIndex: 1000,
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
   },
   // Ícono del botón "Chat" colapsado (reemplaza al emoji 💬, ver comentario
   // junto al <img> más arriba).
-  iconoBotonAbrir: { width: 18, height: 18, objectFit: 'contain' },
+  iconoBotonAbrir: { width: 30, height: 30, objectFit: 'contain' },
   mensajeSticker: { display: 'flex', flexDirection: 'column', gap: 2 },
 panelStickers: {
   display: 'flex', gap: 6, padding: '8px 10px',
