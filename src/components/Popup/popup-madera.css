@@ -136,8 +136,8 @@
   position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain;
   backface-visibility: hidden; -webkit-backface-visibility: hidden;
 }
-.pm-moneda-cara  { animation: pm-moneda-giro 1.4s linear infinite; }
-.pm-moneda-dorso { animation: pm-moneda-giro-dorso 1.4s linear infinite; }
+.pm-moneda-cara  { animation: pm-moneda-giro 2.6s linear infinite; }
+.pm-moneda-dorso { animation: pm-moneda-giro-dorso 2.6s linear infinite; }
 @keyframes pm-moneda-giro       { from { transform: perspective(600px) rotateY(0deg); }   to { transform: perspective(600px) rotateY(360deg); } }
 @keyframes pm-moneda-giro-dorso { from { transform: perspective(600px) rotateY(180deg); } to { transform: perspective(600px) rotateY(540deg); } }
 @media (prefers-reduced-motion: reduce) { .pm-moneda-cara, .pm-moneda-dorso { animation: none; } .pm-moneda-dorso { display: none; } }

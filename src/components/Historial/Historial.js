@@ -345,10 +345,10 @@ const estilos = {
   },
   cintaModoImg: { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain' },
   cintaModoTexto: {
-    position: 'relative', top: -1, fontSize: 10, fontWeight: 800, color: '#fff',
-    textShadow: '-1px -1px 0 #000, 0 -1px 0 #000, 1px -1px 0 #000, -1px 0 0 #000, 1px 0 0 #000, -1px 1px 0 #000, 0 1px 0 #000, 1px 1px 0 #000',
-    textTransform: 'uppercase', letterSpacing: 0.3, fontFamily: "'Fredoka', sans-serif",
+    position: 'relative', top: -2, fontSize: 10.5, fontWeight: 800, color: '#3A1E0A',
+    textTransform: 'uppercase', letterSpacing: 0.3, fontFamily: "'Fredoka', sans-serif", lineHeight: 1,
   },
+
   // "Detalles de partida en marrón café legible" — color oscuro (era
   // `cremaFieltro`, pensado para el fieltro verde) ahora que la fila
   // entera vive sobre pergamino claro. Un solo color sirve para Victoria
