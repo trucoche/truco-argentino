@@ -367,7 +367,7 @@ useEffect(() => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <img src={ui.logo} alt="" style={{ width: 56, height: 56, objectFit: 'contain', flex: '0 0 auto' }} />
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ fontFamily: "'Fredoka', sans-serif", fontWeight: 800, fontSize: 18, color: '#F5B041', letterSpacing: 0.5 }}>MODO RANKED</div>
+                    <div style={{ fontFamily: "'Fredoka', sans-serif", fontWeight: 800, fontSize: 18, color: '#F5B041', letterSpacing: 0.5 }}>LIGA CRIOLLA</div>
                     <div style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 12.5, color: '#FFF3D6' }}>
                       {r ? `${titulo} · ${r.puntos} pts` : titulo}
                     </div>
@@ -382,7 +382,7 @@ useEffect(() => {
                     boxShadow: '0 3px 0 #B9770E, 0 5px 0 #000', cursor: 'pointer', width: '100%',
                   }}
                 >
-                  JUGAR RANKED
+                  JUGAR LIGA
                 </button>
               </PlacaMadera>
             );

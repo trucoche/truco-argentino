@@ -3,7 +3,7 @@ import { API_URL as BASE_URL } from '../../config';
 import { rangoUi } from '../Perfil/rangosUi';
 import { PlacaMadera } from '../Popup/PopupMadera';
 
-// Pase 336: pantalla del MODO RANKED (clasificatorio). Datos de GET /api/salas/ranked/resumen,
+// Pase 336: pantalla de la Liga Criolla (clasificatorio). Datos de GET /api/salas/ranked/resumen,
 // búsqueda con POST /api/salas/ranked (cola emparejada por rango; reglas fijas: 15 puntos, sin Flor).
 // Las partidas casuales ya no mueven el rango: solo esta cola.
 
@@ -52,7 +52,7 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
     try {
       const res = await fetch(`${API_SALAS}/ranked`, { method: 'POST', headers, body: JSON.stringify({ modo }) });
       const data = await res.json();
-      if (!res.ok) { setError(data.error || 'Error al buscar partida clasificatoria'); return; }
+      if (!res.ok) { setError(data.error || 'Error al buscar partida de Liga Criolla'); return; }
       onEntrarAPartida(data.codigo);
     } catch (err) {
       console.error('Error buscando partida ranked:', err);
@@ -117,7 +117,7 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
           {error && <div style={estilos.error}>{error}</div>}
 
           <button onClick={buscarPartida} disabled={buscando} style={estilos.btnBuscar}>
-            {buscando ? 'Buscando...' : 'BUSCAR PARTIDA CLASIFICATORIA'}
+            {buscando ? 'Buscando...' : 'BUSCAR PARTIDA DE LIGA'}
           </button>
 
           <div style={estilos.hintBuscando}>
@@ -153,7 +153,7 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
             <li>3 victorias seguidas dan +10 pts extra por victoria.</li>
             <li>Al ascender de rango ganás escudos que te protegen de bajar de liga.</li>
             <li>En Mancebo las derrotas no restan puntos.</li>
-            <li>Solo las partidas clasificatorias mueven tu rango: las salas casuales no.</li>
+            <li>Solo las partidas de Liga Criolla mueven tu rango: las salas casuales no.</li>
           </ul>
         </PlacaMadera>
         </div>

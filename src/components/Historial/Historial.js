@@ -43,14 +43,7 @@ export default function Historial({ token }) {
   const [partidas, setPartidas] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
-  const [filtro, setFiltro] = useState('todas'); // 'todas' | 'normal' | 'torneo'
-  // Ducentésimo quincuagésimo octavo pase: estado nuevo para el botón de
-  // "desplegar más información" (flecha de madera) que pidió el usuario.
-  // Por ahora el click solo gira la flecha — todavía no hay contenido
-  // extra definido para mostrar adentro (ver el comentario junto al botón
-  // en el JSX), así que el set queda declarado pero el usuario tiene que
-  // confirmar qué va a aparecer ahí antes de sumarle contenido real.
-  const [filasExpandidas, setFilasExpandidas] = useState(() => new Set());
+  const [filtro, setFiltro] = useState('todas'); // 'todas' | 'normal' | 'torneo' | 'liga'
 
   const cargarHistorial = useCallback(async () => {
     try {
@@ -76,14 +69,6 @@ export default function Historial({ token }) {
     cargarHistorial();
   }, [cargarHistorial]);
 
-  const toggleExpandida = (id) => {
-    setFilasExpandidas((prev) => {
-      const siguiente = new Set(prev);
-      if (siguiente.has(id)) siguiente.delete(id); else siguiente.add(id);
-      return siguiente;
-    });
-  };
-
   const partidasFiltradas = partidas.filter(p => filtro === 'todas' || p.tipo === filtro);
 
   // Ducentésimo quincuagésimo octavo pase: se reemplazan los íconos/placa/
@@ -107,7 +92,8 @@ export default function Historial({ token }) {
           {[
             { id: 'todas', label: 'Todas' },
             { id: 'normal', label: 'Normales' },
-            { id: 'torneo', label: 'Campeonato' }
+            { id: 'torneo', label: 'Torneos' },
+            { id: 'liga', label: 'Liga Criolla' }
           ].map(f => (
             <button
               key={f.id}
@@ -124,11 +110,10 @@ export default function Historial({ token }) {
           <PantallaCarga completa={false} conLogo={false} />
         ) : partidasFiltradas.length === 0 ? (
           <p style={estilos.sinResultados}>
-            {filtro === 'todas' ? 'Todavía no jugaste ninguna partida.' : 'No hay partidas de este tipo.'}
+            {filtro === 'todas' ? 'Todavía no jugaste ninguna partida.' : filtro === 'liga' ? 'Todavía no jugaste partidas de Liga Criolla.' : 'No hay partidas de este tipo.'}
           </p>
         ) : (
           partidasFiltradas.map((p) => {
-            const expandida = filasExpandidas.has(p.salaId);
             return (
               <div key={p.salaId} style={estilos.fila}>
                 <div style={{ ...estilos.filaPrincipal, ...(p.gane ? estilos.filaPrincipalVictoria : estilos.filaPrincipalDerrota) }}>
@@ -164,40 +149,16 @@ export default function Historial({ token }) {
                       <div style={estilos.cintaModoWrap}>
                         <img src="/assets/images/historial-cinta.png" alt="" style={estilos.cintaModoImg} />
                         <span style={estilos.cintaModoTexto}>
-                          {p.tipo === 'torneo' ? 'Campeonato' : 'Normal'}
+                          {p.tipo === 'torneo' ? 'Torneo' : p.tipo === 'liga' ? 'Liga' : 'Normal'}
                         </span>
                       </div>
                     </div>
 
                     <div style={estilos.cardInfo}>
-                      {MODO_LABEL[p.modo] || p.modo} · ${p.apuesta} · {formatearFecha(p.fecha)}
+                      {MODO_LABEL[p.modo] || p.modo} · {formatearFecha(p.fecha)}
                     </div>
                   </div>
 
-                  {/* Ducentésimo quincuagésimo octavo pase: botón de
-                      "desplegar más información" (flecha de madera
-                      ilustrada, `historial-flecha.png`) — el usuario lo
-                      pasó pensando en mostrar más detalle por partida,
-                      pero todavía no definió QUÉ contenido extra va
-                      adentro (ahora mismo `cardInfo`/`torneoNombre` ya
-                      muestran todo el dato que devuelve el backend). Se
-                      deja el botón funcional (gira 180° y guarda el
-                      estado expandido/colapsado por fila en
-                      `filasExpandidas`) pero sin ningún contenido nuevo
-                      todavía — pendiente de que el usuario confirme qué
-                      se va a desplegar antes de sumarlo. */}
-                  <button
-                    type="button"
-                    onClick={() => toggleExpandida(p.salaId)}
-                    style={estilos.botonExpandir}
-                    aria-label={expandida ? 'Ocultar detalle' : 'Mostrar detalle'}
-                  >
-                    <img
-                      src="/assets/images/historial-flecha.png"
-                      alt=""
-                      style={{ ...estilos.flechaExpandir, transform: expandida ? 'rotate(180deg)' : 'none' }}
-                    />
-                  </button>
                 </div>
               </div>
             );
@@ -392,17 +353,4 @@ const estilos = {
   // entera vive sobre pergamino claro. Un solo color sirve para Victoria
   // y Derrota porque las dos comparten el mismo fondo de tarjeta.
   cardInfo: { fontSize: 12.5, fontWeight: 700, color: '#7a6660' },
-
-  // Botón de desplegar — tinte chocolate en vez de negro (era pensado
-  // para apoyarse sobre el fieltro verde oscuro; ahora vive dentro de la
-  // tarjeta de pergamino claro).
-  botonExpandir: {
-    flexShrink: 0, width: 30, height: 30, borderRadius: 8,
-    background: 'rgba(74,44,42,0.12)', border: 'none', cursor: 'pointer',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-  },
-  flechaExpandir: {
-    width: 18, height: 18, objectFit: 'contain',
-    transition: 'transform 0.2s ease',
-  },
 };
