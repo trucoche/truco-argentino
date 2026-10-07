@@ -213,19 +213,23 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
                 fila para que se vea la foto de fondo. */}
             {/* Pase 325: el banner va incrustado en un marco de madera ahuecado (esquinas suaves) en
                 vez del recorte gris de antes; sin fondo propio queda el pergamino. */}
+            {/* Pase 330: banner limpio — solo la imagen propia (object-fit: cover) o un plano liso,
+                el anillo del avatar a la izquierda y la ficha circular de cambiar fondo arriba a la
+                derecha. El nombre vive debajo, sobre el pergamino de la tarjeta. */}
             <div style={estilos.marcoBanner}>
-            <div style={estilos.marcoBannerSombra} />
             <div
               style={{
                 ...estilos.encabezadoFilaContenedor,
                 ...(usuario?.fondo_perfil_url ? {} : { background: '#FFF3D6' }),
-                ...(usuario?.fondo_perfil_url ? {
-                  backgroundImage: `url(${usuario.fondo_perfil_url})`,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                } : {}),
               }}
             >
+              {usuario?.fondo_perfil_url && (
+                <img
+                  src={usuario.fondo_perfil_url}
+                  alt=""
+                  style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block', pointerEvents: 'none' }}
+                />
+              )}
               {/* Pase 324: botón circular 3D (ícono de imagen) en la esquina superior derecha. */}
               <button
                 style={estilos.btnFondoCircular}
@@ -252,11 +256,8 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
                       position: 'absolute',
                       left: (TAM_ANILLO - diamAvatar) / 2, top: (TAM_ANILLO - diamAvatar) / 2,
                       width: diamAvatar, height: diamAvatar, border: 'none',
-                      ...(usuario?.fondo_perfil_url ? {
-                        backgroundImage: `url(${usuario.fondo_perfil_url})`,
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center',
-                      } : {}),
+                      // Pase 331: burbuja neutra de pergamino, aislada de la imagen del banner.
+                      background: '#FFFBEB',
                     }}
                   >
                     <img src={avatarSrcDe(usuario)} alt="Avatar" style={estilos.avatarImg} />
@@ -274,15 +275,14 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
                     title="Cambiar foto o personaje"
                   ><img src="/assets/images/icono-cambiar-foto.png" alt="" style={estilos.avatarBadgeIcono} /></button>
                 </div>
-
-                {/* Pase 329: el nombre va en un cartelito de pergamino con contorno negro (legible sobre
-                    cualquier fondo). El rango se muestra en su propia tarjeta, justo al lado/abajo. */}
-                <div style={estilos.identidad}>
-                  <div style={estilos.cartelNombre}>{usuario?.username}</div>
-                </div>
               </div>
 
             </div>
+            </div>
+
+            {/* Pase 330: nombre de usuario fuera del banner, en el pergamino limpio. */}
+            <div style={estilos.cartelNombreFila}>
+              <div style={estilos.cartelNombre}>{usuario?.username}</div>
             </div>
 
           </PlacaMadera>
@@ -453,17 +453,14 @@ const estilos = {
   // `width` implícito 100% a `fit-content` — ya no necesita estirarse
   // porque `identidad`/`saldoBloque` dejaron de forzarlo (ver abajo).
   encabezadoFilaContenedor: {
-    position: 'relative', borderRadius: 11, padding: 12, overflow: 'hidden', minHeight: 150
+    position: 'relative', borderRadius: 11, padding: '16px 12px 16px 20px', overflow: 'hidden', height: 172, boxSizing: 'border-box', display: 'flex', alignItems: 'center'
   },
   // Pase 325: marco de madera ahuecado alrededor del banner (esquinas suaves, sombra interior arriba).
   marcoBanner: {
     position: 'relative', borderRadius: 16, border: '3px solid #1a1410', background: '#4a3226',
     padding: 4, overflow: 'hidden', boxSizing: 'border-box'
   },
-  marcoBannerSombra: {
-    position: 'absolute', top: 0, left: 0, right: 0, height: 8, zIndex: 3, pointerEvents: 'none',
-    background: 'linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0))'
-  },
+  cartelNombreFila: { marginTop: 12, display: 'flex' },
   // Pase 324: botón circular 3D del fondo + chip de monedas fijo + línea de nivel.
   btnFondoCircular: {
     position: 'absolute', top: 8, right: 8, zIndex: 2, width: 40, height: 40, borderRadius: '50%',
@@ -491,7 +488,7 @@ const estilos = {
     border: `2px solid ${C.chocolate}`, borderRadius: 10, padding: '6px 10px',
     cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4
   },
-  encabezadoFila: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 14, width: 'fit-content' },
+  encabezadoFila: { position: 'relative', zIndex: 1, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 14, width: 'fit-content' },
   // Chip translúcido que agrupa avatar+nombre+saldo cuando hay un fondo de
   // foto detrás — sin esto el texto oscuro quedaría ilegible encima de
   // una foto cualquiera. Sin fondo (caso de siempre hasta ahora) no se

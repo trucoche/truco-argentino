@@ -408,12 +408,12 @@ return (
                     los dos se anulan a su ancho natural y quedan parejos,
                     centrados en la fila (pedido del usuario). */}
                 <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
-                  <button onClick={() => handleInscribirse(torneoDestacado)} style={{ ...estilos.btnPrimary, width: 'auto', padding: '11px 26px' }}>
+                  <button onClick={() => handleInscribirse(torneoDestacado)} style={{ ...estilos.btnConfirmar, width: 'auto', padding: '0 26px' }}>
                     Confirmar
                   </button>
                   <button
                     onClick={() => { setInscribiendoId(null); setCompanerosTexto(''); }}
-                    style={{ ...estilos.btnSecondary, width: 'auto', padding: '10px 26px' }}
+                    style={{ ...estilos.btnSecondary, width: 'auto', padding: '0 26px' }}
                   >
                     Cancelar
                   </button>
@@ -565,7 +565,7 @@ return (
 
             <div style={{ display: 'flex', gap: 10, marginTop: 6 }}>
               <button type="submit" style={{ ...estilos.btnPrimary, flex: 1 }}>✓ Crear torneo</button>
-              <button type="button" onClick={() => setCreando(false)} style={{ ...estilos.btnSecondary, width: 'auto', padding: '12px 20px' }}>✕</button>
+              <button type="button" onClick={() => setCreando(false)} style={{ ...estilos.btnSecondary, width: 'auto', padding: '0 22px' }}>✕</button>
             </div>
           </form>
         )}
@@ -637,7 +637,7 @@ return (
                     </div>
                   </div>
                 ) : (
-                  <button onClick={() => setInscribiendoId(t.id)} style={estilos.btnCard}>Inscribirse</button>
+                  <button onClick={() => setInscribiendoId(t.id)} style={estilos.btnCardDorado}>Inscribirse</button>
                 )
               )}
 
@@ -825,12 +825,13 @@ const estilos = {
   // grueso pese más como CTA principal. `destacadoCard` es `textAlign:
   // 'center'`, así que un botón inline-block más angosto queda centrado
   // solo, sin flex ni margin:auto.
+  // Pase 332: sistema de botones plano (cel-shaded) igual al del Lobby — relleno liso, contorno negro 2px y
+  // sombra inferior dura (banda de color oscuro + línea negra). Sin degradés ni brillos.
   destacadoBtn: {
-    fontFamily: "'Fredoka', sans-serif", fontWeight: 800, fontSize: 19, color: C.chocolate,
-    border: '2px solid #000', borderRadius: 999, cursor: 'pointer', width: '58%', minWidth: 200,
-    background: 'linear-gradient(180deg, #FFD147 0%, #E69D00 100%)',
-    boxShadow: '0 4px 0 #000',
-    padding: '13px 20px',
+    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 19, color: '#2C160E',
+    border: '2px solid #000', borderRadius: 999, cursor: 'pointer', width: '100%', maxWidth: 420,
+    height: 50, boxSizing: 'border-box', padding: '0 20px', marginBottom: 6,
+    background: '#F5B041', boxShadow: '0 3px 0 #B9770E, 0 5px 0 #000',
   },
   destacadoYaInscripto: {
     background: 'rgba(255,248,237,0.12)', color: C.doradoClaro,
@@ -903,43 +904,48 @@ const estilos = {
   // este mismo estilo) — mismo pill 100% CSS que "Anotarme ahora", así el
   // dorado queda consistente como "acción principal" en toda la pantalla.
   btnPrimary: {
-    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 15, color: C.chocolate,
+    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 16, color: '#2C160E',
     border: '2px solid #000', borderRadius: 999, cursor: 'pointer',
-    background: 'linear-gradient(180deg, #FFD147 0%, #E69D00 100%)',
-    boxShadow: '0 4px 0 #000',
-    padding: '11px 20px',
+    height: 46, boxSizing: 'border-box', padding: '0 20px', marginBottom: 5,
+    background: '#F5B041', boxShadow: '0 3px 0 #B9770E, 0 5px 0 #000',
+  },
+  btnConfirmar: {
+    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 16, color: '#fff',
+    border: '2px solid #000', borderRadius: 999, cursor: 'pointer',
+    height: 46, boxSizing: 'border-box', padding: '0 20px', marginBottom: 5,
+    background: '#10B981', boxShadow: '0 3px 0 #065F46, 0 5px 0 #000',
   },
   btnSecondary: {
-    fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 15,
-    background: C.crema, color: C.chocolate, border: `3px solid ${C.negroPulido}`,
-    borderRadius: 14, padding: '12px 20px', boxShadow: '0 5px 0 rgba(0,0,0,0.3)',
+    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 16,
+    background: '#8B5A2B', color: '#FFFBEB', border: '2px solid #000',
+    borderRadius: 999, height: 46, boxSizing: 'border-box', padding: '0 20px', marginBottom: 5,
+    boxShadow: 'inset 0 3px 5px rgba(74,44,17,0.55), 0 3px 0 #4A2C11, 0 5px 0 #000',
     cursor: 'pointer', width: '100%'
   },
   // "+ Nuevo torneo" — mismo pill verde 100% CSS que "Inscribirse"/
   // "Ver bracket" (ver `btnCard`), en vez de la barra blanca plana de
   // antes o del pill ilustrado que se deformaba en este ancho.
   btnNuevoTorneo: {
-    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 15, color: '#fff',
+    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 17, color: '#fff',
     border: '2px solid #000', borderRadius: 999, cursor: 'pointer', width: '100%',
-    background: 'linear-gradient(180deg, #2ECC71 0%, #179B4A 100%)',
-    boxShadow: '0 4px 0 #000',
-    padding: '11px 20px',
+    height: 50, boxSizing: 'border-box', padding: '0 20px', marginBottom: 5,
+    background: '#10B981', boxShadow: '0 3px 0 #065F46, 0 5px 0 #000',
   },
   sectionTitle: { fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 16, color: C.crema, margin: '4px 0 10px 4px' },
   tabs: { display: 'flex', gap: 8, marginBottom: 14 },
   // Activa: madera clara/pergamino con borde dorado y contorno negro.
   tabActiva: {
-    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 13,
-    background: `linear-gradient(180deg, ${C.cremaSutil}, ${C.crema})`, color: C.chocolate,
-    border: `2px solid ${C.doradoOscuro}`, borderRadius: 12, padding: '8px 16px',
-    boxShadow: `0 0 0 1.5px ${C.negroPulido}, 0 3px 0 ${C.negroPulido}`, cursor: 'pointer'
+    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 14,
+    background: '#FFFBEB', color: '#2C160E', border: '2px solid #000', borderRadius: 999,
+    height: 38, boxSizing: 'border-box', padding: '0 20px', marginBottom: 5,
+    boxShadow: '0 3px 0 #A8977A, 0 5px 0 #000', cursor: 'pointer'
   },
   // Inactiva: cuero oscuro "hundido" (sombra interior en vez de relieve).
   tabInactiva: {
-    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 13,
-    background: 'linear-gradient(180deg, #2a1c12, #1a100a)', color: 'rgba(255,248,237,0.55)',
-    border: `2px solid ${C.negroPulido}`, borderRadius: 12, padding: '8px 16px',
-    boxShadow: 'inset 0 3px 6px rgba(0,0,0,0.6), inset 0 -1px 0 rgba(255,255,255,0.05)',
+    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 14,
+    background: '#8B5A2B', color: '#FFFBEB', border: '2px solid #000', borderRadius: 999,
+    height: 38, boxSizing: 'border-box', padding: '0 20px', marginBottom: 5,
+    boxShadow: 'inset 0 3px 5px rgba(74,44,17,0.55), 0 3px 0 #4A2C11, 0 5px 0 #000',
     cursor: 'pointer'
   },
   // Pase siguiente: "placa nameplate" de 2 tonos (mismo criterio que
@@ -990,26 +996,31 @@ const estilos = {
   // inferior — el pill ilustrado se deformaba en óvalo con un anillo en
   // el medio a este tamaño.
   btnCard: {
-    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 13, color: '#fff',
-    border: '2px solid #000', borderRadius: 12, cursor: 'pointer',
-    background: 'linear-gradient(180deg, #2ECC71 0%, #179B4A 100%)',
-    boxShadow: '0 3px 0 #000',
-    padding: '8px 16px', marginBottom: 5,
+    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 14, color: '#fff',
+    border: '2px solid #000', borderRadius: 20, cursor: 'pointer',
+    height: 38, boxSizing: 'border-box', padding: '0 18px', marginBottom: 7,
+    background: '#10B981', boxShadow: '0 3px 0 #065F46, 0 5px 0 #000',
+  },
+  btnCardDorado: {
+    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 14, color: '#2C160E',
+    border: '2px solid #000', borderRadius: 20, cursor: 'pointer',
+    height: 38, boxSizing: 'border-box', padding: '0 18px', marginBottom: 7,
+    background: '#F5B041', boxShadow: '0 3px 0 #B9770E, 0 5px 0 #000',
   },
   btnCardSecondary: {
-    fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 13,
-    background: '#fff', color: C.chocolate, border: `2px solid ${C.negroPulido}`,
-    borderRadius: 10, padding: '7px 14px', boxShadow: '0 3px 0 rgba(0,0,0,0.25)', cursor: 'pointer'
+    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 14,
+    background: '#8B5A2B', color: '#FFFBEB', border: '2px solid #000',
+    borderRadius: 20, height: 38, boxSizing: 'border-box', padding: '0 18px', marginBottom: 7,
+    boxShadow: 'inset 0 3px 5px rgba(74,44,17,0.55), 0 3px 0 #4A2C11, 0 5px 0 #000', cursor: 'pointer'
   },
   // "Desinscribirme" — mismo criterio que `btnCard`: rectangular con
   // bordes redondeados en rojo/crimson, no el pill ilustrado (mismo
   // problema de deformación a este tamaño).
   btnCardCrimson: {
-    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 13, color: '#fff',
-    border: '2px solid #000', borderRadius: 12, cursor: 'pointer',
-    background: `linear-gradient(180deg, #F0584A 0%, ${C.crimsonOscuro} 100%)`,
-    boxShadow: '0 3px 0 #000',
-    padding: '8px 16px', marginBottom: 5,
+    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 14, color: '#fff',
+    border: '2px solid #000', borderRadius: 20, cursor: 'pointer',
+    height: 38, boxSizing: 'border-box', padding: '0 18px', marginBottom: 7,
+    background: '#E74C3C', boxShadow: '0 3px 0 #78281F, 0 5px 0 #000',
   },
   torneosGrid: {
   display: 'grid',
@@ -1021,11 +1032,11 @@ const estilos = {
   // verde/dorado de las acciones reales de las tarjetas).
   paginador: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginTop: 14 },
   paginadorBtn: {
-    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 12.5, color: C.crema,
-    border: '2px solid #000', borderRadius: 10, cursor: 'pointer',
-    background: `linear-gradient(180deg, ${C.maderaClara} 0%, ${C.maderaOscura} 100%)`,
-    boxShadow: '0 3px 0 #000', padding: '7px 14px',
+    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 13, color: '#FFFBEB',
+    border: '2px solid #000', borderRadius: 999, cursor: 'pointer',
+    background: '#8B5A2B', boxShadow: '0 3px 0 #4A2C11, 0 5px 0 #000',
+    height: 36, boxSizing: 'border-box', padding: '0 16px', marginBottom: 5,
   },
-  paginadorBtnDisabled: { opacity: 0.4, cursor: 'default', boxShadow: 'none' },
+  paginadorBtnDisabled: { opacity: 0.4, cursor: 'default' },
   paginadorTexto: { fontSize: 12.5, color: C.crema, fontWeight: 700, minWidth: 92, textAlign: 'center' },
 };
