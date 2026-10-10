@@ -35,6 +35,23 @@ export default function AvisosGlobales({ usuario, token, onAceptarDesafio, onCam
   // traer solicitudes viejas, de antes de abrir la app) solo establece la
   // base sin disparar un toast por cada una.
   const solicitudesConocidasRef = useRef(null);
+  // Pase 377: invitaciones pendientes a un equipo de torneo (2v2/3v3). Se muestra la primera
+  // como popup con Aceptar/Rechazar; el invitado paga su entrada recién al aceptar.
+  const [invitacionesTorneo, setInvitacionesTorneo] = useState([]);
+  const [respondiendoInvitacion, setRespondiendoInvitacion] = useState(false);
+
+  const cargarInvitacionesTorneo = async () => {
+    if (!token) return;
+    try {
+      const res = await fetch(`${API_URL}/api/torneos/invitaciones/pendientes`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (res.ok && Array.isArray(data?.invitaciones)) setInvitacionesTorneo(data.invitaciones);
+    } catch (err) {
+      console.error('Error cargando invitaciones de torneo:', err);
+    }
+  };
 
   useEffect(() => {
     if (!usuario?.id) return;
@@ -78,6 +95,34 @@ export default function AvisosGlobales({ usuario, token, onAceptarDesafio, onCam
       mostrarToast(`💬 ${msg.de}: ${msg.texto}`, 'info', 3200, () => setConversacionAbierta(msg.de));
     };
 
+    // Pase 377: invitaciones de equipo de torneo (el listado en sí viene del backend, así que ante
+    // cualquier novedad simplemente se vuelve a pedir).
+    const alInvitacionTorneo = () => cargarInvitacionesTorneo();
+    const alInvitacionCancelada = ({ invitacionId }) =>
+      setInvitacionesTorneo((lista) => lista.filter((i) => i.id !== invitacionId));
+    const alEquipoCancelado = ({ titulo, motivo, por }) => {
+      const texto = motivo === 'rechazada'
+        ? `${por} rechazó la invitación: se canceló tu equipo en "${titulo}" y se te devolvió la entrada.`
+        : motivo === 'sin_respuesta'
+          ? `Tus amigos no respondieron a tiempo: se canceló tu equipo en "${titulo}" y se te devolvió la entrada.`
+          : `${por} canceló el equipo en "${titulo}" y se te devolvió la entrada.`;
+      mostrarToast(texto, 'info', 5000);
+    };
+    const alInvitacionRespondida = ({ aceptada, username, titulo, equipoCompleto }) => {
+      if (!aceptada) return;
+      mostrarToast(
+        equipoCompleto
+          ? `${username} aceptó: tu equipo para "${titulo}" está completo.`
+          : `${username} aceptó la invitación a "${titulo}".`,
+        'exito',
+        4000
+      );
+    };
+    socket.on('torneo:invitacion', alInvitacionTorneo);
+    socket.on('torneo:invitacion-cancelada', alInvitacionCancelada);
+    socket.on('torneo:equipo-cancelado', alEquipoCancelado);
+    socket.on('torneo:invitacion-respondida', alInvitacionRespondida);
+
     socket.on('desafio:recibido', alRecibirDesafio);
     socket.on('desafio:rechazado', alRechazarse);
     socket.on('desafio:expirado', alExpirarse);
@@ -87,6 +132,10 @@ export default function AvisosGlobales({ usuario, token, onAceptarDesafio, onCam
     socket.on('privado:mensaje-nuevo', alMensajePrivado);
 
     return () => {
+      socket.off('torneo:invitacion', alInvitacionTorneo);
+      socket.off('torneo:invitacion-cancelada', alInvitacionCancelada);
+      socket.off('torneo:equipo-cancelado', alEquipoCancelado);
+      socket.off('torneo:invitacion-respondida', alInvitacionRespondida);
       socket.off('desafio:recibido', alRecibirDesafio);
       socket.off('desafio:rechazado', alRechazarse);
       socket.off('desafio:expirado', alExpirarse);
@@ -150,6 +199,49 @@ export default function AvisosGlobales({ usuario, token, onAceptarDesafio, onCam
     return () => { activo = false; clearInterval(intervalo); };
   }, [token, usuario?.id, mostrarToast, onCambioSolicitudesPendientes, onIrASolicitudesAmistad]);
 
+  // Pase 377: polling de invitaciones de torneo (cubre al amigo que estaba desconectado cuando
+  // llegó el aviso en vivo, y refresca si una invitación venció).
+  useEffect(() => {
+    if (!token || !usuario?.id) return;
+    cargarInvitacionesTorneo();
+    const intervalo = setInterval(cargarInvitacionesTorneo, 15000);
+    return () => clearInterval(intervalo);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, usuario?.id]);
+
+  const invitacionTorneo = invitacionesTorneo[0] || null;
+
+  const responderInvitacionTorneo = async (aceptar) => {
+    if (!invitacionTorneo || respondiendoInvitacion) return;
+    setRespondiendoInvitacion(true);
+    try {
+      const res = await fetch(
+        `${API_URL}/api/torneos/invitaciones/${invitacionTorneo.id}/${aceptar ? 'aceptar' : 'rechazar'}`,
+        { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } }
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        mostrarToast(data.error || 'No se pudo responder la invitación', 'error');
+      } else if (aceptar) {
+        mostrarToast(
+          data.equipoCompleto
+            ? `¡Listo! Te anotaste a "${invitacionTorneo.titulo}" y el equipo está completo.`
+            : `Te anotaste a "${invitacionTorneo.titulo}". Faltan tus otros compañeros.`,
+          'exito',
+          4500
+        );
+      } else {
+        mostrarToast('Invitación rechazada.', 'info');
+      }
+    } catch (err) {
+      console.error('Error respondiendo invitación de torneo:', err);
+      mostrarToast('No se pudo conectar con el servidor', 'error');
+    } finally {
+      setRespondiendoInvitacion(false);
+      cargarInvitacionesTorneo();
+    }
+  };
+
   const responder = (aceptar) => {
     if (!desafioRecibido) return;
     getSocket().emit('desafio:responder', { idDesafio: desafioRecibido.idDesafio, aceptar });
@@ -173,6 +265,26 @@ export default function AvisosGlobales({ usuario, token, onAceptarDesafio, onCam
       >
         <p style={{ margin: '0 0 14px', fontWeight: 800, fontSize: 15, color: '#2C160E', textAlign: 'center' }}>
           <strong>{desafioRecibido?.de?.username}</strong> te desafió a jugar.
+        </p>
+      </PopupMadera>
+      {/* Pase 377: invitación a un equipo de torneo (el invitado paga su entrada al aceptar). */}
+      <PopupMadera
+        visible={!!invitacionTorneo && !desafioRecibido}
+        titulo="¡Invitación a torneo!"
+        cinta="verde"
+        icono="/assets/images/trofeo.png"
+        tamIcono={64}
+        onCerrar={() => responderInvitacionTorneo(false)}
+        botones={[
+          { texto: '✔ Aceptar', tipo: 'verde', disabled: respondiendoInvitacion, onClick: () => responderInvitacionTorneo(true) },
+          { texto: '✖ Rechazar', tipo: 'carmesi', disabled: respondiendoInvitacion, onClick: () => responderInvitacionTorneo(false) },
+        ]}
+      >
+        <p style={{ margin: '0 0 8px', fontWeight: 800, fontSize: 15, color: '#2C160E', textAlign: 'center' }}>
+          <strong>{invitacionTorneo?.invitador_nombre}</strong> te invitó a su equipo en <strong>{invitacionTorneo?.titulo}</strong>.
+        </p>
+        <p style={{ margin: '0 0 14px', fontWeight: 700, fontSize: 13, color: '#7a6660', textAlign: 'center' }}>
+          {invitacionTorneo?.modo} · {invitacionTorneo?.puntos_para_ganar} pts · Entrada {Math.round(Number(invitacionTorneo?.apuesta || 0))} monedas (se descuenta al aceptar)
         </p>
       </PopupMadera>
       {conversacionAbierta && token && (
