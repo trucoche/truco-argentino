@@ -440,6 +440,8 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
               ...(baraja === 'clasica' ? estilos.opcionAvatarActiva : {})
             }}
           >
+            {/* Pase 366: preview ilustrado del mazo clásico (cartas españolas). */}
+            <img src="/assets/images/icono-cartas-clasica.png" alt="" style={estilos.previewCartas} />
             <span style={estilos.opcionAvatarLabel}>Clásica</span>
           </button>
           <button
@@ -534,7 +536,10 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
       {/* Pase 311/312: "Mi cuenta" — acceso a eliminar la cuenta. Manda un mail
           de confirmación al email registrado; 30 días de arrepentimiento. */}
       <PlacaMadera>
-        <div style={estilos.panelTitulo}>👤 Mi cuenta</div>
+        <div style={estilos.panelTitulo}>
+          <img src="/assets/images/icono-eliminar-cuenta.png" alt="" style={estilos.panelTituloIcono} />
+          Mi cuenta
+        </div>
         <p style={{ ...estilos.hintBaraja, marginTop: 0 }}>
           Si querés eliminar tu cuenta, te mandamos un mail a tu casilla registrada para confirmarlo. Tenés 30 días para arrepentirte volviendo a iniciar sesión.
         </p>

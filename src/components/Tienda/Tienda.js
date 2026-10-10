@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { API_URL } from '../../config';
+import { PlacaMadera } from '../Popup/PopupMadera';
 
 const C = {
   verde: '#2D9B4F', verdeOscuro: '#1f7a3c',
@@ -50,6 +51,8 @@ const C = {
 // que deja mucho más ordenada la zona de arriba para el nombre del pack.
 // Mismos nombres de archivo que antes (se sobreescriben los PNGs, no hace
 // falta tocar este mapa).
+const CONTORNO_TEXTO = '-1.5px -1.5px 0 #000, 0 -1.5px 0 #000, 1.5px -1.5px 0 #000, -1.5px 0 0 #000, 1.5px 0 0 #000, -1.5px 1.5px 0 #000, 0 1.5px 0 #000, 1.5px 1.5px 0 #000';
+
 const CARTELES = {
   base: '/assets/images/cartelito-madera.png',
   verde: '/assets/images/cartelito-madera-verde.png',
@@ -220,10 +223,9 @@ export default function Tienda({ usuario, token }) {
             SOLO en la tarjeta de Inauguración — reemplaza al banner de texto
             que estaba arriba de todo el panel (ver el JSX del `return`
             principal más abajo, ya no existe). */}
+        {/* Pase 364: el listón diagonal pasa a ser una píldora flotante igual a la de Mejor Valor, en rojo. */}
         {inauguracion && descuentoPct != null && (
-          <div style={estilos.ribbonDescuento}>
-            <span style={estilos.ribbonDescuentoTexto}>-{descuentoPct}% OFF</span>
-          </div>
+          <div style={estilos.badgeInauguracion}>🔥 -{descuentoPct}% OFF</div>
         )}
         <img src={CARTELES[pack.tipoCartel]} alt="" style={estilos.cartelFondo} />
 
@@ -320,7 +322,11 @@ export default function Tienda({ usuario, token }) {
 
   return (
     <>
-      <div style={estilos.sectionTitle}>🛒 Comprá monedas</div>
+      <div style={estilos.sectionTitle}>
+        {/* Pase 366: la bolsita de monedas del pack de 100 reemplaza al 🛒. */}
+        <img src="/assets/images/moneda-800.png" alt="" style={estilos.sectionTitleIcono} />
+        Comprá monedas
+      </div>
       <div style={estilos.sectionSubtitle}>Se acreditan al instante en tu cuenta</div>
 
       {/* Ducentésimo trigésimo tercer pase: se retira el banner rojo de
@@ -338,7 +344,8 @@ export default function Tienda({ usuario, token }) {
         </div>
       )}
 
-      <div style={estilos.panel}>
+      {/* Pase 364: el panel de packs usa el marco de madera con remaches del resto del juego (antes un borde marrón liso). */}
+      <PlacaMadera interiorStyle={estilos.panelInterior}>
         {/* Centésimo trigésimo cuarto pase: el usuario pidió sacar "Tu
             saldo actual" de la Tienda WEB (el saldo ya se ve en el
             header/topbar general de la app) y aprovechar ese espacio para
@@ -369,7 +376,7 @@ export default function Tienda({ usuario, token }) {
             {PACKS.slice(3, 6).map((pack) => renderPack(pack, 2))}
           </div>
         </div>
-      </div>
+      </PlacaMadera>
 
       {/* Ducentésimo trigésimo octavo pase: "el texto legal sigue siendo
           bastante largo y se lee con dificultad" — se parte en 2 líneas
@@ -386,7 +393,8 @@ export default function Tienda({ usuario, token }) {
 }
 
 const estilos = {
-  sectionTitle: { fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 16, color: C.crema, margin: '4px 0 2px 4px' },
+  sectionTitle: { fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 16, color: C.crema, margin: '4px 0 2px 4px', display: 'flex', alignItems: 'center', gap: 8 },
+  sectionTitleIcono: { width: 30, height: 30, objectFit: 'contain', flexShrink: 0 },
   // Mismo criterio que el subtítulo agregado en Ranking.js — la tienda
   // tampoco tenía ninguna bajada de línea, solo el título suelto.
   sectionSubtitle: { fontSize: 12.5, color: 'rgba(255,248,237,0.75)', fontWeight: 700, margin: '0 0 10px 4px' },
@@ -406,11 +414,12 @@ const estilos = {
   // madera y cuero") — mismo marco chocolate y misma sombra de antes,
   // `backgroundColor` queda como color de respaldo mientras carga la
   // imagen (tono oscuro de la propia textura, no crema).
-  panel: {
+  // Pase 364: el marco lo pone <PlacaMadera>; acá queda solo el hueco con el paño verde (fieltro) de siempre.
+  panelInterior: {
     backgroundImage: 'url(/assets/images/fondo-panel-tienda.jpg)',
     backgroundSize: 'cover', backgroundPosition: 'center', backgroundColor: '#1f3d2c',
-    border: `4px solid ${C.chocolate}`, borderRadius: 20,
-    boxShadow: '0 6px 0 rgba(0,0,0,0.25)', padding: '18px 18px 20px'
+    padding: '26px 18px 20px',
+    boxShadow: 'inset 0 4px 14px rgba(0,0,0,0.55), inset 0 -3px 10px rgba(0,0,0,0.35), inset 0 0 0 2px rgba(0,0,0,0.25)',
   },
   // Centésimo trigésimo cuarto pase: `saldoActual`/`saldoIcono` (el
   // "Tu saldo actual: X" que iba acá) sacados — el usuario pidió
@@ -471,6 +480,16 @@ const estilos = {
   // nombre que ya muestra el letrero de madera. Vive por ENCIMA del borde
   // superior de la tarjeta (`top` negativo) para no invadir ninguna de las
   // zonas ya medidas a pixel sobre el cartelito.
+  // Pase 364: mismo listón que `badgeHero`, en rojo (Inauguración).
+  badgeInauguracion: {
+    position: 'absolute', top: -12, left: '50%', transform: 'translateX(-50%)',
+    zIndex: 3, whiteSpace: 'nowrap',
+    background: `linear-gradient(180deg, #FF7A6B, ${C.crimson})`,
+    color: '#fff', fontFamily: "'Fredoka', sans-serif", fontWeight: 800,
+    fontSize: 11, letterSpacing: 0.2, padding: '4px 11px', borderRadius: 999,
+    border: `2px solid ${C.crimsonOscuro}`, boxShadow: '0 3px 0 rgba(0,0,0,0.25)',
+    textShadow: '-1px -1px 0 #7a1f17, 1px -1px 0 #7a1f17, -1px 1px 0 #7a1f17, 1px 1px 0 #7a1f17',
+  },
   badgeHero: {
     position: 'absolute', top: -12, left: '50%', transform: 'translateX(-50%)',
     zIndex: 3, whiteSpace: 'nowrap',
@@ -830,26 +849,21 @@ const estilos = {
   // centro geométrico de la caja) — en vez de padding simétrico, ahora
   // arriba es más chico que abajo (18 vs 30) para correr el texto hacia
   // arriba dentro de la misma caja.
+  // Pase 364: botón plano cel-shaded (igual al del Lobby/Torneos): relleno liso, contorno negro 2px y sombra
+  // inferior dura; reemplaza las imágenes boton-amarillo/verde/rojo.png. El color sigue el de cada tarjeta.
   precioBoton: {
     fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 21,
-    border: 'none', borderRadius: 999, padding: '18px 28px 30px',
-    cursor: 'pointer', backgroundSize: '100% 100%', backgroundRepeat: 'no-repeat',
-    backgroundPosition: 'center',
+    border: '2px solid #000', borderRadius: 999, padding: '9px 30px', marginBottom: 6,
+    cursor: 'pointer', boxSizing: 'border-box', lineHeight: 1.2,
   },
   precioBotonDorado: {
-    backgroundImage: 'url(/assets/images/boton-amarillo.png)', color: C.chocolate,
+    background: '#F5B041', color: '#2C160E', boxShadow: '0 4px 0 #B9770E, 0 6px 0 #000',
   },
-  // Ducentésimo trigésimo octavo pase: "el botón del Mejor Valor podría
-  // tener un poco más de peso o un leve brillo para que invite más al
-  // clic" — un resplandor verde suave por fuera de la píldora (el
-  // `border-radius:999` de `precioBoton` ya hace que el box-shadow lo seep
-  // en forma de aro, no de caja).
   precioBotonVerde: {
-    backgroundImage: 'url(/assets/images/boton-verde.png)', color: '#fff',
-    boxShadow: `0 0 14px rgba(61,221,107,0.65), 0 3px 0 rgba(0,0,0,0.15)`,
+    background: '#10B981', color: '#fff', textShadow: CONTORNO_TEXTO, boxShadow: '0 4px 0 #065F46, 0 6px 0 #000',
   },
   precioBotonRojo: {
-    backgroundImage: 'url(/assets/images/boton-rojo.png)', color: '#fff',
+    background: '#E74C3C', color: '#fff', textShadow: CONTORNO_TEXTO, boxShadow: '0 4px 0 #78281F, 0 6px 0 #000',
   },
   precioBotonDeshabilitado: {
     opacity: 0.6, cursor: 'default',
