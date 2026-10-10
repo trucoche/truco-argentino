@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import PerfilRivalModal from '../PerfilRival/PerfilRivalModal';
 import PantallaCarga from '../PantallaCarga/PantallaCarga';
+import { PlacaMadera } from '../Popup/PopupMadera';
 import { API_URL as BASE_URL } from '../../config';
 
 const API_URL = `${BASE_URL}/api/ranking`;
@@ -106,6 +107,26 @@ const BASE_FRACCIONES = {
   plata: { xCentro: 0.851, mitadAncho: 0.14, yArriba: 0.81, yAbajo: 0.98 },
 };
 
+// Pase 370: pestañas de alcance del ranking. El orden NO cambia (victorias),
+// solo cambia a quién se compara: todos, mi provincia o mi localidad.
+const ALCANCES = [
+  { clave: 'global', texto: 'Global' },
+  { clave: 'provincia', texto: 'Provincia' },
+  { clave: 'localidad', texto: 'Mi Localidad' },
+];
+
+// "4d 12h" mientras falten días; "5h 20m" el último día; null si ya cerró.
+function textoCuentaRegresiva(finISO, ahora) {
+  if (!finISO) return '';
+  const ms = new Date(finISO).getTime() - ahora;
+  if (!(ms > 0)) return 'cerrando';
+  const min = Math.floor(ms / 60000);
+  const d = Math.floor(min / 1440);
+  const h = Math.floor((min % 1440) / 60);
+  const m = min % 60;
+  return d > 0 ? `${d}d ${h}h` : `${h}h ${m}m`;
+}
+
 function Filigrana() {
   const path = (
     <>
@@ -131,33 +152,61 @@ function Filigrana() {
 export default function Ranking({ token, usuarioActual }) {
   const [ranking, setRanking] = useState([]);
   const [cargando, setCargando] = useState(true);
+  const [cargandoLista, setCargandoLista] = useState(false);
   const [error, setError] = useState('');
   // Nonagésimo octavo pase: click en cualquier fila (o en el podio) abre
   // el popup de perfil público de ese jugador.
   const [perfilAbierto, setPerfilAbierto] = useState(null);
+  // Pase 370: alcance (Global/Provincia/Mi Localidad), datos de temporada +
+  // "Tu posición" (GET /api/ranking/info) y reloj para la cuenta regresiva.
+  const [alcance, setAlcance] = useState('global');
+  const [info, setInfo] = useState(null);
+  const [ahora, setAhora] = useState(() => Date.now());
+  // Pase 370: 2 columnas (podio+estado | pestañas+lista) cuando el contenedor es ancho.
+  const layoutRef = useRef(null);
+  const [esAncho, setEsAncho] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 860);
+  useEffect(() => {
+    const el = layoutRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return undefined;
+    const ro = new ResizeObserver(([entrada]) => setEsAncho(entrada.contentRect.width >= 760));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  useEffect(() => {
+    const t = setInterval(() => setAhora(Date.now()), 30000);
+    return () => clearInterval(t);
+  }, []);
 
   useEffect(() => {
+    let vigente = true;
     const cargarRanking = async () => {
+      setCargandoLista(true);
       try {
-        const res = await fetch(API_URL, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
+        const headers = { 'Authorization': `Bearer ${token}` };
+        const [res, resInfo] = await Promise.all([
+          fetch(`${API_URL}?alcance=${alcance}`, { headers }),
+          fetch(`${API_URL}/info?alcance=${alcance}`, { headers }),
+        ]);
         const data = await res.json();
+        if (!vigente) return;
 
         if (!res.ok) {
           setError(data.error || 'Error al cargar el ranking');
           return;
         }
         setRanking(data);
+        setError('');
+        if (resInfo.ok) setInfo(await resInfo.json());
       } catch (err) {
         console.error('Error de conexión:', err);
-        setError('No se pudo conectar con el servidor');
+        if (vigente) setError('No se pudo conectar con el servidor');
       } finally {
-        setCargando(false);
+        if (vigente) { setCargando(false); setCargandoLista(false); }
       }
     };
     cargarRanking();
-  }, [token]);
+    return () => { vigente = false; };
+  }, [token, alcance]);
 
   // Centésimo cuadragésimo sexto pase: ver PantallaCarga — mismo fondo
   // temático que el resto de las pantallas, en vez del texto suelto.
@@ -169,10 +218,6 @@ export default function Ranking({ token, usuarioActual }) {
     return <div style={estilos.errorBox}>{error}</div>;
   }
 
-  if (ranking.length === 0) {
-    return <p style={{ color: C.crema, textAlign: 'center' }}>Todavía no hay partidas jugadas.</p>;
-  }
-
   const podio = ranking.slice(0, 3);
   const resto = ranking.slice(3);
 
@@ -182,23 +227,19 @@ export default function Ranking({ token, usuarioActual }) {
   // original en vez de asumir que "el del medio siempre es index 0".
   const [p1, p2, p3] = podio;
 
-  return (
-    <>
-      {/* Ducentésimo sexagésimo segundo pase: el título era texto suelto en
-          la esquina, sin marco ni presencia — ahora vive en un cartel de
-          madera chico con el trofeo dorado (reutilizamos
-          `historial-trofeo.png`, ya tiene el contorno negro grueso tipo
-          3D que pedía la instrucción — no hace falta un ícono nuevo). */}
-      <div style={estilos.encabezadoBanner}>
-        <span style={{ ...estilos.remacheChico, left: 8 }} />
-        <span style={{ ...estilos.remacheChico, right: 8 }} />
-        <img src="/assets/images/historial-trofeo.png" alt="" style={estilos.encabezadoIcono} />
-        <div>
-          <div style={estilos.sectionTitle}>Ranking</div>
-          <div style={estilos.sectionSubtitle}>Los mejores jugadores de TrucoChe</div>
-        </div>
-      </div>
+  const zonaTexto = info?.yo?.localidad || info?.yo?.provincia || '';
+  const cuenta = textoCuentaRegresiva(info?.temporada?.fin, ahora);
 
+  // Pase 370: timer sutil de la temporada (solo cuenta regresiva por ahora).
+  const bloqueTimer = info?.temporada ? (
+    <div style={estilos.timerTemporada} title={info.temporada.nombre}>
+      <span style={estilos.timerEtiqueta}>Fin de Temporada:</span>
+      <span style={estilos.timerValor}>{cuenta}</span>
+    </div>
+  ) : null;
+
+  const bloquePodio = (
+    <>
       {/* Ducentésimo sexagésimo segundo pase: el marco blanco/crema plano
           pasa a ser la misma "gran placa de madera de taberna" que ya usan
           Historial/Chat Global — madera oscura + remaches de bronce por
@@ -291,43 +332,146 @@ export default function Ranking({ token, usuarioActual }) {
         </div>
       </div>
 
-      {resto.length > 0 && (
-        <div style={estilos.listaPanelExterior}>
-          <span style={{ ...estilos.remache, top: 10, left: 10 }} />
-          <span style={{ ...estilos.remache, top: 10, right: 10 }} />
-          <span style={{ ...estilos.remache, bottom: 10, left: 10 }} />
-          <span style={{ ...estilos.remache, bottom: 10, right: 10 }} />
-          <div style={estilos.listaInterior}>
-            {resto.map((r, i) => {
-              const puesto = i + 4; // arranca en el puesto 4, después del podio
-              const esYo = r.username === usuarioActual;
-              return (
-                <div
-                  key={r.username}
-                  style={{
-                    ...estilos.fila,
-                    ...(i % 2 === 1 ? estilos.filaImpar : {}),
-                    ...(esYo ? estilos.filaYo : {}),
-                    cursor: 'pointer'
-                  }}
-                  onClick={() => setPerfilAbierto(r.username)}
-                >
-                  {/* Badge de posición — chico, CSS por ahora (pendiente de
-                      reemplazo por el medallón de bronce ilustrado). */}
-                  <div style={estilos.filaPuesto}>{puesto}</div>
-                  <div style={estilos.filaAvatar}><img src={avatarSrcCaraDe(r)} alt="" style={estilos.filaAvatarImg} /></div>
-                  <div style={estilos.filaNombre}>{esYo ? 'Vos' : r.username}</div>
-                  <div style={estilos.filaStat}>
-                    <span style={estilos.filaStatNumero}>{r.partidas_ganadas}</span>
-                    <img src="/assets/images/historial-trofeo.png" alt="" style={estilos.filaStatIcono} />
-                    <span style={estilos.filaStatLabel}>victorias</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+    </>
+  );
+
+  // Pase 370: "Tu posición" — tarjeta fija con tu avatar, tu puesto en el alcance elegido,
+  // tus victorias y el badge zonal (localidad, o provincia si no cargaste localidad).
+  const yo = info?.yo;
+  const bloqueTuPosicion = yo ? (
+    <PlacaMadera style={estilos.tuPosicionPlaca} interiorStyle={estilos.tuPosicionInterior} colorInterior="#FFE9B0">
+      <div style={estilos.tuPosicionTitulo}>Tu posición</div>
+      <div style={estilos.tuPosicionFila}>
+        <div style={estilos.tuPosicionAvatar}><img src={avatarSrcCaraDe(yo)} alt="" style={estilos.filaAvatarImg} /></div>
+        <div style={estilos.tuPosicionDatos}>
+          <div style={estilos.tuPosicionNombre}>{yo.username}</div>
+          {zonaTexto && <div style={estilos.badgeZonal}>{zonaTexto}</div>}
         </div>
-      )}
+        <div style={estilos.tuPosicionPuesto}>
+          {yo.puesto ? `#${yo.puesto}` : '—'}
+        </div>
+      </div>
+      <div style={estilos.tuPosicionPie}>
+        <img src="/assets/images/historial-trofeo.png" alt="" style={estilos.filaStatIcono} />
+        <span style={estilos.filaStatNumero}>{yo.partidas_ganadas}</span>
+        <span style={estilos.filaStatLabel}>victorias</span>
+        {!yo.puesto && (
+          <span style={estilos.tuPosicionAviso}>
+            {info.sinUbicacion ? 'Cargá tu zona en el Perfil' : 'Jugá una partida para entrar'}
+          </span>
+        )}
+      </div>
+    </PlacaMadera>
+  ) : null;
+
+  const mensajeVacio = info?.sinUbicacion
+    ? (alcance === 'provincia'
+        ? 'Cargá tu provincia en tu Perfil para ver este ranking.'
+        : 'Cargá tu provincia y tu localidad en tu Perfil para ver este ranking.')
+    : (ranking.length === 0
+        ? (alcance === 'global' ? 'Todavía no hay partidas jugadas.' : 'Todavía no hay partidas en tu zona.')
+        : '');
+
+  // Pase 370: pestañas de alcance (mismo estilo que Activos/Finalizados de Torneos). En 2 columnas
+  // viven arriba de la lista; apiladas van antes del podio, porque filtran podio y lista.
+  const bloqueTabs = (
+    <div style={estilos.tabs}>
+      {ALCANCES.map((a) => (
+        <button
+          key={a.clave}
+          type="button"
+          onClick={() => setAlcance(a.clave)}
+          style={alcance === a.clave ? estilos.tabActiva : estilos.tabInactiva}
+        >
+          {a.texto}
+        </button>
+      ))}
+    </div>
+  );
+
+  const bloqueLista = (
+    <div style={estilos.listaPanelExterior}>
+      <span style={{ ...estilos.remache, top: 10, left: 10 }} />
+      <span style={{ ...estilos.remache, top: 10, right: 10 }} />
+      <span style={{ ...estilos.remache, bottom: 10, left: 10 }} />
+      <span style={{ ...estilos.remache, bottom: 10, right: 10 }} />
+      <div style={estilos.listaInterior}>
+        {esAncho && bloqueTabs}
+        <div style={{ opacity: cargandoLista ? 0.55 : 1, transition: 'opacity 0.15s' }}>
+          {mensajeVacio && <p style={estilos.listaVacia}>{mensajeVacio}</p>}
+          {!mensajeVacio && resto.length === 0 && (
+            <p style={estilos.listaVacia}>Los primeros puestos están en el podio.</p>
+          )}
+          {resto.map((r, i) => {
+            const puesto = i + 4; // arranca en el puesto 4, después del podio
+            const esYo = r.username === usuarioActual;
+            return (
+              <div
+                key={r.username}
+                style={{
+                  ...estilos.fila,
+                  ...(i % 2 === 1 ? estilos.filaImpar : {}),
+                  ...(esYo ? estilos.filaYo : {}),
+                  cursor: 'pointer'
+                }}
+                onClick={() => setPerfilAbierto(r.username)}
+              >
+                <div style={estilos.filaPuesto}>{puesto}</div>
+                <div style={estilos.filaAvatar}><img src={avatarSrcCaraDe(r)} alt="" style={estilos.filaAvatarImg} /></div>
+                <div style={estilos.filaNombre}>{esYo ? 'Vos' : r.username}</div>
+                <div style={estilos.filaStat}>
+                  <span style={estilos.filaStatNumero}>{r.partidas_ganadas}</span>
+                  <img src="/assets/images/historial-trofeo.png" alt="" style={estilos.filaStatIcono} />
+                  <span style={estilos.filaStatLabel}>victorias</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      {/* Ducentésimo sexagésimo segundo pase: el título era texto suelto en
+          la esquina, sin marco ni presencia — ahora vive en un cartel de
+          madera chico con el trofeo dorado (reutilizamos
+          `historial-trofeo.png`, ya tiene el contorno negro grueso tipo
+          3D que pedía la instrucción — no hace falta un ícono nuevo). */}
+      <div style={estilos.encabezadoBanner}>
+        <span style={{ ...estilos.remacheChico, left: 8 }} />
+        <span style={{ ...estilos.remacheChico, right: 8 }} />
+        <img src="/assets/images/historial-trofeo.png" alt="" style={estilos.encabezadoIcono} />
+        <div>
+          <div style={estilos.sectionTitle}>Ranking</div>
+          <div style={estilos.sectionSubtitle}>Los mejores jugadores de TrucoChe</div>
+        </div>
+      </div>
+
+      {/* Pase 370: layout de 2 columnas en pantallas anchas (izquierda: temporada, podio y tu
+          posición; derecha: pestañas y lista) y apilado en angostas (pestañas antes del podio,
+          porque filtran tanto el podio como la lista). */}
+      <div ref={layoutRef} style={esAncho ? estilos.layoutAncho : estilos.layoutApilado}>
+        {esAncho ? (
+          <>
+            <div style={estilos.columna}>
+              {bloqueTimer}
+              {bloquePodio}
+              {bloqueTuPosicion}
+            </div>
+            <div style={estilos.columna}>{bloqueLista}</div>
+          </>
+        ) : (
+          <>
+            {bloqueTimer}
+            {bloqueTabs}
+            {bloquePodio}
+            {bloqueTuPosicion}
+            {bloqueLista}
+          </>
+        )}
+      </div>
 
       {perfilAbierto && (
         <PerfilRivalModal
@@ -341,6 +485,63 @@ export default function Ranking({ token, usuarioActual }) {
 }
 
 const estilos = {
+  // ---- Pase 370: layout, timer, pestañas y "Tu posición" ----
+  layoutAncho: { display: 'grid', gridTemplateColumns: 'minmax(0, 1.15fr) minmax(0, 1fr)', gap: 20, alignItems: 'start' },
+  layoutApilado: { display: 'block' },
+  columna: { minWidth: 0 },
+  timerTemporada: {
+    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+    background: 'rgba(26,20,16,0.55)', border: `1.5px solid ${C.negroPulido}`, borderRadius: 999,
+    padding: '5px 14px', marginBottom: 12,
+  },
+  timerEtiqueta: { fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 13, color: 'rgba(255,248,237,0.85)' },
+  timerValor: {
+    fontFamily: "'Fredoka', sans-serif", fontWeight: 800, fontSize: 14, color: C.doradoClaro,
+    textShadow: '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000',
+  },
+  tabs: { display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
+  tabActiva: {
+    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 14,
+    background: '#FFFBEB', color: '#2C160E', border: '2px solid #000', borderRadius: 999,
+    height: 38, boxSizing: 'border-box', padding: '0 16px', marginBottom: 5,
+    boxShadow: '0 3px 0 #A8977A, 0 5px 0 #000', cursor: 'pointer',
+  },
+  tabInactiva: {
+    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 14,
+    background: '#8B5A2B', color: '#FFFBEB', border: '2px solid #000', borderRadius: 999,
+    height: 38, boxSizing: 'border-box', padding: '0 16px', marginBottom: 5,
+    boxShadow: 'inset 0 3px 5px rgba(74,44,17,0.55), 0 3px 0 #4A2C11, 0 5px 0 #000', cursor: 'pointer',
+  },
+  listaVacia: { margin: '14px 6px', textAlign: 'center', color: C.chocolate, fontWeight: 700, fontSize: 13.5 },
+  tuPosicionPlaca: { marginBottom: 16 },
+  tuPosicionInterior: { padding: '10px 14px 12px' },
+  tuPosicionTitulo: {
+    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 12.5, letterSpacing: 0.6,
+    textTransform: 'uppercase', color: C.chocolate, marginBottom: 6,
+  },
+  tuPosicionFila: { display: 'flex', alignItems: 'center', gap: 10 },
+  tuPosicionAvatar: {
+    width: 46, height: 46, borderRadius: '50%', background: C.verdeOscuro, flexShrink: 0,
+    boxShadow: `0 0 0 2px ${C.negroPulido}`, overflow: 'hidden',
+  },
+  tuPosicionDatos: { flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 4 },
+  tuPosicionNombre: {
+    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 16, color: '#2C160E',
+    maxWidth: '100%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+  },
+  // Badge zonal (ej. "Paso del Rey") — pastilla de madera cálida.
+  badgeZonal: {
+    background: '#8B5A2B', color: '#FFFBEB', border: '1.5px solid #000', borderRadius: 999,
+    padding: '1px 10px', fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 11.5,
+    maxWidth: '100%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+  },
+  tuPosicionPuesto: {
+    fontFamily: "'Fredoka', sans-serif", fontWeight: 800, fontSize: 30, color: C.doradoOscuro,
+    textShadow: '-1.5px -1.5px 0 #2C160E, 1.5px -1.5px 0 #2C160E, -1.5px 1.5px 0 #2C160E, 1.5px 1.5px 0 #2C160E',
+    flexShrink: 0, lineHeight: 1,
+  },
+  tuPosicionPie: { display: 'flex', alignItems: 'center', gap: 5, marginTop: 8, flexWrap: 'wrap' },
+  tuPosicionAviso: { marginLeft: 'auto', fontSize: 11.5, fontWeight: 700, color: C.chocolate },
   errorBox: {
     background: '#ffe0dd', border: '2px solid #E8483A', color: '#c2352a',
     borderRadius: 10, padding: '8px 12px', fontWeight: 700, fontSize: 13

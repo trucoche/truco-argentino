@@ -1,10 +1,12 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import CambiarFondoModal from './CambiarFondoModal';
 import PantallaCarga from '../PantallaCarga/PantallaCarga';
 import { useToast } from '../../contexts/ToastContext';
 import { API_URL as BASE_URL } from '../../config';
 import { rangoUi } from './rangosUi';
 import { PlacaMadera } from '../Popup/PopupMadera';
+import ZonaEditor from './ZonaEditor';
+import { textoZona } from './provincias';
 
 const API_BASE = `${BASE_URL}/api`;
 
@@ -84,11 +86,11 @@ function avatarSrcDe(u) {
     : `/assets/${u?.personaje || 'gaucho'}-avatar-cara.png`;
 }
 
-function StatTile({ label, valor, color }) {
+function StatTile({ label, valor, color, compacto }) {
   return (
-    <div style={estilos.statTile}>
+    <div style={{ ...estilos.statTile, ...(compacto ? estilos.statTileCompacto : {}) }}>
       <div style={{ ...estilos.statValor, ...(color ? { color } : {}) }}>{valor}</div>
-      <div style={estilos.statLabel}>{label}</div>
+      <div style={{ ...estilos.statLabel, ...(compacto ? estilos.statLabelCompacto : {}) }}>{label}</div>
     </div>
   );
 }
@@ -124,6 +126,23 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
   // monedas). El modal hace todo el trabajo (recorte + POST) y solo avisa
   // acá para refrescar `usuario` — mismo patrón que bio/género.
   const [fondoModalAbierto, setFondoModalAbierto] = useState(false);
+  // Pase 370: popup para cargar la provincia/localidad (filtros del Ranking).
+  const [zonaAbierta, setZonaAbierta] = useState(false);
+
+  // Pase 363: en pantallas anchas el layout pasa a una grilla de 2 filas (Perfil | Rendimiento y
+  // Logros | Rango) para que Perfil y Rendimiento midan lo mismo y Logros/Rango arranquen alineados.
+  const layoutRef = useRef(null);
+  const [esAncho, setEsAncho] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 760);
+  useEffect(() => {
+    const el = layoutRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return undefined;
+    const ro = new ResizeObserver(([entrada]) => setEsAncho(entrada.contentRect.width >= 660));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  // Posición de cada tarjeta en la grilla (solo aplica en pantallas anchas).
+  const pos = (col, fila, extra) => (esAncho ? { gridColumn: col, gridRow: fila, display: 'flex', flexDirection: 'column', ...extra } : undefined);
+  const interiorLleno = esAncho ? { flex: 1 } : undefined;
 
   // ---------- Logros (sin cambios de lógica respecto de antes) ----------
   const [logros, setLogros] = useState([]);
@@ -202,11 +221,11 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
     <>
       <div style={estilos.sectionTitle}>Perfil</div>
 
-      <div style={estilos.layout}>
-        <div style={estilos.columnaPrincipal}>
+      <div ref={layoutRef} style={esAncho ? estilos.layoutGrilla : estilos.layout}>
+        <div style={esAncho ? estilos.contenidoPlano : estilos.columnaPrincipal}>
 
           {/* Encabezado: foto, nombre, saldo + acceso a la Tienda, bio y género */}
-          <PlacaMadera>
+          <PlacaMadera style={pos(1, 1)} interiorStyle={interiorLleno}>
             {/* Centésimo pase: fondo de perfil personalizable (foto propia,
                 20 monedas) — va DETRÁS de esta fila (no del panel entero,
                 para no pisar la legibilidad de bio/género más abajo).
@@ -292,10 +311,20 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
               )}
             </div>
 
+            {/* Pase 370: zona del jugador (provincia + localidad) para los filtros del Ranking. */}
+            <div style={estilos.zonaFila}>
+              <span style={textoZona(usuario) ? estilos.zonaTexto : estilos.zonaTextoVacio}>
+                {textoZona(usuario) || 'Todavía no cargaste tu zona'}
+              </span>
+              <button type="button" style={estilos.zonaBoton} onClick={() => setZonaAbierta(true)}>
+                {textoZona(usuario) ? 'Editar zona' : 'Cargar zona'}
+              </button>
+            </div>
+
           </PlacaMadera>
 
           {/* Logros — misma lógica y contenido que ya existía */}
-          <PlacaMadera>
+          <PlacaMadera style={pos(1, 2)}>
             <div style={estilos.panelHeader}>
               <div style={{ ...estilos.panelTitle, ...estilos.tituloConIcono }}>
                 <img src="/assets/images/icono-logros.png" alt="" style={estilos.tituloIcono} />
@@ -345,11 +374,17 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
                       </div>
                       <div style={estilos.filaAbajo}>
                         <span style={estilos.progresoTexto}>{l.progreso}/{l.objetivo}</span>
-                        <span style={estilos.recompensaTexto}>🪙 {l.recompensa}</span>
+                        <span style={{ ...estilos.recompensaTexto, ...estilos.conIconito }}>
+                          <img src="/assets/images/icono-moneda.png" alt="" style={estilos.iconito} />
+                          {l.recompensa}
+                        </span>
                       </div>
 
                       {l.reclamado ? (
-                        <div style={estilos.badgeReclamado}>✓ Reclamado</div>
+                        <div style={{ ...estilos.badgeReclamado, ...estilos.conIconito, justifyContent: 'center' }}>
+                          <img src="/assets/images/icono-check.png" alt="" style={estilos.iconito} />
+                          Reclamado
+                        </div>
                       ) : l.completado ? (
                         <button
                           onClick={() => reclamarLogro(l.tipo)}
@@ -377,17 +412,17 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
             principal, lo que la dejaba muy abajo en pantallas con muchos
             logros. Ahora queda a la altura de la parte de arriba de
             Logros en vez de debajo de toda la grilla. */}
-        <div style={estilos.columnaLateral}>
-          <PlacaMadera>
+        <div style={esAncho ? estilos.contenidoPlano : estilos.columnaLateral}>
+          <PlacaMadera style={pos(2, 1)} interiorStyle={esAncho ? { flex: 1, display: 'flex', flexDirection: 'column' } : undefined}>
             <div style={{ ...estilos.panelTitle, ...estilos.tituloConIcono }}>
               <img src="/assets/images/icono-rendimiento.png" alt="" style={estilos.tituloIcono} />
               <span>Rendimiento</span>
             </div>
-            <div style={estilos.statsGrid}>
-              <StatTile label="Partidas jugadas" valor={partidasJugadas} />
-              <StatTile label="Ganadas" valor={partidasGanadas} color={C.verdeOscuro} />
-              <StatTile label="Perdidas" valor={partidasPerdidas} color={C.crimsonOscuro} />
-              <StatTile label="Abandonos" valor={`${porcentajeAbandonos}%`} />
+            <div style={esAncho ? estilos.statsGridAncho : estilos.statsGrid}>
+              <StatTile label="Partidas jugadas" valor={partidasJugadas} compacto={esAncho} />
+              <StatTile label="Ganadas" valor={partidasGanadas} color={C.verdeOscuro} compacto={esAncho} />
+              <StatTile label="Perdidas" valor={partidasPerdidas} color={C.crimsonOscuro} compacto={esAncho} />
+              <StatTile label="Abandonos" valor={`${porcentajeAbandonos}%`} compacto={esAncho} />
             </div>
           </PlacaMadera>
 
@@ -408,7 +443,7 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
               (bajar la altura total de la página) y a pedido del usuario,
               que además va a ir reemplazando el emoji 🎖️ por logos
               propios de cada rango a futuro. */}
-          <PlacaMadera colorInterior="#FFE9B0" interiorStyle={estilos.panelRangoInterior}>
+          <PlacaMadera style={pos(2, 2, { alignSelf: 'start' })} colorInterior="#FFE9B0" interiorStyle={estilos.panelRangoInterior}>
             <img src={rangoAssets.logo} alt={usuario?.rango?.nombre || 'Rango'} style={estilos.rangoLogo} />
             <div style={estilos.rangoTitulo}>
               {usuario?.rango?.esTop500
@@ -439,6 +474,14 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
           onFondoActualizado={() => { if (onPerfilActualizado) onPerfilActualizado(); }}
         />
       )}
+      {zonaAbierta && (
+        <ZonaEditor
+          token={token}
+          usuario={usuario}
+          onCerrar={() => setZonaAbierta(false)}
+          onGuardado={() => { if (onPerfilActualizado) onPerfilActualizado(); }}
+        />
+      )}
     </>
   );
 }
@@ -451,6 +494,10 @@ const estilos = {
   // cuanto no entran las dos una al lado de la otra, flex-wrap las cae a
   // una debajo de la otra.
   layout: { display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-start' },
+  // Pase 363: versión ancha — grilla de 7:2 con 2 filas; los contenedores de columna desaparecen
+  // (`display: contents`) para que las 4 tarjetas sean celdas directas de la grilla.
+  layoutGrilla: { display: 'grid', gridTemplateColumns: 'minmax(0, 7fr) minmax(220px, 2fr)', gap: 14, alignItems: 'stretch' },
+  contenidoPlano: { display: 'contents' },
   // Pase siguiente: la columna lateral ahora solo tiene "Rendimiento"
   // (se quitó "Top jugadores", ver más abajo) y la principal solo tiene
   // "Logros" — la proporción pasa de 5:2 a 7:2, dándole más ancho a
@@ -474,6 +521,15 @@ const estilos = {
     padding: 4, overflow: 'hidden', boxSizing: 'border-box'
   },
   cartelNombreFila: { marginTop: 12, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 10 },
+  // Pase 370: línea de zona debajo del nombre.
+  zonaFila: { marginTop: 8, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 10 },
+  zonaTexto: { fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 13.5, color: '#4A2C2A' },
+  zonaTextoVacio: { fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 13, color: '#8D7B68' },
+  zonaBoton: {
+    background: '#F5B041', color: '#2C160E', border: '2px solid #000', borderBottom: '4px solid #B9770E',
+    borderRadius: 999, padding: '3px 12px', fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 12.5,
+    cursor: 'pointer',
+  },
   cartelGenero: {
     background: '#E9D9B0', border: '1.5px solid #000', borderRadius: 999, padding: '3px 12px',
     fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 13, color: '#4A2C2A', whiteSpace: 'nowrap',
@@ -645,6 +701,9 @@ const estilos = {
   filaAbajo: { display: 'flex', justifyContent: 'space-between' },
   progresoTexto: { fontSize: 12, fontWeight: 800, color: C.doradoOscuro },
   recompensaTexto: { fontSize: 12, fontWeight: 800, color: C.chocolate },
+  // Pase 368: íconos PNG (moneda, check) en línea con el texto, en lugar de los emojis 🪙 y ✓.
+  conIconito: { display: 'inline-flex', alignItems: 'center', gap: 4 },
+  iconito: { width: 16, height: 16, objectFit: 'contain', flexShrink: 0 },
   btnReclamar: {
     fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 12.5,
     background: `linear-gradient(180deg, ${C.doradoClaro}, ${C.dorado})`, color: C.chocolate,
@@ -661,6 +720,10 @@ const estilos = {
   },
 
   statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 12 },
+  // Pase 363: en la columna angosta las 4 fichas van en 2x2 y se reparten la altura de la tarjeta.
+  statsGridAncho: { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gridAutoRows: '1fr', gap: 10, flex: 1 },
+  statTileCompacto: { padding: '10px 4px', display: 'flex', flexDirection: 'column', justifyContent: 'center' },
+  statLabelCompacto: { fontSize: 10, letterSpacing: 0, overflowWrap: 'anywhere' },
   statTile: {
     background: C.cremaSutil, border: `2px solid ${C.chocolate}22`, borderRadius: 14,
     padding: '14px 10px', textAlign: 'center'
