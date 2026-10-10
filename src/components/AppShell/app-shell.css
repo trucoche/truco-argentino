@@ -311,8 +311,27 @@
   border: none;
   padding: 0;
   background: transparent;
-  box-shadow: 0 0 20px 9px rgba(232, 72, 58, 0.55);
+  box-shadow: none;
+  position: relative;
+  overflow: visible;
 }
+/* Pase 358: el resplandor era un box-shadow, que el navegador NO pinta dentro de la caja del botón:
+   detrás del regalo quedaba un círculo vacío con el color del header (el "círculo blanco").
+   Ahora la luz es un degradé radial rojo que cubre también el centro y se desvanece hacia afuera. */
+.ts-icon-btn.ts-icon-bonus-activo::before {
+  content: '';
+  position: absolute;
+  inset: -12px;
+  border-radius: 50%;
+  background: radial-gradient(circle at center,
+    rgba(232, 72, 58, 1) 0%,
+    rgba(232, 72, 58, 0.9) 48%,
+    rgba(232, 72, 58, 0.45) 66%,
+    rgba(232, 72, 58, 0) 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+.ts-icon-btn.ts-icon-bonus-activo > img { position: relative; z-index: 1; }
 
 /* Centésimo tercer pase: se saca `.ts-icon-bonus-inactivo` — el botón de
    bono ya no se muestra atenuado cuando no hay bono disponible, desaparece
