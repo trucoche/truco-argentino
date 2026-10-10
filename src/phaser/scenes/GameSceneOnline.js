@@ -97,6 +97,11 @@ export default class GameSceneOnline extends Phaser.Scene {
     this._jugadoresSala = [];
     this._modoSala = null;
     this._capacidadSala = null;
+    // Pase 374: datos de la mesa para la línea de modo del cartel de espera.
+    this._puntosSala = null;
+    this._rankedSala = false;
+    this._privadaSala = false;
+    this._torneoSala = false;
     this._avataresEsperaSprites = [];
     this._avataresEsperaTimers = [];
     this._filaEsperaGeneracion = 0;
@@ -297,6 +302,8 @@ preload() {
     // reemplaza, por jugador, con el anillo de su rango (carga perezosa, ver _dibujarTileEspera).
     this.load.image('aroAvatarEspera', conVersion('assets/images/juego/aro-avatar-espera.png'));
     // Pase 346: cara y dorso de la moneda para el spinner "Buscando rival...".
+    // Pase 374: escudo con espadas y "VS" (PNG del usuario) entre los dos aros.
+    this.load.image('vsEscudoEspera', conVersion('assets/images/vs-escudo.png'));
     this.load.image('monedaEsperaCara', conVersion('assets/images/moneda.png'));
     this.load.image('monedaEsperaDorso', conVersion('assets/images/moneda-dorso.png'));
     // Pase 267, punto 4: este tablón ya NO se usa — el botón "Volver al
@@ -1471,7 +1478,15 @@ _mostrarMarcadores(visible) {
 // creado), así que esta función guarda la referencia y destruye la
 // anterior antes de crear la que la reemplaza — mismo patrón que
 // _redibujarFilaEspera con los tiles de avatares.
-_actualizarBannerEsperaTitulo(texto, modo = null) {
+// Pase 374: línea chica bajo el título ("Mesa a 15 tantos · Liga Criolla"). null si todavía no llegaron los
+// datos de la mesa (servidor viejo) — en ese caso el cartel queda como antes.
+_textoDetalleSala() {
+  if (!this._puntosSala) return null;
+  const tipo = this._rankedSala ? 'Liga Criolla' : this._torneoSala ? 'Torneo' : this._privadaSala ? 'Sala privada' : 'Partida libre';
+  return `Mesa a ${this._puntosSala} tantos · ${tipo}`;
+}
+
+_actualizarBannerEsperaTitulo(texto, modo = null, detalle = null) {
   if (this._bannerEsperaTitulo) {
     const viejo = this._bannerEsperaTitulo;
     viejo.destroy();
@@ -1496,10 +1511,21 @@ _actualizarBannerEsperaTitulo(texto, modo = null) {
     pillW = Math.round(pillTxt.width + 24);
   }
 
+  // Pase 374: línea de detalle (puntos + tipo de sala) en chico debajo del título.
+  let detalleTxt = null;
+  if (detalle) {
+    detalleTxt = this.add.text(0, 0, detalle, {
+      fontFamily: 'Fredoka, Arial', fontSize: '14px', fontStyle: '600', color: '#F1D9A8',
+      stroke: '#2C160E', strokeThickness: 3,
+    }).setOrigin(0.5);
+  }
+  const yTitulo = detalleTxt ? -10 : 0;
+
   const contenido = pillW ? pillW + gap + label.width : label.width;
   const padX = 44;
-  const ancho = Math.max(260, Math.round(contenido + padX * 2));
-  const alto = 64;
+  const anchoDetalle = detalleTxt ? detalleTxt.width : 0;
+  const ancho = Math.max(260, Math.round(Math.max(contenido, anchoDetalle) + padX * 2));
+  const alto = detalleTxt ? 80 : 64;
 
   const g = this.add.graphics();
   // Sombra dura inferior
@@ -1534,7 +1560,7 @@ _actualizarBannerEsperaTitulo(texto, modo = null) {
   if (pillTxt) {
     const pg = this.add.graphics();
     const px = inicioX;
-    const py = -pillH / 2;
+    const py = -pillH / 2 + yTitulo;
     pg.fillStyle(0xB9770E, 1);
     pg.fillRoundedRect(px, py + 3, pillW, pillH, pillH / 2);
     pg.fillStyle(0xF5B041, 1);
@@ -1543,12 +1569,16 @@ _actualizarBannerEsperaTitulo(texto, modo = null) {
     pg.fillRoundedRect(px + 5, py + 3, pillW - 10, pillH * 0.38, pillH * 0.19);
     pg.lineStyle(2, 0x000000, 1);
     pg.strokeRoundedRect(px, py, pillW, pillH, pillH / 2);
-    pillTxt.setPosition(px + pillW / 2, 0);
-    label.setPosition(inicioX + pillW + gap + label.width / 2, 0);
+    pillTxt.setPosition(px + pillW / 2, yTitulo);
+    label.setPosition(inicioX + pillW + gap + label.width / 2, yTitulo);
     hijos.push(pg, pillTxt, label);
   } else {
-    label.setPosition(0, 0);
+    label.setPosition(0, yTitulo);
     hijos.push(label);
+  }
+  if (detalleTxt) {
+    detalleTxt.setPosition(0, 22);
+    hijos.push(detalleTxt);
   }
 
   this._bannerEsperaTitulo = this.add.container(400, 130, hijos).setDepth(401);
@@ -1639,7 +1669,7 @@ _redibujarFilaEspera() {
   if (!this._modoSala || !this._capacidadSala) return;
 
   // Pase 346: el modo ("1v1") va en una mini píldora dorada dentro del cartel.
-  this._actualizarBannerEsperaTitulo('Esperando jugadores', this._modoSala);
+  this._actualizarBannerEsperaTitulo('Esperando jugadores', this._modoSala, this._textoDetalleSala());
   this._actualizarTextoBuscando();
 
   const total = this._capacidadSala;
@@ -1852,6 +1882,14 @@ _dibujarTileEspera(cx, cy, radio, jugador, pendientes) {
 // Pase 346: badge "VS" — placa dorada 3D (borde negro 3px, relieve inferior
 // ocre) con "VS" en Fredoka chocolate, levemente inclinada.
 _dibujarBadgeVsEspera(x, y) {
+  // Pase 374: escudo con espadas y "VS" (PNG del usuario). Si por algo la textura no cargó,
+  // se cae al badge dibujado por código de antes.
+  if (this.textures.exists('vsEscudoEspera')) {
+    const img = this.add.image(x, y, 'vsEscudoEspera').setDisplaySize(88, 88).setDepth(414);
+    this._avataresEsperaSprites.push(img);
+    this._sprites.push(img);
+    return;
+  }
   const w = 58, h = 58, r = 16;
   const g = this.add.graphics();
   g.fillStyle(0x000000, 0.4);
@@ -1953,6 +1991,11 @@ _conectarSocket() {
       if (Array.isArray(data.jugadores)) this._jugadoresSala = data.jugadores;
       if (data.modo) this._modoSala = data.modo;
       if (data.capacidadTotal) this._capacidadSala = data.capacidadTotal;
+      // Pase 374: datos de la mesa (puntos, tipo de sala) para la línea de modo del cartel.
+      if (data.puntosParaGanar) this._puntosSala = data.puntosParaGanar;
+      this._rankedSala = !!data.ranked;
+      this._privadaSala = !!data.privada;
+      this._torneoSala = !!data.esTorneo;
       // Pase 210: el título ya no es un add.text suelto (this.textoEsperaCartel,
       // sacado) sino el banner de pergamino — _redibujarFilaEspera lo
       // actualiza con el texto "<MODO> — esperando jugadores" en cuanto
