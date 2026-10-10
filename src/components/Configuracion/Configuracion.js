@@ -257,7 +257,10 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
 
       {usuario?.foto_perfil_url && (
         <PlacaMadera>
-          <div style={estilos.panelTitulo}>🖼️ Foto de perfil</div>
+          <div style={estilos.panelTitulo}>
+            <img src="/assets/images/icono-foto-perfil.png" alt="" style={estilos.panelTituloIcono} />
+            Foto de perfil
+          </div>
           <div style={estilos.opcionesAvatar}>
             <button
               onClick={() => elegirTipoAvatar('foto')}
@@ -293,7 +296,10 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
 
       {/* Pase 324: Género (antes vivía en el Perfil). */}
       <PlacaMadera>
-        <div style={estilos.panelTitulo}>ℹ️ Género</div>
+        <div style={estilos.panelTitulo}>
+          <img src="/assets/images/icono-genero.png" alt="" style={estilos.panelTituloIcono} />
+          Género
+        </div>
         <div style={estilos.chipsFila}>
           {GENEROS.map(g => (
             <button
