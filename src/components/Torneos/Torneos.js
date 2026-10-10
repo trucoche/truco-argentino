@@ -1,5 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
 import PantallaCarga from '../PantallaCarga/PantallaCarga';
+import PopupMadera from '../Popup/PopupMadera';
+import { useToast } from '../../contexts/ToastContext';
 import { API_URL as BASE_URL } from '../../config';
 
 const API_URL = `${BASE_URL}/api/torneos`;
@@ -13,6 +15,10 @@ const JUGADORES_POR_EQUIPO = { '1v1': 1, '2v2': 2, '3v3': 3 };
 // diferencia de Lobby, que sí los sacó en su propio pase).
 const MODOS = ['1v1', '2v2', '3v3'];
 const CUPO_OPCIONES = [4, 8, 16];
+// Pase 375: costo de CREAR un torneo según el cupo (el mismo que cobra el
+// backend, ver COSTO_CREAR_TORNEO en routes/torneos.js — si se cambia allá,
+// cambiarlo acá). Se reembolsa si el torneo vence sin llenarse.
+const COSTO_CREAR_TORNEO = { 4: 5, 8: 10, 16: 20 };
 const PUNTOS_OPCIONES = [15, 30];
 const TIEMPO_OPCIONES = [
   { valor: '', label: 'Sin límite' },
@@ -101,6 +107,35 @@ function Paginador({ pagina, totalPaginas, onCambiar }) {
   );
 }
 
+// Pase 367: la lista de torneos (Disponibles / Finalizados) muestra solo 3 tarjetas completas y el resto
+// queda en el scroll interno, así los botones de abajo (paginador) se ven sin bajar la página. Se mide la
+// posición real de las tarjetas (en una grilla de varias columnas cuenta 3 filas) para que el alto
+// no dependa de cuántas líneas tenga cada título.
+const TARJETAS_VISIBLES = 3;
+function useAltoTresTarjetas(ref, dependencia) {
+  const [alto, setAlto] = useState(null);
+  useLayoutEffect(() => {
+    const calcular = () => {
+      const el = ref.current;
+      if (!el) return;
+      const tops = [];
+      Array.from(el.children).forEach((h) => {
+        const t = Math.round(h.getBoundingClientRect().top);
+        if (!tops.includes(t)) tops.push(t);
+      });
+      if (tops.length <= TARJETAS_VISIBLES) { setAlto(null); return; }
+      const gap = parseFloat(getComputedStyle(el).rowGap) || 12;
+      // Hasta el borde inferior de la 3.ª fila (+8 de sombra) menos el padding de abajo del scroll (6).
+      setAlto(Math.max(120, tops[TARJETAS_VISIBLES] - tops[0] - gap + 8 - 6));
+    };
+    calcular();
+    const t = setTimeout(calcular, 250);
+    window.addEventListener('resize', calcular);
+    return () => { clearTimeout(t); window.removeEventListener('resize', calcular); };
+  }, [ref, dependencia]);
+  return alto;
+}
+
 // Ya NO recibe onVolver — la navegación de vuelta al Lobby ahora vive en
 // la barra del AppShell, no como botón propio de esta pantalla.
 export default function Torneos({ token, onVerBracket }) {
@@ -114,6 +149,12 @@ export default function Torneos({ token, onVerBracket }) {
   const [cupoEntradas, setCupoEntradas] = useState(4);
   const [puntosParaGanar, setPuntosParaGanar] = useState(15);
   const [tiempoPorTurno, setTiempoPorTurno] = useState('');
+  // Pase 375: torneo privado (se entra con código) y unirse por código.
+  const { mostrarToast } = useToast();
+  const [privado, setPrivado] = useState(false);
+  const [codigoCreado, setCodigoCreado] = useState(null);
+  const [codigoBuscar, setCodigoBuscar] = useState('');
+  const [torneoPorCodigo, setTorneoPorCodigo] = useState(null);
 
   const [inscribiendoId, setInscribiendoId] = useState(null);
   const [companerosTexto, setCompanerosTexto] = useState('');
@@ -131,9 +172,11 @@ export default function Torneos({ token, onVerBracket }) {
   const [paginaActivos, setPaginaActivos] = useState(0);
   const [paginaFinalizados, setPaginaFinalizados] = useState(0);
   const TORNEOS_POR_PAGINA = 8;
+  const scrollActivosRef = useRef(null);
+  const scrollFinalizadosRef = useRef(null);
 
   const torneoDestacado = torneos.find(
-    t => t.estado === 'inscripcion' && Number(t.entradas_actuales) < t.cupo_entradas
+    t => t.estado === 'inscripcion' && !t.privado && Number(t.entradas_actuales) < t.cupo_entradas
   );
   // Pase siguiente: renombrado de "campeonato" a "torneo" en los textos de
   // esta pantalla, a pedido del usuario (mismo concepto, terminología más
@@ -161,6 +204,8 @@ export default function Torneos({ token, onVerBracket }) {
     paginaFinalizadosActual * TORNEOS_POR_PAGINA,
     paginaFinalizadosActual * TORNEOS_POR_PAGINA + TORNEOS_POR_PAGINA
   );
+  const altoActivos = useAltoTresTarjetas(scrollActivosRef, `${vista}-${cargando}-${torneosPaginados.map((t) => t.id).join(',')}`);
+  const altoFinalizados = useAltoTresTarjetas(scrollFinalizadosRef, `${vista}-${cargandoFinalizados}-${torneosFinalizadosPaginados.map((t) => t.id).join(',')}`);
 
   const headers = {
     'Content-Type': 'application/json',
@@ -237,7 +282,8 @@ export default function Torneos({ token, onVerBracket }) {
           modo,
           cupoEntradas: Number(cupoEntradas),
           puntosParaGanar,
-          tiempoPorTurno: tiempoPorTurno || null
+          tiempoPorTurno: tiempoPorTurno || null,
+          privado
         })
       });
       const data = await res.json();
@@ -249,11 +295,46 @@ export default function Torneos({ token, onVerBracket }) {
 
       setTitulo('');
       setCreando(false);
+      // Torneo privado: mostrar el código para compartirlo.
+      if (data.privado && data.codigo) setCodigoCreado(data.codigo);
+      setPrivado(false);
       cargarTorneos();
 
     } catch (err) {
       console.error('Error de conexión:', err);
       setError('No se pudo conectar con el servidor');
+    }
+  };
+
+  const handleBuscarCodigo = async (e) => {
+    e.preventDefault();
+    setError('');
+    const codigo = codigoBuscar.trim().toUpperCase();
+    if (!codigo) return;
+    try {
+      const res = await fetch(`${API_URL}/codigo/${encodeURIComponent(codigo)}`, { headers });
+      const data = await res.json();
+      if (!res.ok) {
+        setTorneoPorCodigo(null);
+        setError(data.error || 'No se encontró el torneo');
+        return;
+      }
+      setTorneoPorCodigo(data);
+      setCodigoBuscar('');
+      setInscribiendoId(null);
+      setCompanerosTexto('');
+    } catch (err) {
+      console.error('Error de conexión:', err);
+      setError('No se pudo conectar con el servidor');
+    }
+  };
+
+  const copiarCodigo = (codigo) => {
+    try {
+      navigator.clipboard.writeText(codigo);
+      mostrarToast('Código copiado', 'exito');
+    } catch (err) {
+      mostrarToast('No se pudo copiar el código', 'error');
     }
   };
 
@@ -279,7 +360,11 @@ export default function Torneos({ token, onVerBracket }) {
       const res = await fetch(`${API_URL}/${torneo.id}/inscribirse`, {
         method: 'POST',
         headers,
-        body: JSON.stringify({ companerosUsernames })
+        body: JSON.stringify({
+          companerosUsernames,
+          // Torneo privado encontrado por código: el backend lo exige para anotarse.
+          codigo: torneoPorCodigo && torneoPorCodigo.id === torneo.id ? torneoPorCodigo.codigo : undefined
+        })
       });
       const data = await res.json();
 
@@ -288,6 +373,7 @@ export default function Torneos({ token, onVerBracket }) {
         return;
       }
 
+      if (torneoPorCodigo && torneoPorCodigo.id === torneo.id) setTorneoPorCodigo(null);
       setInscribiendoId(null);
       setCompanerosTexto('');
       cargarTorneos();
@@ -573,14 +659,120 @@ return (
               </div>
             </div>
 
+            <div style={estilos.field}>
+              <label style={estilos.label}>Visibilidad</label>
+              <div style={estilos.opcionesRow}>
+                <button
+                  type="button"
+                  onClick={() => setPrivado(false)}
+                  style={{ ...estilos.opcionBtn, ...(!privado ? estilos.opcionBtnActiva : {}) }}
+                >
+                  Público
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPrivado(true)}
+                  style={{ ...estilos.opcionBtn, ...(privado ? estilos.opcionBtnActiva : {}) }}
+                >
+                  Privado (con código)
+                </button>
+              </div>
+              <div style={estilos.ayudaCosto}>
+                {privado
+                  ? 'No aparece en el listado: se entra con un código que vos compartís.'
+                  : 'Aparece en el listado para que cualquiera se anote.'}
+              </div>
+            </div>
+
+            <div style={estilos.costoCrear}>
+              <img src="/assets/images/icono-moneda.png" alt="" style={estilos.iconoMonedaInline} />
+              Crear este torneo cuesta <b>{COSTO_CREAR_TORNEO[cupoEntradas]}</b>. Si vence sin llenarse, te lo devolvemos.
+            </div>
+
             <div style={{ display: 'flex', gap: 10, marginTop: 6 }}>
-              <button type="submit" style={{ ...estilos.btnPrimary, flex: 1 }}>✓ Crear torneo</button>
+              <button type="submit" style={{ ...estilos.btnPrimary, flex: 1 }}>
+                ✓ Crear por {COSTO_CREAR_TORNEO[cupoEntradas]}
+                <img src="/assets/images/icono-moneda.png" alt="" style={{ ...estilos.iconoMonedaInline, marginLeft: 5, marginRight: 0, verticalAlign: 'text-bottom' }} />
+              </button>
               <button type="button" onClick={() => setCreando(false)} style={{ ...estilos.btnSecondary, width: 'auto', padding: '0 22px' }}>✕</button>
             </div>
           </form>
         )}
+
+        <div style={estilos.separadorCodigo} />
+        <div style={estilos.panelTitle}>
+          <img src="/assets/images/icono-sala-privada.png" alt="" style={estilos.panelTitleIcono} />
+          Unirme con código
+        </div>
+        <form onSubmit={handleBuscarCodigo} style={{ display: 'flex', gap: 10 }}>
+          <input
+            type="text"
+            placeholder="Código de torneo"
+            value={codigoBuscar}
+            onChange={(e) => setCodigoBuscar(e.target.value.toUpperCase())}
+            maxLength={12}
+            style={{ ...estilos.input, flex: 1 }}
+          />
+          <button type="submit" style={{ ...estilos.btnPrimary, width: 'auto', padding: '0 20px' }}>Buscar</button>
+        </form>
+
+        {torneoPorCodigo && (
+          <div style={estilos.codigoEncontrado}>
+            <div style={estilos.torneoHeader}>
+              <div style={estilos.torneoNombre}>{renderTituloTorneo(torneoPorCodigo.titulo)}</div>
+              <div style={{ ...estilos.badge, ...estilos.badgeAbierta }}>Privado</div>
+            </div>
+            <div style={estilos.torneoInfo}>
+              {torneoPorCodigo.modo} · Cupo {torneoPorCodigo.entradas_actuales}/{torneoPorCodigo.cupo_entradas} · {torneoPorCodigo.puntos_para_ganar} pts · {torneoPorCodigo.creador_nombre}
+            </div>
+            {torneoPorCodigo.ya_inscripto ? (
+              <div style={estilos.torneoInfo}>Ya estás anotado en este torneo.</div>
+            ) : Number(torneoPorCodigo.entradas_actuales) >= torneoPorCodigo.cupo_entradas ? (
+              <div style={estilos.torneoInfo}>Este torneo ya está completo.</div>
+            ) : (
+              <>
+                {JUGADORES_POR_EQUIPO[torneoPorCodigo.modo] > 1 && (
+                  <input
+                    type="text"
+                    placeholder={`Usernames de tus ${JUGADORES_POR_EQUIPO[torneoPorCodigo.modo] - 1} compañero(s), separados por coma`}
+                    value={companerosTexto}
+                    onChange={(e) => setCompanerosTexto(e.target.value)}
+                    style={{ ...estilos.input, marginBottom: 8 }}
+                  />
+                )}
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={() => handleInscribirse(torneoPorCodigo)} style={estilos.btnCard}>
+                    Inscribirme ({Math.round(Number(torneoPorCodigo.apuesta))}
+                    <img src="/assets/images/icono-moneda.png" alt="" style={{ ...estilos.iconoMonedaInline, marginLeft: 3, marginRight: 0, verticalAlign: 'text-bottom' }} />)
+                  </button>
+                  <button onClick={() => { setTorneoPorCodigo(null); setCompanerosTexto(''); }} style={estilos.btnCardSecondary}>
+                    Cancelar
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
       </div>
+
+      <PopupMadera
+        visible={!!codigoCreado}
+        titulo="Torneo privado creado"
+        cinta="verde"
+        icono="/assets/images/icono-sala-privada.png"
+        tamIcono={72}
+        onCerrar={() => setCodigoCreado(null)}
+        botones={[
+          { texto: 'Copiar código', onClick: () => copiarCodigo(codigoCreado) },
+          { texto: 'Listo', tipo: 'verde', onClick: () => setCodigoCreado(null) },
+        ]}
+      >
+        <p style={{ fontSize: 15, fontWeight: 800, color: '#2C160E', margin: '0 0 10px', textAlign: 'center' }}>
+          Compartí este código con quien quieras invitar. Tampoco aparece en el listado, así que solo entra quien lo tenga:
+        </p>
+        <div style={estilos.codigoBox}>{codigoCreado}</div>
+      </PopupMadera>
 
       <div style={estilos.listaColumna}>
       {/* Pase 359: Activos/Finalizados viven dentro de UNA tarjeta (marco de madera + paño verde) con la lista
@@ -612,7 +804,7 @@ return (
     ) : torneos.length === 0 ? (
       <p style={{ color: C.crema, textAlign: 'center' }}>No hay torneos activos. ¡Creá uno!</p>
     ) : (
-      <div style={{ ...estilos.torneosGrid, ...estilos.torneosScroll }}>
+      <div ref={scrollActivosRef} style={{ ...estilos.torneosGrid, ...estilos.torneosScroll, ...(altoActivos ? { maxHeight: altoActivos } : null) }}>
         {torneosPaginados.map((t) => {
           const jugadoresNecesarios = JUGADORES_POR_EQUIPO[t.modo];
           const completo = Number(t.entradas_actuales) >= t.cupo_entradas;
@@ -624,12 +816,18 @@ return (
               <div style={estilos.torneoHeader}>
                 <div style={estilos.torneoNombre}>{renderTituloTorneo(t.titulo)}</div>
                 <div style={{ ...estilos.badge, ...(enCurso ? estilos.badgeCurso : estilos.badgeAbierta) }}>
-                  {enCurso ? 'En curso' : t.estado === 'inscripcion' ? 'Inscripción abierta' : t.estado}
+                  {enCurso ? 'En curso' : t.estado === 'inscripcion' ? (t.privado ? 'Privado' : 'Inscripción abierta') : t.estado}
                 </div>
               </div>
               <div style={estilos.torneoInfo}>
                 {t.modo} · Cupo {t.entradas_actuales}/{t.cupo_entradas} · {t.puntos_para_ganar} pts · {t.creador_nombre}
               </div>
+              {t.privado && t.codigo && (
+                <div style={estilos.codigoFila}>
+                  <span>Código: <b style={estilos.codigoTexto}>{t.codigo}</b></span>
+                  <button type="button" onClick={() => copiarCodigo(t.codigo)} style={estilos.btnCopiarMini}>Copiar</button>
+                </div>
+              )}
 
               {t.estado === 'inscripcion' && !completo && !t.ya_inscripto && (
                 inscribiendoId === t.id ? (
@@ -688,7 +886,7 @@ return (
     ) : torneosFinalizados.length === 0 ? (
       <p style={{ color: C.crema, textAlign: 'center' }}>Todavía no jugaste ningún torneo hasta el final.</p>
     ) : (
-      <div style={{ ...estilos.torneosGrid, ...estilos.torneosScroll }}>
+      <div ref={scrollFinalizadosRef} style={{ ...estilos.torneosGrid, ...estilos.torneosScroll, ...(altoFinalizados ? { maxHeight: altoFinalizados } : null) }}>
         {torneosFinalizadosPaginados.map((t) => (
           <div key={t.id} style={estilos.torneoCardExterior}>
             <div style={estilos.torneoCard}>
@@ -916,6 +1114,34 @@ const estilos = {
     gap: 18, alignItems: 'start', marginBottom: 18,
   },
   listaColumna: { display: 'flex', flexDirection: 'column', minWidth: 0 },
+  // Pase 375: torneos privados y costo de crear.
+  ayudaCosto: { fontSize: 12, color: '#7a6660', fontWeight: 700, marginTop: 6 },
+  costoCrear: {
+    display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 2,
+    fontSize: 13, color: C.chocolate, fontWeight: 700, marginBottom: 12,
+  },
+  separadorCodigo: { height: 0, borderTop: '2px dashed rgba(74,44,42,0.35)', margin: '18px 0 14px' },
+  codigoEncontrado: {
+    marginTop: 12, padding: '10px 12px', borderRadius: 12,
+    background: 'rgba(255,255,255,0.55)', border: '1.5px solid rgba(26,20,16,0.35)',
+  },
+  codigoFila: {
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+    fontSize: 12.5, color: '#7a6660', fontWeight: 700, marginBottom: 10,
+  },
+  codigoTexto: { fontFamily: "'Fredoka', sans-serif", letterSpacing: 2, color: '#B9770E', fontSize: 15 },
+  btnCopiarMini: {
+    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 12, color: '#2C160E',
+    border: '2px solid #000', borderRadius: 14, cursor: 'pointer',
+    height: 28, boxSizing: 'border-box', padding: '0 12px',
+    background: '#F5B041', boxShadow: '0 2px 0 #B9770E, 0 3px 0 #000',
+  },
+  codigoBox: {
+    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 32,
+    letterSpacing: 3, color: '#B9770E', background: '#fff',
+    border: '3px dashed #B9770E', borderRadius: 14, padding: '14px 10px',
+    marginBottom: 6, textAlign: 'center',
+  },
   field: { marginBottom: 12, flex: 1 },
   fieldRow: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 },
   label: { display: 'block', fontWeight: 700, fontSize: 12, color: C.chocolate, marginBottom: 5, textTransform: 'uppercase' },
