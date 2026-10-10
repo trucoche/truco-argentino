@@ -1,4 +1,4 @@
-import { confirmarPopup } from '../Popup/PopupMadera';
+import { confirmarPopup, PlacaMadera } from '../Popup/PopupMadera';
 import React, { useState, useEffect, useCallback } from 'react';
 import PersonajeSelector from '../Lobby/PersonajeSelector';
 import { API_URL as BASE_URL } from '../../config';
@@ -256,7 +256,7 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
       <div style={estilos.contenedor}>
 
       {usuario?.foto_perfil_url && (
-        <div style={estilos.panel}>
+        <PlacaMadera>
           <div style={estilos.panelTitulo}>🖼️ Foto de perfil</div>
           <div style={estilos.opcionesAvatar}>
             <button
@@ -282,7 +282,7 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
               <span style={estilos.opcionAvatarLabel}>Personaje</span>
             </button>
           </div>
-        </div>
+        </PlacaMadera>
       )}
 
       <PersonajeSelector
@@ -292,7 +292,7 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
       />
 
       {/* Pase 324: Género (antes vivía en el Perfil). */}
-      <div style={estilos.panel}>
+      <PlacaMadera>
         <div style={estilos.panelTitulo}>ℹ️ Género</div>
         <div style={estilos.chipsFila}>
           {GENEROS.map(g => (
@@ -306,9 +306,9 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
             </button>
           ))}
         </div>
-      </div>
+      </PlacaMadera>
 
-      <div style={estilos.panel}>
+      <PlacaMadera>
         {/* Ducentésimo cuadragésimo pase: el usuario pasó iconos ilustrados
             propios (luna/espadas/nota, estilo madera+dorado) para reemplazar
             los emojis de estos 3 títulos — "faltan algunos" (el resto de
@@ -331,11 +331,11 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
             style={estilos.switchImagen}
           />
         </label>
-      </div>
+      </PlacaMadera>
 
       {/* Pase siguiente: preferencia de "Desafiar" — dos switches
           independientes, uno para amigos y otro para desconocidos. */}
-      <div style={estilos.panel}>
+      <PlacaMadera>
         <div style={estilos.panelTitulo}>
           <img src="/assets/images/icono-desafios.png" alt="" style={estilos.panelTituloIcono} />
           Desafíos
@@ -362,7 +362,7 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
             style={estilos.switchImagen}
           />
         </label>
-      </div>
+      </PlacaMadera>
 
       {/* Octogésimo tercer pase: el botón de mutear música que vivía arriba
           de AppShell (en todas las pantallas con nav) se saca de ahí y se
@@ -371,7 +371,7 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
           que ya usa el panel de configuración dentro de la partida
           (ConfiguracionMesaModal.js) — es la misma música de fondo global,
           no una pista nueva. */}
-      <div style={estilos.panel}>
+      <PlacaMadera>
         <div style={estilos.panelTitulo}>
           <img src="/assets/images/icono-musica.png" alt="" style={estilos.panelTituloIcono} />
           Música de fondo
@@ -416,9 +416,9 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
             />
           </div>
         </div>
-      </div>
+      </PlacaMadera>
 
-      <div style={estilos.panel}>
+      <PlacaMadera>
         <div style={estilos.panelTitulo}>
           {/* Ducentésimo cuadragésimo tercer pase: el ícono de las 3 cartas
               reemplaza el 🃏 acá también, no solo en el preview del botón
@@ -453,12 +453,12 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
         <p style={estilos.hintBaraja}>
           El cambio se aplica la próxima vez que entres a una partida.
         </p>
-      </div>
+      </PlacaMadera>
 
       {/* Centésimo quinto pase: lista de usuarios bloqueados + desbloquear.
           El backend ya existía (GET/DELETE en routes/usuarios.js) desde el
           nonagésimo octavo pase, no había ninguna pantalla que lo usara. */}
-      <div style={estilos.panel}>
+      <PlacaMadera>
         <div style={estilos.panelTitulo}>
           <img src="/assets/images/icono-bloqueados.png" alt="" style={estilos.panelTituloIcono} />
           Usuarios bloqueados
@@ -484,7 +484,7 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
             ))}
           </div>
         )}
-      </div>
+      </PlacaMadera>
 
       {/* Centésimo quinto pase: panel de administración de denuncias —
           solo visible con rol 'admin' (viaja en el JWT desde el login,
@@ -492,7 +492,7 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
           a mano `UPDATE usuarios SET rol='admin' WHERE username='...';`
           y volver a loguearte (el token viejo no tiene el rol nuevo). */}
       {esAdmin && (
-        <div style={estilos.panel}>
+        <PlacaMadera>
           <div style={estilos.panelTitulo}>🚩 Denuncias (administración)</div>
           {cargandoDenuncias ? (
             <p style={estilos.hintBaraja}>Cargando...</p>
@@ -522,12 +522,12 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
               ))}
             </div>
           )}
-        </div>
+        </PlacaMadera>
       )}
 
       {/* Pase 311/312: "Mi cuenta" — acceso a eliminar la cuenta. Manda un mail
           de confirmación al email registrado; 30 días de arrepentimiento. */}
-      <div style={estilos.panel}>
+      <PlacaMadera>
         <div style={estilos.panelTitulo}>👤 Mi cuenta</div>
         <p style={{ ...estilos.hintBaraja, marginTop: 0 }}>
           Si querés eliminar tu cuenta, te mandamos un mail a tu casilla registrada para confirmarlo. Tenés 30 días para arrepentirte volviendo a iniciar sesión.
@@ -539,7 +539,7 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
         >
           {enviandoEliminacion ? 'Enviando…' : 'Eliminar mi cuenta'}
         </button>
-      </div>
+      </PlacaMadera>
 
       {/* Links legales abajo de todo (Política de Privacidad y, desde el pase
           312, Términos de Servicio — se enlazan entre sí). */}
@@ -563,7 +563,7 @@ const estilos = {
   // márgenes sueltos de cada panel — ver el comentario junto al JSX. Gap
   // más chico que el que tenía cada panel antes (16→12) a pedido explícito
   // del usuario ("reducir un poco el espacio vacío entre secciones").
-  contenedor: { display: 'flex', flexDirection: 'column', gap: 12 },
+  contenedor: { display: 'flex', flexDirection: 'column', gap: 18 },
   // Ducentésimo trigésimo noveno pase: rediseño "premium" pedido por el
   // usuario — mismo fondo/radio de antes, pero con un borde superior
   // dorado más grueso (remate tipo placa/bisagra de bronce, coherente con
@@ -804,4 +804,4 @@ if (typeof document !== 'undefined' && !document.getElementById('config-slider-g
     }
   `;
   document.head.appendChild(style);
-}
+}
