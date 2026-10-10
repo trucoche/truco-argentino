@@ -1215,11 +1215,11 @@ btnJugarYa: {
   },
   badgeAbierta: {
     background: 'linear-gradient(180deg, #5EE87A, #2FBD52)', color: '#fff',
-    boxShadow: '0 2px 0 #1a6b2e, inset 0 1px 0 rgba(255,255,255,0.5)', textShadow: '0 1px 1px rgba(0,0,0,0.3)',
+    boxShadow: '0 2px 0 #1a6b2e, inset 0 1px 0 rgba(255,255,255,0.5)', textShadow: '-1px -1px 0 #2C160E, 1px -1px 0 #2C160E, -1px 1px 0 #2C160E, 1px 1px 0 #2C160E, 0px -1px 0 #2C160E, 0px 1px 0 #2C160E, -1px 0px 0 #2C160E, 1px 0px 0 #2C160E',
   },
   badgeCompleta: {
     background: 'linear-gradient(180deg, #f0584a, #c2352a)', color: '#fff',
-    boxShadow: '0 2px 0 #7a1f17, inset 0 1px 0 rgba(255,255,255,0.35)', textShadow: '0 1px 1px rgba(0,0,0,0.3)',
+    boxShadow: '0 2px 0 #7a1f17, inset 0 1px 0 rgba(255,255,255,0.35)', textShadow: '-1px -1px 0 #2C160E, 1px -1px 0 #2C160E, -1px 1px 0 #2C160E, 1px 1px 0 #2C160E, 0px -1px 0 #2C160E, 0px 1px 0 #2C160E, -1px 0px 0 #2C160E, 1px 0px 0 #2C160E',
   },
   salaInfo: { fontSize: 14.5, color: '#7a6660', fontWeight: 700, marginBottom: 10 },
   // "Unirse" — verde esmeralda 3D, mismo criterio "verde = avanzar/unirse"

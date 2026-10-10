@@ -178,6 +178,8 @@
     1.5px 1.5px 0 var(--ts-nombre-halo, var(--ts-chocolate));
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   padding: 0 6px;
+  /* Pase 356: texto 3px más abajo para centrarlo en la tableta de madera. */
+  transform: translateY(3px);
   pointer-events: none;
 }
 .ts-tarjeta-perfil-saldo {
@@ -190,6 +192,8 @@
   text-shadow:
     -1.5px 0 0 #2A1408, 1.5px 0 0 #2A1408, 0 -1.5px 0 #2A1408, 0 1.5px 0 #2A1408,
     -1.5px -1.5px 0 #2A1408, 1.5px -1.5px 0 #2A1408, -1.5px 1.5px 0 #2A1408, 1.5px 1.5px 0 #2A1408;
+  /* Pase 356: 4px más abajo, centrado en la ranura. */
+  transform: translateY(4px);
   pointer-events: none;
 }
 /* Nonagésimo primer pase: el hotspot único de "+" (que hacía lo mismo que

@@ -556,12 +556,12 @@ botonGoogleTexto: {
   // suave con sombra sutil, para que se lea bien sobre el paño verde.
   footerHint: {
     textAlign: 'center', marginTop: 16, fontSize: 12, color: C.doradoClaro,
-    fontWeight: 700, textShadow: '0 1px 3px rgba(0,0,0,0.6)'
+    fontWeight: 700, textShadow: '-1.5px -1.5px 0 #2C160E, 1.5px -1.5px 0 #2C160E, -1.5px 1.5px 0 #2C160E, 1.5px 1.5px 0 #2C160E, 0px -1.5px 0 #2C160E, 0px 1.5px 0 #2C160E, -1.5px 0px 0 #2C160E, 1.5px 0px 0 #2C160E'
   },
   footerLinkWrap: { textAlign: 'center', marginTop: 6 },
   footerLink: {
     fontSize: 11, color: C.doradoClaro, fontWeight: 700, textDecoration: 'underline',
-    textShadow: '0 1px 3px rgba(0,0,0,0.6)'
+    textShadow: '-1.5px -1.5px 0 #2C160E, 1.5px -1.5px 0 #2C160E, -1.5px 1.5px 0 #2C160E, 1.5px 1.5px 0 #2C160E, 0px -1.5px 0 #2C160E, 0px 1.5px 0 #2C160E, -1.5px 0px 0 #2C160E, 1.5px 0px 0 #2C160E'
   },
 linkOlvide: {
     fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 13,
@@ -580,5 +580,5 @@ linkOlvide: {
     marginTop: 12, textAlign: 'center', fontSize: 11.5, lineHeight: 1.4,
     fontWeight: 700, color: '#6b4a34',
   },
-  footerSeparador: { margin: '0 8px', fontSize: 11, color: C.doradoClaro, textShadow: '0 1px 3px rgba(0,0,0,0.6)' },
+  footerSeparador: { margin: '0 8px', fontSize: 11, color: C.doradoClaro, textShadow: '-1.5px -1.5px 0 #2C160E, 1.5px -1.5px 0 #2C160E, -1.5px 1.5px 0 #2C160E, 1.5px 1.5px 0 #2C160E, 0px -1.5px 0 #2C160E, 0px 1.5px 0 #2C160E, -1.5px 0px 0 #2C160E, 1.5px 0px 0 #2C160E' },
 };

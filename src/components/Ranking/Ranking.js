@@ -348,7 +348,7 @@ const estilos = {
   // Ducentésimo sexagésimo segundo pase: el título pasa de texto suelto a
   // vivir adentro del cartel de madera (`encabezadoBanner`) — ya no hace
   // falta el margen manual, el padding del cartel se encarga del espacio.
-  sectionTitle: { fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 16, color: C.crema, textShadow: '0 1px 2px rgba(0,0,0,0.4)' },
+  sectionTitle: { fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 16, color: C.crema, textShadow: '-1.5px -1.5px 0 #2C160E, 1.5px -1.5px 0 #2C160E, -1.5px 1.5px 0 #2C160E, 1.5px 1.5px 0 #2C160E, 0px -1.5px 0 #2C160E, 0px 1.5px 0 #2C160E, -1.5px 0px 0 #2C160E, 1.5px 0px 0 #2C160E' },
   sectionSubtitle: { fontSize: 12, color: 'rgba(255,248,237,0.75)', fontWeight: 700, marginTop: 1 },
   // Cartel de madera chico para el encabezado — mismo criterio que el
   // panel de madera+bronce grande (ver `podioPanelExterior`), pero sin
@@ -606,7 +606,7 @@ const estilos = {
     background: `radial-gradient(circle at 35% 30%, ${C.remacheClaro} 0%, ${C.remache} 45%, ${C.remacheOscuro} 78%, #3a2610 100%)`,
     boxShadow: '0 2px 3px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.35)',
     fontFamily: "'Fredoka', sans-serif", fontWeight: 800, fontSize: 12.5, color: C.crema,
-    textShadow: '0 1px 1px rgba(0,0,0,0.5)',
+    textShadow: '-1px -1px 0 #2C160E, 1px -1px 0 #2C160E, -1px 1px 0 #2C160E, 1px 1px 0 #2C160E, 0px -1px 0 #2C160E, 0px 1px 0 #2C160E, -1px 0px 0 #2C160E, 1px 0px 0 #2C160E',
   },
   // Ducentésimo sexagésimo segundo pase: aro negro limpio en vez del
   // dorado genérico — se acerca más al "marco circular de madera con

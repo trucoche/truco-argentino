@@ -1124,7 +1124,7 @@ const estilos = {
   },
   filaNombre: { display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 },
   nombreUsuario: { fontSize: 12.5, fontWeight: 800, color: C.doradoOscuro, cursor: 'pointer' },
-  nombreVip: { color: '#B8860B', textShadow: '0 0 6px rgba(255,182,39,0.5)' },
+  nombreVip: { color: '#B8860B', textShadow: '-1px -1px 0 #5A3E00, 1px -1px 0 #5A3E00, -1px 1px 0 #5A3E00, 1px 1px 0 #5A3E00, 0px -1px 0 #5A3E00, 0px 1px 0 #5A3E00, -1px 0px 0 #5A3E00, 1px 0px 0 #5A3E00' },
   badgeVip: {
     fontSize: 9.5, fontWeight: 800, color: '#fff', background: C.crimson,
     borderRadius: 5, padding: '1.5px 5px', letterSpacing: 0.3,

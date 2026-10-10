@@ -128,7 +128,7 @@ boton: {
   imagen: { width: 42, height: 42, objectFit: 'contain' },
   montoTexto: {
     fontFamily: "'Fredoka', sans-serif", fontWeight: 800, fontSize: 20, color: '#C9860E',
-    textShadow: '0 1px 3px rgba(0,0,0,0.5)'
+    textShadow: '-1.5px -1.5px 0 #2C160E, 1.5px -1.5px 0 #2C160E, -1.5px 1.5px 0 #2C160E, 1.5px 1.5px 0 #2C160E, 0px -1.5px 0 #2C160E, 0px 1.5px 0 #2C160E, -1.5px 0px 0 #2C160E, 1.5px 0px 0 #2C160E'
   }
 };
 

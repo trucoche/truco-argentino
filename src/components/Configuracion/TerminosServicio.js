@@ -233,7 +233,7 @@ const estilos = {
   btnVolver: {
     background: 'none', border: 'none', cursor: 'pointer',
     fontSize: 14, fontWeight: 700, color: C.crema, marginBottom: 16, padding: 0,
-    textShadow: '0 1px 3px rgba(0,0,0,0.6)',
+    textShadow: '-1.5px -1.5px 0 #2C160E, 1.5px -1.5px 0 #2C160E, -1.5px 1.5px 0 #2C160E, 1.5px 1.5px 0 #2C160E, 0px -1.5px 0 #2C160E, 0px 1.5px 0 #2C160E, -1.5px 0px 0 #2C160E, 1.5px 0px 0 #2C160E',
   },
   panel: {
     background: C.crema, border: `2px solid ${C.chocolate}22`, borderRadius: 18,

@@ -823,7 +823,7 @@ _crearElementosDeTexto() {
 
     this.mensajeText = this.add.text(400, 13, 'Conectando...', {
       font: '16px Nunito, Arial', fill: '#ffffaa', stroke: '#000000', strokeThickness: 3,
-      shadow: { offsetX: 0, offsetY: 2, color: '#000000', blur: 4, fill: true }
+      shadow: { offsetX: 0, offsetY: 2, color: '#000000', blur: 0, fill: true }
     }).setOrigin(0.5).setDepth(301);
 
     // Nonagésimo cuarto pase: chiquito helper para que la píldora
@@ -2204,7 +2204,7 @@ this._limpiarSprites();
     const textoTitulo = this.add.text(0, 0, titulo, {
       fontFamily: 'Fredoka, Arial', fontSize: '22px', fontStyle: '600', color: colorTitulo, align: 'center',
       wordWrap: { width: panelAncho - 60 },
-      ...(gano ? { shadow: { offsetX: 0, offsetY: 0, color: '#FFD668', blur: 10, fill: true } } : {}),
+      ...(gano ? { stroke: '#FFD668', strokeThickness: 3 } : {}),
     }).setDepth(902);
     const pillW = textoTitulo.width + padHTitulo * 2;
     const pillH = textoTitulo.height + padVTitulo * 2;

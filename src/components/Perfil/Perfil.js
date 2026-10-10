@@ -468,7 +468,7 @@ const estilos = {
     display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0
   },
   // Pase 328: sin placa translúcida; el texto sobre el banner lleva sombra oscura.
-  textoSobreFondo: { color: '#FFFBEB', textShadow: '0 1px 3px rgba(0,0,0,0.8), 0 0 2px rgba(0,0,0,0.6)' },
+  textoSobreFondo: { color: '#FFFBEB', textShadow: '-1.5px -1.5px 0 #2C160E, 1.5px -1.5px 0 #2C160E, -1.5px 1.5px 0 #2C160E, 1.5px 1.5px 0 #2C160E, 0px -1.5px 0 #2C160E, 0px 1.5px 0 #2C160E, -1.5px 0px 0 #2C160E, 1.5px 0px 0 #2C160E' },
   cartelNombre: {
     display: 'inline-block', maxWidth: '100%', boxSizing: 'border-box', background: '#FFFBEB', border: '1.5px solid #000',
     borderRadius: 10, padding: '5px 14px', fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 22,
