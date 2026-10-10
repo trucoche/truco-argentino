@@ -52,7 +52,10 @@ export default function ConfiguracionMesaModal({
       botones={[{ texto: 'Cerrar', tipo: 'dorado', onClick: onCerrar }]}
     >
       <div style={estilos.fila}>
-        <label style={estilos.label}>🎵 Música de fondo</label>
+        <label style={estilos.label}>
+          <img src="/assets/images/icono-musica.png" alt="" style={estilos.labelIcono} />
+          Música de fondo
+        </label>
         <div style={estilos.sliderPistaContenedor}>
           <input
             type="range"
@@ -67,7 +70,10 @@ export default function ConfiguracionMesaModal({
       </div>
 
       <div style={estilos.fila}>
-        <label style={estilos.label}>🗣️ Voces de los cantos</label>
+        <label style={estilos.label}>
+          <img src="/assets/images/icono-voces.png" alt="" style={estilos.labelIcono} />
+          Voces de los cantos
+        </label>
         <div style={estilos.sliderPistaContenedor}>
           <input
             type="range"
@@ -140,7 +146,8 @@ const estilos = {
   iconoTitulo: { width: 22, height: 22, objectFit: 'contain', flexShrink: 0 },
   cuerpo: { padding: '18px 22px 22px' },
   fila: { marginBottom: 16 },
-  label: { display: 'block', marginBottom: 8, color: C.chocolate, fontWeight: 700, fontSize: 13 },
+  labelIcono: { width: 22, height: 22, objectFit: 'contain', flexShrink: 0 },
+  label: { display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, color: C.chocolate, fontWeight: 700, fontSize: 13 },
   // Nonagésimo cuarto pase: mismo contenedor de "tronco de madera" a
   // tamaño fijo que Configuracion.js (250x54, sin estirar nunca) —
   // centrado con `margin: 0 auto` porque este panel es más angosto
