@@ -297,7 +297,10 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
           {/* Logros — misma lógica y contenido que ya existía */}
           <PlacaMadera>
             <div style={estilos.panelHeader}>
-              <div style={estilos.panelTitle}>🏅 Logros</div>
+              <div style={{ ...estilos.panelTitle, ...estilos.tituloConIcono }}>
+                <img src="/assets/images/icono-logros.png" alt="" style={estilos.tituloIcono} />
+                <span>Logros</span>
+              </div>
               {logros.length > 0 && (
                 <div style={estilos.resumen}>{completados}/{logros.length} desbloqueados</div>
               )}
@@ -376,7 +379,10 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
             Logros en vez de debajo de toda la grilla. */}
         <div style={estilos.columnaLateral}>
           <PlacaMadera>
-            <div style={estilos.panelTitle}>📊 Rendimiento</div>
+            <div style={{ ...estilos.panelTitle, ...estilos.tituloConIcono }}>
+              <img src="/assets/images/icono-rendimiento.png" alt="" style={estilos.tituloIcono} />
+              <span>Rendimiento</span>
+            </div>
             <div style={estilos.statsGrid}>
               <StatTile label="Partidas jugadas" valor={partidasJugadas} />
               <StatTile label="Ganadas" valor={partidasGanadas} color={C.verdeOscuro} />
@@ -582,6 +588,8 @@ const estilos = {
   rangoPuntosTexto: { fontSize: 11.5, fontWeight: 800, color: C.chocolate, marginTop: 4, opacity: 0.85 },
 
   panelHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  tituloConIcono: { display: 'flex', alignItems: 'center', gap: 8 },
+  tituloIcono: { width: 40, height: 40, objectFit: 'contain' },
   panelTitle: { fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 19, color: C.chocolate, marginBottom: 14 },
   resumen: { fontSize: 12.5, color: '#7a6660', fontWeight: 700 },
   errorBox: {

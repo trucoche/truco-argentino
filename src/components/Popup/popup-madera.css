@@ -20,8 +20,10 @@
   width: 13px;
   height: 13px;
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #f0d9a0 0%, #c9973e 45%, #7a5322 78%, #3a2610 100%);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.65), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+  /* Pase 360: remache unificado — bola de bronce lisa, borde marrón fino y brillo claro arriba a la izquierda. */
+  box-sizing: border-box;
+  background: radial-gradient(circle at 32% 28%, rgba(255, 243, 210, 0.92) 0, rgba(255, 243, 210, 0.92) 1.5px, transparent 2.1px), #c9973e;
+  border: 1.5px solid #5a3a14;
   z-index: 3;
   pointer-events: none;
 }

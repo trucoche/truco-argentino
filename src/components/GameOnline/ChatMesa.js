@@ -346,9 +346,10 @@ const estilos = {
   // de `marcoExterior`.
   remache: {
     position: 'absolute', width: 9, height: 9, borderRadius: '50%',
-    background: 'radial-gradient(circle at 35% 30%, #f2d587 0%, #e3a94a 45%, #8a5a28 78%, #3a1a0a 100%)',
-    boxShadow: '0 1px 2px rgba(0,0,0,0.65), inset 0 1px 1px rgba(255,255,255,0.4)',
     zIndex: 2,
+    // Pase 360: remache unificado en todo el juego — bola de bronce lisa con borde marrón fino y un brillo claro arriba a la izquierda.
+    background: 'radial-gradient(circle at 32% 28%, rgba(255,243,210,0.92) 0, rgba(255,243,210,0.92) 1.1px, transparent 1.7px), #C9973E',
+    border: '1.5px solid #5A3A14', boxSizing: 'border-box',
   },
   contenedor: {
     width: '100%', maxHeight: '100%',

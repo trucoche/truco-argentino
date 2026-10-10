@@ -1526,12 +1526,7 @@ _actualizarBannerEsperaTitulo(texto, modo = null) {
   const rx = ancho / 2 - 16;
   const ry = alto / 2 - 13;
   [[-rx, -ry], [rx, -ry], [-rx, ry], [rx, ry]].forEach(([dx, dy]) => {
-    g.fillStyle(0x2C160E, 1);
-    g.fillCircle(dx, dy, 6);
-    g.fillStyle(0xF5B041, 1);
-    g.fillCircle(dx, dy, 4.5);
-    g.fillStyle(0xFFF1C2, 0.9);
-    g.fillCircle(dx - 1.3, dy - 1.3, 1.5);
+    this._dibujarRemache(g, dx, dy, 6);
   });
 
   const hijos = [g];
@@ -2982,6 +2977,17 @@ _calcularAsientos(companeros, rivales) {
 // dibuja alrededor del texto, que es un indicador distinto del badge de
 // fondo que se sacó acá.
 
+// Pase 360: remache unificado de todo el juego (igual que el CSS/nativo): bola de bronce lisa (#C9973E),
+// borde marrón fino (#5A3A14) y un brillo claro arriba a la izquierda. `r` = radio exterior.
+_dibujarRemache(g, x, y, r) {
+  g.fillStyle(0x5a3a14, 1);
+  g.fillCircle(x, y, r);
+  g.fillStyle(0xc9973e, 1);
+  g.fillCircle(x, y, Math.max(1, r - 1.5));
+  g.fillStyle(0xfff3d2, 0.92);
+  g.fillCircle(x - r * 0.32, y - r * 0.36, Math.max(0.9, r * 0.28));
+}
+
 // Nonagésimo cuarto pase: marco de madera biselada con remaches de
 // bronce para el panel grande de la pantalla de resultado
 // (_mostrarPantallaFinal) — pedido explícito del usuario: "usar el
@@ -3060,16 +3066,7 @@ _dibujarMarcoMaderaConRemaches(g, x, y, w, h, rExterior = 20, rInterior = 14, pa
     { rx: x + margenRemache, ry: y + h - margenRemache },
     { rx: x + w - margenRemache, ry: y + h - margenRemache },
   ].forEach(({ rx, ry }) => {
-    g.fillStyle(0x000000, 0.4); // sombra proyectada
-    g.fillCircle(rx + 1.2, ry + 1.6, 7.5);
-    g.fillStyle(0x7a5322, 1); // remacheOscuro (anillo de base)
-    g.fillCircle(rx, ry, 6.5);
-    g.fillStyle(0xc9973e, 1); // remache (cuerpo bronce)
-    g.fillCircle(rx, ry, 5);
-    g.fillStyle(0x5a3d18, 0.55); // sombra interna (esfericidad)
-    g.fillCircle(rx + 1, ry + 1, 3.5);
-    g.fillStyle(0xf0d9a0, 0.95); // remacheClaro (brillo especular)
-    g.fillCircle(rx - 1.5, ry - 1.5, 2);
+    this._dibujarRemache(g, rx, ry, 6.5);
   });
 }
 
@@ -4501,12 +4498,7 @@ _crearBannerTexto(x, y, texto, depth = 200, { tamanoFuente = 14, colorTexto = '#
     const rx = anchoBanner / 2 - 14;
     const ry = altoBanner / 2 - 11;
     [[-rx, -ry], [rx, -ry], [-rx, ry], [rx, ry]].forEach(([dx, dy]) => {
-      remaches.lineStyle(3, 0x1a1410, 1);
-      remaches.strokeCircle(dx, dy, 5);
-      remaches.fillStyle(0xc9973e, 1);
-      remaches.fillCircle(dx, dy, 4);
-      remaches.fillStyle(0xf0d9a0, 0.85);
-      remaches.fillCircle(dx - 1, dy - 1, 1.4);
+      this._dibujarRemache(remaches, dx, dy, 5);
     });
     hijos.splice(3, 0, remaches); // detrás del label, encima de las 3 franjas
   }

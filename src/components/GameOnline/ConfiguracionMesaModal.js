@@ -115,9 +115,10 @@ const estilos = {
   // `radial-gradient` que ya usa Lobby.js para sus placas de madera.
   remache: {
     position: 'absolute', width: 13, height: 13, borderRadius: '50%',
-    background: `radial-gradient(circle at 35% 30%, ${C.remacheClaro} 0%, ${C.remache} 45%, ${C.remacheOscuro} 78%, #3a2610 100%)`,
-    boxShadow: '0 1px 2px rgba(0,0,0,0.65), inset 0 1px 1px rgba(255,255,255,0.4)',
     zIndex: 2,
+    // Pase 360: remache unificado en todo el juego — bola de bronce lisa con borde marrón fino y un brillo claro arriba a la izquierda.
+    background: 'radial-gradient(circle at 32% 28%, rgba(255,243,210,0.92) 0, rgba(255,243,210,0.92) 1.5px, transparent 2.1px), #C9973E',
+    border: '1.5px solid #5A3A14', boxSizing: 'border-box',
   },
   // Tarjeta interior (antes esta era la caja exterior completa, con su
   // propio borde/boxShadow dorado) — ahora solo el pergamino inset

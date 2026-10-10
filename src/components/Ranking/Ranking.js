@@ -371,16 +371,18 @@ const estilos = {
   // panel grande como para llevar 4 remaches en las esquinas).
   remacheChico: {
     position: 'absolute', top: '50%', width: 9, height: 9, borderRadius: '50%', marginTop: -4.5,
-    background: `radial-gradient(circle at 35% 30%, ${C.remacheClaro} 0%, ${C.remache} 45%, ${C.remacheOscuro} 78%, #3a2610 100%)`,
-    boxShadow: '0 1px 1px rgba(0,0,0,0.6), inset 0 1px 1px rgba(255,255,255,0.4)',
+    // Pase 360: remache unificado en todo el juego — bola de bronce lisa con borde marrón fino y un brillo claro arriba a la izquierda.
+    background: 'radial-gradient(circle at 32% 28%, rgba(255,243,210,0.92) 0, rgba(255,243,210,0.92) 1.1px, transparent 1.7px), #C9973E',
+    border: '1.5px solid #5A3A14', boxSizing: 'border-box',
   },
   // Remache grande — mismo criterio que Historial/Chat Global, para las
   // esquinas de los paneles grandes (podio y lista).
   remache: {
     position: 'absolute', width: 13, height: 13, borderRadius: '50%',
-    background: `radial-gradient(circle at 35% 30%, ${C.remacheClaro} 0%, ${C.remache} 45%, ${C.remacheOscuro} 78%, #3a2610 100%)`,
-    boxShadow: '0 1px 2px rgba(0,0,0,0.65), inset 0 1px 1px rgba(255,255,255,0.4)',
     zIndex: 2,
+    // Pase 360: remache unificado en todo el juego — bola de bronce lisa con borde marrón fino y un brillo claro arriba a la izquierda.
+    background: 'radial-gradient(circle at 32% 28%, rgba(255,243,210,0.92) 0, rgba(255,243,210,0.92) 1.5px, transparent 2.1px), #C9973E',
+    border: '1.5px solid #5A3A14', boxSizing: 'border-box',
   },
   // Ducentésimo sexagésimo segundo pase: el marco blanco/crema plano de
   // antes pasa a ser la "gran placa de madera de taberna" que pedía el

@@ -34,8 +34,7 @@ export default function LogroDesbloqueadoPopup({ logros, onCerrarTodos }) {
       visible
       titulo="¡Logro desbloqueado!"
       cinta="dorada"
-      icono={icono}
-      emojiIcono={icono ? undefined : '🏅'}
+      icono={icono || '/assets/images/icono-logros.png'}
       tamIcono={116}
       onCerrar={() => onCerrarTodos?.()}
       onFondo={avanzar}
