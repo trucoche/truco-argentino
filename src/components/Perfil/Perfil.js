@@ -103,6 +103,9 @@ function StatTile({ label, valor, color }) {
 // columna lateral con el top de jugadores + otro acceso a la Tienda. La
 // columna lateral se apila abajo en pantallas angostas vía flex-wrap, sin
 // necesidad de un media query (ver `estilos.layout`).
+// Pase 359: etiqueta corta del género elegido en Ajustes ('prefiero_no_decir' no se muestra).
+const ETIQUETA_GENERO = { masculino: 'Masculino', femenino: 'Femenino', neutro: 'Neutro' };
+
 export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado }) {
   const headers = {
     'Content-Type': 'application/json',
@@ -283,6 +286,10 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
             {/* Pase 330: nombre de usuario fuera del banner, en el pergamino limpio. */}
             <div style={estilos.cartelNombreFila}>
               <div style={estilos.cartelNombre}>{usuario?.username}</div>
+              {/* Pase 359: el género que el usuario elige en Ajustes, al lado del nombre. */}
+              {ETIQUETA_GENERO[usuario?.genero] && (
+                <div style={estilos.cartelGenero}>{ETIQUETA_GENERO[usuario?.genero]}</div>
+              )}
             </div>
 
           </PlacaMadera>
@@ -460,7 +467,11 @@ const estilos = {
     position: 'relative', borderRadius: 16, border: '3px solid #1a1410', background: '#4a3226',
     padding: 4, overflow: 'hidden', boxSizing: 'border-box'
   },
-  cartelNombreFila: { marginTop: 12, display: 'flex' },
+  cartelNombreFila: { marginTop: 12, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 10 },
+  cartelGenero: {
+    background: '#E9D9B0', border: '1.5px solid #000', borderRadius: 999, padding: '3px 12px',
+    fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 13, color: '#4A2C2A', whiteSpace: 'nowrap',
+  },
   // Pase 324: botón circular 3D del fondo + chip de monedas fijo + línea de nivel.
   btnFondoCircular: {
     position: 'absolute', top: 8, right: 8, zIndex: 2, width: 40, height: 40, borderRadius: '50%',

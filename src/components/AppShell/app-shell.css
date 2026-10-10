@@ -324,9 +324,9 @@
   inset: -12px;
   border-radius: 50%;
   background: radial-gradient(circle at center,
-    rgba(232, 72, 58, 1) 0%,
-    rgba(232, 72, 58, 0.9) 48%,
-    rgba(232, 72, 58, 0.45) 66%,
+    rgba(232, 72, 58, 0.6) 0%,
+    rgba(232, 72, 58, 0.5) 48%,
+    rgba(232, 72, 58, 0.24) 66%,
     rgba(232, 72, 58, 0) 100%);
   pointer-events: none;
   z-index: 0;

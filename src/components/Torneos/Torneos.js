@@ -369,7 +369,7 @@ return (
                 <span style={estilos.destacadoStatLabel}>Modo</span>
               </div>
               <div style={estilos.destacadoStatBadge}>
-                <span style={estilos.fichaTruco} />
+                <img src="/assets/images/fosforos_5_tantos.png" alt="" style={estilos.fosforosPuntos} />
                 <span style={estilos.destacadoStatValor}>{torneoDestacado.puntos_para_ganar}</span>
                 <span style={estilos.destacadoStatLabel}>Puntos</span>
               </div>
@@ -583,6 +583,10 @@ return (
       </div>
 
       <div style={estilos.listaColumna}>
+      {/* Pase 359: Activos/Finalizados viven dentro de UNA tarjeta (marco de madera + paño verde) con la lista
+          en un área de alto máximo con scroll propio, para que la página no se alargue con muchos torneos. */}
+      <div style={estilos.listaPanelExterior}>
+      <div style={estilos.listaPanelInterior}>
       <div style={estilos.tabs}>
         <button
           onClick={() => setVista('activos')}
@@ -608,7 +612,7 @@ return (
     ) : torneos.length === 0 ? (
       <p style={{ color: C.crema, textAlign: 'center' }}>No hay torneos activos. ¡Creá uno!</p>
     ) : (
-      <div style={estilos.torneosGrid}>
+      <div style={{ ...estilos.torneosGrid, ...estilos.torneosScroll }}>
         {torneosPaginados.map((t) => {
           const jugadoresNecesarios = JUGADORES_POR_EQUIPO[t.modo];
           const completo = Number(t.entradas_actuales) >= t.cupo_entradas;
@@ -684,7 +688,7 @@ return (
     ) : torneosFinalizados.length === 0 ? (
       <p style={{ color: C.crema, textAlign: 'center' }}>Todavía no jugaste ningún torneo hasta el final.</p>
     ) : (
-      <div style={estilos.torneosGrid}>
+      <div style={{ ...estilos.torneosGrid, ...estilos.torneosScroll }}>
         {torneosFinalizadosPaginados.map((t) => (
           <div key={t.id} style={estilos.torneoCardExterior}>
             <div style={estilos.torneoCard}>
@@ -712,6 +716,8 @@ return (
     />
   </>
 )}
+      </div>
+      </div>
       </div>
       </div>
 </>
@@ -805,7 +811,7 @@ const estilos = {
   },
   // Silueta de Jugadores tintada café oscuro (para que contraste sobre pergamino).
   iconoSiluetaJugadores: {
-    display: 'inline-block', width: 26, height: 26, flexShrink: 0, backgroundColor: C.chocolate,
+    display: 'inline-block', width: 36, height: 36, flexShrink: 0, backgroundColor: C.chocolate,
     WebkitMask: 'url(/assets/images/icono-personaje.png) center / contain no-repeat',
     mask: 'url(/assets/images/icono-personaje.png) center / contain no-repeat',
   },
@@ -832,9 +838,11 @@ const estilos = {
     boxShadow: 'inset 0 4px 7px rgba(74,44,17,0.38), inset 0 -2px 0 rgba(255,255,255,0.7), 0 3px 0 rgba(0,0,0,0.55)',
   },
   // Pase siguiente: +4px — el usuario los vio bien pero un poco chicos.
-  destacadoStatIcono: { width: 26, height: 26, objectFit: 'contain' },
+  destacadoStatIcono: { width: 36, height: 36, objectFit: 'contain', marginBottom: 1 },
   // "Ficha de truco" — mismo degradé de remache (moneda/ficha de bronce)
   // dibujado en CSS, no hay un asset de ficha de truco individual todavía.
+  // Pase 354: cuadro de fósforos (5 tantos) en la ficha PUNTOS.
+  fosforosPuntos: { width: 36, height: 36, objectFit: 'contain', marginBottom: 1 },
   fichaTruco: {
     display: 'block', width: 24, height: 24, borderRadius: '50%',
     background: `radial-gradient(circle at 35% 30%, ${C.remacheClaro} 0%, ${C.remache} 45%, ${C.remacheOscuro} 78%, #3a2610 100%)`,
@@ -1053,6 +1061,25 @@ const estilos = {
     height: 38, boxSizing: 'border-box', padding: '0 18px', marginBottom: 7,
     background: '#E74C3C', boxShadow: '0 3px 0 #78281F, 0 5px 0 #000',
   },
+  // Pase 359: tarjeta contenedora de la lista de torneos.
+  listaPanelExterior: {
+    position: 'relative',
+    background: `linear-gradient(160deg, ${C.maderaClara} 0%, ${C.maderaMedia} 55%, ${C.maderaOscura} 100%)`,
+    border: `3px solid ${C.negroPulido}`, borderRadius: 22, padding: 10,
+    boxShadow: [
+      'inset 0 2px 0 rgba(255,255,255,0.10)',
+      'inset 0 -4px 10px rgba(0,0,0,0.5)',
+      `0 6px 0 ${C.negroPulido}`,
+      '0 14px 22px rgba(0,0,0,0.35)',
+    ].join(', '),
+  },
+  listaPanelInterior: {
+    position: 'relative',
+    background: `linear-gradient(180deg, ${C.verdeProfundo}, ${C.verdeOscuro})`,
+    borderRadius: 16, padding: '14px 14px 12px',
+    boxShadow: 'inset 0 4px 14px rgba(0,0,0,0.55), inset 0 -3px 10px rgba(0,0,0,0.35), inset 0 0 0 2px rgba(0,0,0,0.25)',
+  },
+  torneosScroll: { maxHeight: 520, overflowY: 'auto', paddingRight: 6, paddingBottom: 6 },
   torneosGrid: {
   display: 'grid',
   gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
