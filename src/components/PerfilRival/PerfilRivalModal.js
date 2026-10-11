@@ -4,6 +4,9 @@ import { getSocket } from '../../services/socket';
 import { useToast } from '../../contexts/ToastContext';
 import MensajePrivadoModal from '../MensajePrivado/MensajePrivadoModal';
 import { API_URL as BASE_URL } from '../../config';
+import PopupMadera from '../Popup/PopupMadera';
+import { rangoUi } from '../Perfil/rangosUi';
+import './perfil-rival.css';
 
 const API_BASE = `${BASE_URL}/api`;
 
@@ -16,10 +19,11 @@ const C = {
 };
 
 // Mismo criterio de avatar que ya usan Perfil/Ranking/el header.
+// Pase 421: dentro del aro de madera se usa el recorte de la CARA (más zoom, más presencia).
 function avatarSrcDe(u) {
   return u?.avatar_tipo === 'foto' && u?.foto_perfil_url
     ? u.foto_perfil_url
-    : `/assets/${u?.personaje || 'gaucho'}-avatar.png`;
+    : `/assets/${u?.personaje || 'gaucho'}-avatar-cara.png`;
 }
 
 // Nonagésimo octavo pase: popup de perfil de OTRO usuario — se abre al
@@ -211,51 +215,60 @@ export default function PerfilRivalModal({ username, token, onClose }) {
     }
   };
 
-  return (
-    <div style={estilos.overlay} onClick={onClose}>
-      {/* Centésimo décimo tercer pase: anillo dorado alrededor de toda la
-          tarjeta — mismo criterio que ya tenía la versión nativa
-          (`anilloPanel`/`panel`, ver PerfilRivalModal.tsx), acá replicado
-          con un div envolvente en vez de un componente propio de RN. */}
-      <div style={estilos.anillo} onClick={(e) => e.stopPropagation()}>
-      <div style={estilos.box}>
-        <button style={estilos.cerrar} onClick={onClose}>✕</button>
+  const u = datos ? datos.usuario : null;
+  // Pase 422: el aro que rodea al personaje es el de SU rango y el logo del rango va en la píldora.
+  const rUi = rangoUi(u && u.rango);
+  const TAM_ARO = 120;
+  const TAM_FOTO = Math.round(TAM_ARO * rUi.hueco) + 2;
+  const encabezado = datos && (
+    <>
+      <div style={estilos.avatarAro}>
+        <div style={{ ...estilos.avatarHueco, width: TAM_FOTO, height: TAM_FOTO }}>
+          <img src={avatarSrcDe(u)} alt="" style={estilos.avatarImg} />
+        </div>
+        <img src={rUi.anillo} alt="" style={estilos.aroImg} />
+      </div>
+      <div style={estilos.placaNombre}>{u.username}</div>
+    </>
+  );
 
+  const lanzarDesafio = () => {
+    // Pase siguiente: si ya hay un desafío esperando respuesta, NO se manda otro (bug real: mandar dos desafíos
+    // al mismo usuario hacía que el segundo pisara al primero del lado del receptor) — se avisa con un toast.
+    if (desafioEnviado) {
+      mostrarToast('Esperando respuesta de tu desafío anterior...', 'info');
+      return;
+    }
+    getSocket().emit('desafio:enviar', { paraUsername: username });
+    setDesafioEnviado(true);
+    // 30s — mismo tiempo que tiene el otro para responder en el servidor.
+    setTimeout(() => setDesafioEnviado(false), 30000);
+  };
+
+  return (
+    <div className="pr-popup">
+      <PopupMadera visible onCerrar={onClose} scroll anchoMax={340}>
         {cargando ? (
           <p style={{ color: '#7a6660', textAlign: 'center', padding: '30px 0' }}>Cargando...</p>
         ) : error ? (
           <p style={{ color: C.crimsonOscuro, textAlign: 'center', padding: '30px 0', fontWeight: 700 }}>{error}</p>
         ) : datos && (
           <>
-            {/* Centésimo octavo pase: corrección de diseño — el usuario
-                aclaró que el fondo comprado no va detrás del PERSONAJE
-                (dentro del círculo, que igual queda tapado por la imagen
-                del avatar), sino como una imagen de fondo de la zona
-                blanca de la tarjeta que rodea al avatar y al nombre —
-                mismo espíritu que ya usa la pantalla propia de Perfil
-                (`encabezadoFilaContenedor`), acá adaptado al layout
-                vertical y centrado de este popup. */}
-            {datos.usuario.fondo_perfil_url ? (
+            {/* Centésimo octavo pase: el fondo comprado va como imagen de fondo de la zona que rodea al avatar y
+                al nombre (no detrás del personaje). */}
+            {u.fondo_perfil_url ? (
               <div
                 style={{
                   ...estilos.encabezadoConFondo,
-                  backgroundImage: `linear-gradient(rgba(20,20,15,0.05), rgba(20,20,15,0.32)), url(${datos.usuario.fondo_perfil_url})`,
+                  backgroundImage: `linear-gradient(rgba(20,20,15,0.05), rgba(20,20,15,0.32)), url(${u.fondo_perfil_url})`,
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
                 }}
               >
-                <div style={estilos.avatarWrap}>
-                  <img src={avatarSrcDe(datos.usuario)} alt="" style={estilos.avatar} />
-                </div>
-                <div style={{ ...estilos.username, ...estilos.usernameConFondo }}>{datos.usuario.username}</div>
+                {encabezado}
               </div>
             ) : (
-              <>
-                <div style={estilos.avatarWrap}>
-                  <img src={avatarSrcDe(datos.usuario)} alt="" style={estilos.avatar} />
-                </div>
-                <div style={estilos.username}>{datos.usuario.username}</div>
-              </>
+              <div style={estilos.encabezadoSinFondo}>{encabezado}</div>
             )}
 
             {!datos.esUnoMismo && (
@@ -267,38 +280,35 @@ export default function PerfilRivalModal({ username, token, onClose }) {
             )}
 
             <div style={estilos.rangoBox}>
-              <span style={estilos.rangoIcono}>🎖️</span>
+              <img src={rangoUi(u.rango).logo} alt="" style={estilos.rangoIcono} />
               <span style={estilos.rangoNombre}>
-                {datos.usuario.rango.esTop500
-                  ? `${datos.usuario.rango.nombre} · #${datos.usuario.rango.posicion ?? '—'}`
-                  : `${datos.usuario.rango.nombre} ${datos.usuario.rango.division}`}
+                {u.rango.esTop500
+                  ? `${u.rango.nombre} · #${u.rango.posicion ?? '—'}`
+                  : `${u.rango.nombre} ${u.rango.division}`}
               </span>
             </div>
 
-            {/* Centésimo tercer pase: "Puntos" (rango) se reemplaza por
-                "Jugadas" — mismo criterio que ya usa el panel de
-                Rendimiento del perfil propio, que tampoco repite Puntos
-                acá porque ya se ve arriba en `rangoBox`. */}
+            {/* Centésimo tercer pase: "Puntos" (rango) se reemplaza por "Jugadas". Pase 421: placas de papel viejo. */}
             <div style={estilos.statsGrid}>
-              <div style={estilos.statTile}>
-                <div style={estilos.statValor}>{datos.usuario.partidas_jugadas}</div>
-                <div style={estilos.statLabel}>Jugadas</div>
-              </div>
-              <div style={estilos.statTile}>
-                <div style={{ ...estilos.statValor, color: C.verdeOscuro }}>{datos.usuario.partidas_ganadas}</div>
-                <div style={estilos.statLabel}>Ganadas</div>
-              </div>
-              <div style={estilos.statTile}>
-                <div style={{ ...estilos.statValor, color: C.crimsonOscuro }}>{datos.usuario.partidas_perdidas}</div>
-                <div style={estilos.statLabel}>Perdidas</div>
-              </div>
-              <div style={estilos.statTile}>
-                <div style={estilos.statValor}>{datos.usuario.porcentajeAbandonos}%</div>
-                <div style={estilos.statLabel}>Abandonos</div>
-              </div>
+              {[
+                { valor: u.partidas_jugadas, etiqueta: 'Jugadas', color: C.chocolate },
+                { valor: u.partidas_ganadas, etiqueta: 'Ganadas', color: C.verdeOscuro },
+                { valor: u.partidas_perdidas, etiqueta: 'Perdidas', color: C.crimsonOscuro },
+                { valor: `${u.porcentajeAbandonos}%`, etiqueta: 'Abandonos', color: C.chocolate },
+              ].map((t) => (
+                <div key={t.etiqueta} style={estilos.statTile}>
+                  <div style={estilos.statTileBrillo} />
+                  <div style={{ ...estilos.statValor, color: t.color }}>{t.valor}</div>
+                  <div style={estilos.statLabel}>{t.etiqueta}</div>
+                </div>
+              ))}
             </div>
 
-            <div style={estilos.insigniasHeader}>Insignias</div>
+            <div style={estilos.insigniasEncabezado}>
+              <span style={estilos.insigniasLinea} />
+              <span style={estilos.insigniasHeader}>Insignias</span>
+              <span style={estilos.insigniasLinea} />
+            </div>
             <div style={estilos.insigniasFila}>
               {datos.insignias.map(i => (
                 <div
@@ -319,99 +329,72 @@ export default function PerfilRivalModal({ username, token, onClose }) {
               ))}
             </div>
 
-            {/* Centésimo cuadragésimo sexto pase: al tocar una medalla de
-                arriba, se muestra acá su descripción (texto real del
-                logro, ver routes/logros.js) — pedido explícito del
-                usuario ("al hacer click ahí... muestre un texto que diga
-                de qué trata el logro"). */}
+            {/* Centésimo cuadragésimo sexto pase: al tocar una medalla se muestra acá su descripción. */}
             {insigniaAbierta && (() => {
               const sel = datos.insignias.find(i => i.tipo === insigniaAbierta);
               if (!sel) return null;
               return (
                 <div style={estilos.insigniaDescripcion}>
-                  <strong>{nombreLogroSinEmoji(sel.titulo)}:</strong> {sel.descripcion || 'Sin descripción todavía.'}
+                  <strong style={{ color: '#5C3317' }}>{nombreLogroSinEmoji(sel.titulo)}:</strong> {sel.descripcion || 'Sin descripción todavía.'}
                 </div>
               );
             })()}
 
             {!datos.esUnoMismo && (
               <>
-                <div style={estilos.botonera}>
-                  <button
-                    style={estilos.btnDesafiar}
-                    onClick={() => {
-                      // Pase siguiente: si ya hay un desafío esperando
-                      // respuesta, NO se manda otro (bug real: mandar dos
-                      // desafíos al mismo usuario hacía que el segundo
-                      // pisara al primero del lado del receptor) — se
-                      // avisa con un toast en vez de reintentar.
-                      if (desafioEnviado) {
-                        mostrarToast('Esperando respuesta de tu desafío anterior...', 'info');
-                        return;
-                      }
-                      getSocket().emit('desafio:enviar', { paraUsername: username });
-                      setDesafioEnviado(true);
-                      // 30s — mismo tiempo que tiene el otro para responder
-                      // en el servidor (antes eran 4s, mucho menos que los
-                      // 30 reales).
-                      setTimeout(() => setDesafioEnviado(false), 30000);
-                    }}
-                  >
-                    {desafioEnviado ? '✓ Desafío enviado...' : '⚔️ Desafiar'}
-                  </button>
-                </div>
+                <button type="button" className="pm-boton pr-boton" style={estilos.btnDesafiar} onClick={lanzarDesafio}>
+                  <img src={desafioEnviado ? '/assets/images/icono-check.png' : '/assets/images/icono-desafios.png'} alt="" style={estilos.iconoGrande} />
+                  {desafioEnviado ? 'Desafío enviado...' : 'Desafiar'}
+                </button>
 
-                {/* Pase siguiente: fila de amistad — un solo botón (o dos,
-                    si hay una solicitud recibida esperando respuesta) según
-                    `datos.amistad`. Va antes de Bloquear/Denunciar porque es
-                    la acción "positiva" del popup. */}
-                <div style={estilos.filaAmistad}>
+                {/* Pase siguiente: fila de amistad — un solo botón (o dos, si hay una solicitud recibida esperando
+                    respuesta) según `datos.amistad`. */}
+                <div style={estilos.filaPills}>
                   {datos.amistad === 'ninguna' && (
-                    <button style={estilos.btnAgregarAmigo} onClick={solicitarAmistad} disabled={procesandoAmistad}>
-                      ➕ Agregar amigo
+                    <button type="button" className="pm-boton verde pr-boton" style={estilos.pill} onClick={solicitarAmistad} disabled={procesandoAmistad}>
+                      <IconoMas /> Agregar amigo
                     </button>
                   )}
                   {datos.amistad === 'pendiente_enviada' && (
-                    <button style={estilos.btnAccionChica} onClick={quitarAmistad} disabled={procesandoAmistad}>
-                      ✖ Cancelar solicitud
+                    <button type="button" className="pm-boton neutro pr-boton" style={estilos.pill} onClick={quitarAmistad} disabled={procesandoAmistad}>
+                      <img src="/assets/images/historial-cruz.png" alt="" style={estilos.iconoPill} /> Cancelar solicitud
                     </button>
                   )}
                   {datos.amistad === 'pendiente_recibida' && (
                     <>
-                      <button style={estilos.btnAgregarAmigo} onClick={aceptarAmistad} disabled={procesandoAmistad}>
-                        ✔ Aceptar amistad
+                      <button type="button" className="pm-boton verde pr-boton" style={estilos.pill} onClick={aceptarAmistad} disabled={procesandoAmistad}>
+                        <img src="/assets/images/icono-check.png" alt="" style={estilos.iconoPill} /> Aceptar
                       </button>
-                      <button style={estilos.btnAccionChica} onClick={quitarAmistad} disabled={procesandoAmistad}>
-                        ✖ Rechazar
+                      <button type="button" className="pm-boton neutro pr-boton" style={estilos.pill} onClick={quitarAmistad} disabled={procesandoAmistad}>
+                        <img src="/assets/images/historial-cruz.png" alt="" style={estilos.iconoPill} /> Rechazar
                       </button>
                     </>
                   )}
                   {datos.amistad === 'amigos' && (
                     <>
-                      <button
-                        style={{ ...estilos.btnAccionChica, ...estilos.btnAccionActivaAmigos }}
-                        onClick={quitarAmistad}
-                        disabled={procesandoAmistad}
-                      >
-                        ✓ Amigos (quitar)
+                      <button type="button" className="pm-boton neutro pr-boton" style={{ ...estilos.pill, color: C.verdeOscuro }} onClick={quitarAmistad} disabled={procesandoAmistad}>
+                        <img src="/assets/images/icono-check.png" alt="" style={estilos.iconoPill} /> Amigos (quitar)
                       </button>
-                      <button style={estilos.btnMensaje} onClick={() => setMensajeAbierto(true)}>
-                        <img src="/assets/images/icono-chat.png" alt="" style={estilos.iconoBotonMensaje} /> Mensaje
+                      <button type="button" className="pm-boton pr-boton" style={{ ...estilos.pill, '--pm-fondo': '#3FA6D6', '--pm-relieve': '#1F6F96' }} onClick={() => setMensajeAbierto(true)}>
+                        <img src="/assets/images/icono-avioncito-chat.png" alt="" style={estilos.iconoPill} /> Mensaje
                       </button>
                     </>
                   )}
                 </div>
 
-                <div style={estilos.filaAcciones}>
+                <div style={estilos.filaPills}>
                   <button
-                    style={{ ...estilos.btnAccionChica, ...(datos.bloqueado ? estilos.btnAccionActiva : {}) }}
+                    type="button"
+                    className="pm-boton neutro pr-boton"
+                    style={{ ...estilos.pill, ...(datos.bloqueado ? { '--pm-fondo': '#FFE0DD', '--pm-relieve': '#C98A84', color: C.crimsonOscuro } : {}) }}
                     onClick={toggleBloqueo}
                     disabled={bloqueando}
                   >
-                    {datos.bloqueado ? '✓ Bloqueado' : '🚫 Bloquear'}
+                    <img src={datos.bloqueado ? '/assets/images/icono-check.png' : '/assets/images/icono-bloqueados.png'} alt="" style={estilos.iconoPill} />
+                    {datos.bloqueado ? ' Bloqueado' : ' Bloquear'}
                   </button>
-                  <button style={estilos.btnAccionChica} onClick={() => setMostrarDenuncia(v => !v)}>
-                    🚩 Denunciar
+                  <button type="button" className="pm-boton neutro pr-boton" style={estilos.pill} onClick={() => setMostrarDenuncia(v => !v)}>
+                    <IconoBandera /> Denunciar
                   </button>
                 </div>
 
@@ -427,7 +410,9 @@ export default function PerfilRivalModal({ username, token, onClose }) {
                     />
                     {mensajeDenuncia && <div style={estilos.mensajeDenuncia}>{mensajeDenuncia}</div>}
                     <button
-                      style={estilos.btnEnviarDenuncia}
+                      type="button"
+                      className="pm-boton carmesi pr-boton"
+                      style={{ ...estilos.pill, marginTop: 8 }}
                       onClick={enviarDenuncia}
                       disabled={enviandoDenuncia || !motivoDenuncia.trim()}
                     >
@@ -438,154 +423,114 @@ export default function PerfilRivalModal({ username, token, onClose }) {
               </>
             )}
 
-            <button style={estilos.btnVerCompleto} onClick={() => setExpandido(v => !v)}>
-              {expandido ? '▲ Ver menos' : '▼ Ver perfil completo'}
+            <button type="button" style={estilos.btnVerCompleto} onClick={() => setExpandido(v => !v)}>
+              {expandido ? 'Ver menos' : 'Ver perfil completo'}
+              <img src="/assets/images/historial-flecha.png" alt="" style={{ ...estilos.flechaVerMas, transform: expandido ? 'rotate(180deg)' : 'none' }} />
             </button>
           </>
         )}
-      </div>
-      </div>
+      </PopupMadera>
       {mensajeAbierto && (
-        <MensajePrivadoModal username={username} token={token} onCerrar={() => setMensajeAbierto(false)} />
+        // Por encima del pop-up de madera (z-index 3500): contexto de apilamiento propio.
+        <div style={{ position: 'relative', zIndex: 3700 }}>
+          <MensajePrivadoModal username={username} token={token} onCerrar={() => setMensajeAbierto(false)} />
+        </div>
       )}
     </div>
   );
 }
 
+// Pase 421: íconos vectoriales para lo que no tiene PNG en el juego (el "+" y la bandera de denuncia).
+function IconoMas() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" style={{ verticalAlign: '-3px', margin: '0 4px' }}>
+      <rect x="6.5" y="2" width="3" height="12" rx="1.5" fill="#fff" stroke="#000" strokeWidth="0.8" />
+      <rect x="2" y="6.5" width="12" height="3" rx="1.5" fill="#fff" stroke="#000" strokeWidth="0.8" />
+    </svg>
+  );
+}
+function IconoBandera() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true" style={{ verticalAlign: '-4px', margin: '0 4px' }}>
+      <rect x="3" y="1.5" width="2" height="15" rx="1" fill="#6b4a34" stroke="#2C160E" strokeWidth="0.8" />
+      <path d="M5 2.5 L15.5 2.5 L13 6.3 L15.5 10.1 L5 10.1 Z" fill="#E74C3C" stroke="#2C160E" strokeWidth="1" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 const estilos = {
-  overlay: {
-    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
-    display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 3000, padding: 16
-  },
-  // Centésimo décimo tercer pase: anillo dorado exterior (mismo criterio
-  // que `anilloPanel` en la versión nativa) — envuelve a `box` con un
-  // margen fino de 3px, mismos números que usa nativo (padding3, radio21
-  // vs. el radio18 de `box`, así el hueco queda parejo en todo el borde).
-  anillo: {
-    padding: 3, borderRadius: 21, backgroundColor: C.dorado,
-    boxShadow: '0 5px 0 rgba(0,0,0,0.2)', width: '90%', maxWidth: 340,
-  },
-  box: {
-    position: 'relative',
-    backgroundColor: C.cremaSutil,
-    backgroundImage: 'url(/assets/images/textura-tarjeta.png)', backgroundRepeat: 'repeat',
-    border: `2px solid ${C.chocolate}`, borderRadius: 18,
-    padding: '22px 20px 18px',
-    textAlign: 'center', maxHeight: '85vh', overflowY: 'auto'
-  },
-  cerrar: {
-    position: 'absolute', top: 10, right: 10,
-    background: '#fff', border: `2px solid ${C.chocolate}`, borderRadius: 8,
-    width: 26, height: 26, cursor: 'pointer', fontSize: 13, color: C.chocolate
-  },
-  avatarWrap: {
-    width: 76, height: 76, borderRadius: '50%', margin: '0 auto 8px',
-    border: `3px solid ${C.dorado}`, overflow: 'hidden', boxShadow: '0 3px 0 rgba(0,0,0,0.15)'
-  },
-  avatar: { width: '100%', height: '100%', objectFit: 'cover' },
-  username: { fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 19, color: C.chocolate },
-  // Centésimo octavo pase: banda con el fondo de perfil comprado, envuelve
-  // avatar+nombre. `avatarWrap`/`username` de arriba quedan intactos para
-  // cuando no hay fondo (sin esta banda, tal cual estaba siempre).
-  // Centésimo noveno pase: se le agrega marco (mismo borde chocolate del
-  // resto de la tarjeta) y se achica/baja un poco — tapaba el botón de
-  // cerrar (✕), que está en la esquina superior derecha del popup.
+  encabezadoSinFondo: { display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 6 },
   encabezadoConFondo: {
-    position: 'relative', borderRadius: 14, padding: '12px 10px 10px',
-    margin: '16px 6px 10px', minHeight: 112,
-    border: `2.5px solid ${C.chocolate}`, boxShadow: '0 3px 0 rgba(0,0,0,0.15)'
+    position: 'relative', borderRadius: 14, padding: '8px 10px 10px', margin: '2px 0 8px',
+    display: 'flex', flexDirection: 'column', alignItems: 'center',
+    border: '2.5px solid #1a0f08', boxShadow: '0 3px 0 rgba(0,0,0,0.25)',
   },
-  usernameConFondo: {
-    background: 'rgba(255,248,237,0.88)', borderRadius: 12,
-    padding: '2px 10px', display: 'inline-block'
+  avatarAro: { position: 'relative', width: 120, height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  avatarHueco: { borderRadius: '50%', overflow: 'hidden', background: '#EAD9B5', flexShrink: 0 },
+  avatarImg: { width: '100%', height: '100%', objectFit: 'cover', display: 'block' },
+  aroImg: { position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' },
+  placaNombre: {
+    marginTop: 2, height: 34, padding: '0 18px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+    background: '#5C3317', border: '2px solid #1a0f08', borderRadius: 8, boxShadow: '0 2px 0 rgba(0,0,0,0.5)',
+    fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 16, color: '#FFF8ED', maxWidth: '100%',
+    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', boxSizing: 'border-box',
   },
-  enfrentamientos: { fontSize: 12.5, color: '#8a7267', fontStyle: 'italic', marginTop: 2, marginBottom: 10 },
+  enfrentamientos: { fontSize: 12.5, color: '#7a5a3a', fontStyle: 'italic', marginBottom: 10 },
   rangoBox: {
     display: 'inline-flex', alignItems: 'center', gap: 6,
-    background: '#fff', border: `1.5px solid ${C.chocolate}33`, borderRadius: 20,
-    padding: '4px 12px', margin: '2px 0 12px'
+    background: '#EAD9B5', border: '2px solid #6b4a34', borderRadius: 20,
+    padding: '3px 16px 3px 6px', margin: '0 0 12px',
   },
-  rangoIcono: { fontSize: 14 },
-  rangoNombre: { fontSize: 13, fontWeight: 800, color: C.chocolate },
-  statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, marginBottom: 10 },
+  rangoIcono: { width: 34, height: 34, objectFit: 'contain', flexShrink: 0 },
+  rangoNombre: { fontSize: 13, fontWeight: 800, color: '#3B2312' },
+  statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, marginBottom: 12 },
   statTile: {
-    background: '#fff', border: `1.5px solid ${C.chocolate}22`, borderRadius: 10, padding: '6px 2px'
+    position: 'relative', overflow: 'hidden', background: '#EAD9B5', border: '2px solid #6b4a34', borderRadius: 10,
+    padding: '9px 2px 6px',
   },
-  statValor: { fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 16, color: C.chocolate },
-  statLabel: { fontSize: 9.5, color: '#8a7267', fontWeight: 700, textTransform: 'uppercase' },
-  bio: {
-    fontSize: 12.5, color: '#6d5850', fontStyle: 'italic', background: '#fff',
-    border: `1px solid ${C.chocolate}22`, borderRadius: 10, padding: '8px 10px', marginBottom: 10
-  },
-  insigniasHeader: { fontSize: 11, fontWeight: 800, color: '#8a7267', textTransform: 'uppercase', marginBottom: 6, textAlign: 'left' },
-  insigniasFila: { display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8, justifyContent: 'flex-start' },
+  statTileBrillo: { position: 'absolute', top: 0, left: 0, right: 0, height: 5, background: 'rgba(137,104,60,0.40)' },
+  statValor: { fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 16, color: C.chocolate, lineHeight: 1.2 },
+  statLabel: { fontSize: 8.5, letterSpacing: 0, color: '#7a5a3a', fontWeight: 800, textTransform: 'uppercase' },
+  insigniasEncabezado: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 },
+  insigniasLinea: { flex: 1, height: 2, borderRadius: 1, background: 'rgba(107,74,52,0.35)' },
+  insigniasHeader: { fontSize: 11, fontWeight: 800, color: '#6b4a34', textTransform: 'uppercase', letterSpacing: 1 },
+  insigniasFila: { display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12, justifyContent: 'center' },
   insigniaChip: {
-    fontSize: 18, background: '#fff', border: `1.5px solid ${C.doradoOscuro}`,
-    borderRadius: 10, padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 4,
+    fontSize: 18, background: '#F6EBD0', border: `2px solid ${C.doradoOscuro}`,
+    borderRadius: 10, padding: '4px 6px', display: 'flex', alignItems: 'center', gap: 4,
     cursor: 'pointer',
   },
-  insigniaChipBloqueada: { border: `1.5px solid ${C.chocolate}22`, opacity: 0.35, filter: 'grayscale(1)' },
-  // Centésimo cuadragésimo sexto pase: resaltado del chip tocado, para que
-  // quede claro cuál de las medallas corresponde a la descripción de abajo.
-  insigniaChipActiva: { border: `2px solid ${C.doradoOscuro}`, boxShadow: `0 0 0 2px ${C.doradoClaro}66` },
-  // Centésimo cuadragésimo segundo pase — reemplaza el emoji (que antes
-  // hacía de ícono acá, ver `i.titulo.split(' ')[0]`) por la medalla
-  // ilustrada. Centésimo cuadragésimo sexto pase: 20→32px, pedido
-  // explícito del usuario ("donde sea [las medallas] tienen que ser un
-  // poco más grandes").
+  insigniaChipBloqueada: { border: '2px solid rgba(107,74,52,0.35)', background: '#EAD9B5', opacity: 0.5 },
+  insigniaChipActiva: { border: '2px solid #5C3317', background: '#FFF3CC' },
   insigniaIcono: { width: 32, height: 32, objectFit: 'contain' },
-  insigniaTitulo: { fontSize: 10.5, fontWeight: 700, color: C.chocolate },
-  // Centésimo cuadragésimo sexto pase: texto de la medalla tocada.
+  insigniaTitulo: { fontSize: 10.5, fontWeight: 700, color: '#3B2312' },
   insigniaDescripcion: {
-    fontSize: 12, color: '#6d5850', textAlign: 'left', background: '#fff',
-    border: `1px solid ${C.chocolate}22`, borderRadius: 10, padding: '8px 10px', marginBottom: 12,
+    fontSize: 12, color: '#3B2312', textAlign: 'left', background: '#F6EBD0',
+    border: '2px solid #6b4a34', borderRadius: 10, padding: '8px 10px', marginBottom: 12,
     lineHeight: 1.4,
   },
-  botonera: { marginBottom: 8 },
-  btnDesafiar: {
-    width: '100%', fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 15,
-    background: `linear-gradient(180deg, ${C.doradoClaro}, ${C.dorado})`, color: C.chocolate,
-    border: `2.5px solid ${C.chocolate}`, borderRadius: 12, padding: '9px 14px',
-    boxShadow: `0 4px 0 ${C.doradoOscuro}`, cursor: 'pointer'
+  // Botones: cápsulas 3D del pop-up de madera (.pm-boton), en tamaño chico
+  btnDesafiar: { fontSize: 16, padding: '9px 16px 10px', marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  iconoGrande: { width: 28, height: 28, objectFit: 'contain', margin: 0 },
+  filaPills: { display: 'flex', gap: 8, marginBottom: 12 },
+  pill: {
+    flex: 1, width: 'auto', minWidth: 0, fontSize: 12.5, padding: '7px 6px 8px', margin: 0, letterSpacing: 0,
+    WebkitTextStroke: '0px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2, whiteSpace: 'nowrap',
   },
-  filaAmistad: { display: 'flex', gap: 6, marginBottom: 6 },
-  btnAgregarAmigo: {
-    flex: 1, fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 12.5,
-    background: C.verde, color: '#fff', border: `2px solid ${C.verdeOscuro}`,
-    borderRadius: 10, padding: '7px 4px', cursor: 'pointer'
-  },
-  btnAccionActivaAmigos: { background: '#e3f5e7', borderColor: C.verdeOscuro, color: C.verdeOscuro },
-  btnMensaje: {
-    flex: 1, fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 12.5,
-    background: C.celeste, color: '#fff', border: `2px solid #2f8dbf`,
-    borderRadius: 10, padding: '7px 4px', cursor: 'pointer',
-    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
-  },
-  // Pase siguiente: reemplaza el emoji 💬 básico por el ícono ilustrado
-  // que ya usa el resto de la app para "chat" (icono-chat.png).
-  iconoBotonMensaje: { width: 15, height: 15, objectFit: 'contain' },
-  filaAcciones: { display: 'flex', gap: 6, marginBottom: 6 },
-  btnAccionChica: {
-    flex: 1, fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 12.5,
-    background: '#fff', color: C.chocolate, border: `2px solid ${C.chocolate}33`,
-    borderRadius: 10, padding: '7px 4px', cursor: 'pointer'
-  },
-  btnAccionActiva: { background: '#ffe0dd', borderColor: C.crimson, color: C.crimsonOscuro },
+  iconoPill: { width: 18, height: 18, objectFit: 'contain', margin: '0 2px 0 0' },
   panelDenuncia: {
-    background: '#fff', border: `1.5px solid ${C.chocolate}33`, borderRadius: 10,
-    padding: 8, marginBottom: 6, textAlign: 'left'
+    background: '#F6EBD0', border: '2px solid #6b4a34', borderRadius: 10,
+    padding: 8, marginBottom: 12, textAlign: 'left'
   },
   textareaDenuncia: {
-    width: '100%', border: `1.5px solid ${C.chocolate}33`, borderRadius: 8,
+    width: '100%', border: '1.5px solid rgba(107,74,52,0.5)', borderRadius: 8, background: '#FFFBEB', color: '#3B2312',
     padding: 6, fontSize: 12.5, fontFamily: "'Nunito', sans-serif", resize: 'none', boxSizing: 'border-box'
   },
   mensajeDenuncia: { fontSize: 11.5, color: C.verdeOscuro, fontWeight: 700, margin: '4px 0' },
-  btnEnviarDenuncia: {
-    marginTop: 6, width: '100%', fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 12.5,
-    background: C.crimson, color: '#fff', border: 'none', borderRadius: 8, padding: '7px 0', cursor: 'pointer'
-  },
   btnVerCompleto: {
-    marginTop: 4, background: 'none', border: 'none', color: C.doradoOscuro,
-    fontWeight: 800, fontSize: 12.5, cursor: 'pointer', fontFamily: "'Nunito', sans-serif"
+    marginTop: 2, background: 'none', border: 'none', color: '#6b4a34',
+    fontWeight: 800, fontSize: 12.5, cursor: 'pointer', fontFamily: "'Nunito', sans-serif",
+    display: 'inline-flex', alignItems: 'center', gap: 6,
   },
+  flechaVerMas: { width: 18, height: 18, objectFit: 'contain' },
 };

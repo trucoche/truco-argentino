@@ -24,7 +24,7 @@ const C = {
   crema: '#FFF8ED', chocolate: '#4A2C2A',
 };
 
-const FECHA_ACTUALIZACION = '06/10/2026';
+const FECHA_ACTUALIZACION = '11/10/2026';
 
 const SECCIONES = [
   {
@@ -45,6 +45,9 @@ const SECCIONES = [
           'Contraseña (almacenada de forma encriptada, nunca en texto plano)',
           'Nombre de usuario',
           'Foto de perfil (opcional, si elegís usar tu foto de Google/Facebook en lugar de un personaje del juego)',
+          'Imagen de fondo de perfil (opcional, la que elijas subir)',
+          'Género y biografía o descripción (opcionales)',
+          'Provincia y localidad (opcionales; se usan para los rankings por zona)',
         ],
       },
       {
@@ -61,6 +64,9 @@ const SECCIONES = [
           'Saldo de moneda virtual dentro del juego',
           'Logros y misiones completadas',
           'Mensajes de texto del chat global y mensajes privados entre jugadores',
+          'Lista de amigos, solicitudes de amistad y usuarios que bloqueaste',
+          'Reportes que hagas sobre otros jugadores y los que reciba tu cuenta',
+          'Historial de compras y de movimientos de monedas (compras, premios, entradas a salas y torneos)',
           'Stickers y mensajes enviados en el chat de las salas de juego (solo se transmiten durante la partida, no se guardan)',
         ],
       },
@@ -78,6 +84,13 @@ const SECCIONES = [
           'Identificadores de sesión',
         ],
       },
+      {
+        subtitulo: '2.6 Qué ven los demás jugadores de tu perfil',
+        parrafos: [
+          'Tu nombre de usuario, personaje o foto, fondo de perfil, biografía, rango, estadísticas de partidas, insignias y logros son visibles para otros jugadores (por ejemplo, en rankings, salas, torneos y el perfil público). Tu provincia y localidad se usan para armar los rankings por zona. No mostramos a otros jugadores tu email ni tu contraseña.',
+          'Los datos marcados como opcionales los completás vos: podés dejarlos vacíos o borrarlos cuando quieras desde tu perfil.',
+        ],
+      },
     ],
   },
   {
@@ -90,6 +103,8 @@ const SECCIONES = [
       'Enviar comunicaciones relacionadas con tu cuenta (por ejemplo, recuperación de contraseña)',
       'Mejorar el funcionamiento y la seguridad de la aplicación',
       'Prevenir fraude, trampas o uso indebido del sistema de moneda virtual',
+      'Mostrar tu perfil, tus estadísticas y los rankings (incluidos los de provincia y localidad) a otros jugadores',
+      'Registrar las compras y los movimientos de monedas, y conservarlos como registro de las transacciones',
     ],
     parrafos: [
       'Si detectamos un uso fraudulento del juego o de la economía virtual (por ejemplo, coordinar partidas para transferirse créditos de forma artificial, explotar errores del sistema, o usar múltiples cuentas para manipular resultados), podemos suspender o eliminar la cuenta involucrada. Si la gravedad lo amerita, esta medida puede extenderse a otras cuentas que identifiquemos como vinculadas a la misma persona.',
@@ -162,9 +177,10 @@ const SECCIONES = [
     parrafos: [
       'Podés solicitar la eliminación de tu cuenta desde Ajustes → Mi cuenta → "Eliminar mi cuenta" en la aplicación, o desde la página trucoche.com.ar/eliminar-cuenta. Te enviamos un email para confirmar el pedido, y el proceso funciona en dos etapas:',
       'Etapa 1 — Desactivación inmediata. Tu cuenta deja de estar visible para otros jugadores (no aparece en rankings, búsquedas ni salas) y ya no podés iniciar sesión con normalidad.',
-      'Etapa 2 — Período de arrepentimiento (30 días). Durante los 30 días posteriores a la desactivación, conservamos tus datos por si querés recuperar la cuenta. Si volvés a iniciar sesión dentro de ese plazo, tu cuenta y toda tu información (estadísticas, personaje, historial) se restauran automáticamente. Pasados los 30 días sin que vuelvas a ingresar, eliminamos de forma definitiva y sin posibilidad de recuperación tus datos personales (nombre de usuario, foto de perfil, estadísticas e historial de partidas).',
+      'Etapa 2 — Período de arrepentimiento (30 días). Durante los 30 días posteriores a la desactivación, conservamos tus datos por si querés recuperar la cuenta. Si volvés a iniciar sesión dentro de ese plazo, tu cuenta y toda tu información (monedas, estadísticas, personaje, historial) se restauran automáticamente. Pasados los 30 días sin que vuelvas a ingresar, eliminamos de forma definitiva y sin posibilidad de recuperación tus datos personales: nombre de usuario, email, contraseña, vínculos con Google o Facebook, foto y fondo de perfil, biografía, género, lista de amigos, usuarios bloqueados y mensajes.',
+      'Las estadísticas, partidas, torneos y movimientos de monedas asociados a la cuenta se conservan de forma anonimizada (bajo un alias genérico y sin ningún dato que te identifique), para mantener la integridad de los resultados del juego y de los registros de transacciones. Una vez anonimizados, no se pueden volver a vincular con vos.',
       'Podés pedirnos también una eliminación inmediata y definitiva, sin pasar por el período de 30 días, escribiéndonos a trucoargentino.dev@gmail.com. En ese caso, podemos pedirte alguna verificación para confirmar que sos el titular de la cuenta.',
-      'Aun eliminada la cuenta, podemos conservar tu dirección de email por un tiempo adicional únicamente para evitar el registro de cuentas duplicadas o la reincidencia de usuarios que hayan sido suspendidos por incumplir las normas de convivencia (punto 6).',
+      'Al completarse la eliminación definitiva, tu email se reemplaza por una dirección anónima y deja de estar asociado a la cuenta.',
     ],
   },
   {

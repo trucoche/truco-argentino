@@ -10,7 +10,7 @@ const C = {
   crema: '#FFF8ED', chocolate: '#4A2C2A',
 };
 
-const FECHA_ACTUALIZACION = '06/10/2026';
+const FECHA_ACTUALIZACION = '11/10/2026';
 
 const SECCIONES = [
   {
@@ -134,7 +134,7 @@ const SECCIONES = [
     "titulo": "15. Eliminación de tu cuenta y fin del servicio",
     "parrafos": [
       "Podés eliminar tu cuenta cuando quieras desde Ajustes → Mi cuenta → \"Eliminar mi cuenta\", o desde trucoche.com.ar/eliminar-cuenta. El proceso (confirmación por email, período de 30 días para arrepentirte y eliminación definitiva) se explica en el punto 10 de la Política de Privacidad.",
-      "Al eliminar tu cuenta se pierden las monedas que tengas y no se devuelven ni se pueden transferir. Gastalas antes si querés aprovecharlas.",
+      "Si no recuperás tu cuenta dentro de los 30 días del período de arrepentimiento, las monedas que tengas se pierden y no se devuelven ni se pueden transferir. Gastalas antes si querés aprovecharlas.",
       "También podemos cerrar una cuenta o dejar de ofrecer el servicio, total o parcialmente. Si cerramos el servicio completo, vamos a avisar con anticipación razonable."
     ]
   },

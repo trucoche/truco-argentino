@@ -1,0 +1,7 @@
+/* Pase 421 — modal de perfil de usuario sobre el pop-up de madera (PopupMadera). Sin cinta de título:
+   se recorta el relleno superior de la placa, y los botones chicos de la botonera 3D. */
+.pr-popup .pm-caja .pm-pergamino { padding: 16px 14px 12px; }
+.pr-popup .pm-cuerpo.pm-scroll { max-height: 72vh; padding: 0 2px 2px 0; }
+.pr-popup .pr-boton:not(.neutro) { -webkit-text-stroke: 1.4px #000; }
+.pr-popup .pr-boton { box-shadow: 0 4px 0 -2px var(--pm-relieve), 0 4px 0 0 var(--pm-borde); border-width: 2.5px; }
+.pr-popup .pr-boton:active:not(:disabled) { box-shadow: 0 2px 0 -2px var(--pm-relieve), 0 2px 0 0 var(--pm-borde); }
