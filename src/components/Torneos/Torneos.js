@@ -474,6 +474,34 @@ export default function Torneos({ token, onVerBracket }) {
     }
   };
 
+  // Pase 387: el creador que no se anotó (o quien tenga un cupo libre a mano) ocupa un lugar desde "Mis torneos":
+  // se carga el torneo y se abre la misma tarjeta de anotarse que "Unirme con código".
+  const anotarmeDesdeMisTorneos = async (t) => {
+    avisarError('');
+    try {
+      const res = await fetch(`${API_URL}/${t.id}`, { headers });
+      const d = await res.json();
+      if (!res.ok) { avisarError(d.error || 'No se pudo cargar el torneo'); return; }
+      if (d.puedo_anotarme === false) { avisarError('Ya no hay cupo libre en este torneo'); return; }
+      setTorneoPorCodigo({
+        ...d,
+        entradas_actuales: Array.isArray(d.entradas) ? d.entradas.length : Number(t.entradas_actuales),
+        creador_nombre: d.creador_nombre || (d.soy_creador ? 'vos' : ''),
+        ya_inscripto: false,
+        companero_sugerido: null,
+        desde_sala: true,
+      });
+      setInscribiendoId(null);
+      setAmigosElegidos([]);
+      setTimeout(() => {
+        if (tarjetaCodigoRef.current) tarjetaCodigoRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 250);
+    } catch (err) {
+      console.error('Error de conexión:', err);
+      avisarError('No se pudo conectar con el servidor');
+    }
+  };
+
   const handleBuscarCodigo = async (e) => {
     e.preventDefault();
     avisarError('');
@@ -840,6 +868,11 @@ return (
                           Desinscribirme
                         </button>
                       )}
+                      {inscripcion && !t.estoy_inscripto && Number(t.entradas_actuales) < Number(t.cupo_entradas) && (
+                        <button disabled={ocupado} onClick={() => anotarmeDesdeMisTorneos(t)} style={{ ...estilos.btnCard, ...(ocupado ? { opacity: 0.6 } : null) }}>
+                          Anotarme
+                        </button>
+                      )}
                       {inscripcion && t.soy_creador && (
                         <button disabled={ocupado} onClick={() => pedirEliminar(t)} style={{ ...estilos.btnCardCrimson, ...(ocupado ? { opacity: 0.6 } : null) }}>
                           Eliminar torneo
@@ -1019,7 +1052,7 @@ return (
           <div style={estilos.codigoEncontrado} ref={tarjetaCodigoRef}>
             <div style={estilos.torneoHeader}>
               <div style={estilos.torneoNombre}>{renderTituloTorneo(torneoPorCodigo.titulo)}</div>
-              <div style={{ ...estilos.badge, ...estilos.badgeAbierta }}>{torneoPorCodigo.privado ? 'Privado' : 'Invitación'}</div>
+              <div style={{ ...estilos.badge, ...estilos.badgeAbierta }}>{torneoPorCodigo.desde_sala ? 'Cupo libre' : torneoPorCodigo.privado ? 'Privado' : 'Invitación'}</div>
             </div>
             <div style={estilos.torneoInfo}>
               {torneoPorCodigo.modo} · Cupo {torneoPorCodigo.entradas_actuales}/{torneoPorCodigo.cupo_entradas} · {torneoPorCodigo.puntos_para_ganar} pts · {torneoPorCodigo.creador_nombre}

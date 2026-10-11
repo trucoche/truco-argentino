@@ -98,7 +98,7 @@ function nombreDeRonda(cruces, numRonda) {
 
 // ---------- Pantalla ----------
 
-export default function BracketView({ torneoId, usuario, token, onVolver, onEntrarAPartida }) {
+export default function BracketView({ torneoId, usuario, token, onVolver, onEntrarAPartida, onAnotarme }) {
   const esSimulador = torneoId === 'simulador';
   const [torneo, setTorneo] = useState(null);
   const [partidos, setPartidos] = useState([]);
@@ -139,6 +139,19 @@ export default function BracketView({ torneoId, usuario, token, onVolver, onEntr
     } finally {
       setCargandoAmigos(false);
     }
+  };
+
+  // Pase 387: el torneo se pasa a Torneos con la forma de la tarjeta "Unirme con código" para anotarse.
+  const anotarmeEnCupo = () => {
+    if (!torneo || !onAnotarme) return;
+    onAnotarme({
+      ...torneo,
+      entradas_actuales: Array.isArray(torneo.entradas) ? torneo.entradas.length : 0,
+      creador_nombre: torneo.creador_nombre || (torneo.soy_creador ? 'vos' : ''),
+      ya_inscripto: false,
+      companero_sugerido: null,
+      desde_sala: true,
+    });
   };
 
   const invitarAmigo = async (amigo) => {
@@ -423,7 +436,7 @@ export default function BracketView({ torneoId, usuario, token, onVolver, onEntr
           <BarraPlana porcentaje={cupoTotal ? Math.round((equiposListos / cupoTotal) * 100) : 0} />
           {/* Pase 386: solo invita quien ya está anotado (aparece en la sala); el creador sin anotarse ve este aviso. */}
           {torneo.soy_creador && !torneo.estoy_anotado && (
-            <div style={estilos.notaEspera}>Todavía no te anotaste en tu torneo: anotate desde Torneos para poder invitar amigos a los cupos libres.</div>
+            <div style={estilos.notaEspera}>Todavía no te anotaste en tu torneo: tocá "Anotarme" en un cupo libre para entrar y poder invitar amigos.</div>
           )}
           {/* Pase 383: jugadores sin equipo esperando que se les arme uno (completar al azar). */}
           {(torneo.jugadores_en_espera > 0 || torneo.estoy_en_espera) && (
@@ -488,6 +501,12 @@ export default function BracketView({ torneoId, usuario, token, onVolver, onEntr
                 {torneo.puedo_invitar && (
                   <button type="button" onClick={abrirSelectorAmigos} style={estilos.btnInvitarAmigo}>
                     + Invitar amigo
+                  </button>
+                )}
+                {/* Pase 387: ocupar el cupo libre uno mismo (lleva a la tarjeta de anotarse de Torneos). */}
+                {torneo.puedo_anotarme && onAnotarme && (
+                  <button type="button" onClick={anotarmeEnCupo} style={estilos.btnAnotarmeCupo}>
+                    Anotarme
                   </button>
                 )}
               </div>
@@ -717,6 +736,10 @@ const estilos = {
     border: `2px dashed ${C.apagado}`, borderRadius: 12, padding: '9px 12px 9px 40px', minHeight: 48, boxSizing: 'border-box',
   },
   salaLibreTexto: { fontWeight: 700, fontSize: 12.5, color: C.apagado },
+  btnAnotarmeCupo: {
+    ...BTN_PLANO, fontSize: 12.5, color: '#fff', background: '#10B981', borderRadius: 999,
+    boxShadow: '0 2px 0 #065F46, 0 3px 0 #000', padding: '4px 15px', flexShrink: 0, marginBottom: 3,
+  },
   btnInvitarAmigo: {
     ...BTN_PLANO, fontSize: 12.5, color: '#2C160E', background: '#F5B041', borderRadius: 999,
     boxShadow: '0 2px 0 #B9770E, 0 3px 0 #000', padding: '4px 13px', flexShrink: 0, marginBottom: 3,

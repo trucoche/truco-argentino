@@ -720,6 +720,12 @@ function AppInterna() {
               usuario={usuario}
               token={token}
               onVolver={() => setPantalla('torneos')}
+              onAnotarme={(torneo) => {
+                // Pase 387: "Anotarme" en un cupo libre de la sala → Torneos con la tarjeta de anotarse abierta.
+                window.__torneoInvitado = torneo || null;
+                setPantalla('torneos');
+                window.dispatchEvent(new Event('torneo-invitado'));
+              }}
               onEntrarAPartida={(codigoSala) => {
                 setCodigoSalaActual(codigoSala);
                 setPantalla('juego');
