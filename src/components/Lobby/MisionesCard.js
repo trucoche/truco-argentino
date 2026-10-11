@@ -152,13 +152,13 @@ export default function MisionesCard({ token, onMisionReclamada }) {
                       </span>
                       <span style={estilos.progresoTexto}>{m.progreso}/{m.objetivo}</span>
                   </div>
-                {/* Pase de rediseño estructural: barra 3D verde neón (antes
+                {/* Pase de rediseño estructural: barra plana verde (Pase 381; antes 3D neón,
                     un degradé dorado plano) + recompensa en monedas de oro
                     al extremo, visible siempre (no solo dentro del botón
                     de reclamar) — pedido explícito del usuario. */}
                 <div style={estilos.filaBarra}>
                   <div style={estilos.barraFondo}>
-                    <div style={{ ...estilos.barraRelleno, width: `${porcentaje}%` }} />
+                    <div style={{ ...estilos.barraRelleno, width: `${porcentaje}%`, ...(porcentaje === 0 ? { borderRight: 'none' } : null) }} />
                   </div>
                   <span style={estilos.recompensaChip}>
                     <img src="/assets/images/moneda.png" alt="" style={estilos.iconoMonedaChip} />
@@ -289,17 +289,17 @@ const estilos = {
   // de la pantalla) y el relleno a un verde neón con brillo superior +
   // sombra de borde, para que se note como una barra con volumen real.
   // Ahora vive dentro de `filaBarra`, junto al chip de recompensa.
+  // Pase 381: barra de progreso PLANA (estándar del juego, ya no metalizada): canal color pergamino con borde
+  // chocolate de 2px y relleno verde liso con un filo oscuro a la derecha — mismo criterio cel-shaded que los
+  // botones, sin degradé ni brillo ni resplandor. Misma receta en nativo (MisionesCard.js) y en la sala del torneo.
   barraFondo: {
-    flex: 1, minWidth: 0, height: 9,
-    background: 'linear-gradient(180deg, #0f0a06, #1c130c)',
-    borderRadius: 6, overflow: 'hidden',
-    boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.6), inset 0 0 0 1px rgba(0,0,0,0.4)'
+    flex: 1, minWidth: 0, height: 12, boxSizing: 'border-box',
+    background: '#E9D9BB', border: `2px solid ${C.chocolate}`,
+    borderRadius: 8, overflow: 'hidden'
   },
   barraRelleno: {
-    height: '100%',
-    background: 'linear-gradient(180deg, #7CFF9B 0%, #2ECC71 55%, #17A54A 100%)',
-    borderRadius: 6, transition: 'width 0.3s ease',
-    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.55), inset 0 -2px 3px rgba(0,0,0,0.3), 0 0 6px rgba(46,204,113,0.55)'
+    height: '100%', background: '#10B981', borderRight: '2px solid #065F46',
+    boxSizing: 'border-box', transition: 'width 0.3s ease'
   },
   // Fila que alinea la barra de progreso con el chip de recompensa "al
   // extremo" — pedido explícito del usuario, visible siempre y no solo

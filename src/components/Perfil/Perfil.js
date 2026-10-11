@@ -693,10 +693,11 @@ const estilos = {
   // Centésimo décimo tercer pase: cómo se obtiene cada logro — el usuario
   // pidió que la tarjeta deje de ser solo título+barra.
   logroDescripcion: { fontSize: 11.5, color: '#8a7267', marginTop: 4, lineHeight: 1.35 },
-  barraFondo: { height: 9, background: '#eee2d0', borderRadius: 6, overflow: 'hidden' },
+  // Pase 381: barra plana estándar (canal pergamino + borde chocolate, relleno liso con filo oscuro, sin degradé).
+  barraFondo: { height: 12, boxSizing: 'border-box', background: '#E9D9BB', border: `2px solid ${C.chocolate}`, borderRadius: 8, overflow: 'hidden' },
   barraRelleno: {
-    height: '100%', background: `linear-gradient(90deg, ${C.doradoClaro}, ${C.dorado})`,
-    borderRadius: 6, transition: 'width 0.3s ease'
+    height: '100%', boxSizing: 'border-box', background: C.dorado, borderRight: '2px solid #B9770E',
+    transition: 'width 0.3s ease'
   },
   filaAbajo: { display: 'flex', justifyContent: 'space-between' },
   progresoTexto: { fontSize: 12, fontWeight: 800, color: C.doradoOscuro },

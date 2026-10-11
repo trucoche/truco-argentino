@@ -179,6 +179,23 @@ export default function Torneos({ token, onVerBracket }) {
   const [torneos, setTorneos] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
+  // Pase 381: los errores de una ACCIÓN (crear, anotarse, eliminar…) viven aparte de los errores de carga: antes
+  // el sondeo de 5 s llamaba setError('') y los borraba al instante. Ahora duran 10 s (o hasta la próxima acción) y
+  // la pantalla se desplaza hasta el cartel.
+  const [errorAccion, setErrorAccion] = useState('');
+  const errorAccionRef = useRef(null);
+  const timerErrorAccion = useRef(null);
+  const avisarError = (msg) => {
+    clearTimeout(timerErrorAccion.current);
+    setErrorAccion(msg || '');
+    if (msg) timerErrorAccion.current = setTimeout(() => setErrorAccion(''), 10000);
+  };
+  useEffect(() => () => clearTimeout(timerErrorAccion.current), []);
+  useEffect(() => {
+    if (errorAccion && errorAccionRef.current) {
+      errorAccionRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [errorAccion]);
   const [creando, setCreando] = useState(false);
 
   const [titulo, setTitulo] = useState('');
@@ -198,6 +215,7 @@ export default function Torneos({ token, onVerBracket }) {
 
   const [inscribiendoId, setInscribiendoId] = useState(null);
   const [misTorneos, setMisTorneos] = useState([]);
+  const [misTorneosError, setMisTorneosError] = useState('');
   const [accionandoId, setAccionandoId] = useState(null);
   // Pase 377: amigos disponibles para invitar y los elegidos para el equipo.
   const [amigos, setAmigos] = useState([]);
@@ -287,7 +305,12 @@ export default function Torneos({ token, onVerBracket }) {
     try {
       const res = await fetch(`${API_URL}/mios/activos`, { headers });
       const data = await res.json();
-      if (res.ok && Array.isArray(data)) setMisTorneos(data);
+      if (res.ok && Array.isArray(data)) {
+        setMisTorneos(data);
+        setMisTorneosError('');
+      } else {
+        setMisTorneosError(`${(data && data.error) || 'Respuesta inesperada'} (${res.status})`);
+      }
     } catch (err) {
       // Sin conexión: se deja lo último que se sabía.
     }
@@ -363,7 +386,7 @@ export default function Torneos({ token, onVerBracket }) {
 
   const handleCrearTorneo = async (e) => {
     e.preventDefault();
-    setError('');
+    avisarError('');
 
     if (!titulo.trim()) {
       setErrorTitulo(true);
@@ -391,7 +414,7 @@ export default function Torneos({ token, onVerBracket }) {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || 'Error al crear torneo');
+        avisarError(data.error || 'Error al crear torneo');
         return;
       }
 
@@ -405,13 +428,13 @@ export default function Torneos({ token, onVerBracket }) {
 
     } catch (err) {
       console.error('Error de conexión:', err);
-      setError('No se pudo conectar con el servidor');
+      avisarError('No se pudo conectar con el servidor');
     }
   };
 
   const handleBuscarCodigo = async (e) => {
     e.preventDefault();
-    setError('');
+    avisarError('');
     const codigo = codigoBuscar.trim().toUpperCase();
     if (!codigo) return;
     try {
@@ -419,7 +442,7 @@ export default function Torneos({ token, onVerBracket }) {
       const data = await res.json();
       if (!res.ok) {
         setTorneoPorCodigo(null);
-        setError(data.error || 'No se encontró el torneo');
+        avisarError(data.error || 'No se encontró el torneo');
         return;
       }
       setTorneoPorCodigo(data);
@@ -428,7 +451,7 @@ export default function Torneos({ token, onVerBracket }) {
       setAmigosElegidos([]);
     } catch (err) {
       console.error('Error de conexión:', err);
-      setError('No se pudo conectar con el servidor');
+      avisarError('No se pudo conectar con el servidor');
     }
   };
 
@@ -442,13 +465,13 @@ export default function Torneos({ token, onVerBracket }) {
   };
 
   const handleInscribirse = async (torneo) => {
-    setError('');
+    avisarError('');
 
     const jugadoresNecesarios = JUGADORES_POR_EQUIPO[torneo.modo];
 
     if (jugadoresNecesarios > 1 && amigosElegidos.length !== jugadoresNecesarios - 1) {
       const n = jugadoresNecesarios - 1;
-      setError(`Este torneo es ${torneo.modo}: elegí ${n} amigo${n === 1 ? '' : 's'} para invitar`);
+      avisarError(`Este torneo es ${torneo.modo}: elegí ${n} amigo${n === 1 ? '' : 's'} para invitar`);
       return;
     }
 
@@ -465,7 +488,7 @@ export default function Torneos({ token, onVerBracket }) {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || 'Error al inscribirse');
+        avisarError(data.error || 'Error al inscribirse');
         return;
       }
 
@@ -479,12 +502,12 @@ export default function Torneos({ token, onVerBracket }) {
 
     } catch (err) {
       console.error('Error de conexión:', err);
-      setError('No se pudo conectar con el servidor');
+      avisarError('No se pudo conectar con el servidor');
     }
   };
 
   const handleDesinscribirse = async (torneo) => {
-    setError('');
+    avisarError('');
     try {
       const res = await fetch(`${API_URL}/${torneo.id}/desinscribirse`, {
         method: 'DELETE',
@@ -493,14 +516,14 @@ export default function Torneos({ token, onVerBracket }) {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || 'Error al desinscribirse');
+        avisarError(data.error || 'Error al desinscribirse');
         return;
       }
 
       refrescarTodo();
     } catch (err) {
       console.error('Error de conexión:', err);
-      setError('No se pudo conectar con el servidor');
+      avisarError('No se pudo conectar con el servidor');
     }
   };
 
@@ -529,13 +552,13 @@ export default function Torneos({ token, onVerBracket }) {
       icono: '/assets/images/trofeo.png',
     });
     if (!ok) return;
-    setError('');
+    avisarError('');
     setAccionandoId(t.id);
     try {
       const res = await fetch(`${API_URL}/${t.id}`, { method: 'DELETE', headers });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || 'No se pudo eliminar el torneo');
+        avisarError(data.error || 'No se pudo eliminar el torneo');
       } else {
         mostrarToast(
           data.costoReembolsado > 0
@@ -547,7 +570,7 @@ export default function Torneos({ token, onVerBracket }) {
       }
     } catch (err) {
       console.error('Error de conexión:', err);
-      setError('No se pudo conectar con el servidor');
+      avisarError('No se pudo conectar con el servidor');
     } finally {
       setAccionandoId(null);
     }
@@ -555,7 +578,11 @@ export default function Torneos({ token, onVerBracket }) {
 
 return (
     <>
-      {error && <div style={estilos.errorBox}>{error}</div>}
+      {(errorAccion || error) && (
+        <div ref={errorAccionRef} style={estilos.errorBox} onClick={() => avisarError('')}>
+          {errorAccion || error}
+        </div>
+      )}
 
       {/* Pase siguiente: se probó `torneo-marco-destacado.png` como
           `border-image` para este panel, pero el usuario pidió volver
@@ -721,7 +748,11 @@ return (
             <img src="/assets/images/trofeo.png" alt="" style={estilos.panelTitleIcono} />
             Mis torneos
           </div>
-          {misTorneos.length === 0 ? (
+          {misTorneosError && misTorneos.length === 0 ? (
+            <div style={estilos.misTorneosVacio}>
+              No se pudieron cargar tus torneos: {misTorneosError}
+            </div>
+          ) : misTorneos.length === 0 ? (
             <div style={estilos.misTorneosVacio}>
               Todavía no creaste ni te anotaste a ningún torneo. Cuando lo hagas, lo administrás desde acá.
             </div>

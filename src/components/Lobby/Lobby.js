@@ -623,7 +623,6 @@ useEffect(() => {
         <img src="/assets/images/vs-escudo.png" alt="" style={estilos.iconoPanelTitle} /> Partida en curso
       </div>
         <div style={estilos.indicadorEsperando}>
-          <img src="/assets/images/reloj-arena.png" alt="" style={estilos.iconoIndicadorEsperando} />
           Partida esperando
         </div>
         <div style={estilos.hint}>¿Tenés una partida esperando o en juego? Buscala acá.</div>

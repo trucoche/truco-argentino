@@ -342,8 +342,9 @@ const estilos = {
     padding: '10px 14px', marginBottom: 14
   },
   progresoTexto: { fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 12.5, color: C.chocolate, marginBottom: 6 },
-  progresoBarraFondo: { height: 10, borderRadius: 6, background: 'rgba(74,44,42,0.12)', overflow: 'hidden' },
-  progresoBarraRelleno: { height: '100%', borderRadius: 6, background: `linear-gradient(90deg, ${C.doradoClaro}, ${C.dorado})`, transition: 'width 0.4s ease' },
+  // Pase 381: barra plana estándar (canal pergamino + borde chocolate, relleno liso con filo oscuro, sin degradé).
+  progresoBarraFondo: { height: 12, boxSizing: 'border-box', borderRadius: 8, background: '#E9D9BB', border: `2px solid ${C.chocolate}`, overflow: 'hidden' },
+  progresoBarraRelleno: { height: '100%', boxSizing: 'border-box', background: C.dorado, borderRight: '2px solid #B9770E', transition: 'width 0.4s ease' },
 
   errorBox: {
     background: '#ffe0dd', border: '2px solid #E8483A', color: '#c2352a',
