@@ -1182,7 +1182,7 @@ _crearElementosDeTexto() {
     const panelH = Math.round(panelW * 193 / 700);
     const panelTop = Hg - panelH;
     const panelCY = Hg - panelH / 2;
-    const kMano = 1.7 * f;
+    const kMano = Math.min(1.7 * f, panelH / 118);   // Pase 402: la carta de la mano nunca es mas alta que la botonera de madera
     const manoY = panelTop - 6;
 
     // Mesa: la imagen se parte en TRES franjas y solo la del medio se
@@ -1210,28 +1210,35 @@ _crearElementosDeTexto() {
     // detras de la mano y el mazo del rival va sobre el borde superior del paño.
     const CORTE_A = 255;                               // fila (de 895) donde empieza la franja del medio (sin estirar)
     const CORTE_B = 267;
-    const filaTotal = CORTE_A + (895 - CORTE_B);       // alto "natural" en filas del PNG
+    // Pase 401: las patas (filas CORTE_C..895, solo madera lisa) se dibujan a
+    // PIES_Y de su alto para que la mesa no quede "alta y flaca": el paño
+    // queda mas cerca del centro y la mano tapa lo que sobra. El aro y el
+    // paño mantienen la escala 1:1.
+    const CORTE_C = 722;
+    const PIES_Y = 0.55;
+    const filaTotal = CORTE_A + (CORTE_B - CORTE_A) + (CORTE_C - CORTE_B) + (895 - CORTE_C) * PIES_Y;   // alto "natural" en filas del PNG
     const topExtras = rivalH / 2 + bultoR + nombreH + 28;   // lo que ocupa el mazo del rival + su nombre sobre el borde de la mesa
     const tableBottom = Math.min(tableBottomMax, handTop + handH * 0.50);
     const htabDisp = tableBottom - (regionTop + topExtras);
-    let sT = 1.30;
+    let sT = 1.07;                                     // Pase 401: el aro solo asoma ~2-3% por lado (como el nativo)
     while (sT > 0.8 && filaTotal * (700 * sT / 1169) > htabDisp) sT -= 0.02;
     sT = Math.max(0.8, sT);
     const tableW = Math.round(700 * sT);
     const u = tableW / 1169;
     const altoTopNat = CORTE_A * u;
-    const altoBotNat = (895 - CORTE_B) * u;
-    const hNat = altoTopNat + altoBotNat;
+    const altoBotNat = (CORTE_C - CORTE_B) * u + (895 - CORTE_C) * u * PIES_Y;
+    const hNat = altoTopNat + (CORTE_B - CORTE_A) * u + altoBotNat;
     const E = 0;                                       // sin estirado vertical
     const slackSobra = Math.max(0, htabDisp - hNat);
     const tableTop = tableBottom - hNat;
-    const rivalY = tableTop - 28;
+    const rivalY = tableTop - 40;                      // Pase 401: el mazo apoya en el borde superior del paño, sin entrar a la zona de jugadas
     const nombreY = rivalY - rivalH / 2 - bultoR - nombreH / 2 - 2;
     const feltCY = tableTop + 149 * sT;
     const feltRY = 170 * sT;
     const feltH = 203 * sT;                            // alto visible del paño verde
     const dueloEscala = Math.min(0.66 * 1.9 * f, 0.82 * feltH / 234);
-    const hudYFinal = hudYBase + slackSobra * 0.45;
+    // Pase 401: el marcador queda anclado ~220 sobre el borde alto de la mesa (justo arriba del nombre/mazo del rival) (no se despega en ventanas altas)
+    const hudYFinal = Math.max(hudYBase, tableTop - 220);
     const hudBottom = hudYFinal + placaH / 2;
 
     // eq3 se calcula en el espacio del grupo (0..Hg) y luego se desplaza
@@ -1246,7 +1253,7 @@ _crearElementosDeTexto() {
       zoom, H, zoom8, H8, WN, yOff,
       kp, placaW, placaH, hudY: hudYFinal + yOff, placaVosX, placaRivalX,
       panelW, panelH, panelTop: panelTop + yOff, panelCY: panelCY + yOff, kMano, manoY: manoY + yOff,
-      tableW, u, CORTE_A, CORTE_B, altoTopNat, altoBotNat, E, tableTop: tableTop + yOff, tableBottom: tableBottom + yOff,
+      tableW, u, CORTE_A, CORTE_B, CORTE_C, PIES_Y, altoTopNat, altoBotNat, E, tableTop: tableTop + yOff, tableBottom: tableBottom + yOff,
       rivalY: rivalY + yOff, kRival, nombreY: nombreY + yOff, sT,
       feltCY: feltCY + yOff, feltRY, dueloY: feltCY + yOff, dueloEscala, kBoton: 1.15 + 0.15 * f,
       kSeat: 1.35, perspCY: feltCY + yOff, perspRY: feltRY,
@@ -1342,6 +1349,7 @@ _crearElementosDeTexto() {
     if (!this.mesaMedio) {
       this.mesaMedio = this.add.image(400, 0, clave).setDepth(1).setOrigin(0.5, 0);
       this.mesaPatas = this.add.image(400, 0, clave).setDepth(1).setOrigin(0.5, 0);
+      this.mesaPies = this.add.image(400, 0, clave).setDepth(1).setOrigin(0.5, 0);
       if (clave === 'mesaRedondaLimpia' && this.textures.exists('marcaTcMesa')) {
         this.marcaTcMesa = this.add.image(0, 0, 'marcaTcMesa').setDepth(1.05);
       }
@@ -1355,10 +1363,20 @@ _crearElementosDeTexto() {
       .setScale(L.u, escMedioY)
       .setPosition(400, yMedio - L.CORTE_A * escMedioY)
       .setVisible(this.mesaImg.visible);
+    const yFilaB = yMedio + L.E + filasMedio * L.u;      // y de la fila CORTE_B
     this.mesaPatas
-      .setCrop(0, L.CORTE_B - 1, 1169, 895 - L.CORTE_B + 1)
+      .setTexture(clave)
+      .setCrop(0, L.CORTE_B - 1, 1169, L.CORTE_C - L.CORTE_B + 2)
       .setScale(L.u)
-      .setPosition(400, yMedio + L.E + filasMedio * L.u - L.CORTE_B * L.u)
+      .setPosition(400, yFilaB - L.CORTE_B * L.u)
+      .setVisible(this.mesaImg.visible);
+    // patas acortadas (solo madera lisa): escala Y reducida
+    const yFilaC1 = yFilaB + (L.CORTE_C - 1 - L.CORTE_B) * L.u;   // y de la fila CORTE_C-1
+    this.mesaPies
+      .setTexture(clave)
+      .setCrop(0, L.CORTE_C - 1, 1169, 895 - L.CORTE_C + 1)
+      .setScale(L.u, L.u * L.PIES_Y)
+      .setPosition(400, yFilaC1 - (L.CORTE_C - 1) * L.u * L.PIES_Y)
       .setVisible(this.mesaImg.visible);
     if (this.marcaTcMesa) {
       // la marca original (caja 130..1062 x 59..426 de la imagen) vuelve al centro del paño ya estirado
@@ -1385,7 +1403,7 @@ _crearElementosDeTexto() {
       // Pase 394: la mesa de 3v3 se estira en vertical para llenar la ventana (ver eq3 en _calcularLayoutAngosto)
       const m = this._L.eq3;
       this.mesaImg.setScale(this.mesaImg.scaleX, this.mesaImg.scaleY * m.gy).setPosition(400, m.cy + (220 - m.cyOld) * m.gy);
-      [this.mesaMedio, this.mesaPatas, this.marcaTcMesa].forEach(o => { if (o && o.scene) o.setVisible(false); });
+      [this.mesaMedio, this.mesaPatas, this.mesaPies, this.marcaTcMesa].forEach(o => { if (o && o.scene) o.setVisible(false); });
     }
   } else {
     // 690 (antes 660, y 700 antes de eso) — el usuario había pedido achicarla
@@ -1723,7 +1741,7 @@ _limpiarAvataresEspera() {
 // modo), así que acá solo se tocan al ocultar; al mostrar, se deja que
 // _renderizarEstado decida su visibilidad.
 _mostrarMarcadores(visible) {
-  [this.mesaMedio, this.mesaPatas, this.marcaTcMesa].forEach(o => { if (o && o.scene) o.setVisible(visible && this._mesaModoActual !== '3v3'); });
+  [this.mesaMedio, this.mesaPatas, this.mesaPies, this.marcaTcMesa].forEach(o => { if (o && o.scene) o.setVisible(visible && this._mesaModoActual !== '3v3'); });
   [this.scoreBg, this.scoreText, this.labelPropio, this.fondoInfoRival, this.scoreTextRival]
     .forEach(o => { if (o && o.scene) o.setVisible(visible); });
   if (!visible) {
@@ -3857,8 +3875,13 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
 // borde quede centrado exactamente igual. 100% Graphics — no toca ningún
 // PNG de carta.
 _dibujarBordeSticker(x, y, w, h, rotacion, ox, oy, depth) {
-  const margen = 3;
+  // Pase 401: sin recuadro blanco detras de las cartas. Se devuelve un
+  // Graphics VACIO (para que los tweens y setDepth que lo usan sigan andando):
+  // la carta es solo su PNG, con su propio contorno.
   const g = this.add.graphics().setPosition(x, y).setRotation(rotacion).setDepth(depth);
+  return g;
+  // eslint-disable-next-line no-unreachable
+  const margen = 3;
   const left = -w * ox - margen;
   const top = -h * oy - margen;
   const ancho = w + margen * 2;
@@ -3899,7 +3922,13 @@ _dibujarManoJugador(cartas, yBase, jugable, animar = false) {
     // Nonagésimo tercer pase: +18% de tamaño (73x100 → 86x118, misma
     // proporción), pedido explícito del usuario para que se lean mejor
     // los números/índices de cada naipe.
-    const kM = this._L ? this._L.kMano : 1;   // Pase 394: mano mas grande en layout angosto
+    // Pase 402: tamaño de la mano en UNIDADES DEL MUNDO, ligado al tamaño de la
+    // mesa (no a la ventana ni al dpr). Antes la imagen se mostraba al tamaño en
+    // pixeles de su textura (anchoCarta * factor de dpr), asi que en pantallas de
+    // alta densidad las cartas crecian x2 y tapaban la mesa. Ahora se fuerza el
+    // tamaño con setDisplaySize: mesa 690 de ancho -> carta de 1.2*86 = 103 (~15%
+    // del ancho de la mesa); en el layout angosto la ancla es kMano (<= alto de la botonera).
+    const kM = this._L ? this._L.kMano : 1.2;
     const anchoCarta = 86 * kM;
     const altoCarta  = 118 * kM;
     const cantidad   = cartas.length;
@@ -3975,6 +4004,7 @@ _dibujarManoJugador(cartas, yBase, jugable, animar = false) {
       ).setAlpha(animar ? 0 : 1);
 
       const img = this.add.image(animar ? 400 : destinoX, animar ? 300 : destinoY, keyMano)
+        .setDisplaySize(anchoCarta, altoCarta)
         .setOrigin(0.5, 0.85)
         .setDepth(10 + i)
         .setAlpha(animar ? 0 : 1)
