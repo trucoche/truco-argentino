@@ -137,7 +137,7 @@ function useAltoTresTarjetas(ref, dependencia) {
 
 // Pase 377: en 2v2 y 3v3 ya no se escriben usernames — se eligen amigos de la lista y a cada uno
 // le llega una invitación (aviso con Aceptar/Rechazar). Cada jugador paga su entrada al aceptar.
-function SelectorAmigos({ cantidad, amigos, cargando, elegidos, onToggle, apuesta, oscuro = false }) {
+function SelectorAmigos({ cantidad, amigos, cargando, elegidos, onToggle, apuesta, oscuro = false, permitirAzar = false, azar = false, onToggleAzar }) {
   return (
     <div style={estilos.selectorAmigos}>
       <div style={{ ...estilos.selectorAmigosTitulo, ...(oscuro ? { color: C.crema } : null) }}>
@@ -164,6 +164,21 @@ function SelectorAmigos({ cantidad, amigos, cargando, elegidos, onToggle, apuest
               </button>
             );
           })}
+        </div>
+      )}
+      {/* Pase 383: completar los lugares que falten con jugadores al azar (solo torneos públicos). */}
+      {permitirAzar && (
+        <button
+          type="button"
+          onClick={onToggleAzar}
+          style={{ ...estilos.amigoChip, ...(azar ? estilos.amigoChipActivo : {}), marginTop: 8 }}
+        >
+          {azar ? '✓ ' : ''}Completar con jugadores al azar
+        </button>
+      )}
+      {azar && (
+        <div style={{ ...estilos.selectorAmigosAyuda, ...(oscuro ? { color: C.crema } : null) }}>
+          Los lugares que falten se completan con otros jugadores sin equipo. Si no elegís amigos, entrás a la lista de espera y se te arma equipo apenas haya gente (si no se arma, se te devuelve la entrada).
         </div>
       )}
       <div style={{ ...estilos.selectorAmigosAyuda, ...(oscuro ? { color: C.crema } : null) }}>
@@ -222,6 +237,8 @@ export default function Torneos({ token, onVerBracket }) {
   const [amigos, setAmigos] = useState([]);
   const [cargandoAmigos, setCargandoAmigos] = useState(false);
   const [amigosElegidos, setAmigosElegidos] = useState([]);
+  // Pase 383: completar con jugadores al azar (torneos públicos 2v2/3v3).
+  const [azarElegido, setAzarElegido] = useState(false);
 
   // Pestañas Activos / Finalizados (historial de torneos jugados).
   const [vista, setVista] = useState('activos'); // 'activos' | 'finalizados'
@@ -381,7 +398,8 @@ export default function Torneos({ token, onVerBracket }) {
       window.__torneoInvitado = null;
       setTorneoPorCodigo(invitado);
       setInscribiendoId(null);
-      setAmigosElegidos([]);
+      // Pase 383: quien lo invitó viene precargado como compañero.
+      setAmigosElegidos(invitado.companero_sugerido ? [invitado.companero_sugerido.id] : []);
       setTimeout(() => {
         if (tarjetaCodigoRef.current) tarjetaCodigoRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }, 350);
@@ -391,11 +409,15 @@ export default function Torneos({ token, onVerBracket }) {
     return () => window.removeEventListener('torneo-invitado', tomarInvitado);
   }, []);
 
+  // Pase 383: al cambiar de torneo/tarjeta se apaga "completar con jugadores al azar".
+  useEffect(() => { setAzarElegido(false); }, [inscribiendoId, torneoPorCodigo && torneoPorCodigo.id]);
+
   // Al abrir "Inscribirse" (o un torneo encontrado por código) se refresca la lista de amigos.
   useEffect(() => {
     if (inscribiendoId !== null || torneoPorCodigo) cargarAmigos();
   }, [inscribiendoId, torneoPorCodigo, cargarAmigos]);
 
+  const etiquetaAnotarme = azarElegido && amigosElegidos.length === 0 ? 'Anotarme y buscar equipo' : 'Invitar y anotarme';
   const alternarAmigo = (id, max) => {
     setAmigosElegidos((prev) => {
       if (prev.includes(id)) return prev.filter((x) => x !== id);
@@ -489,9 +511,10 @@ export default function Torneos({ token, onVerBracket }) {
 
     const jugadoresNecesarios = JUGADORES_POR_EQUIPO[torneo.modo];
 
-    if (jugadoresNecesarios > 1 && amigosElegidos.length !== jugadoresNecesarios - 1) {
+    const usaAzar = jugadoresNecesarios > 1 && azarElegido && !torneo.privado;
+    if (jugadoresNecesarios > 1 && amigosElegidos.length !== jugadoresNecesarios - 1 && !(usaAzar && amigosElegidos.length < jugadoresNecesarios - 1)) {
       const n = jugadoresNecesarios - 1;
-      avisarError(`Este torneo es ${torneo.modo}: elegí ${n} amigo${n === 1 ? '' : 's'} para invitar`);
+      avisarError(`Este torneo es ${torneo.modo}: elegí ${n} amigo${n === 1 ? '' : 's'} para invitar${torneo.privado ? '' : ' o completá con jugadores al azar'}`);
       return;
     }
 
@@ -501,6 +524,7 @@ export default function Torneos({ token, onVerBracket }) {
         headers,
         body: JSON.stringify({
           amigosIds: jugadoresNecesarios > 1 ? amigosElegidos : undefined,
+          azar: usaAzar ? true : undefined,
           // Torneo privado encontrado por código: el backend lo exige para anotarse.
           codigo: torneoPorCodigo && torneoPorCodigo.id === torneo.id ? torneoPorCodigo.codigo : undefined
         })
@@ -515,7 +539,9 @@ export default function Torneos({ token, onVerBracket }) {
       if (torneoPorCodigo && torneoPorCodigo.id === torneo.id) setTorneoPorCodigo(null);
       setInscribiendoId(null);
       setAmigosElegidos([]);
-      if (data.pendiente) {
+      if (data.enLista) {
+        mostrarToast('Estás en la lista de espera: te armamos equipo con otros jugadores.', 'exito', 4500);
+      } else if (data.pendiente) {
         mostrarToast('Invitaciones enviadas. Tu equipo se arma cuando tus amigos acepten.', 'exito');
       }
       refrescarTodo();
@@ -690,6 +716,7 @@ return (
                     elegidos={amigosElegidos}
                     onToggle={alternarAmigo}
                     apuesta={Math.round(Number(torneoDestacado.apuesta))}
+                    permitirAzar={!torneoDestacado.privado} azar={azarElegido} onToggleAzar={() => setAzarElegido((v) => !v)}
                     oscuro
                   />
                 )}
@@ -700,7 +727,7 @@ return (
                     centrados en la fila (pedido del usuario). */}
                 <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
                   <button onClick={() => handleInscribirse(torneoDestacado)} style={{ ...estilos.btnConfirmar, width: 'auto', padding: '0 26px' }}>
-                    {JUGADORES_POR_EQUIPO[torneoDestacado.modo] > 1 ? 'Invitar y anotarme' : 'Confirmar'}
+                    {JUGADORES_POR_EQUIPO[torneoDestacado.modo] > 1 ? etiquetaAnotarme : 'Confirmar'}
                   </button>
                   <button
                     onClick={() => { setInscribiendoId(null); setAmigosElegidos([]); }}
@@ -1005,11 +1032,12 @@ return (
                     elegidos={amigosElegidos}
                     onToggle={alternarAmigo}
                     apuesta={Math.round(Number(torneoPorCodigo.apuesta))}
+                    permitirAzar={!torneoPorCodigo.privado} azar={azarElegido} onToggleAzar={() => setAzarElegido((v) => !v)}
                   />
                 )}
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button onClick={() => handleInscribirse(torneoPorCodigo)} style={estilos.btnCard}>
-                    {JUGADORES_POR_EQUIPO[torneoPorCodigo.modo] > 1 ? 'Invitar y anotarme' : 'Inscribirme'} ({Math.round(Number(torneoPorCodigo.apuesta))}
+                    {JUGADORES_POR_EQUIPO[torneoPorCodigo.modo] > 1 ? etiquetaAnotarme : 'Inscribirme'} ({Math.round(Number(torneoPorCodigo.apuesta))}
                     <img src="/assets/images/icono-moneda.png" alt="" style={{ ...estilos.iconoMonedaInline, marginLeft: 3, marginRight: 0, verticalAlign: 'text-bottom' }} />)
                   </button>
                   <button onClick={() => { setTorneoPorCodigo(null); setAmigosElegidos([]); }} style={estilos.btnCardSecondary}>
@@ -1108,11 +1136,12 @@ return (
                         elegidos={amigosElegidos}
                         onToggle={alternarAmigo}
                         apuesta={Math.round(Number(t.apuesta))}
+                        permitirAzar={!t.privado} azar={azarElegido} onToggleAzar={() => setAzarElegido((v) => !v)}
                       />
                     )}
                     <div style={{ display: 'flex', gap: 8 }}>
                       <button onClick={() => handleInscribirse(t)} style={estilos.btnCard}>
-                        {jugadoresNecesarios > 1 ? 'Invitar y anotarme' : 'Confirmar'}
+                        {jugadoresNecesarios > 1 ? etiquetaAnotarme : 'Confirmar'}
                       </button>
                       <button onClick={() => { setInscribiendoId(null); setAmigosElegidos([]); }} style={estilos.btnCardSecondary}>
                         Cancelar

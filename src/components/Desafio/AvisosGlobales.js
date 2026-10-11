@@ -116,7 +116,9 @@ export default function AvisosGlobales({ usuario, token, onAceptarDesafio, onCam
     // Pase 382: anti-spam — el servidor frenó un mensaje por escribir muy rápido o repetido.
     const alLimite = ({ mensaje }) => mostrarToast(mensaje, 'info', 3000);
     const alEquipoCancelado = ({ titulo, motivo, por }) => {
-      const texto = motivo === 'torneo_eliminado'
+      const texto = motivo === 'sin_equipo'
+        ? `No se logró armar tu equipo en "${titulo}": se te devolvió la entrada.`
+        : motivo === 'torneo_eliminado'
         ? `El creador eliminó el torneo "${titulo}": se te devolvió la entrada.`
         : motivo === 'rechazada'
         ? `${por} rechazó la invitación: se canceló tu equipo en "${titulo}" y se te devolvió la entrada.`
@@ -137,6 +139,16 @@ export default function AvisosGlobales({ usuario, token, onAceptarDesafio, onCam
         4000
       );
     };
+    // Pase 383: se armó (o se completó) mi equipo con jugadores al azar.
+    const alEquipoArmado = ({ titulo, completo }) => {
+      window.dispatchEvent(new Event('torneos-actualizados'));
+      mostrarToast(
+        completo ? `¡Tu equipo para "${titulo}" está completo!` : `Se sumó un jugador a tu equipo en "${titulo}".`,
+        'exito',
+        4500
+      );
+    };
+    socket.on('torneo:equipo-armado', alEquipoArmado);
     socket.on('torneo:invitacion', alInvitacionTorneo);
     socket.on('torneo:invitacion-cancelada', alInvitacionCancelada);
     socket.on('torneo:equipo-cancelado', alEquipoCancelado);
@@ -153,6 +165,7 @@ export default function AvisosGlobales({ usuario, token, onAceptarDesafio, onCam
     socket.on('privado:mensaje-nuevo', alMensajePrivado);
 
     return () => {
+      socket.off('torneo:equipo-armado', alEquipoArmado);
       socket.off('torneo:invitacion', alInvitacionTorneo);
       socket.off('torneo:invitacion-cancelada', alInvitacionCancelada);
       socket.off('torneo:equipo-cancelado', alEquipoCancelado);

@@ -266,6 +266,14 @@ export default function BracketView({ torneoId, usuario, token, onVolver, onEntr
             <div style={estilos.salaSub}>
               {equiposListos} de {cupoTotal} equipos listos · el bracket se arma cuando se completa el cupo
             </div>
+            {/* Pase 383: jugadores sin equipo esperando que se les arme uno (completar al azar). */}
+            {(torneo.jugadores_en_espera > 0 || torneo.estoy_en_espera) && (
+              <div style={estilos.salaSub}>
+                {torneo.estoy_en_espera
+                  ? 'Estás en la lista de espera: te armamos equipo con otros jugadores.'
+                  : `${torneo.jugadores_en_espera} jugador${torneo.jugadores_en_espera === 1 ? '' : 'es'} esperando equipo.`}
+              </div>
+            )}
             <div style={estilos.progresoBarraFondo}>
               <div style={{ ...estilos.progresoBarraRelleno, width: `${cupoTotal ? Math.round((equiposListos / cupoTotal) * 100) : 0}%` }} />
             </div>
@@ -280,7 +288,12 @@ export default function BracketView({ torneoId, usuario, token, onVolver, onEntr
                       <div style={estilos.salaNombre}>{nombre}{esMiEntrada(e) ? ' (vos)' : ''}</div>
                       {pendiente && (
                         <div style={estilos.salaDetalle}>
-                          Esperando a que acepte{(e.invitados_pendientes || []).length === 1 ? '' : 'n'}: {(e.invitados_pendientes || []).join(', ') || 'sus compañeros'}
+                          {[
+                            (e.invitados_pendientes || []).length > 0
+                              ? `Esperando a que acepte${(e.invitados_pendientes || []).length === 1 ? '' : 'n'}: ${(e.invitados_pendientes || []).join(', ')}`
+                              : null,
+                            e.huecos_azar > 0 ? `Buscando ${e.huecos_azar} jugador${e.huecos_azar === 1 ? '' : 'es'} al azar` : null,
+                          ].filter(Boolean).join(' · ') || 'Esperando a sus compañeros'}
                         </div>
                       )}
                     </div>
