@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { API_URL as BASE_URL } from '../../config';
+import { PlacaMadera } from '../Popup/PopupMadera';
 
 const API_URL = `${BASE_URL}/api/auth`;
 
@@ -45,7 +46,7 @@ export default function PersonajeSelector({ token, personajeActual, onPersonajeC
   };
 
   return (
-    <div style={estilos.panel}>
+    <PlacaMadera>
       <div style={estilos.titulo}>
         {/* Ducentésimo cuadragésimo segundo pase: ícono ilustrado del
             gaucho (mismo criterio que los 3 títulos de Configuracion.js
@@ -64,18 +65,14 @@ export default function PersonajeSelector({ token, personajeActual, onPersonajeC
                     disabled={!!guardando}
                     style={{ ...estilos.tarjeta, ...(activo ? estilos.tarjetaActiva : {}) }}
                     >
-                    <img src={`/assets/${p.id}-avatar.png`} alt={p.nombre} style={estilos.imagen} />
-                    {/* Ducentésimo trigésimo noveno pase: "agregar un pequeño
-                        label... que diga el nombre del personaje" — el
-                        estilo `nombre` ya existía en este archivo pero
-                        nunca se usaba en el JSX. */}
-                    <span style={estilos.nombre}>{p.nombre}</span>
+                    {/* Pase 390: se quitó el rótulo con el nombre ("Gaucho"/"Gaucha"): los personajes no tienen nombre. */}
+                    <img src={`/assets/${p.id}-avatar.png`} alt="Personaje" style={estilos.imagen} />
                     {activo && <span style={estilos.check}>✓</span>}
                     </button>
                 );
             })}
       </div>
-    </div>
+    </PlacaMadera>
   );
 }
 
