@@ -20,6 +20,7 @@ import VerificarEmail from './components/Auth/VerificarEmail';
 import SolicitarEliminacionCuenta from './components/Auth/SolicitarEliminacionCuenta';
 import ConfirmarEliminacionCuenta from './components/Auth/ConfirmarEliminacionCuenta';
 import Perfil from './components/Perfil/Perfil';
+import AnotadorOffline from './components/AnotadorOffline/AnotadorOffline';
 import Tienda from './components/Tienda/Tienda';
 import ChatGlobal from './components/ChatGlobal/ChatGlobal';
 import MonedaEasterEgg from './components/MonedaEasterEgg';
@@ -209,6 +210,11 @@ function AppInterna() {
       setPantalla('olvide-password');
       return;
     }
+    // Pase 404: "Anotador de Asado" (anotador offline), público: no pide iniciar sesión.
+    if (path === '/anotador') {
+      setPantalla('anotador');
+      return;
+    }
     // Ruta pública (sin login) para la Política de Privacidad — la pide
     // Facebook Login para poder pasar la app a modo Live (antes solo se
     // podía ver logueado, dentro de Ajustes).
@@ -343,9 +349,10 @@ function AppInterna() {
     }
   };
 
-  const verificarPartidaActiva = async (tokenActual) => {
+  const verificarPartidaActiva = async (tokenActual, incluirEsperando = false) => {
     try {
-      const res = await fetch(`${API_URL}/api/salas/mi-partida-activa`, {
+      // Pase 410: el botón "Buscar mi partida activa" también busca salas esperando rival.
+      const res = await fetch(`${API_URL}/api/salas/mi-partida-activa${incluirEsperando ? '?incluirEsperando=1' : ''}`, {
         headers: { 'Authorization': `Bearer ${tokenActual}` }
       });
       const data = await res.json();
@@ -362,7 +369,7 @@ function AppInterna() {
   };
 
   const buscarPartidaActiva = async () => {
-    const habiaPartida = await verificarPartidaActiva(token);
+    const habiaPartida = await verificarPartidaActiva(token, true);
     if (!habiaPartida) {
       alert('No tenés ninguna partida activa en este momento.');
     }
@@ -509,8 +516,19 @@ function AppInterna() {
       <AuthScreen
         onLoginExitoso={handleLoginExitoso}
         onOlvidoPassword={() => setPantalla('olvide-password')}
+        onIrAnotador={() => setPantalla('anotador')}
         musicaMuteada={musicaMuteada}
         onToggleMusica={handleToggleMusica}
+      />
+    );
+  } else if (pantalla === 'anotador') {
+    // Pase 404: pantalla pública y sin conexión; "volver" lleva al lobby si hay sesión, si no al login.
+    contenido = (
+      <AnotadorOffline
+        onVolver={() => {
+          setPantalla(token ? 'lobby' : 'auth');
+          if (window.location.pathname === '/anotador') window.history.replaceState({}, '', '/');
+        }}
       />
     );
   } else if (pantalla === 'olvide-password') {
@@ -634,6 +652,7 @@ function AppInterna() {
               }}
               onMisionReclamada={actualizarPerfil}
               onIrARanked={() => setPantalla('ranked')}
+              onIrAnotador={() => setPantalla('anotador')}
               codigoInicial={codigoParaUnirse}
               // Pase siguiente: el banner de torneo ahora lo dibuja el
               // propio Lobby (comparte fila con "Jugar ya") — mismos
