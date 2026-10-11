@@ -2186,7 +2186,7 @@ _conectarSocket() {
         const delay = hayRevelacionPendiente ? 3800 : 0;
 
         this.time.delayedCall(delay, () => {
-          this._mostrarPantallaFinal(titulo, !!data.esCampeon, data.esTorneo, data.torneoId, data.jugadores, extra, gano);
+          this._mostrarPantallaFinal(titulo, !!data.esCampeon, data.esTorneo, data.torneoId, data.jugadores, extra, gano, data.recompensa || null);
         });
       });
     this.socket.off('revancha-estado').on('revancha-estado', (data) => {
@@ -2240,23 +2240,17 @@ _esRepartoNuevo(nuevoEstado) {
     return rondaAnterior !== nuevoEstado.numeroRonda;
 }
 
-_mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = null, jugadoresFinal = null, subtitulo = '', gano = false) {
-this._limpiarSprites();
+_mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = null, jugadoresFinal = null, subtitulo = '', gano = false, recompensa = null) {
+    this._limpiarSprites();
     this._ocultarCanto();
     // Centésimo pase: referencias a la placa de alerta de revancha y al
     // botón de "Pedir revancha" — se resetean acá porque `_limpiarSprites`
-    // (arriba) ya destruyó los objetos de la pantalla final anterior, si
-    // hubo una (revancha aceptada → nueva partida → nuevo fin de partida).
-    // Sin este reset, `_mostrarAlertaRevancha` podría encontrar una
-    // referencia a un Graphics ya destruido y fallar al llamar `.clear()`.
+    // ya destruyó los objetos de la pantalla final anterior, si hubo una.
     this.fondoAlertaRevancha = null;
     this.contRevancha = null;
-    // Pase siguiente (placa doble): antes solo `scoreBg`/`scoreText` (el
-    // "N - N" combinado) sobrevivían a esta pantalla final — ahora que el
-    // puntaje vive repartido en dos placas (la propia y la del rival), hay
-    // que conservar las DOS para que la pantalla de resultado siga
-    // mostrando el marcador completo (antes mostraba ambos números en un
-    // solo texto; con la placa dividida hace falta listar cada pieza).
+    // Pase 391: tweens infinitos de la pantalla final (rayos, destellos,
+    // resplandor) — `_limpiarSprites` los frena al limpiar.
+    this._tweensFinal = [];
     const elementosMarcador = [
       this.scoreBg, this.scoreText, this.labelPropio,
       this.fondoInfoRival, this.scoreTextRival, this.labelRival, this.manoIconoRival,
@@ -2265,382 +2259,321 @@ this._limpiarSprites();
       .filter(c => c !== undefined)
       .forEach(c => { if (!elementosMarcador.includes(c)) c.setVisible(false); });
 
-    // Pase 201: pedido del usuario de sacar el fondo negro plano de
-    // esta pantalla y usar el mismo fondo fotográfico que ya tiene el
-    // lobby — el velo de color pasa a ser mucho más liviano, solo para
-    // que la tarjeta central siga leyéndose bien encima.
+    // Pase 201: fondo fotográfico del lobby + velo liviano.
     const fondoResultado = this.add.image(400, 300, 'fondoResultado').setDepth(898);
     fondoResultado.setDisplaySize(800, 600);
     this._sprites.push(fondoResultado);
-
     const velo = this.add.rectangle(400, 300, 800, 600, 0x14140f, 0.45).setDepth(900);
     this._sprites.push(velo);
 
-    // Septuagésimo sexto pase: pedido explícito del usuario de copiar
-    // ACÁ el mismo estilo que ya tiene esta pantalla en el nativo
-    // (mismos colores, textos y diseño), reemplazando el rediseño propio
-    // del pase anterior (cartel con degradé, acentos de esquina, sombra
-    // detrás del panel, colores que cambiaban según ganó/perdió). El
-    // nativo (overlay de resultado de `juego.tsx`) usa un lenguaje mucho
-    // más simple: un anillo dorado macizo (5px de "grosor", vía un
-    // rectángulo más grande detrás) alrededor de una tarjeta crema con
-    // borde chocolate de 3px — sin degradé, sin sombra, sin acentos de
-    // esquina — y un cartel de título también dorado macizo, SIEMPRE del
-    // mismo color sin importar el resultado (`carteloTitulo` en
-    // juego.tsx es un estilo fijo, no condicional). Se replica ese mismo
-    // esquema acá con `graphics` planas en vez de gradientes.
-    //
-    // A diferencia del pase anterior (panel de alto fijo), el alto de la
-    // tarjeta ahora se calcula en base al contenido real que va a llevar
-    // (título, línea de campeón si corresponde, aclaración si la hay,
-    // filas de jugadores, botón de revancha si corresponde, botón de
-    // volver) — igual que en el nativo, donde la tarjeta crece con su
-    // contenido en vez de tener un tamaño fijo adivinado. Para esto se
-    // crean primero los textos (así se puede medir su ancho/alto real
-    // vía `.width`/`.height`, que Phaser calcula con la fuente real) y
-    // recién después se dibuja el anillo/tarjeta con el alto exacto que
-    // hace falta, y se termina de ubicar todo en su lugar final.
+    // ─────────────────────────────────────────────────────────────────
+    // Pase 391: rediseño de la pantalla final.
+    //  · Jerarquía invertida: la fila del ganador brilla (pergamino
+    //    dorado + marco de madera + trofeo), la del perdedor queda
+    //    sobria y ahuecada (pergamino grisáceo, "Paso").
+    //  · Botones planos de código: Esmeralda #10B981 / Dorado #F5B041.
+    //  · Título: cinta dorada festiva con rayos, destellos y papelitos si
+    //    ganó; cartel de madera oscura con flejes de hierro si perdió.
+    //  · Placa de recompensas ahuecada (puntos de rango / monedas).
+    //  · Avatar dentro del Aro de Madera Criollo de Caoba.
+    // ─────────────────────────────────────────────────────────────────
+    const modo = titulo === '¡Ganaste!' ? 'victoria' : (titulo === 'Perdiste' ? 'derrota' : 'neutro');
     const panelAncho = 400;
     const px = 400 - panelAncho / 2;
-    const padArriba = 26;
-    const padAbajo = 26;
-    // Centésimo pase: alto fijo de cada fila de jugador + aire entre una y
-    // la otra — antes las dos filas quedaban pegadas (un solo bloque
-    // partido al medio por el color); ahora son dos placas visualmente
-    // independientes, así que hace falta un gap real entre ellas. Se
-    // declaran acá (no sueltos adentro del bloque de abajo) porque el
-    // cálculo de `altoContenido` (más abajo) necesita el mismo número para
-    // no desfasar el alto real del panel.
-    const filaJugadorAlto = 28;
-    const gapEntreFilas = 10;
-    // Pase 266, punto 3: 44→52 — el usuario pidió "aumentar la altura
-    // mínima de los botones (Pedir revancha / Volver al lobby) para que
-    // los textos interiores respiren con un margen amplio". Se declara
-    // acá (no un literal suelto en cada `_crearBotonOverlay`) por el
-    // mismo motivo que `filaJugadorAlto`: el precálculo de
-    // `altoContenido` más abajo y el `y +=` entre un botón y el otro
-    // necesitan el mismo número para no desfasar el panel.
-    const altoBotonFinal = 52;
+    const padArriba = 22;
+    const padAbajo = 22;
+    const altoBotonFinal = 46;
+    const altoFilaGanador = 34;
+    const altoFilaPerdedor = 26;
+    const gapEntreFilas = 8;
 
-    // 1) Título — ancho ceñido al texto real vía `.width` en vez de una
-    // fórmula por cantidad de caracteres — mismo criterio que el
-    // `carteloTitulo` nativo, que se ciñe por padding, no por un ancho
-    // fijo adivinado.
-    // Pase 211: bug real reportado — con un título largo (ej. "Pasaron 10
-    // minutos sin que se sumara nadie más. Se canceló la sala.", el
-    // mensaje de sala cancelada por timeout) este texto no tenía
-    // `wordWrap`, así que medía su ancho REAL en una sola línea sin
-    // límite — y el cartel dorado (`pillW`, calculado a partir de ese
-    // ancho) terminaba mucho más ancho que la tarjeta entera
-    // (`panelAncho`), desbordando sus bordes. Mismo `wordWrap` que ya usa
-    // `textoSubtitulo` más abajo (panelAncho - 60) — un título corto
-    // ("¡Ganaste!") sigue entrando en una sola línea igual que antes, uno
-    // largo ahora pasa a 2-3 líneas en vez de estirar el cartel.
-    // Nonagésimo sexto pase: antes el título era SIEMPRE dorado macizo,
-    // sin importar el resultado (paridad explícita con el nativo, pase
-    // 76). El usuario pidió ahora lo contrario, explícitamente: título
-    // verde esmeralda con resplandor tipo cartoon si ganó, rojo carmesí/
-    // borgoña si perdió — se revierte esa paridad a propósito, por
-    // pedido directo, no por error. El resplandor (pedido solo para la
-    // victoria) se logra con la sombra de Phaser con blur>0 — el resto de
-    // los textos de esta escena usan a propósito blur:0 (contorno sólido,
-    // no difuminado) para legibilidad general, pero un halo difuminado es
-    // justamente el efecto pedido acá.
-    const colorTitulo = gano ? '#1f7a3c' : '#8c2a2a';
-    const padHTitulo = 18, padVTitulo = 6;
-    const textoTitulo = this.add.text(0, 0, titulo, {
-      fontFamily: 'Fredoka, Arial', fontSize: '22px', fontStyle: '600', color: colorTitulo, align: 'center',
-      wordWrap: { width: panelAncho - 60 },
-      ...(gano ? { stroke: '#FFD668', strokeThickness: 3 } : {}),
-    }).setDepth(902);
-    const pillW = textoTitulo.width + padHTitulo * 2;
-    const pillH = textoTitulo.height + padVTitulo * 2;
+    // 1) Título
+    let textoTitulo;
+    let pillW, pillH;
+    if (modo === 'victoria') {
+      textoTitulo = this.add.text(0, 0, '¡GANASTE!', {
+        fontFamily: 'Fredoka, Arial', fontSize: '32px', fontStyle: '700', color: '#FFFFFF', align: 'center',
+        stroke: '#7a4200', strokeThickness: 6,
+      }).setDepth(903);
+      pillW = textoTitulo.width + 84;
+      pillH = textoTitulo.height + 16;
+    } else if (modo === 'derrota') {
+      textoTitulo = this.add.text(0, 0, 'PERDISTE', {
+        fontFamily: 'Fredoka, Arial', fontSize: '28px', fontStyle: '700', color: '#E4573D', align: 'center',
+        stroke: '#000000', strokeThickness: 5,
+      }).setDepth(903);
+      pillW = textoTitulo.width + 76;
+      pillH = textoTitulo.height + 18;
+    } else {
+      textoTitulo = this.add.text(0, 0, titulo, {
+        fontFamily: 'Fredoka, Arial', fontSize: '22px', fontStyle: '600', color: '#8c2a2a', align: 'center',
+        wordWrap: { width: panelAncho - 60 },
+      }).setDepth(903);
+      pillW = textoTitulo.width + 36;
+      pillH = textoTitulo.height + 12;
+    }
     this._sprites.push(textoTitulo);
 
-    let altoContenido = padArriba + pillH;
+    // 2) Aro de caoba + cara. El hueco del aro mide ≈62% del PNG.
+    const HUECO = 0.62;
+    const cuerpoSinAvatar = () => {
+      let h = padArriba + pillH + 8 + 6;
+      if (esCampeon) h += 22;
+      if (subtitulo) h += 24;
+      return h;
+    };
 
-    // 1.5) Cara del personaje del propio jugador — victoriosa si ganó,
-    // derrotada si perdió — reemplaza el emoji fijo que antes vivía
-    // pegado al texto del título (pedido del usuario). Mismo personaje
-    // que el jugador tiene elegido, cargado en preload() como
-    // 'caraVictorioso'/'caraDerrotado'.
-    // Pase 204: 72→140 — el usuario pidió agrandarla porque sobraba
-    // espacio vacío alrededor; el resto del layout ya calcula el alto
-    // del panel en base a `caraTam`, así que agrandarla acá alcanza (el
-    // panel sigue cómodo bajo el tope de 560px, ver `panelAlto` abajo).
-    // Centésimo primer pase: 140→190 (+35%, dentro del 30-40% pedido) —
-    // mismo motivo que el pase 204, el usuario la pidió más grande todavía.
-    const caraTam = 190;
-    const caraFinal = this.add.image(400, 0, gano ? 'caraVictorioso' : 'caraDerrotado').setDepth(902);
-    caraFinal.setDisplaySize(caraTam, caraTam);
-    this._sprites.push(caraFinal);
-
-    // Nonagésimo sexto pase: "borde circular estilo moneda de bronce...
-    // con trazo negro marcado para integrarlo a la placa" — 3 anillos
-    // concéntricos dibujados con `strokeCircle` (no `fillCircle`: un
-    // relleno tapa a `caraFinal`, un trazo deja el centro transparente)
-    // mismo criterio de capas que los remaches de `_dibujarPlacaMarcador`
-    // pero a la escala de un marco de avatar en vez de un rivet chico.
-    // Se posiciona junto con `caraFinal` más abajo (mismo punto, mismo
-    // momento), no acá — todavía no se sabe el Y final.
-    // Pase 266: + 6 → - 14. Ahora que `caraFinal` carga la variante
-    // "_cerca" (recorte ajustado al contenido, ver preload), el personaje
-    // ocupa el 100% de `caraTam` en vez de flotar con relleno vacío
-    // alrededor. Un radio MENOR que caraTam/2 hace que el sombrero/parte
-    // superior de la cabeza sobresalga por encima del anillo dorado en
-    // vez de quedar contenido adentro — el "efecto pop-out sticker"
-    // pedido. El valor -14 es empírico: deja asomar la copa del sombrero
-    // sin tapar el anillo en el resto del contorno (cara/hombros siguen
-    // adentro, que es lo que da la sensación de superposición y no de
-    // recorte roto).
-    const radioAvatar = caraTam / 2 - 14;
-    const marcoAvatar = this.add.graphics().setDepth(901.9);
-    marcoAvatar.lineStyle(10, 0x1a1410, 1); // negroPulido — contorno exterior grueso
-    marcoAvatar.strokeCircle(0, 0, radioAvatar);
-    marcoAvatar.lineStyle(7, 0xc9973e, 1); // remache — cuerpo de la moneda de bronce
-    marcoAvatar.strokeCircle(0, 0, radioAvatar - 1);
-    marcoAvatar.lineStyle(2, 0xf0d9a0, 0.85); // remacheClaro — brillo fino interior
-    marcoAvatar.strokeCircle(0, 0, radioAvatar - 4);
-    this._sprites.push(marcoAvatar);
-
-    altoContenido += 10 + caraTam;
-
-    // 2) "👑 ¡Sos el campeón del torneo!" — línea aparte, no reemplaza
-    // el título (en el nativo conviven las dos: el título de
-    // ganó/perdió arriba siempre, y esta debajo solo si es campeón).
-    let campeonTxt = null;
-    if (esCampeon) {
-      campeonTxt = this.add.text(400, 0, '👑 ¡Sos el campeón del torneo!', {
-        fontFamily: 'Fredoka, Arial', fontSize: '15px', fontStyle: '600', color: '#C9860E', align: 'center',
-      }).setOrigin(0.5, 0).setDepth(902);
-      this._sprites.push(campeonTxt);
-      altoContenido += 12 + campeonTxt.height + 16;
+    // Ítems de recompensa (solo lo que haya para mostrar).
+    const itemsRec = [];
+    if (recompensa && typeof recompensa === 'object') {
+      const p = Number(recompensa.puntos);
+      if (Number.isFinite(p) && p !== 0) {
+        itemsRec.push({ tipo: 'puntos', texto: `${p > 0 ? '+' : ''}${p} Puntos`, color: p > 0 ? '#1f7a3c' : '#8c2a2a' });
+      }
+      const m = Number(recompensa.monedas);
+      if (Number.isFinite(m) && m > 0) {
+        itemsRec.push({ tipo: 'moneda', texto: `+${m} Monedas`, color: '#9a6200' });
+      }
     }
+    const hayRecompensa = itemsRec.length > 0;
 
-    // 3) Aclaración de motivo (ej. "El rival abandonó la partida.") —
-    // esto es un agregado propio de la web, el nativo no la muestra; se
-    // mantiene porque el backend ya manda ese dato y le da contexto real
-    // al jugador de por qué terminó la partida, pero ahora se pinta con
-    // el mismo criterio tipográfico apagado que el resto de los textos
-    // secundarios de esta pantalla en vez de convivir dentro del cartel
-    // del título.
-    let textoSubtitulo = null;
-    if (subtitulo) {
-      textoSubtitulo = this.add.text(400, 0, subtitulo, {
-        fontFamily: 'Nunito, Arial', fontSize: '13px', color: '#7a6660', align: 'center',
-        wordWrap: { width: panelAncho - 60 },
-      }).setOrigin(0.5, 0).setDepth(902);
-      this._sprites.push(textoSubtitulo);
-      altoContenido += (esCampeon ? 0 : 12) + textoSubtitulo.height + 14;
-    } else if (!esCampeon) {
-      altoContenido += 12;
-    }
-
-    // 4) Filas de jugadores — fondo neutro parejo para las dos filas (no
-    // coloreado por resultado) + franja de acento a la izquierda, mismo
-    // criterio que `filaJugadorResultado` en el nativo (ahí el color
-    // solo tiñe la franja y el texto, nunca el fondo de la fila entera).
-    // Pase siguiente: se agrega una línea divisoria fina antes de las
-    // filas de jugadores (separa visualmente "resultado" de "detalle de
-    // quién ganó/perdió", como pide el feedback de que esta pantalla se
-    // sentía poco jerarquizada) — de ahí el +14 extra acá.
     const hayJugadores = jugadoresFinal && jugadoresFinal.length > 0;
-    if (hayJugadores) {
-      // Centésimo pase: antes era `jugadoresFinal.length * 32` (28 de
-      // fila + 4 de aire implícito, pegadas) — ahora cada fila suma su
-      // propio alto más el gap real contra la siguiente, salvo la
-      // última (no hay gap después de la última fila, por eso el -1).
-      altoContenido += 14 + jugadoresFinal.length * filaJugadorAlto + (jugadoresFinal.length - 1) * gapEntreFilas + 16;
-    }
+    const filas = hayJugadores
+      ? [...jugadoresFinal].sort((a, b) => (b.gano ? 1 : 0) - (a.gano ? 1 : 0))
+      : [];
+    let altoFilasTotal = 0;
+    filas.forEach((j, i) => { altoFilasTotal += (j.gano ? altoFilaGanador : altoFilaPerdedor) + (i < filas.length - 1 ? gapEntreFilas : 0); });
 
-    // 5) Botón de revancha (si no es torneo) — con su texto de estado
-    // arriba (como en el nativo: "Esperando confirmación… (X/Y)" vive
-    // ANTES del botón, no después) — y 6) botón de volver al lobby.
-    if (!esTorneo) {
-      altoContenido += 20 + altoBotonFinal + 8;
-    }
-    altoContenido += altoBotonFinal;
+    const altoSinAvatar = cuerpoSinAvatar()
+      + (hayRecompensa ? 38 + 10 : 0)
+      + (hayJugadores ? 4 + altoFilasTotal + 14 : 8)
+      + (!esTorneo ? 18 + altoBotonFinal + 8 : 0)
+      + altoBotonFinal + padAbajo;
+    const PANEL_MAX = 584;
+    let aroTam = 176;
+    if (altoSinAvatar + aroTam > PANEL_MAX) aroTam = Math.max(110, PANEL_MAX - altoSinAvatar);
+    const huecoD = aroTam * HUECO;
+    const caraTam = Math.round(huecoD * 1.1);
 
-    const panelAlto = Math.min(560, Math.max(220, altoContenido + padAbajo));
+    const panelAlto = Math.min(PANEL_MAX, Math.max(220, altoSinAvatar + aroTam));
     const py = 300 - panelAlto / 2;
 
-    // Nonagésimo cuarto pase: el anillo dorado macizo + tarjeta crema
-    // plana (sin relieve, con líneas divisorias de tabla web — feedback
-    // explícito del usuario) se reemplazan por el marco de madera
-    // biselada con remaches de bronce que ya usa el Lobby — ver
-    // `_dibujarMarcoMaderaConRemaches`, un solo Graphics en vez de dos.
     const marco = this.add.graphics().setDepth(900);
     this._dibujarMarcoMaderaConRemaches(marco, px, py, panelAncho, panelAlto, 20, 14, 9);
     this._sprites.push(marco);
 
-    // Pase siguiente: pedido del usuario de "sumar algún detalle de
-    // celebración si ganás" — un puñado de cuadraditos de colores que
-    // caen desde arriba del panel y se desvanecen, una sola vez, nada
-    // en loop. Solo cuando el resultado es una victoria propia (nunca en
-    // el caso neutro de sala cancelada ni cuando perdés).
-    if (gano) {
-      const coloresConfeti = [0xFFB627, 0xFFD668, 0x4FB3E8, 0x2D9B4F];
-      for (let i = 0; i < 16; i++) {
-        const cx = px + 16 + Math.random() * (panelAncho - 32);
-        const cy = py - 4;
-        const pieza = this.add.graphics().setDepth(901.5);
-        pieza.fillStyle(coloresConfeti[i % coloresConfeti.length], 1);
-        pieza.fillRect(-3, -3, 6, 6);
-        pieza.setPosition(cx, cy);
-        pieza.setAngle(Math.random() * 360);
-        this._sprites.push(pieza);
-        this.tweens.add({
-          targets: pieza,
-          y: cy + 46 + Math.random() * 44,
-          x: cx + (Math.random() * 44 - 22),
-          angle: pieza.angle + (Math.random() > 0.5 ? 220 : -220),
-          alpha: 0,
-          duration: 1000 + Math.random() * 500,
-          delay: Math.random() * 250,
-          ease: 'Cubic.easeIn',
-        });
-      }
-    }
-
+    // Posiciones verticales
     const pillCenterY = py + padArriba + pillH / 2;
-    // Nonagésimo cuarto pase: el cartel de título pasa del rectángulo
-    // dorado macizo y plano de antes al mismo banner de pergamino de 3
-    // franjas que ya usa el resto de la mesa para carteles de texto
-    // (`_crearBannerTexto`/`_mostrarCanto`) — pedido explícito del
-    // usuario: "colocar el encabezado en un cartel de madera o listón
-    // de pergamino desplegado".
-    const texIzqTit = this.textures.get('banner_izq').getSourceImage();
-    const texDerTit = this.textures.get('banner_der').getSourceImage();
-    const capWTit = Math.round(texIzqTit.width * (pillH / texIzqTit.height));
-    const capWDerTit = Math.round(texDerTit.width * (pillH / texDerTit.height));
-    const midWTit = Math.max(1, pillW - capWTit - capWDerTit);
-    const cartelIzq = this.add.image(400 - pillW / 2 + capWTit / 2, pillCenterY, 'banner_izq').setDisplaySize(capWTit, pillH).setDepth(901);
-    const cartelCentro = this.add.image(400 - pillW / 2 + capWTit + midWTit / 2, pillCenterY, 'banner_centro').setDisplaySize(midWTit, pillH).setDepth(901);
-    const cartelDer = this.add.image(400 + pillW / 2 - capWDerTit / 2, pillCenterY, 'banner_der').setDisplaySize(capWDerTit, pillH).setDepth(901);
-    textoTitulo.setPosition(400, pillCenterY).setOrigin(0.5).setDepth(902);
-    this._sprites.push(cartelIzq, cartelCentro, cartelDer);
+    const avatarCy = pillCenterY + pillH / 2 + 8 + aroTam / 2;
 
-    let y = pillCenterY + pillH / 2 + 12;
-
-    caraFinal.setPosition(400, y + caraTam / 2);
-    marcoAvatar.setPosition(400, y + caraTam / 2);
-    y += caraTam + 10;
-
-    if (campeonTxt) {
-      campeonTxt.setPosition(400, y);
-      y += campeonTxt.height + 16;
+    // 3) Rayos de victoria girando detrás (recortados al interior de la tarjeta)
+    if (modo === 'victoria') {
+      const rayos = this.add.graphics().setDepth(900.6);
+      rayos.setPosition(400, avatarCy);
+      const N = 14, R = 340;
+      for (let i = 0; i < N; i++) {
+        const a0 = (i / N) * Math.PI * 2;
+        const a1 = a0 + (Math.PI * 2 / N) * 0.5;
+        rayos.fillStyle(i % 2 === 0 ? 0xFFD668 : 0xFFF3B0, i % 2 === 0 ? 0.30 : 0.18);
+        rayos.beginPath();
+        rayos.moveTo(0, 0);
+        rayos.lineTo(Math.cos(a0) * R, Math.sin(a0) * R);
+        rayos.lineTo(Math.cos(a1) * R, Math.sin(a1) * R);
+        rayos.closePath();
+        rayos.fillPath();
+      }
+      const mascara = this.make.graphics({ x: 0, y: 0 }, false);
+      mascara.fillStyle(0xffffff, 1);
+      mascara.fillRect(px + 12, py + 12, panelAncho - 24, panelAlto - 24);
+      rayos.setMask(mascara.createGeometryMask());
+      this._sprites.push(rayos, mascara);
+      this._tweensFinal.push(this.tweens.add({ targets: rayos, angle: 360, duration: 26000, repeat: -1, ease: 'Linear' }));
     }
 
-    if (textoSubtitulo) {
-      textoSubtitulo.setPosition(400, y);
-      y += textoSubtitulo.height + 14;
+    // 4) Título (cinta dorada / cartel de madera y hierro / cinta neutra)
+    if (modo === 'derrota') {
+      const g = this.add.graphics().setDepth(901);
+      const x0 = 400 - pillW / 2, y0 = pillCenterY - pillH / 2;
+      g.fillStyle(0x000000, 0.35);
+      g.fillRoundedRect(x0 + 2, y0 + 5, pillW, pillH, 8);
+      g.fillStyle(0x2f2018, 1);
+      g.fillRoundedRect(x0, y0, pillW, pillH, 8);
+      g.lineStyle(1, 0x4a3226, 1);                       // vetas de tablón
+      [0.33, 0.66].forEach(f => g.lineBetween(x0 + 24, y0 + pillH * f, x0 + pillW - 24, y0 + pillH * f));
+      g.fillStyle(0x3d2b20, 1);
+      g.fillRect(x0 + 24, y0 + 3, pillW - 48, 3);
+      g.fillStyle(0x4a4e57, 1);                           // flejes de hierro
+      g.fillRect(x0 + 12, y0, 12, pillH);
+      g.fillRect(x0 + pillW - 24, y0, 12, pillH);
+      g.lineStyle(2, 0x000000, 1);
+      g.strokeRoundedRect(x0, y0, pillW, pillH, 8);
+      g.fillStyle(0x9aa0aa, 1);                           // remaches
+      [[18, 7], [18, pillH - 7], [pillW - 18, 7], [pillW - 18, pillH - 7]].forEach(([dx, dy]) => g.fillCircle(x0 + dx, y0 + dy, 2.3));
+      this._sprites.push(g);
+    } else {
+      const texIzqTit = this.textures.get('banner_izq').getSourceImage();
+      const texDerTit = this.textures.get('banner_der').getSourceImage();
+      const capWTit = Math.round(texIzqTit.width * (pillH / texIzqTit.height));
+      const capWDerTit = Math.round(texDerTit.width * (pillH / texDerTit.height));
+      const midWTit = Math.max(1, pillW - capWTit - capWDerTit);
+      const cartelIzq = this.add.image(400 - pillW / 2 + capWTit / 2, pillCenterY, 'banner_izq').setDisplaySize(capWTit, pillH).setDepth(901);
+      const cartelCentro = this.add.image(400 - pillW / 2 + capWTit + midWTit / 2, pillCenterY, 'banner_centro').setDisplaySize(midWTit, pillH).setDepth(901);
+      const cartelDer = this.add.image(400 + pillW / 2 - capWDerTit / 2, pillCenterY, 'banner_der').setDisplaySize(capWDerTit, pillH).setDepth(901);
+      if (modo === 'victoria') [cartelIzq, cartelCentro, cartelDer].forEach(c => c.setTint(0xFFD25A));
+      this._sprites.push(cartelIzq, cartelCentro, cartelDer);
+    }
+    textoTitulo.setPosition(400, pillCenterY + (modo === 'victoria' ? -1 : 0)).setOrigin(0.5);
+
+    // 5) Avatar: disco de fondo + cara + Aro de Caoba por encima
+    const discoColor = modo === 'victoria' ? 0xFFE9A8 : (modo === 'derrota' ? 0xB9AE9E : 0xE9D9B0);
+    if (modo === 'victoria') {
+      const halo = this.add.graphics().setDepth(901.8);
+      halo.fillStyle(0xFFD668, 0.45);
+      halo.fillCircle(0, 0, aroTam * 0.5);
+      halo.setPosition(400, avatarCy);
+      this._sprites.push(halo);
+      this._tweensFinal.push(this.tweens.add({ targets: halo, alpha: 0.35, scale: 1.06, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' }));
+    }
+    const disco = this.add.graphics().setDepth(902);
+    disco.fillStyle(discoColor, 1);
+    disco.fillCircle(400, avatarCy, huecoD / 2 + 2);
+    this._sprites.push(disco);
+    const caraFinal = this.add.image(400, avatarCy, gano ? 'caraVictorioso' : 'caraDerrotado').setDepth(902.2);
+    caraFinal.setDisplaySize(caraTam, caraTam);
+    this._sprites.push(caraFinal);
+    const aroFinal = this.add.image(400, avatarCy, 'aroAvatarEspera').setDisplaySize(aroTam, aroTam).setDepth(902.6);
+    this._sprites.push(aroFinal);
+
+    let y = avatarCy + aroTam / 2 + 6;
+
+    // 6) Frases debajo del avatar
+    if (esCampeon) {
+      const campeonTxt = this.add.text(400, y, '👑 ¡Sos el campeón del torneo!', {
+        fontFamily: 'Fredoka, Arial', fontSize: '15px', fontStyle: '600', color: '#C9860E', align: 'center',
+      }).setOrigin(0.5, 0).setDepth(902);
+      this._sprites.push(campeonTxt);
+      y += 22;
+    }
+    if (subtitulo) {
+      const textoSubtitulo = this.add.text(400, y, subtitulo, {
+        fontFamily: 'Nunito, Arial', fontSize: '13px', fontStyle: 'bold', color: '#7a6660', align: 'center',
+        wordWrap: { width: panelAncho - 60 },
+      }).setOrigin(0.5, 0).setDepth(902);
+      this._sprites.push(textoSubtitulo);
+      y += 24;
     }
 
-    if (hayJugadores) {
-      // Línea divisoria fina — separa el cartel de resultado de arriba
-      // del detalle de "quién ganó/perdió" de abajo, mismo criterio de
-      // separadores tenues que ya usa Ranking.js (fila con
-      // borderBottom dashed) en vez de dejarlo todo flotando junto.
-      const anchoLinea = panelAncho - 60;
-      const lineaDivisoria = this.add.graphics().setDepth(901);
-      lineaDivisoria.lineStyle(2, 0x4A2C2A, 0.12);
-      lineaDivisoria.lineBetween(400 - anchoLinea / 2, y, 400 + anchoLinea / 2, y);
-      this._sprites.push(lineaDivisoria);
-      y += 14;
+    // 7) Placa de recompensas (pergamino ahuecado)
+    if (hayRecompensa) {
+      const ICONO = 22, GAP_ICONO = 6, GAP_ITEMS = 26;
+      const objs = itemsRec.map(it => {
+        const t = this.add.text(0, 0, it.texto, {
+          fontFamily: 'Fredoka, Arial', fontSize: '17px', fontStyle: '700', color: it.color,
+        }).setOrigin(0, 0.5).setDepth(902);
+        this._sprites.push(t);
+        return t;
+      });
+      const anchoItems = objs.reduce((s, t) => s + ICONO + GAP_ICONO + t.width, 0) + GAP_ITEMS * (objs.length - 1);
+      const placaW = Math.min(panelAncho - 60, Math.max(200, anchoItems + 40));
+      const placaH = 38;
+      const placaX = 400 - placaW / 2;
+      const placa = this.add.graphics().setDepth(901);
+      placa.fillStyle(0x4A2C2A, 0.28);
+      placa.fillRoundedRect(placaX, y, placaW, placaH, 10);
+      placa.fillStyle(0xEAD9B5, 1);
+      placa.fillRoundedRect(placaX + 1.5, y + 3, placaW - 3, placaH - 5, 8);
+      placa.fillStyle(0xB89A6A, 0.45);                    // sombra interior superior
+      placa.fillRoundedRect(placaX + 1.5, y + 3, placaW - 3, 6, 8);
+      placa.lineStyle(2, 0x6b4a34, 1);
+      placa.strokeRoundedRect(placaX, y, placaW, placaH, 10);
+      this._sprites.push(placa);
 
-      const filaAncho = panelAncho - 80;
-      jugadoresFinal.forEach((j) => {
-        const filaFondo = this.add.graphics().setDepth(901);
-        const fy = y - filaJugadorAlto / 2;
-
-        // Centésimo pase: pedido explícito del usuario — ya no son dos
-        // mitades de un mismo bloque (franja de acento a la izquierda
-        // nada más); cada fila pasa a ser una placa VISUALMENTE
-        // INDEPENDIENTE, con su propio contorno fino alrededor entero
-        // ("borde de madera fina" en la ganadora, "borde rojo carmesí"
-        // en la perdedora) además del gap real que ya separa una de la
-        // otra (ver `gapEntreFilas`, declarado arriba junto a
-        // `panelAncho`). Se sacó la franja sólida de la izquierda — el
-        // contorno completo ya cumple ese rol de "detalle de color" sin
-        // necesitar las dos cosas a la vez.
-        let colorTexto;
-        if (j.gano) {
-          // Pergamino claro ahuecado (sin cambios de tono respecto al
-          // pase 263) + borde de madera fina (maderaClara, el mismo tono
-          // que ya usa el resto de la mesa para marcos de madera) en vez
-          // de la franja esmeralda sólida de antes — el verde esmeralda
-          // queda como "detalle" en el filete interior, no como borde.
-          filaFondo.fillStyle(0x4A2C2A, 0.18); // sombra sutil, da profundidad al hueco
-          filaFondo.fillRoundedRect(400 - filaAncho / 2, fy, filaAncho, filaJugadorAlto, 8);
-          filaFondo.fillStyle(0xFFF8ED, 1); // crema/pergamino
-          filaFondo.fillRoundedRect(400 - filaAncho / 2 + 1.5, fy + 1.5, filaAncho - 3, filaJugadorAlto - 5, 6.5);
-          filaFondo.fillStyle(0xFFFFFF, 0.35); // brillo superior sutil
-          filaFondo.fillRoundedRect(400 - filaAncho / 2 + 1.5, fy + 1.5, filaAncho - 3, 7, 6.5);
-          filaFondo.lineStyle(1, 0x2D9B4F, 0.5); // filete esmeralda interior — el "detalle" pedido
-          filaFondo.lineBetween(400 - filaAncho / 2 + 10, fy + filaJugadorAlto - 2.5, 400 + filaAncho / 2 - 10, fy + filaJugadorAlto - 2.5);
-          filaFondo.lineStyle(2, 0x6b4a34, 1); // maderaClara — borde de madera fina, entero
-          filaFondo.strokeRoundedRect(400 - filaAncho / 2, fy, filaAncho, filaJugadorAlto, 8);
-          colorTexto = '#3a2412'; // chocolate oscuro, legible sobre pergamino claro
+      let cx = 400 - anchoItems / 2;
+      const cyP = y + placaH / 2 + 1;
+      itemsRec.forEach((it, i) => {
+        const ic = cx + ICONO / 2;
+        if (it.tipo === 'moneda') {
+          const m = this.add.image(ic, cyP, 'monedaEsperaCara').setDisplaySize(ICONO + 2, ICONO + 2).setDepth(902);
+          this._sprites.push(m);
         } else {
-          // Cuero oscuro ahuecado (sin cambios de tono) + borde rojo
-          // carmesí entero, mismo criterio que la ganadora.
-          filaFondo.fillStyle(0x1a1410, 0.9); // negroPulido — base del hueco
-          filaFondo.fillRoundedRect(400 - filaAncho / 2, fy, filaAncho, filaJugadorAlto, 8);
-          filaFondo.fillStyle(0x4a3226, 1); // maderaMedia tratada como cuero
-          filaFondo.fillRoundedRect(400 - filaAncho / 2 + 1.5, fy + 1.5, filaAncho - 3, filaJugadorAlto - 5, 6.5);
-          filaFondo.fillStyle(0x000000, 0.22);
-          filaFondo.fillRoundedRect(400 - filaAncho / 2 + 1.5, fy + 1.5, filaAncho - 3, 7, 6.5);
-          filaFondo.lineStyle(2, 0xB0454B, 1); // rojo carmesí — borde entero
-          filaFondo.strokeRoundedRect(400 - filaAncho / 2, fy, filaAncho, filaJugadorAlto, 8);
-          colorTexto = '#FFF8ED'; // crema, legible sobre cuero oscuro
+          // cuadro de fósforos: 4 palitos + el tachado del quinto
+          const f = this.add.graphics().setDepth(902);
+          f.lineStyle(3, 0x3a2412, 1);
+          [-7, -2.5, 2, 6.5].forEach(dx => f.lineBetween(ic + dx, cyP - 8, ic + dx, cyP + 8));
+          f.lineStyle(3, 0xB0454B, 1);
+          f.lineBetween(ic - 10, cyP + 5, ic + 10, cyP - 5);
+          this._sprites.push(f);
+        }
+        objs[i].setPosition(cx + ICONO + GAP_ICONO, cyP);
+        cx += ICONO + GAP_ICONO + objs[i].width + GAP_ITEMS;
+      });
+      y += placaH + 10;
+    }
+
+    // 8) Filas de jugadores: el ganador brilla, el perdedor queda sobrio
+    if (hayJugadores) {
+      y += 4;
+      const filaAncho = panelAncho - 80;
+      filas.forEach((j) => {
+        const alto = j.gano ? altoFilaGanador : altoFilaPerdedor;
+        const fx = 400 - filaAncho / 2;
+        const fy = y;
+        const cyF = fy + alto / 2;
+        const filaFondo = this.add.graphics().setDepth(901);
+        if (j.gano) {
+          const brillo = this.add.graphics().setDepth(900.9);
+          brillo.fillStyle(0xFFD668, 0.5);
+          brillo.fillRoundedRect(fx - 4, fy - 4, filaAncho + 8, alto + 8, 12);
+          this._sprites.push(brillo);
+          this._tweensFinal.push(this.tweens.add({ targets: brillo, alpha: 0.25, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' }));
+
+          filaFondo.fillStyle(0x4A2C2A, 0.3);
+          filaFondo.fillRoundedRect(fx, fy + 2, filaAncho, alto, 9);
+          filaFondo.fillStyle(0xFFE08A, 1);
+          filaFondo.fillRoundedRect(fx + 1.5, fy + 1.5, filaAncho - 3, alto - 4, 7.5);
+          filaFondo.fillStyle(0xFFF3C4, 1);
+          filaFondo.fillRoundedRect(fx + 1.5, fy + 1.5, filaAncho - 3, (alto - 4) * 0.5, 7.5);
+          filaFondo.lineStyle(2, 0xF5B041, 1);
+          filaFondo.strokeRoundedRect(fx + 3, fy + 3, filaAncho - 6, alto - 8, 6);
+          filaFondo.lineStyle(2, 0x6b4a34, 1);
+          filaFondo.strokeRoundedRect(fx, fy, filaAncho, alto, 9);
+        } else {
+          filaFondo.fillStyle(0x8a7b6a, 0.55);
+          filaFondo.fillRoundedRect(fx, fy, filaAncho, alto, 8);
+          filaFondo.fillStyle(0xD3C9B8, 1);
+          filaFondo.fillRoundedRect(fx + 1.5, fy + 3, filaAncho - 3, alto - 5, 6.5);
+          filaFondo.fillStyle(0x8a7b6a, 0.35);              // sombra interior: se ve hundida
+          filaFondo.fillRoundedRect(fx + 1.5, fy + 3, filaAncho - 3, 5, 6.5);
+          filaFondo.lineStyle(1, 0x8a7b6a, 1);
+          filaFondo.strokeRoundedRect(fx, fy, filaAncho, alto, 8);
         }
         this._sprites.push(filaFondo);
 
-        // Pase 201: se quita el chip de avatar con la inicial del
-        // nombre (pedido del usuario: "con el nombre alcanza") — el
-        // texto de la fila arranca directo después del borde izquierdo.
-        const filaTexto = this.add.text(400 - filaAncho / 2 + 14, y, j.nombre, {
-          fontFamily: 'Nunito, Arial', fontSize: '13px', fontStyle: 'bold', color: colorTexto,
-          ...(j.gano ? {} : { stroke: '#000000', strokeThickness: 2 }),
-        }).setOrigin(0, 0.5).setDepth(902);
+        const filaTexto = this.add.text(fx + 14, cyF + 1, j.nombre, j.gano
+          ? { fontFamily: 'Nunito, Arial', fontSize: '15px', fontStyle: '800', color: '#3a2412' }
+          : { fontFamily: 'Nunito, Arial', fontSize: '12px', fontStyle: 'bold', color: '#6f6558' }
+        ).setOrigin(0, 0.5).setDepth(902);
         this._sprites.push(filaTexto);
 
-        // Centésimo pase: la etiqueta "🏆 Ganador" (texto) se reemplaza
-        // por un ícono de trofeo real en el extremo derecho — pedido
-        // explícito del usuario ("ícono de Copa/Trofeo dorado 3D en el
-        // extremo derecho"), en vez de un emoji adentro del texto. La
-        // fila perdedora mantiene su etiqueta de texto "Perdedor" (no se
-        // pidió ningún ícono para ese lado).
         if (j.gano) {
-          const iconoTrofeo = this.add.image(400 + filaAncho / 2 - 16, y, 'trofeoFila')
-            .setDisplaySize(24, 24).setDepth(902);
+          const iconoTrofeo = this.add.image(fx + filaAncho - 18, cyF, 'trofeoFila').setDisplaySize(28, 28).setDepth(902);
           this._sprites.push(iconoTrofeo);
         } else {
-          const filaEtiqueta = this.add.text(400 + filaAncho / 2 - 12, y, 'Perdedor', {
-            fontFamily: 'Nunito, Arial', fontSize: '12px', fontStyle: 'bold', color: '#f0a3a3',
-            stroke: '#000000', strokeThickness: 2,
+          const filaEtiqueta = this.add.text(fx + filaAncho - 12, cyF + 1, 'Paso', {
+            fontFamily: 'Nunito, Arial', fontSize: '11px', fontStyle: 'italic', color: '#7d7263',
           }).setOrigin(1, 0.5).setDepth(902);
           this._sprites.push(filaEtiqueta);
         }
-
-        y += filaJugadorAlto + gapEntreFilas;
+        y += alto + gapEntreFilas;
       });
-      // La última fila ya suma `gapEntreFilas` de más (el gap es "contra
-      // la siguiente fila", pero no hay una siguiente) — se resta antes
-      // de sumar el margen real de cierre de esta sección.
       y -= gapEntreFilas;
-      y += 16;
+      y += 14;
+    } else {
+      y += 8;
     }
 
+    // 9) Botones
     if (!esTorneo) {
-      // Centésimo pase: placa de fondo para el texto de estado de la
-      // revancha — arranca invisible (la mayoría de los estados de este
-      // texto, "Esperando confirmación…", no llevan placa, solo texto
-      // apagado como antes). Se muestra solo cuando `_mostrarAlertaRevancha`
-      // la necesita (el aviso de "se agotó el tiempo"). Se crea ACÁ, no
-      // dentro de `_mostrarAlertaRevancha`, porque esta es la única vez
-      // que se conoce el ancho/posición real del panel — después solo se
-      // redimensiona con `.clear()` + redibujado.
       this.fondoAlertaRevancha = this.add.graphics().setDepth(901).setVisible(false);
       this._sprites.push(this.fondoAlertaRevancha);
 
@@ -2649,51 +2582,84 @@ this._limpiarSprites();
         wordWrap: { width: panelAncho - 40 },
       }).setOrigin(0.5, 0).setDepth(902);
       this._sprites.push(this.textoEsperaRevancha);
-      y += 20;
+      y += 18;
 
-      // Ducentésimo septuagésimo segundo pase: pedido explícito del
-      // usuario — sacar el ícono/emoji de la izquierda, texto limpio.
       const revanchaTexto = 'Pedir revancha';
-      const revanchaAncho = this._medirAnchoTextoOverlay(revanchaTexto, '13px') + 44;
+      const revanchaAncho = this._medirAnchoTextoOverlay(revanchaTexto, '14px') + 56;
       const { contenedor: contRevancha, img: imgRevancha } = this._crearBotonOverlay({
-        x: 400, y: y + altoBotonFinal / 2, ancho: revanchaAncho, alto: altoBotonFinal, variante: 'verde', texto: revanchaTexto, tamanoFuente: 13,
+        x: 400, y: y + altoBotonFinal / 2, ancho: revanchaAncho, alto: altoBotonFinal, variante: 'esmeralda', texto: revanchaTexto, tamanoFuente: 14,
         onClick: () => {
           this.socket.emit('pedir-revancha', { codigoSala: this.codigoSala });
-          // Nonagésimo sexto pase: antes el estado "ya pedida" se
-          // simulaba redibujando el Graphics con menos opacidad.
-          // Ducentésimo septuagésimo segundo pase: pedido explícito del
-          // usuario — los botones de esta pantalla deben quedar siempre
-          // en alpha 1.0 (nada semitransparente). El estado "ya pedida"
-          // ahora se marca solo con un tinte gris apagado sobre el
-          // sprite (sigue 100% opaco) en vez de bajar la opacidad.
+          // El estado "ya pedida" se marca apagando el color (sigue 100% opaco).
           contRevancha.disableInteractive();
           if (imgRevancha) imgRevancha.setTint(0x8a9e8a);
         },
       });
-      // Centésimo pase: guardadas como propiedades de la escena — el
-      // handler de 'revancha-cancelada' (registrado en create(), fuera de
-      // esta función) necesita apagar este botón cuando se agota el
-      // tiempo, y no tenía ninguna referencia a él hasta ahora.
       this.contRevancha = contRevancha;
       this.imgRevancha = imgRevancha;
       y += altoBotonFinal + 8;
     }
 
-    const labelBoton = esTorneo ? '🏆 Ver bracket' : 'Volver al lobby';
-    const volverAncho = this._medirAnchoTextoOverlay(labelBoton, '13px') + 44;
+    const labelBoton = esTorneo ? 'Ver bracket' : 'Volver al lobby';
+    const volverAncho = this._medirAnchoTextoOverlay(labelBoton, '14px') + 56;
     this._crearBotonOverlay({
-      x: 400, y: y + altoBotonFinal / 2, ancho: volverAncho, alto: altoBotonFinal, variante: 'dorado', texto: labelBoton, tamanoFuente: 13,
+      x: 400, y: y + altoBotonFinal / 2, ancho: volverAncho, alto: altoBotonFinal, variante: 'oro', texto: labelBoton, tamanoFuente: 14,
       onClick: () => {
         if (esTorneo && this.onVerBracket) {
           this.onVerBracket(torneoId);
         } else if (this.onVolverLobby) {
-          // Pase siguiente: se manda junto lo que haya quedado guardado
-          // arriba en el handler de 'juego-terminado' — así el popup de
-          // logro desbloqueado aparece recién en el Lobby, no acá.
           this.onVolverLobby(this._logrosDesbloqueadosPendientes || []);
         }
       },
     });
+
+    // 10) Destellos y papelitos de victoria
+    if (modo === 'victoria') {
+      const estrella = (ex, ey, tam, delay) => {
+        const s = this.add.graphics().setDepth(903);
+        s.fillStyle(0xFFFFFF, 1);
+        s.fillTriangle(0, -tam, tam * 0.22, 0, -tam * 0.22, 0);
+        s.fillTriangle(0, tam, tam * 0.22, 0, -tam * 0.22, 0);
+        s.fillTriangle(-tam, 0, 0, tam * 0.22, 0, -tam * 0.22);
+        s.fillTriangle(tam, 0, 0, tam * 0.22, 0, -tam * 0.22);
+        s.fillStyle(0xFFD668, 0.9);
+        s.fillCircle(0, 0, tam * 0.2);
+        s.setPosition(ex, ey).setScale(0).setAlpha(0);
+        this._sprites.push(s);
+        this._tweensFinal.push(this.tweens.add({
+          targets: s, scale: 1, alpha: 1, angle: 45, duration: 520, delay, yoyo: true, repeat: -1, repeatDelay: 900,
+          ease: 'Sine.easeInOut',
+        }));
+      };
+      estrella(400 - pillW / 2 + 14, pillCenterY - pillH / 2 + 4, 11, 0);
+      estrella(400 + pillW / 2 - 14, pillCenterY + 2, 9, 450);
+      estrella(400 - pillW / 2 + 70, pillCenterY + pillH / 2 - 2, 7, 900);
+      estrella(400 + pillW / 2 - 80, pillCenterY - pillH / 2 + 2, 8, 1300);
+      estrella(400 - aroTam * 0.42, avatarCy - aroTam * 0.3, 9, 300);
+      estrella(400 + aroTam * 0.44, avatarCy + aroTam * 0.18, 10, 700);
+
+      const colores = [0xFFB627, 0xFFD668, 0x4FB3E8, 0xFFFFFF, 0xE74C3C, 0x10B981];
+      for (let i = 0; i < 44; i++) {
+        const cx0 = px + 16 + Math.random() * (panelAncho - 32);
+        const cy0 = py - 4;
+        const pieza = this.add.graphics().setDepth(903.5);
+        pieza.fillStyle(colores[i % colores.length], 1);
+        if (i % 3 === 0) pieza.fillRect(-1.5, -5, 3, 10); else pieza.fillRect(-3, -3, 6, 6);
+        pieza.setPosition(cx0, cy0);
+        pieza.setAngle(Math.random() * 360);
+        this._sprites.push(pieza);
+        this.tweens.add({
+          targets: pieza,
+          y: cy0 + panelAlto * (0.55 + Math.random() * 0.45),
+          x: cx0 + (Math.random() * 70 - 35),
+          angle: pieza.angle + (Math.random() > 0.5 ? 400 : -400),
+          alpha: { from: 1, to: 0 },
+          duration: 1800 + Math.random() * 1400,
+          delay: Math.random() * 1500,
+          ease: 'Cubic.easeIn',
+        });
+      }
+    }
   }
 
   // Mide el ancho real que ocuparía un texto con la fuente/tamaño de los
@@ -4757,6 +4723,57 @@ _crearBotonOverlay({ x, y, ancho, alto = 44, texto, variante = 'dorado', tamanoF
     return { contenedor, img: { setTint() {}, clearTint() {} }, label: labelRojo };
   }
 
+  // Pase 391: variantes planas 3D de código — 'esmeralda' (#10B981 / relieve
+  // #065F46) y 'oro' (#F5B041 / relieve #B9770E), borde negro 2px.
+  if (variante === 'esmeralda' || variante === 'oro') {
+    const paleta = variante === 'esmeralda'
+      ? { fill: 0x10B981, rel: 0x065F46 }
+      : { fill: 0xF5B041, rel: 0xB9770E };
+    const w = Math.max(ancho, 150);
+    const prof = 5;
+    const g = this.add.graphics();
+    const dibujar = (fill, rel) => {
+      g.clear();
+      g.fillStyle(rel, 1);
+      g.fillRoundedRect(-w / 2, -alto / 2 + prof, w, alto, alto / 2);
+      g.lineStyle(2, 0x000000, 1);
+      g.strokeRoundedRect(-w / 2, -alto / 2 + prof, w, alto, alto / 2);
+      g.fillStyle(fill, 1);
+      g.fillRoundedRect(-w / 2, -alto / 2, w, alto, alto / 2);
+      g.fillStyle(0xFFFFFF, 0.22);                       // brillo superior
+      g.fillRoundedRect(-w / 2 + 10, -alto / 2 + 4, w - 20, alto * 0.28, alto * 0.14);
+      g.lineStyle(2, 0x000000, 1);
+      g.strokeRoundedRect(-w / 2, -alto / 2, w, alto, alto / 2);
+    };
+    dibujar(paleta.fill, paleta.rel);
+    const labelPlano = this.add.text(0, 0, texto, {
+      fontFamily: 'Fredoka, Arial', fontSize: `${tamanoFuente}px`, fontStyle: '600',
+      color: '#FFFFFF', stroke: '#000000', strokeThickness: 3,
+    }).setOrigin(0.5);
+    contenedor.add([g, labelPlano]);
+    contenedor.setSize(w, alto + prof);
+    contenedor.setInteractive({ useHandCursor: true });
+    contenedor.on('pointerdown', () => {
+      this.tweens.add({ targets: contenedor, scale: 0.94, duration: 80, ease: 'Quad.easeOut' });
+    });
+    contenedor.on('pointerup', () => {
+      this.tweens.add({ targets: contenedor, scale: 1, duration: 140, ease: 'Quad.easeOut' });
+      onClick();
+    });
+    contenedor.on('pointerout', () => {
+      this.tweens.add({ targets: contenedor, scale: 1, duration: 140, ease: 'Quad.easeOut' });
+    });
+    this._sprites.push(contenedor);
+    return {
+      contenedor,
+      img: {
+        setTint() { dibujar(0x9AA39E, 0x5F6B66); },
+        clearTint() { dibujar(paleta.fill, paleta.rel); },
+      },
+      label: labelPlano,
+    };
+  }
+
   const prefijo = variante === 'verde' ? 'botonVerde' : 'botonAmarillo';
   const texIzq = this.textures.get(`${prefijo}Izq`).getSourceImage();
   const texDer = this.textures.get(`${prefijo}Der`).getSourceImage();
@@ -5167,6 +5184,8 @@ _irseAlMazo() {
   }
 
   _limpiarSprites() {
+    // Pase 391: frena los tweens infinitos de la pantalla final (rayos, destellos).
+    if (this._tweensFinal) { this._tweensFinal.forEach(t => { try { t.stop(); } catch (e) {} }); this._tweensFinal = []; }
     this._sprites.forEach(s => { if (s && s.destroy) s.destroy(); });
     this._sprites = [];
   }
