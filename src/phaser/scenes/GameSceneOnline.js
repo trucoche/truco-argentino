@@ -102,10 +102,12 @@ const VARIANTES_RUSTICAS = {
   claro:   { marco: 0x7a4a24, marcoLuz: 0xb98350, campo: 0xf0dcae, campoLuz: 0xfcefcf, campoSombra: 0xc79f62, texto: '#3a1b0c', grabado: true,  prof: 0.10 },
   oro:     { marco: 0x4a2412, marcoLuz: 0x9a5e2c, campo: 0xe3a92e, campoLuz: 0xfad46c, campoSombra: 0xa56a16, texto: '#fff3c4', grabado: false, prof: 0.14 },
   caoba:   { marco: 0x3a1c10, marcoLuz: 0x7e4e2c, campo: 0x8a4b2a, campoLuz: 0xb77041, campoSombra: 0x5a2c16, texto: '#ffe9c2', grabado: false, prof: 0.10 },
+  esmeralda: { marco: 0x0d3b2c, marcoLuz: 0x2f8f6b, campo: 0x10b981, campoLuz: 0x5fe0b5, campoSombra: 0x065f46, texto: '#f0fff8', grabado: false, prof: 0.12 },
+  apagado: { marco: 0x3a3a38, marcoLuz: 0x6a6a66, campo: 0x8a9488, campoLuz: 0xa9b3a7, campoSombra: 0x5f6b66, texto: '#dfe6dc', grabado: false, prof: 0.12 },
   oliva:   { marco: 0x26331a, marcoLuz: 0x5a7438, campo: 0x4f8a3a, campoLuz: 0x82bd5e, campoSombra: 0x2f5a22, texto: '#f4ffdc', grabado: false, prof: 0.10 },
   carmesi: { marco: 0x3a1010, marcoLuz: 0x7e2c24, campo: 0xb02a24, campoLuz: 0xdc564d, campoSombra: 0x7a1411, texto: '#ffe6d6', grabado: false, prof: 0.12 },
 };
-const RATIO_FUENTE_RUSTICO = 0.40;
+const RATIO_FUENTE_RUSTICO = 0.43;
 
 export default class GameSceneOnline extends Phaser.Scene {
 
@@ -220,9 +222,8 @@ preload() {
     // y más liviana a la vez).
     // Decimosexto pase: mismo criterio para el fondo de modo noche (arte
     // nuevo del usuario, misma composición pero de noche) — también a .jpg.
-    this.load.image('fondoMesa', conVersion(modoOscuro
-      ? 'assets/images/juego/fondo-cantina-web-noche.jpg'
-      : 'assets/images/juego/fondo-cantina-web.jpg'));
+    // Pase 412: el fondo detras de la mesa es la madera rustica vertical del Anotador de Asado, dibujada por código
+    // (ver _crearTexturaPano). Vale para 1v1, 2v2 y 3v3. El paño verde queda solo en la mesa.
     // Pedido del usuario ("vamos a colocar ahora la nueva mesa, así ya
     // completamos el diseño definitivo de la pantalla de juego 1v1"):
     // nuevo asset de mesa (paño verde + isotipo "TC", ya recortado a su
@@ -312,7 +313,6 @@ preload() {
     this.load.audio('jugar-carta', 'assets/sounds/CardGame-SoundEffect.mp3');
     this.load.audio('ganar',       'assets/sounds/ganarpartidasonido.mp3');
     this.load.audio('repartir',    'assets/sounds/repartir_cartas.mp3');
-    this.load.audio('sfx_fosforo', 'assets/sounds/sfx_fosforo_click.mp3');
     ['1_fosforo', '2_fosforos', '3_fosforos', '4_fosforos', '5_fosforos_cruz'].forEach((f, i) => {
       this.load.image(`fos_${i + 1}`, conVersion(`assets/images/juego/fosforos/${f}.png`));
     });   // Pase 403: clic de fosforo al sumar un punto
@@ -501,6 +501,7 @@ preload() {
   }
 
 _crearElementosDeTexto() {
+    this._crearTexturaPano();
     const fondo = this.add.image(400, 300, 'fondoMesa').setDisplaySize(800, 600).setDepth(0);
     this.fondoMesaImg = fondo;
 
@@ -722,7 +723,8 @@ _crearElementosDeTexto() {
     // conjunto con el +10px de `_dibujarManoJugador`).
     const altoBotonera = this._L ? this._L.panelH : 130;
     const anchoBotonera = Math.round(altoBotonera * (700 / 193));
-    const yBotonera = this._L ? this._L.panelCY : 500 + altoBotonera / 2;
+    // Pase 409: en escritorio la placa sube 10px (borde superior en Y=490) para que la botonera tenga más aire.
+    const yBotonera = this._L ? this._L.panelCY : 490 + altoBotonera / 2;
     this.add.image(400, yBotonera, 'panelBotonera').setDisplaySize(anchoBotonera, altoBotonera).setDepth(150);
     // Nonagésimo primer pase: guardada como propiedad de la escena para que
     // `_dibujarBotonesCanto` pueda repartir los botones dentro del ancho
@@ -1617,6 +1619,44 @@ _aplicarUnsharpMask(ctx, ancho, alto, cantidad = 0.35, radioBlur = 1.0, umbral =
   }
   ctx.putImageData(salida, 0, 0);
 }
+
+// Pase 412: fondo de madera rustica vertical (tablas de caoba) detras de la mesa, igual que el del
+// Anotador de Asado: degradé #5a3b28 -> #2d1b14, luz suave arriba, juntas verticales cada tabla y
+// vetas finas. El paño verde queda solo en la mesa. En modo noche se oscurece. Se guarda como 'fondoMesa'.
+_crearTexturaPano() {
+  if (this.textures.exists('fondoMesa')) this.textures.remove('fondoMesa');   // se rehace: el modo noche puede haber cambiado
+  const W = 1000, H = 1500, TABLA = 58;
+  const cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  const ctx = cv.getContext('2d');
+  const v = ctx.createLinearGradient(0, 0, 0, H);
+  v.addColorStop(0, '#5A3B28'); v.addColorStop(1, '#2D1B14');
+  ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
+  // cada tabla con un tono apenas distinto + vetas
+  let seed = 7;
+  const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  for (let x = 0; x < W; x += TABLA) {
+    ctx.fillStyle = rnd() < 0.5 ? 'rgba(255,225,190,0.035)' : 'rgba(0,0,0,0.05)';
+    ctx.fillRect(x, 0, TABLA, H);
+    for (let k = 0; k < 9; k++) {
+      const vx = x + 4 + rnd() * (TABLA - 8);
+      ctx.fillStyle = rnd() < 0.5 ? 'rgba(0,0,0,0.07)' : 'rgba(255,225,190,0.04)';
+      ctx.fillRect(vx, rnd() * H * 0.4, 1 + rnd() * 1.5, H * (0.3 + rnd() * 0.7));
+    }
+  }
+  // juntas verticales
+  for (let x = 0; x < W; x += TABLA) {
+    ctx.fillStyle = 'rgba(0,0,0,0.26)'; ctx.fillRect(x, 0, 2.5, H);
+    ctx.fillStyle = 'rgba(255,225,190,0.05)'; ctx.fillRect(x + 2.5, 0, 1.5, H);
+  }
+  // luz suave arriba
+  const luz = ctx.createRadialGradient(W / 2, 0, 0, W / 2, 0, H * 0.55);
+  luz.addColorStop(0, 'rgba(255,255,255,0.08)'); luz.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = luz; ctx.fillRect(0, 0, W, H);
+  if (this.modoOscuro) { ctx.fillStyle = 'rgba(0,0,0,0.38)'; ctx.fillRect(0, 0, W, H); }
+  this.textures.addCanvas('fondoMesa', cv);
+}
+
 
 // Vigésimo primer pase ("iluminación y atmósfera"): dos texturas de
 // gradiente radial generadas con canvas 2D (mismo mecanismo que
@@ -2784,7 +2824,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
         this._sprites.push(t);
         xTxt += icoTrofeo + 4;
       }
-      etiqueta.setPosition(xTxt, yNombre + 1);
+      etiqueta.setPosition(xTxt, yNombre);
 
       // Píldora de estado: "✓ Ganador" (verde) / "Derrotado" (gris)
       const yPill = yNombre + 32;
@@ -3050,7 +3090,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
     // "Esperando confirmación… (n/n)" que reutiliza el mismo objeto en
     // su estado normal y que el usuario no pidió achicar. 12px → 10px
     // es ~17% de reducción, dentro del 15-20% pedido.
-    this.textoEsperaRevancha.setText(mensaje).setColor('#8c2a2a').setFontStyle('bold').setFontSize('10px');
+    this.textoEsperaRevancha.setText(mensaje).setColor('#FEF08A').setFontStyle('bold').setFontSize('11px').setStroke('#000000', 3).setShadow(1, 1, '#000000', 2, true, true);   // Pase 411: pergamino claro sobre el paño, con contorno oscuro
     this.textoEsperaRevancha.setDepth(902);
 
     // Si el jugador todavía no había tocado "Pedir revancha" (el botón
@@ -3283,7 +3323,7 @@ _renderizarEstado(animarReparto) {
             // ARRIBA (525→495), pedido explícito del usuario porque los
             // remaches de la botonera (agrandada en el pase anterior) ya
             // tapaban los números/índices de las cartas.
-            this._dibujarManoJugador(e.misCartas, this._L ? this._L.manoY : 495, e.turno === 'mio' && !hayCantoSinResolver, animarReparto);
+            this._dibujarManoJugador(e.misCartas, this._L ? this._L.manoY : 485, e.turno === 'mio' && !hayCantoSinResolver, animarReparto);
     }
 
     this._dibujarBotonesCanto(e);
@@ -3415,7 +3455,7 @@ _renderizarEquipos(e, animarReparto, hayCantoSinResolver) {
     // Nonagésimo primer pase: mismo +10px (505→515) que el otro call site.
     // Nonagésimo segundo pase: mismo +10px (515→525) que el otro call site.
     // Nonagésimo tercer pase: mismo -30px (525→495) que el otro call site.
-    this._dibujarManoJugador(e.misCartas, this._L ? this._L.manoY : 495, e.turno === 'mio' && !hayCantoSinResolver, animarReparto);
+    this._dibujarManoJugador(e.misCartas, this._L ? this._L.manoY : 485, e.turno === 'mio' && !hayCantoSinResolver, animarReparto);
 }
 
 _calcularAsientos(companeros, rivales) {
@@ -3715,14 +3755,7 @@ _notificarPuntos(yo, rival) {
   this._aplicarMarcadorEstilo(!!ant);
   const cambio = !ant || ant.yo !== yo || ant.rival !== rival;
   if (cambio && this.onPuntos) this.onPuntos({ yo, rival, objetivo: this._puntosSala || 15 });
-  if (!ant) return;
-  const subio = Math.max(0, yo - ant.yo) + Math.max(0, rival - ant.rival);
-  const clics = Math.min(5, subio);
-  for (let i = 0; i < clics; i++) {
-    this.time.delayedCall(i * 110, () => {
-      try { this.sound.play('sfx_fosforo', { volume: 0.45 }); } catch (err) {}
-    });
-  }
+  // Pase 411: sin ningun sonido al cambiar el puntaje (el clic de fosforo queda solo en el Anotador offline).
 }
 
 // Pase siguiente (placa doble): las placas de "Vos"/Rival son de ancho
@@ -4979,22 +5012,28 @@ _calcularPerspectiva(y) {
   // Pase 406: tablita de madera rústica en relieve (ver BOTON_RUSTICO). Coordenadas
   // locales centradas en (0,0). Todo con Graphics (rects redondeados apilados),
   // sin sombras difusas: la "sombra inferior" es un canto sólido debajo.
-  _dibujarBotonRustico(g, w, h, v) {
+  // `simple` (Pase 411, botones de la pantalla final): un unico canto oscuro debajo, sin la sombra dura
+  // ni la franja interior de marco que se veian como un segundo marco inferior descalzado.
+  _dibujarBotonRustico(g, w, h, v, simple = false) {
     const P = VARIANTES_RUSTICAS[v];
     const OUT = 0x2c160e;
-    const d = Math.max(3, h * P.prof);      // alto del canto inferior (extrusión)
+    const d = simple ? Math.max(2, h * P.prof * 0.5) : Math.max(3, h * P.prof);      // alto del canto inferior (extrusión); Pase 412: a la mitad en los botones de la pantalla final
     const hb = h - d;                        // alto de la cara frontal
     const R = Math.min(h * 0.24, 11);
     const top = -h / 2;
     const b = Math.max(3, h * 0.13);         // grosor del marco de madera
     // sombra dura de apoyo
-    g.fillStyle(0x000000, 0.35);
-    g.fillRoundedRect(-w / 2 + 1, top + d + 2, w, hb, R);
+    if (!simple) {
+      g.fillStyle(0x000000, 0.35);
+      g.fillRoundedRect(-w / 2 + 1, top + d + 2, w, hb, R);
+    }
     // canto (extrusión) en tono más oscuro que el marco
     g.fillStyle(OUT, 1);
     g.fillRoundedRect(-w / 2, top + d, w, hb, R);
-    g.fillStyle(P.marco, 1);
-    g.fillRoundedRect(-w / 2 + 1, top + d - 1, w - 2, hb - 1, R);
+    if (!simple) {
+      g.fillStyle(P.marco, 1);
+      g.fillRoundedRect(-w / 2 + 1, top + d - 1, w - 2, hb - 1, R);
+    }
     // cara frontal: marco + luz de bisel arriba
     g.fillStyle(P.marco, 1);
     g.fillRoundedRect(-w / 2, top, w, hb, R);
@@ -5322,6 +5361,42 @@ _ocultarCanto() {
 // de los bordes.
 _crearBotonOverlay({ x, y, ancho, alto = 44, texto, variante = 'dorado', tamanoFuente = 15, onClick }) {
   const contenedor = this.add.container(x, y).setDepth(902);
+
+  // Pase 409: 'rojo' / 'esmeralda' / 'oro' pasan a tablitas de madera rústica (mismo estilo que
+  // la botonera de cantos), conservando el color de cada fondo: rojo → carmesí, esmeralda → verde, oro → dorado.
+  if (variante === 'rojo' || variante === 'esmeralda' || variante === 'oro') {
+    const vRus = variante === 'rojo' ? 'carmesi' : variante;
+    const P = VARIANTES_RUSTICAS[vRus];
+    const txt = String(texto).toUpperCase();
+    const fs = Math.max(13, tamanoFuente);
+    const estiloTxt = { fontFamily: 'Nunito, Arial', fontSize: `${fs}px`, fontStyle: 'bold' };
+    const label = this.add.text(0, 0, txt, { ...estiloTxt, color: P.texto, stroke: '#2c160e', strokeThickness: Math.max(2, fs * 0.17) }).setOrigin(0.5);
+    const w = Math.max(ancho, label.width + alto * 1.3, 150);
+    const hBtn = alto + 6;
+    const g = this.add.graphics();
+    let dCanto = 0;
+    const dibujar = (v) => { g.clear(); dCanto = this._dibujarBotonRustico(g, w, hBtn, v, true); label.setY(-dCanto / 2); };
+    dibujar(vRus);
+    contenedor.add([g, label]);
+    contenedor.setSize(w, hBtn);
+    contenedor.setInteractive({ useHandCursor: true });
+    contenedor.on('pointerdown', () => {
+      this.tweens.add({ targets: contenedor, scale: 0.94, duration: 80, ease: 'Quad.easeOut' });
+    });
+    contenedor.on('pointerup', () => {
+      this.tweens.add({ targets: contenedor, scale: 1, duration: 140, ease: 'Quad.easeOut' });
+      onClick();
+    });
+    contenedor.on('pointerout', () => {
+      this.tweens.add({ targets: contenedor, scale: 1, duration: 140, ease: 'Quad.easeOut' });
+    });
+    this._sprites.push(contenedor);
+    return {
+      contenedor,
+      img: { setTint() { dibujar('apagado'); }, clearTint() { dibujar(vRus); } },
+      label,
+    };
+  }
 
   // Pase 346: variante 'rojo' (Rojo Carmesí #E74C3C) — píldora plana cel-shaded
   // dibujada por código: borde negro 2px y relieve inferior granate #78281F.
@@ -5786,7 +5861,7 @@ _dibujarBotonesCanto(e) {
     if (hayEnvido && itemsFila.length > 3) {
       const ids = ['envido', 'real-envido', 'falta-envido'];
       const K2 = this._L ? 1.22 : 1;
-      const altoArriba = this._L ? 34 : 28, altoAbajo = this._L ? 44 : 34;
+      const altoArriba = this._L ? 34 : 32, altoAbajo = this._L ? 44 : 38;
       const filaArriba = itemsFila.filter(it => ids.includes(it.id))
         .map(it => { const sp = specImagen(it.id, it.onClick); const c = CLAVE_IMAGEN_BOTON[it.id]; return { ...sp, alto: altoArriba, ancho: this._anchoBotonImagen(c, altoArriba) }; });
       const filaAbajo = itemsFila.filter(it => !ids.includes(it.id))
@@ -5797,13 +5872,13 @@ _dibujarBotonesCanto(e) {
       let yTop = Y_FILA_UNICA + 10 - (hB + sep) / 2;
       let yBot = Y_FILA_UNICA + 10 + (hA + sep) / 2;
       if (!this._L) {
-        // Escritorio: la zona útil de la placa va de Y≈521 a 598 (el mundo termina en 600).
-        const sepD = 5, tope = 521;
+        // Escritorio: la zona útil de la placa va de Y≈511 a 598 (el mundo termina en 600).
+        const sepD = 5, tope = 511;
         yTop = tope + hA / 2;
         yBot = tope + hA + sepD + hB / 2;
       }
-      centrarFila(filaArriba, yTop, 9, K2);
-      centrarFila(filaAbajo, yBot, 22, K2);
+      centrarFila(filaArriba, yTop, this._L ? 9 : 14, K2);
+      centrarFila(filaAbajo, yBot, this._L ? 22 : 30, K2);
       return;
     }
     // Ducentésimo sexagésimo noveno pase: Y_FILA_UNICA en vez del 565 suelto

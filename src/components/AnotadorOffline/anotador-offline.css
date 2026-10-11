@@ -208,16 +208,17 @@
   padding: 2px;
   scrollbar-width: thin;
 }
-.ao-seccion { display: flex; flex-direction: column; gap: 3px; }
+.ao-seccion { display: flex; flex-direction: column; gap: 3px; flex: 1 1 auto; min-height: 0; }   /* Pase 411: las secciones se reparten el alto libre */
 .ao-seccion-titulo {
   display: flex; align-items: baseline; justify-content: space-between;
   padding: 0 4px;
-  font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase; color: #d6ecd8;
+  font-size: 14px; letter-spacing: 1.2px; text-transform: uppercase; color: #d6ecd8;   /* Pase 412: etiquetas mas grandes */
 }
 .ao-seccion-titulo b { font-weight: 800; }
 .ao-seccion-titulo span { opacity: 0.75; font-weight: 700; }
 .ao-grilla {
   display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;
+  flex: 1 1 auto; align-content: center; align-items: center;   /* Pase 411: la tabla se expande hasta los botones; las cajas quedan agrupadas al centro */
   padding: 4px;
   border: 2px solid var(--ao-negro); border-radius: 10px;
   background: var(--ao-crema);
@@ -238,7 +239,7 @@
 
 /* Cinta patria entre MALAS y BUENAS */
 .ao-cinta {
-  position: relative; flex: 0 0 auto; height: 26px; margin: 2px -2px;
+  position: relative; flex: 0 0 auto; height: 30px; margin: 2px -2px;
   display: flex; align-items: center; justify-content: center;
   background: linear-gradient(180deg, var(--ao-celeste) 0 33%, #fff 33% 67%, var(--ao-celeste) 67% 100%);
   clip-path: polygon(0 0, 100% 0, calc(100% - 9px) 50%, 100% 100%, 0 100%, 9px 50%);
@@ -249,7 +250,7 @@
   border: 2px solid var(--ao-negro); border-radius: 6px;
   background: linear-gradient(170deg, #b98350, #7a4d2f);
   color: #fff4dc;
-  font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 11.5px; letter-spacing: 1px; text-transform: uppercase; white-space: nowrap;
+  font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 14px; letter-spacing: 1px; text-transform: uppercase; white-space: nowrap;
   text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.7);
 }
 
@@ -276,7 +277,7 @@
 .ao-btn-mas:active:not(:disabled) { box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.55), inset 0 -5px 0 rgba(122, 83, 34, 0.45), 0 1px 0 var(--ao-negro); }
 .ao-btn-menos:active:not(:disabled) { box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.14), 0 1px 0 var(--ao-negro); }
 .ao-btn:disabled { opacity: 0.4; cursor: default; }
-.ao-botones { margin-bottom: 5px; }
+.ao-botones { margin-bottom: 0; }
 
 /* Aviso con "Deshacer" */
 .ao-toast {
@@ -315,7 +316,8 @@
   .ao-caja { max-width: 22vh; }
   .ao-btn { height: 46px; }
   .ao-ico { --ico: 26px; }
-  .ao-cinta { height: 20px; }
+  .ao-cinta { height: 22px; }
+  .ao-cinta-placa { font-size: 12px; padding: 0 12px; }
 }
 @media (max-width: 400px) {
   .ao-titulo-icono { display: none; }
