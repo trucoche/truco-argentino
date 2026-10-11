@@ -421,6 +421,10 @@ export default function BracketView({ torneoId, usuario, token, onVolver, onEntr
             {equiposListos} de {cupoTotal} equipos listos · el bracket se arma cuando se completa el cupo
           </div>
           <BarraPlana porcentaje={cupoTotal ? Math.round((equiposListos / cupoTotal) * 100) : 0} />
+          {/* Pase 386: solo invita quien ya está anotado (aparece en la sala); el creador sin anotarse ve este aviso. */}
+          {torneo.soy_creador && !torneo.estoy_anotado && (
+            <div style={estilos.notaEspera}>Todavía no te anotaste en tu torneo: anotate desde Torneos para poder invitar amigos a los cupos libres.</div>
+          )}
           {/* Pase 383: jugadores sin equipo esperando que se les arme uno (completar al azar). */}
           {(torneo.jugadores_en_espera > 0 || torneo.estoy_en_espera) && (
             <div style={estilos.notaEspera}>
@@ -469,7 +473,12 @@ export default function BracketView({ torneoId, usuario, token, onVolver, onEntr
             {invitacionesVisibles.map((inv) => (
               <div key={`inv-${inv.id}`} style={estilos.salaFilaInvitada}>
                 <span style={estilos.salaNumeroInvitada}>·</span>
-                <span style={estilos.salaInvitadaTexto}>Invitación enviada a <strong>{inv.invitado}</strong></span>
+                {/* Pase 386: se aclara quién invitó a quién (antes solo decía "Invitación enviada a X"). */}
+                <span style={estilos.salaInvitadaTexto}>
+                  {inv.invitador === usuario.username
+                    ? <>Vos invitaste a <strong>{inv.invitado}</strong></>
+                    : <><strong>{inv.invitador}</strong> invitó a <strong>{inv.invitado}</strong></>}
+                </span>
                 <div style={{ ...estilos.salaBadge, ...estilos.salaBadgePendiente }}>Esperando</div>
               </div>
             ))}
