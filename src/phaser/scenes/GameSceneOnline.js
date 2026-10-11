@@ -84,6 +84,14 @@ export default class GameSceneOnline extends Phaser.Scene {
 
   init(data) {
     this.usuario    = data.usuario;
+    // Pase 394: layout vertical para ventanas angostas (<700px, ver GameOnlinePhaser.js).
+    // `_L` (null en escritorio) concentra toda la geometria; cada cambio del
+    // layout angosto esta condicionado a `this._L`, asi que en escritorio
+    // nada cambia.
+    this._angosto   = !!data.angosto;
+    this._eqMap     = null;
+    this._L         = null;
+    this._modoCamara = null;
     this.codigoSala = data.codigoSala;
     this.estado     = null;
     this._sprites   = [];
@@ -191,6 +199,9 @@ preload() {
     // reemplazo para la mesa de 3v3, que sigue con su asset de siempre.
     this.load.image('mesaRedonda', conVersion('assets/images/juego/mesa-truco-nueva.png'));
     this.load.image('mesaRedonda3v3', conVersion('assets/images/juego/mesa-truco-3v3.png'));
+    // Pase 394: la misma mesa SIN la marca "TC" (que va como imagen aparte) — la usa el layout angosto, que estira el paño.
+    this.load.image('mesaRedondaLimpia', conVersion('assets/images/juego/mesa-truco-nueva-sin-marca.png'));
+    this.load.image('marcaTcMesa', conVersion('assets/images/juego/marca-tc-mesa.png'));
     // Fase 6 — fondo de la barra de acciones ("madera + filete dorado"),
     // reemplaza el rectángulo de color plano que había antes (ver
     // _crearElementosDeTexto). Imagen de 800x110, misma proporción que el
@@ -379,6 +390,8 @@ preload() {
     // exactamente para marcar "esta partida la gané") en vez de generar
     // un asset nuevo.
     this.load.image('trofeoFila', conVersion('assets/images/historial-trofeo.png'));
+    // Pase 393: cuadro de fósforos (5 tantos) = icono de los PUNTOS de la Liga Criolla.
+    this.load.image('fosforosPuntos', conVersion('assets/images/fosforos_5_tantos.png'));
 
     const CLAVES_CANTO = ['truco', 'retruco', 'vale-cuatro', 'envido', 'real-envido', 'falta-envido', 'quiero', 'no-quiero'];
     PERSONAJES_CANTO.forEach(p => {
@@ -412,8 +425,13 @@ preload() {
     // `_factorEscalaTextura()` nunca puedan quedar desincronizados entre sí
     // como pasó en el pase anterior.
     const dpr = window.devicePixelRatio || 1;
-    this.cameras.main.setZoom((ANCHO_MAX_CSS / 800) * dpr);
-    this.cameras.main.centerOn(400, 300);
+    if (this._angosto) {
+      this._L = this._calcularLayoutAngosto();
+      this._modoCamaraAngosto('estatica');
+    } else {
+      this.cameras.main.setZoom((ANCHO_MAX_CSS / 800) * dpr);
+      this.cameras.main.centerOn(400, 300);
+    }
 
     const fuentesListas = Promise.all([
       document.fonts.load('700 16px Nunito'),
@@ -431,6 +449,7 @@ preload() {
 
 _crearElementosDeTexto() {
     const fondo = this.add.image(400, 300, 'fondoMesa').setDisplaySize(800, 600).setDepth(0);
+    this.fondoMesaImg = fondo;
 
     // Punto 6, ver _crearTexturasAtmosfera: depth 0.2, por encima del fondo
     // de madera (depth 0) pero por debajo de la mesa/paño (depth 1) y de
@@ -438,7 +457,7 @@ _crearElementosDeTexto() {
     // visible alrededor de la mesa, nunca toca el paño ni lo que se dibuja
     // sobre él.
     this._crearTexturasAtmosfera();
-    this.add.image(400, 300, 'vinetaMadera').setDepth(0.2);
+    this.vinetaMaderaImg = this.add.image(400, 300, 'vinetaMadera').setDepth(0.2);
 
     this.sombraMesa = this.add.ellipse(400, 520, 560, 90, 0x000000, 0.35).setDepth(0.5);
     // Ducentésimo sexagésimo noveno pase: halo cálido detrás de la mesa
@@ -447,7 +466,7 @@ _crearElementosDeTexto() {
     // dándole un borde de luz que la separa de la pared de fondo. A
     // diferencia de `luzCalidaMesa` más abajo, este se dibuja en los dos
     // modos (día y noche).
-    this.add.image(400, 320, 'resplandorMesa').setDepth(0.6);
+    this.resplandorMesaImg = this.add.image(400, 320, 'resplandorMesa').setDepth(0.6);
     this.mesaImg = this.add.image(400, 340, 'mesaRedonda').setDepth(1);
     this._ajustarMesaSegunAsientos(2);
 
@@ -471,7 +490,7 @@ _crearElementosDeTexto() {
     // deja de dibujar directamente cuando `modoOscuro` está activo; en modo
     // día sigue igual que siempre.
     if (!this.modoOscuro) {
-      this.add.image(400, 320, 'luzCalidaMesa').setDepth(1.2);
+      this.luzCalidaMesaImg = this.add.image(400, 320, 'luzCalidaMesa').setDepth(1.2);
     }
     // Depth 1000: por encima de TODO lo que dibuja la escena (cartas,
     // botonera, texto) — así el oscurecimiento de las esquinas es parejo
@@ -479,7 +498,8 @@ _crearElementosDeTexto() {
     // gradiente queda transparente (radio 250, ver _crearTexturasAtmosfera)
     // así que no llega a tocar ni la mesa ni las cartas jugadas, solo el
     // marco exterior.
-    this.add.image(400, 300, 'vinetaMesa').setDepth(1000);
+    this.vinetaMesaImg = this.add.image(400, 300, 'vinetaMesa').setDepth(1000);
+    if (this._L) { this._acomodarFondosAngosto(); this.vinetaMesaImg.setVisible(this._modoCamara === 'juego'); }
 
     // Vigésimo segundo pase: el intento anterior (bajarlo de Y=22 a Y=36,
     // debajo del texto de estado y arriba de las cartas) TODAVÍA se solapaba
@@ -553,17 +573,18 @@ _crearElementosDeTexto() {
     // borde superior queda en Y=12 y el borde derecho de la placa "Vos"
     // (ver más abajo) + el margen entre ambas dejan el borde izquierdo de
     // ESTA en X=130 — ninguna placa toca ya el borde de la pantalla.
-    this.PLACA_RIVAL_CX = 178;
-    this.PLACA_RIVAL_CY = 36;
-    const placaAncho = 96;
-    const placaAlto = 48;
+    this.PLACA_RIVAL_CX = this._L ? this._L.placaRivalX : 178;
+    this.PLACA_RIVAL_CY = this._L ? this._L.hudY : 36;
+    const kpH = this._L ? this._L.kp : 1;   // Pase 394: escala del HUD en layout angosto
+    const placaAncho = this._L ? this._L.placaW : 96;
+    const placaAlto = this._L ? this._L.placaH : 48;
     // Nonagésimo tercer pase: color sólido (sin alpha en el hex) +
     // contorno fino, en vez de '#ffffffdd' sin stroke — pedido explícito
     // del usuario, el nombre del rival se perdía sobre la madera. Mismo
     // criterio que `labelPropio` (ver más abajo), para que las dos placas
     // sean igual de legibles.
-    this.labelRival = this.add.text(this.PLACA_RIVAL_CX, this.PLACA_RIVAL_CY - 11, 'Rival', {
-      font: '12px Arial', fill: '#FFF8ED', stroke: '#2a1c14', strokeThickness: 2.5,
+    this.labelRival = this.add.text(this.PLACA_RIVAL_CX, this.PLACA_RIVAL_CY - 11 * kpH, 'Rival', {
+      font: `${Math.round(12 * kpH)}px Arial`, fill: '#FFF8ED', stroke: '#2a1c14', strokeThickness: 2.5,
     }).setOrigin(0.5).setDepth(1002);
     // Centésimo décimo quinto pase: nombre del rival clickeable, mismo
     // criterio que Ranking/Lobby/chat/Perfil (abre PerfilRivalModal). Se
@@ -574,12 +595,24 @@ _crearElementosDeTexto() {
     this.labelRival.on('pointerdown', () => {
       if (this._nombreRivalActual && this.onVerPerfil) this.onVerPerfil(this._nombreRivalActual);
     });
+    // Pase 396 (layout angosto): las placas dicen "Vos" / "Rival" como en el
+    // nativo; el nombre real del rival va sobre sus cartas (clickeable → perfil).
+    if (this._L) {
+      this.nombreRivalAngosto = this.add.text(400, this._L.nombreY, '', {
+        font: 'bold 17px Arial', fill: '#FFF8ED', stroke: '#2a1c14', strokeThickness: 3,
+        resolution: this._factorEscalaTextura(),
+      }).setOrigin(0.5).setDepth(1002).setVisible(false);
+      this.nombreRivalAngosto.setInteractive({ useHandCursor: true });
+      this.nombreRivalAngosto.on('pointerdown', () => {
+        if (this._nombreRivalActual && this.onVerPerfil) this.onVerPerfil(this._nombreRivalActual);
+      });
+    }
     // Puntos del rival — antes vivían combinados con los propios en un
     // solo texto "N - N" adentro de la placa "Vos" (`scoreText`); ahora
     // cada placa muestra sus propios puntos, en el mismo estilo (cifras
     // doradas) que ya tenía ese texto combinado.
-    this.scoreTextRival = this.add.text(this.PLACA_RIVAL_CX, this.PLACA_RIVAL_CY + 11, '0', {
-      fontFamily: 'Nunito, Arial', fontSize: '18px', fontStyle: 'bold',
+    this.scoreTextRival = this.add.text(this.PLACA_RIVAL_CX, this.PLACA_RIVAL_CY + 11 * kpH, '0', {
+      fontFamily: 'Nunito, Arial', fontSize: `${Math.round(18 * kpH)}px`, fontStyle: 'bold',
       color: '#FFF8ED', stroke: '#4A2C2A', strokeThickness: 2,
       shadow: { offsetX: 0, offsetY: 1, color: '#4A2C2A', blur: 0, fill: true },
       resolution: this._factorEscalaTextura()
@@ -594,7 +627,7 @@ _crearElementosDeTexto() {
     // dinámica); con la placa fija, se fija por fuera de su borde derecho
     // (mismo lugar relativo que antes — el ícono siempre quedaba DESPUÉS
     // del nombre, nunca superpuesto) en vez de recalcularse en cada estado.
-    this.manoIconoRival = this.add.image(this.PLACA_RIVAL_CX + placaAncho / 2 + 11, this.PLACA_RIVAL_CY - 11, 'icono_rival').setDisplaySize(17, 19).setDepth(1002).setVisible(false);
+    this.manoIconoRival = this.add.image(this.PLACA_RIVAL_CX + placaAncho / 2 + (this._L ? 14 : 11), this.PLACA_RIVAL_CY - 11 * kpH, 'icono_rival').setDisplaySize(17 * kpH, 19 * kpH).setDepth(1002).setVisible(false);
 
     // Barra de fondo para los botones de acción — línea divisoria subida de
     // 521 a 500 (y panel agrandado a juego) para ganarle ~21px al área de la
@@ -630,16 +663,16 @@ _crearElementosDeTexto() {
     // cartas en mano en vez de darles aire (ver pedido del usuario sobre
     // "la tira de remaches no tape las cartas en mano", resuelto en
     // conjunto con el +10px de `_dibujarManoJugador`).
-    const altoBotonera = 130;
+    const altoBotonera = this._L ? this._L.panelH : 130;
     const anchoBotonera = Math.round(altoBotonera * (700 / 193));
-    const yBotonera = 500 + altoBotonera / 2;
+    const yBotonera = this._L ? this._L.panelCY : 500 + altoBotonera / 2;
     this.add.image(400, yBotonera, 'panelBotonera').setDisplaySize(anchoBotonera, altoBotonera).setDepth(150);
     // Nonagésimo primer pase: guardada como propiedad de la escena para que
     // `_dibujarBotonesCanto` pueda repartir los botones dentro del ancho
     // real de ESTA placa (más angosta que el canvas completo) en vez de un
     // ancho fijo — si se vuelve a ensanchar la placa (ver comentario de
     // arriba sobre el asset en 3 franjas), este número se actualiza solo.
-    this.anchoBotonera = anchoBotonera;
+    this.anchoBotonera = this._L ? anchoBotonera - 90 : anchoBotonera;   // angosto: deja libre la esquina de la tuerca de ajustes (React)
     // Ducentésimo sexagésimo noveno pase: guardado también el centro
     // vertical real de la placa (`yBotonera`, ya calculado arriba a partir
     // del alto real `altoBotonera`) — `_dibujarBotonesCanto` lo venía
@@ -667,8 +700,8 @@ _crearElementosDeTexto() {
     // mismo para el rival. Mismo ancho/alto que la placa del rival
     // (`placaAncho`/`placaAlto`, definidos junto a esa placa) para que el
     // par se vea como un solo bloque de HUD parejo.
-    const marcadorAncho = 96;
-    const marcadorAlto = 48;
+    const marcadorAncho = this._L ? this._L.placaW : 96;
+    const marcadorAlto = this._L ? this._L.placaH : 48;
     // Decimoctavo pase: el marcador vivía centrado en (400,18), justo en el
     // mismo punto donde caen el texto de estado ("Conectando...") y las
     // cartas boca abajo del rival (fila que arranca en Y=95 más abajo) —
@@ -685,8 +718,8 @@ _crearElementosDeTexto() {
     // rival (ver comentario junto a `PLACA_RIVAL_CX/CY` más arriba) — deja
     // ~12px de aire contra el borde superior e izquierdo real de la
     // pantalla (borde de esta placa: X=12, Y=12).
-    const marcadorX = 60;
-    const marcadorY = 36;
+    const marcadorX = this._L ? this._L.placaVosX : 60;
+    const marcadorY = this._L ? this._L.hudY : 36;
 
     // Trigésimo octavo pase: causa real de "se ve semi transparente" — el
     // marcador vivía a depth 300, POR DEBAJO del viñeteado de atmósfera
@@ -715,8 +748,8 @@ _crearElementosDeTexto() {
     // nombre de usuario largo nunca estire la placa.
     // Nonagésimo tercer pase: mismo color sólido + contorno que
     // `labelRival` (ver más arriba) en vez de '#ffffffdd' sin stroke.
-    this.labelPropio = this.add.text(marcadorX, marcadorY - 11, this._truncarNombre(this.usuario?.username) || 'Vos', {
-      font: '12px Arial', fill: '#FFF8ED', stroke: '#2a1c14', strokeThickness: 2.5,
+    this.labelPropio = this.add.text(marcadorX, marcadorY - 11 * kpH, this._L ? 'Vos' : (this._truncarNombre(this.usuario?.username) || 'Vos'), {
+      font: `${Math.round(12 * kpH)}px Arial`, fill: '#FFF8ED', stroke: '#2a1c14', strokeThickness: 2.5,
     }).setOrigin(0.5).setDepth(1002);
 
     // Texto crema con SOMBRA chocolate en vez del chocolate plano de antes:
@@ -766,9 +799,9 @@ _crearElementosDeTexto() {
     // `scoreTextRival`, en su propia placa. Tamaño 20→18 y baja un poco
     // (21→marcadorY+11) para convivir con `labelPropio` arriba, mismo
     // layout de dos líneas que la placa del rival.
-    this.scoreText = this.add.text(marcadorX, marcadorY + 11, '0', {
+    this.scoreText = this.add.text(marcadorX, marcadorY + 11 * kpH, '0', {
       fontFamily: 'Nunito, Arial',
-      fontSize: '18px',
+      fontSize: `${Math.round(18 * kpH)}px`,
       fontStyle: 'bold',
       color: '#FFF8ED',
       stroke: '#4A2C2A',
@@ -797,8 +830,8 @@ _crearElementosDeTexto() {
     // inmediatamente abajo, con ~8px de aire entre ambas filas (ver Y del
     // `turnoText`, más abajo). Subida un poco (472→462) para dejarle
     // lugar abajo sin invadir más la mesa hacia arriba.
-    this.manoIconoPropio = this.add.image(650, 462, 'circulo_mano').setDisplaySize(24, 24).setDepth(200).setVisible(false);
-    this.miManoTexto = this.add.text(666, 462, '', {
+    this.manoIconoPropio = this.add.image(this._L ? this._L.indicadoresX : 650, this._L ? this._L.manoIndY : 462, 'circulo_mano').setDisplaySize(24, 24).setDepth(200).setVisible(false);
+    this.miManoTexto = this.add.text(this._L ? this._L.indicadoresX + 16 : 666, this._L ? this._L.manoIndY : 462, '', {
       font: 'bold 15px Arial', fill: '#FFD700', stroke: '#000000', strokeThickness: 3
     }).setOrigin(0, 0.5).setDepth(200);
 
@@ -862,7 +895,7 @@ _crearElementosDeTexto() {
     // vez de reusar _crearBannerTexto directamente (esa crea un
     // container nuevo cada vez, pensado para los carteles que si viven
     // en `_sprites`).
-    this.cantoText = this.add.text(400, 300, '', {
+    this.cantoText = this.add.text(400, this._L ? this._L.feltCY : 300, '', {
       fontFamily: 'Nunito, Arial', fontSize: '14px', fontStyle: 'bold', color: '#4A2C2A',
       align: 'center', wordWrap: { width: 620 }
     }).setOrigin(0.5).setDepth(250).setVisible(false);
@@ -904,7 +937,7 @@ _crearElementosDeTexto() {
     // Y=500 queda igual aunque ya no haga falta el aire extra contra
     // "Sos mano" que pedía la placa alta — mover el texto de vuelta no se
     // pidió.
-    this.turnoText = this.add.text(690, 500, '', {
+    this.turnoText = this.add.text(this._L ? this._L.turnoX : 690, this._L ? this._L.turnoY : 500, '', {
       font: 'bold 15px Arial', fill: '#F0D9A0', stroke: '#2a1c14', strokeThickness: 3
     }).setOrigin(0.5).setDepth(200);
 
@@ -972,8 +1005,9 @@ _crearElementosDeTexto() {
     // Tarjeta de espera — tapa la mesa vacía hasta que arranca la partida.
     // Se destruye sola en el primer _limpiarSprites (primer estado-juego).
     this.fondoEspera = this.add.image(400, 300, 'fondoEspera').setDisplaySize(800, 600).setDepth(340);
+    if (this._L) this._cubrirEstatico(this.fondoEspera);
     this._sprites.push(this.fondoEspera);
-    this.veloEspera = this.add.rectangle(400, 300, 800, 600, 0x000000, 0.35).setDepth(350);
+    this.veloEspera = this.add.rectangle(400, 300, 800, this._L ? this._L.H8 + 4 : 600, 0x000000, 0.35).setDepth(350);
     this._sprites.push(this.veloEspera);
 
     // Pase 267, punto 5: "romper el vacío del paño verde... agregar en el
@@ -1103,6 +1137,167 @@ _crearElementosDeTexto() {
 
 
  
+  // ───────────────────────────────────────────────────────────────────────
+  // Pase 394 — layout vertical para ventanas angostas (<700px).
+  //
+  // El mundo logico sigue teniendo 800 de ancho "de diseño" pero en este
+  // modo la camara muestra solo 720 unidades de ancho (x de 40 a 760) y el
+  // ALTO del mundo sale del alto real de la ventana (H = 720 * alto/ancho,
+  // tipicamente 1100-1600 en un celular o una ventana angosta). Toda la
+  // geometria que depende de ese alto vive en este objeto — el resto del
+  // archivo solo lee `this._L` (que es null en escritorio, asi que el
+  // layout 4:3 de siempre no cambia). Nada se calcula dos veces: si hay que
+  // mover algo de la mesa angosta, se cambia ACA.
+  // ───────────────────────────────────────────────────────────────────────
+  _calcularLayoutAngosto() {
+    const WN = 720;
+    const cw = this.scale.width;
+    const ch = this.scale.height;
+    const zoom = cw / WN;
+    const H = ch / zoom;
+    // Modo "estatico" (sala de espera / pantalla final): se muestra el mundo
+    // 800x600 de siempre, centrado, con los fondos estirados a cubrir.
+    const zoom8 = cw / 760;   // sala de espera / pantalla final: 760 de ancho de mundo visible
+    const H8 = ch / zoom8;
+
+    // Factor de tamaño de cartas segun cuanto alto hay: en ventanas angostas pero
+    // bajitas (alto/ancho ~1.2-1.5) las cartas grandes se pisarian entre si.
+    const f = Math.max(0.62, Math.min(1, 0.62 + ((H - 860) / 440) * 0.38));
+    const kp = 1.3;                      // placas del marcador
+    const placaW = Math.round(96 * kp);
+    const placaH = Math.round(48 * kp);
+    // Pase 396: marcador VOS | RIVAL centrado arriba del mazo del rival (igual que el nativo)
+    const hudYBase = 100;
+    const placaVosX = 400 - 8 - placaW / 2;
+    const placaRivalX = 400 + 8 + placaW / 2;
+
+    // Botonera + mano (abajo, pegadas al borde inferior)
+    const panelW = 700;
+    const panelH = Math.round(panelW * 193 / 700);
+    const panelTop = H - panelH;
+    const panelCY = H - panelH / 2;
+    const kMano = 1.7 * f;
+    const manoY = panelTop - 6;
+
+    // Mesa: la imagen se parte en TRES franjas y solo la del medio se
+    // estira (un corte fino en el punto mas ancho del paño; la marca "TC"
+    // va aparte, ver `marcaTcMesa`): asi la mesa gana alto como un ovalo largo (aro de arriba y de
+    // abajo intactos, lados rectos) en vez de deformarse como un barril.
+    // Pase 396: la mesa YA NO se estira (en la web angosta quedaba como un
+    // ovalo gigante). Se muestra con su proporcion real, con perspectiva y
+    // patas, centrada en el espacio libre entre el marcador y la mano, y el
+    // piso/pared de la cantina asoma alrededor, igual que en el nativo.
+    // Solo si la ventana es muy baja la mesa se achica (nunca baja de 0.8).
+    const kRival = 1.7 * f;
+    const rivalH = 95 * kRival;
+    const bultoR = 9 * kRival;
+    const nombreH = 28;                                // linea con el nombre del rival, sobre sus cartas
+    const hudBottomBase = hudYBase + placaH / 2;
+    const handH = 118 * kMano;
+    const handTop = manoY - 0.85 * handH - 19 * kMano;
+    const regionTop = hudBottomBase + 12;
+    const tableBottomMax = panelTop + 20;
+    // Pase 398: la mesa baja hasta apoyarse en la mano (las patas quedan un poco
+    // detras de ella) y crece: escala 1.12 (el aro asoma apenas por los lados de
+    // la pantalla) + un estirado vertical moderado (nunca mas de +30 %), asi el
+    // paño ocupa el centro de la pantalla.
+    const CORTE_A = 255;                               // fila (de 895) donde empieza la franja estirable
+    const CORTE_B = 267;
+    const filaTotal = CORTE_A + (895 - CORTE_B);       // alto "natural" en filas del PNG (sin la franja del medio)
+    const topExtras = rivalH / 2 + bultoR + nombreH - 12;   // lo que ocupa el bloque del rival sobre el borde de la mesa
+    const tableBottom = Math.min(tableBottomMax, handTop + handH * 0.30);
+    const htabDisp = tableBottom - (regionTop + topExtras);
+    let sT = 1.12;
+    while (sT > 0.8 && filaTotal * (700 * sT / 1169) > htabDisp) sT -= 0.02;
+    sT = Math.max(0.8, sT);
+    const tableW = Math.round(700 * sT);
+    const u = tableW / 1169;
+    const altoTopNat = CORTE_A * u;
+    const altoBotNat = (895 - CORTE_B) * u;
+    const hNat = altoTopNat + altoBotNat;
+    const E = Math.max(0, Math.min(0.30 * hNat, htabDisp - hNat));
+    const slackSobra = Math.max(0, htabDisp - hNat - E);
+    const tableTop = tableBottom - hNat - E;
+    const rivalY = tableTop + 12;
+    const nombreY = rivalY - rivalH / 2 - bultoR - nombreH / 2 - 2;
+    const feltCY = tableTop + 149 * sT + E / 2;
+    const feltRY = 170 * sT + 170 * E / 198;
+    const feltH = 203 * sT + E;                        // alto visible del paño verde
+    const dueloEscala = Math.min(0.66 * 1.9 * f, 0.82 * feltH / 234);
+    const hudYFinal = hudYBase + slackSobra * 0.45;
+    const hudBottom = hudYFinal + placaH / 2;
+
+    return {
+      zoom, H, zoom8, H8, WN,
+      kp, placaW, placaH, hudY: hudYFinal, placaVosX, placaRivalX,
+      panelW, panelH, panelTop, panelCY, kMano, manoY,
+      tableW, u, CORTE_A, CORTE_B, altoTopNat, altoBotNat, E, tableTop, tableBottom, rivalY, kRival, nombreY, sT,
+      feltCY, feltRY, dueloY: feltCY, dueloEscala, kBoton: 1.15 + 0.15 * f,
+      kSeat: 1.35, perspCY: feltCY, perspRY: feltRY,
+      eq2: { cyOld: 250, cy: feltCY, gy: (137 * sT + E / 2) / 130 },
+      eq3: (() => {
+        const nTop = hudBottom + 28;
+        const nBot = manoY + 25;
+        const gy = Math.max(0.8, Math.min(2.2, (nBot - nTop) / 490));
+        return { cyOld: 320, cy: nBot - 200 * gy, gy };
+      })(),
+      indicadoresX: 62, manoIndY: panelTop - 26, turnoX: 650, turnoY: panelTop - 26,
+    };
+  }
+
+  // Mapeo vertical de los asientos de 2v2/3v3 (null en 1v1 y en escritorio): las
+  // posiciones se calculan en el mundo viejo y se estiran en vertical alrededor del
+  // centro de la mesa para llenar el alto de la ventana.
+  _yEq(y) {
+    const m = this._eqMap;
+    return m ? m.cy + (y - m.cyOld) * m.gy : y;
+  }
+
+  // 'juego': 720 de ancho de mundo, alto H. 'estatica': el 800x600 de
+  // siempre centrado (sala de espera y pantalla final, que estan dibujadas
+  // con coordenadas fijas sobre ese tamaño).
+  _modoCamaraAngosto(modo) {
+    const L = this._L;
+    if (!L || this._modoCamara === modo) return;
+    this._modoCamara = modo;
+    const cam = this.cameras.main;
+    if (modo === 'juego') {
+      cam.setZoom(L.zoom);
+      cam.centerOn(400, L.H / 2);
+    } else {
+      cam.setZoom(L.zoom8);
+      cam.centerOn(400, 300);
+    }
+    if (this.vinetaMesaImg) this.vinetaMesaImg.setVisible(modo === 'juego');
+  }
+
+  // Cubre todo el area visible (en modo estatico) con una imagen sin
+  // deformarla: toma la escala que llena ancho y alto y deja que la
+  // camara recorte el sobrante.
+  _cubrirEstatico(img, centroY = 300) {
+    const L = this._L;
+    if (!L || !img) return img;
+    const src = img.texture.getSourceImage();
+    const sc = Math.max(800 / src.width, (L.H8 + 4) / src.height);
+    img.setDisplaySize(src.width * sc, src.height * sc).setPosition(400, centroY);
+    return img;
+  }
+
+  _acomodarFondosAngosto() {
+    const L = this._L;
+    const tex = this.textures.get('fondoMesa').getSourceImage();
+    const sc = Math.max(800 / tex.width, L.H / tex.height);
+    this.fondoMesaImg.setDisplaySize(tex.width * sc, tex.height * sc).setPosition(400, L.H / 2);
+    this.vinetaMaderaImg.setDisplaySize(800, L.H).setPosition(400, L.H / 2);
+    this.vinetaMesaImg.setDisplaySize(800, L.H).setPosition(400, L.H / 2);
+    const altoMesaTotal = L.tableBottom - L.tableTop;
+    const centroMesa = (L.tableTop + L.tableBottom) / 2;
+    const escY = altoMesaTotal / 528;   // el halo se estira junto con la mesa
+    if (this.resplandorMesaImg) this.resplandorMesaImg.setPosition(400, centroMesa).setScale(1, escY);
+    if (this.luzCalidaMesaImg) this.luzCalidaMesaImg.setVisible(false);   // estirado dejaba un arco visible sobre el paño
+    if (this.sombraMesa) this.sombraMesa.setPosition(400, L.tableBottom - 30).setSize(620, 110);
+  }
+
   _ajustarMesaSegunAsientos(cantidadAsientos) {
   const modo = cantidadAsientos === 5 ? '3v3' : 'normal';
   if (modo === this._mesaModoActual) return;
@@ -1122,6 +1317,48 @@ _crearElementosDeTexto() {
   // "normal" de acá abajo ahora tiene su propio factor, bien separado.
   const FACTOR_ALTURA = 1.95;
 
+  // Pase 394: en layout angosto la mesa de 1v1 se arma partida en dos
+  // (aro estirado + patas), ver _calcularLayoutAngosto.
+  if (this._L && modo !== '3v3') {
+    const L = this._L;
+    const clave = this.textures.exists('mesaRedondaLimpia') ? 'mesaRedondaLimpia' : 'mesaRedonda';
+    this.mesaImg
+      .setTexture(clave)
+      .setCrop(0, 0, 1169, L.CORTE_A + 1)
+      .setOrigin(0.5, 0)
+      .setScale(L.u)
+      .setPosition(400, L.tableTop);
+    if (!this.mesaMedio) {
+      this.mesaMedio = this.add.image(400, 0, clave).setDepth(1).setOrigin(0.5, 0);
+      this.mesaPatas = this.add.image(400, 0, clave).setDepth(1).setOrigin(0.5, 0);
+      if (clave === 'mesaRedondaLimpia' && this.textures.exists('marcaTcMesa')) {
+        this.marcaTcMesa = this.add.image(0, 0, 'marcaTcMesa').setDepth(1.05);
+      }
+    }
+    const yMedio = L.tableTop + L.altoTopNat;
+    // franja estirable: un corte de (B-A) filas estirado hasta cubrir E px
+    const filasMedio = L.CORTE_B - L.CORTE_A;
+    const escMedioY = (L.E + filasMedio * L.u) / filasMedio;
+    this.mesaMedio
+      .setCrop(0, L.CORTE_A, 1169, filasMedio)
+      .setScale(L.u, escMedioY)
+      .setPosition(400, yMedio - L.CORTE_A * escMedioY)
+      .setVisible(this.mesaImg.visible);
+    this.mesaPatas
+      .setCrop(0, L.CORTE_B - 1, 1169, 895 - L.CORTE_B + 1)
+      .setScale(L.u)
+      .setPosition(400, yMedio + L.E + filasMedio * L.u - L.CORTE_B * L.u)
+      .setVisible(this.mesaImg.visible);
+    if (this.marcaTcMesa) {
+      // la marca original (caja 130..1062 x 59..426 de la imagen) vuelve al centro del paño ya estirado
+      this.marcaTcMesa
+        .setScale(L.u)
+        .setPosition(400 + ((130 + 1062) / 2 - 1169 / 2) * L.u, L.tableTop + ((59 + 426) / 2) * L.u + L.E / 2)
+        .setVisible(this.mesaImg.visible);
+    }
+    return;
+  }
+
   if (modo === '3v3') {
     const CROP = { x: 37, y: 876, width: 1128, height: 1064 };
     const anchoDisplay = 600;
@@ -1129,9 +1366,16 @@ _crearElementosDeTexto() {
 
     this.mesaImg
       .setTexture('mesaRedonda3v3')
+      .setOrigin(0.5, 0.5)
       .setCrop(CROP.x, CROP.y, CROP.width, CROP.height)
       .setDisplaySize(anchoDisplay, altoDisplay)
       .setPosition(400, 220);
+    if (this._L) {
+      // Pase 394: la mesa de 3v3 se estira en vertical para llenar la ventana (ver eq3 en _calcularLayoutAngosto)
+      const m = this._L.eq3;
+      this.mesaImg.setScale(this.mesaImg.scaleX, this.mesaImg.scaleY * m.gy).setPosition(400, m.cy + (220 - m.cyOld) * m.gy);
+      [this.mesaMedio, this.mesaPatas, this.marcaTcMesa].forEach(o => { if (o && o.scene) o.setVisible(false); });
+    }
   } else {
     // 690 (antes 660, y 700 antes de eso) — el usuario había pedido achicarla
     // a 660 en su momento (octavo pase), pero en la ronda de crítica de
@@ -1209,6 +1453,7 @@ _crearTexturaDorsoMini() {
 }
 
 _factorEscalaTextura() {
+  if (this._L) return this._L.zoom;   // Pase 394: px reales por unidad de mundo (layout angosto)
   // Décimo pase — bug de fondo encontrado al investigar por qué el fix del
   // dorso "no se notaba": TODO el pre-escalado de texturas de este archivo
   // (botones, cartas jugadas, cartas reveladas, mano propia, dorso) venía
@@ -1467,10 +1712,11 @@ _limpiarAvataresEspera() {
 // modo), así que acá solo se tocan al ocultar; al mostrar, se deja que
 // _renderizarEstado decida su visibilidad.
 _mostrarMarcadores(visible) {
+  [this.mesaMedio, this.mesaPatas, this.marcaTcMesa].forEach(o => { if (o && o.scene) o.setVisible(visible && this._mesaModoActual !== '3v3'); });
   [this.scoreBg, this.scoreText, this.labelPropio, this.fondoInfoRival, this.scoreTextRival]
     .forEach(o => { if (o && o.scene) o.setVisible(visible); });
   if (!visible) {
-    [this.labelRival, this.manoIconoRival].forEach(o => { if (o && o.scene) o.setVisible(false); });
+    [this.labelRival, this.manoIconoRival, this.nombreRivalAngosto].forEach(o => { if (o && o.scene) o.setVisible(false); });
   }
 }
 
@@ -1491,7 +1737,7 @@ _textoDetalleSala() {
   return `Mesa a ${this._puntosSala} tantos · ${tipo}`;
 }
 
-_actualizarBannerEsperaTitulo(texto, modo = null, detalle = null) {
+_actualizarBannerEsperaTitulo(texto, modo = null, detalle = null, opts = {}) {
   if (this._bannerEsperaTitulo) {
     const viejo = this._bannerEsperaTitulo;
     viejo.destroy();
@@ -1500,8 +1746,9 @@ _actualizarBannerEsperaTitulo(texto, modo = null, detalle = null) {
   // Pase 346: cartel de CAOBA con remaches dorados (ya no el pergamino) y,
   // a la izquierda del texto, una mini píldora 3D dorada con el modo
   // ("1v1"). Se dibuja todo por código dentro de un container en (400,130).
+  // Pase 393: la pantalla final reusa este cartel (opts: y, depth, color, tamano).
   const label = this.add.text(0, 0, texto, {
-    fontFamily: 'Fredoka, Arial', fontSize: '24px', fontStyle: '700', color: '#FFD98A',
+    fontFamily: 'Fredoka, Arial', fontSize: `${opts.tamano || 24}px`, fontStyle: '700', color: opts.color || '#FFD98A',
     stroke: '#2C160E', strokeThickness: 5,
   }).setOrigin(0.5);
 
@@ -1524,13 +1771,13 @@ _actualizarBannerEsperaTitulo(texto, modo = null, detalle = null) {
       stroke: '#2C160E', strokeThickness: 3,
     }).setOrigin(0.5);
   }
-  const yTitulo = detalleTxt ? -10 : 0;
+  const yTitulo = detalleTxt ? (opts.tamano > 24 ? -13 : -10) : 0;
 
   const contenido = pillW ? pillW + gap + label.width : label.width;
   const padX = 44;
   const anchoDetalle = detalleTxt ? detalleTxt.width : 0;
   const ancho = Math.max(260, Math.round(Math.max(contenido, anchoDetalle) + padX * 2));
-  const alto = detalleTxt ? 80 : 64;
+  const alto = (detalleTxt ? 80 : 64) + (opts.tamano > 24 ? 10 : 0);
 
   const g = this.add.graphics();
   // Sombra dura inferior
@@ -1582,11 +1829,11 @@ _actualizarBannerEsperaTitulo(texto, modo = null, detalle = null) {
     hijos.push(label);
   }
   if (detalleTxt) {
-    detalleTxt.setPosition(0, 22);
+    detalleTxt.setPosition(0, opts.tamano > 24 ? 27 : 22);
     hijos.push(detalleTxt);
   }
 
-  this._bannerEsperaTitulo = this.add.container(400, 130, hijos).setDepth(401);
+  this._bannerEsperaTitulo = this.add.container(400, opts.y || 130, hijos).setDepth(opts.depth || 401);
   this._sprites.push(this._bannerEsperaTitulo);
 }
 
@@ -2057,6 +2304,7 @@ _conectarSocket() {
       // ocultar) de todo lo de la sala de espera — mismo criterio que el
       // handler real de 'partida-iniciada' más abajo, ver comentario ahí.
       this._salaEnJuego = true;
+      if (this._L) this._modoCamaraAngosto('juego');
       if (this.panelEspera) this.panelEspera.setVisible(false);
       if (this.botonVolverEspera) this.botonVolverEspera.setVisible(false);
       this._limpiarAvataresEspera();
@@ -2128,6 +2376,7 @@ _conectarSocket() {
       if (this.botonVolverEspera) this.botonVolverEspera.setVisible(false);
       this._limpiarAvataresEspera();
       this._destruirBannerEsperaTitulo();
+      if (this._L) this._modoCamaraAngosto('juego');
       if (this.mesaImg) this.mesaImg.setVisible(true);
       if (this.sombraMesa) this.sombraMesa.setVisible(true);
       this._mostrarMarcadores(true);
@@ -2186,7 +2435,7 @@ _conectarSocket() {
         const delay = hayRevelacionPendiente ? 3800 : 0;
 
         this.time.delayedCall(delay, () => {
-          this._mostrarPantallaFinal(titulo, !!data.esCampeon, data.esTorneo, data.torneoId, data.jugadores, extra, gano, data.recompensa || null);
+          this._mostrarPantallaFinal(titulo, !!data.esCampeon, data.esTorneo, data.torneoId, data.jugadores, extra, gano, data.recompensa || null, { ranked: !!data.ranked, privada: !!data.privada, puntosParaGanar: data.puntosParaGanar || null, motivo: data.motivo || null });
         });
       });
     this.socket.off('revancha-estado').on('revancha-estado', (data) => {
@@ -2240,370 +2489,343 @@ _esRepartoNuevo(nuevoEstado) {
     return rondaAnterior !== nuevoEstado.numeroRonda;
 }
 
-_mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = null, jugadoresFinal = null, subtitulo = '', gano = false, recompensa = null) {
+_mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = null, jugadoresFinal = null, subtitulo = '', gano = false, recompensa = null, datosFinal = null) {
     this._limpiarSprites();
     this._ocultarCanto();
-    // Centésimo pase: referencias a la placa de alerta de revancha y al
-    // botón de "Pedir revancha" — se resetean acá porque `_limpiarSprites`
-    // ya destruyó los objetos de la pantalla final anterior, si hubo una.
+    this._destruirBannerEsperaTitulo();
+    this._salaEnJuego = true;               // por si llega un 'jugador-unido' tardío: no redibujar la espera
     this.fondoAlertaRevancha = null;
     this.contRevancha = null;
-    // Pase 391: tweens infinitos de la pantalla final (rayos, destellos,
-    // resplandor) — `_limpiarSprites` los frena al limpiar.
     this._tweensFinal = [];
-    const elementosMarcador = [
+    this._finalGeneracion = (this._finalGeneracion || 0) + 1;
+    const generacion = this._finalGeneracion;
+    const elementosMarcador = this._L ? [] : [
       this.scoreBg, this.scoreText, this.labelPropio,
       this.fondoInfoRival, this.scoreTextRival, this.labelRival, this.manoIconoRival,
     ];
+    if (this._L) this._modoCamaraAngosto('estatica');
     this.children.list
       .filter(c => c !== undefined)
       .forEach(c => { if (!elementosMarcador.includes(c)) c.setVisible(false); });
 
-    // Pase 201: fondo fotográfico del lobby + velo liviano.
+    // Fondo: el paño verde de juego completo (sin tarjeta de pergamino) + velo liviano.
     const fondoResultado = this.add.image(400, 300, 'fondoResultado').setDepth(898);
     fondoResultado.setDisplaySize(800, 600);
+    if (this._L) this._cubrirEstatico(fondoResultado);
     this._sprites.push(fondoResultado);
-    const velo = this.add.rectangle(400, 300, 800, 600, 0x14140f, 0.45).setDepth(900);
+    const velo = this.add.rectangle(400, 300, 800, this._L ? this._L.H8 + 4 : 600, 0x14140f, 0.45).setDepth(900);
     this._sprites.push(velo);
 
     // ─────────────────────────────────────────────────────────────────
-    // Pase 391: rediseño de la pantalla final.
-    //  · Jerarquía invertida: la fila del ganador brilla (pergamino
-    //    dorado + marco de madera + trofeo), la del perdedor queda
-    //    sobria y ahuecada (pergamino grisáceo, "Paso").
-    //  · Botones planos de código: Esmeralda #10B981 / Dorado #F5B041.
-    //  · Título: cinta dorada festiva con rayos, destellos y papelitos si
-    //    ganó; cartel de madera oscura con flejes de hierro si perdió.
-    //  · Placa de recompensas ahuecada (puntos de rango / monedas).
-    //  · Avatar dentro del Aro de Madera Criollo de Caoba.
+    // Pase 393: la pantalla final reusa el lenguaje de la sala de espera —
+    // cartel de caoba arriba, "batalla de avatares" con el aro de caoba y
+    // el escudo central (acá con el marcador final), moneda + frase y la
+    // botonera vertical en cápsulas 3D. Sin tarjeta, sin monedas ganadas y
+    // con puntos SOLO si la partida fue de Liga Criolla (ranked).
     // ─────────────────────────────────────────────────────────────────
+    const PERSONAJES_CANTO = ['gaucho', 'gaucha', 'gaucho2', 'gaucha2'];
     const modo = titulo === '¡Ganaste!' ? 'victoria' : (titulo === 'Perdiste' ? 'derrota' : 'neutro');
-    const panelAncho = 400;
-    const px = 400 - panelAncho / 2;
-    const padArriba = 22;
-    const padAbajo = 22;
-    const altoBotonFinal = 46;
-    const altoFilaGanador = 34;
-    const altoFilaPerdedor = 26;
-    const gapEntreFilas = 8;
+    const datos = datosFinal || {};
+    const tipoMesa = datos.ranked ? 'Liga Criolla' : esTorneo ? 'Torneo' : datos.privada ? 'Sala privada' : 'Partida libre';
+    const puntosMesa = datos.puntosParaGanar || this._puntosSala;
+    const detalle = puntosMesa ? `Mesa a ${puntosMesa} tantos · ${tipoMesa}` : null;
 
-    // 1) Título
-    let textoTitulo;
-    let pillW, pillH;
-    if (modo === 'victoria') {
-      textoTitulo = this.add.text(0, 0, '¡GANASTE!', {
-        fontFamily: 'Fredoka, Arial', fontSize: '32px', fontStyle: '700', color: '#FFFFFF', align: 'center',
-        stroke: '#7a4200', strokeThickness: 6,
-      }).setDepth(903);
-      pillW = textoTitulo.width + 84;
-      pillH = textoTitulo.height + 16;
-    } else if (modo === 'derrota') {
-      textoTitulo = this.add.text(0, 0, 'PERDISTE', {
-        fontFamily: 'Fredoka, Arial', fontSize: '28px', fontStyle: '700', color: '#E4573D', align: 'center',
-        stroke: '#000000', strokeThickness: 5,
-      }).setDepth(903);
-      pillW = textoTitulo.width + 76;
-      pillH = textoTitulo.height + 18;
-    } else {
-      textoTitulo = this.add.text(0, 0, titulo, {
-        fontFamily: 'Fredoka, Arial', fontSize: '22px', fontStyle: '600', color: '#8c2a2a', align: 'center',
-        wordWrap: { width: panelAncho - 60 },
-      }).setDepth(903);
-      pillW = textoTitulo.width + 36;
-      pillH = textoTitulo.height + 12;
-    }
-    this._sprites.push(textoTitulo);
+    // 1) Cartel de caoba con el resultado
+    const textoCartel = modo === 'victoria' ? '¡GANASTE!' : (modo === 'derrota' ? 'PERDISTE' : 'Sala cancelada');
+    this._actualizarBannerEsperaTitulo(textoCartel, null, detalle, {
+      y: 84, depth: 903,
+      color: modo === 'derrota' ? '#E4573D' : '#FFD98A',
+      tamano: 30,
+    });
+    const cartel = this._bannerEsperaTitulo;
+    this._bannerEsperaTitulo = null;       // ya no es el cartel de la espera
 
-    // 2) Aro de caoba + cara. El hueco del aro mide ≈62% del PNG.
-    const HUECO = 0.62;
-    const cuerpoSinAvatar = () => {
-      let h = padArriba + pillH + 8 + 6;
-      if (esCampeon) h += 22;
-      if (subtitulo) h += 24;
-      return h;
-    };
-
-    // Ítems de recompensa (solo lo que haya para mostrar).
-    const itemsRec = [];
-    if (recompensa && typeof recompensa === 'object') {
-      const p = Number(recompensa.puntos);
-      if (Number.isFinite(p) && p !== 0) {
-        itemsRec.push({ tipo: 'puntos', texto: `${p > 0 ? '+' : ''}${p} Puntos`, color: p > 0 ? '#1f7a3c' : '#8c2a2a' });
-      }
-      const m = Number(recompensa.monedas);
-      if (Number.isFinite(m) && m > 0) {
-        itemsRec.push({ tipo: 'moneda', texto: `+${m} Monedas`, color: '#9a6200' });
-      }
-    }
-    const hayRecompensa = itemsRec.length > 0;
-
+    // 2) Fila de avatares: ganadores a la izquierda, escudo con el marcador, perdedores a la derecha
     const hayJugadores = jugadoresFinal && jugadoresFinal.length > 0;
-    const filas = hayJugadores
-      ? [...jugadoresFinal].sort((a, b) => (b.gano ? 1 : 0) - (a.gano ? 1 : 0))
-      : [];
-    let altoFilasTotal = 0;
-    filas.forEach((j, i) => { altoFilasTotal += (j.gano ? altoFilaGanador : altoFilaPerdedor) + (i < filas.length - 1 ? gapEntreFilas : 0); });
+    const ganadores = hayJugadores ? jugadoresFinal.filter(j => j.gano) : [];
+    const perdedores = hayJugadores ? jugadoresFinal.filter(j => !j.gano) : [];
+    const todos = [...ganadores, ...perdedores];
+    const total = todos.length;
+    const tamano = total <= 2 ? 140 : total <= 4 ? 115 : 92;
+    const gapIntra = total <= 2 ? 0 : total <= 4 ? 30 : 20;
+    const gapEscudo = 96;
+    const paso = tamano + gapIntra;
+    const anchoGrupo = (n) => (n > 0 ? n * paso - gapIntra : 0);
+    const anchoFila = anchoGrupo(ganadores.length) + (ganadores.length && perdedores.length ? gapEscudo : 0) + anchoGrupo(perdedores.length);
+    let cursorX = 400 - anchoFila / 2 + tamano / 2;
+    const cyAv = 212;
 
-    const altoSinAvatar = cuerpoSinAvatar()
-      + (hayRecompensa ? 38 + 10 : 0)
-      + (hayJugadores ? 4 + altoFilasTotal + 14 : 8)
-      + (!esTorneo ? 18 + altoBotonFinal + 8 : 0)
-      + altoBotonFinal + padAbajo;
-    const PANEL_MAX = 584;
-    let aroTam = 176;
-    if (altoSinAvatar + aroTam > PANEL_MAX) aroTam = Math.max(110, PANEL_MAX - altoSinAvatar);
-    const huecoD = aroTam * HUECO;
-    const caraTam = Math.round(huecoD * 1.1);
+    const radio = tamano / 2;
+    const radioFoto = radio * 0.72;
+    const infoSala = (nombre) => (this._jugadoresSala || []).find(s => s.username === nombre) || {};
+    const pendientes = [];
+    let escudoX = 400;
 
-    const panelAlto = Math.min(PANEL_MAX, Math.max(220, altoSinAvatar + aroTam));
-    const py = 300 - panelAlto / 2;
-
-    const marco = this.add.graphics().setDepth(900);
-    this._dibujarMarcoMaderaConRemaches(marco, px, py, panelAncho, panelAlto, 20, 14, 9);
-    this._sprites.push(marco);
-
-    // Posiciones verticales
-    const pillCenterY = py + padArriba + pillH / 2;
-    const avatarCy = pillCenterY + pillH / 2 + 8 + aroTam / 2;
-
-    // 3) Rayos de victoria girando detrás (recortados al interior de la tarjeta)
-    if (modo === 'victoria') {
-      const rayos = this.add.graphics().setDepth(900.6);
-      rayos.setPosition(400, avatarCy);
-      const N = 14, R = 340;
-      for (let i = 0; i < N; i++) {
-        const a0 = (i / N) * Math.PI * 2;
-        const a1 = a0 + (Math.PI * 2 / N) * 0.5;
-        rayos.fillStyle(i % 2 === 0 ? 0xFFD668 : 0xFFF3B0, i % 2 === 0 ? 0.30 : 0.18);
-        rayos.beginPath();
-        rayos.moveTo(0, 0);
-        rayos.lineTo(Math.cos(a0) * R, Math.sin(a0) * R);
-        rayos.lineTo(Math.cos(a1) * R, Math.sin(a1) * R);
-        rayos.closePath();
-        rayos.fillPath();
+    todos.forEach((j, idx) => {
+      const esGanadorGrupo = j.gano;
+      const cx = cursorX;
+      cursorX += paso;
+      if (idx === ganadores.length - 1 && perdedores.length) {
+        escudoX = cx + tamano / 2 + gapEscudo / 2;
+        cursorX += gapEscudo - gapIntra;
       }
-      const mascara = this.make.graphics({ x: 0, y: 0 }, false);
-      mascara.fillStyle(0xffffff, 1);
-      mascara.fillRect(px + 12, py + 12, panelAncho - 24, panelAlto - 24);
-      rayos.setMask(mascara.createGeometryMask());
-      this._sprites.push(rayos, mascara);
-      this._tweensFinal.push(this.tweens.add({ targets: rayos, angle: 360, duration: 26000, repeat: -1, ease: 'Linear' }));
-    }
+      const info = { ...infoSala(j.nombre), ...Object.fromEntries(Object.entries(j).filter(([k, v]) => v != null && k !== 'nombre' && k !== 'gano' && k !== 'tantos')) };
+      const rangoFicha = info.rango_id ? RANGOS_UI[Number(info.rango_id)] : null;
+      const hueco = rangoFicha ? rangoFicha.hueco : 0.62;
+      const tamanoAro = Math.round((radioFoto * 2) / (hueco + 0.02));
 
-    // 4) Título (cinta dorada / cartel de madera y hierro / cinta neutra)
-    if (modo === 'derrota') {
-      const g = this.add.graphics().setDepth(901);
-      const x0 = 400 - pillW / 2, y0 = pillCenterY - pillH / 2;
-      g.fillStyle(0x000000, 0.35);
-      g.fillRoundedRect(x0 + 2, y0 + 5, pillW, pillH, 8);
-      g.fillStyle(0x2f2018, 1);
-      g.fillRoundedRect(x0, y0, pillW, pillH, 8);
-      g.lineStyle(1, 0x4a3226, 1);                       // vetas de tablón
-      [0.33, 0.66].forEach(f => g.lineBetween(x0 + 24, y0 + pillH * f, x0 + pillW - 24, y0 + pillH * f));
-      g.fillStyle(0x3d2b20, 1);
-      g.fillRect(x0 + 24, y0 + 3, pillW - 48, 3);
-      g.fillStyle(0x4a4e57, 1);                           // flejes de hierro
-      g.fillRect(x0 + 12, y0, 12, pillH);
-      g.fillRect(x0 + pillW - 24, y0, 12, pillH);
-      g.lineStyle(2, 0x000000, 1);
-      g.strokeRoundedRect(x0, y0, pillW, pillH, 8);
-      g.fillStyle(0x9aa0aa, 1);                           // remaches
-      [[18, 7], [18, pillH - 7], [pillW - 18, 7], [pillW - 18, pillH - 7]].forEach(([dx, dy]) => g.fillCircle(x0 + dx, y0 + dy, 2.3));
-      this._sprites.push(g);
-    } else {
-      const texIzqTit = this.textures.get('banner_izq').getSourceImage();
-      const texDerTit = this.textures.get('banner_der').getSourceImage();
-      const capWTit = Math.round(texIzqTit.width * (pillH / texIzqTit.height));
-      const capWDerTit = Math.round(texDerTit.width * (pillH / texDerTit.height));
-      const midWTit = Math.max(1, pillW - capWTit - capWDerTit);
-      const cartelIzq = this.add.image(400 - pillW / 2 + capWTit / 2, pillCenterY, 'banner_izq').setDisplaySize(capWTit, pillH).setDepth(901);
-      const cartelCentro = this.add.image(400 - pillW / 2 + capWTit + midWTit / 2, pillCenterY, 'banner_centro').setDisplaySize(midWTit, pillH).setDepth(901);
-      const cartelDer = this.add.image(400 + pillW / 2 - capWDerTit / 2, pillCenterY, 'banner_der').setDisplaySize(capWDerTit, pillH).setDepth(901);
-      if (modo === 'victoria') [cartelIzq, cartelCentro, cartelDer].forEach(c => c.setTint(0xFFD25A));
-      this._sprites.push(cartelIzq, cartelCentro, cartelDer);
-    }
-    textoTitulo.setPosition(400, pillCenterY + (modo === 'victoria' ? -1 : 0)).setOrigin(0.5);
+      // Halo dorado + estrellitas detrás del ganador
+      if (esGanadorGrupo) {
+        // Pase 395: halo circular más llamativo — anillos concéntricos que se
+        // desvanecen hacia afuera (desborde de luz), un núcleo cálido y un
+        // anillo de destello que respira.
+        const halo = this.add.graphics().setDepth(902);
+        const anillosHalo = [
+          [1.30, 0xFFC94A, 0.10],
+          [1.10, 0xFFD668, 0.16],
+          [0.92, 0xFFE08A, 0.22],
+          [0.76, 0xFFEBB0, 0.30],
+          [0.60, 0xFFF3CC, 0.42],
+        ];
+        anillosHalo.forEach(([k, col, al]) => {
+          halo.fillStyle(col, al);
+          halo.fillCircle(0, 0, tamanoAro * k);
+        });
+        halo.lineStyle(3, 0xFFF3CC, 0.9);
+        halo.strokeCircle(0, 0, tamanoAro * 0.62);
+        halo.setPosition(cx, cyAv);
+        this._sprites.push(halo);
+        this._tweensFinal.push(this.tweens.add({ targets: halo, alpha: 0.7, scale: 1.1, duration: 1000, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' }));
+        // Destello exterior que se expande y se apaga, en bucle
+        const onda = this.add.graphics().setDepth(901.9);
+        onda.lineStyle(4, 0xFFE08A, 1);
+        onda.strokeCircle(0, 0, tamanoAro * 0.62);
+        onda.setPosition(cx, cyAv);
+        this._sprites.push(onda);
+        this._tweensFinal.push(this.tweens.add({ targets: onda, alpha: { from: 0.85, to: 0 }, scale: { from: 1, to: 1.75 }, duration: 1800, repeat: -1, ease: 'Cubic.easeOut' }));
+      }
 
-    // 5) Avatar: disco de fondo + cara + Aro de Caoba por encima
-    const discoColor = modo === 'victoria' ? 0xFFE9A8 : (modo === 'derrota' ? 0xB9AE9E : 0xE9D9B0);
-    if (modo === 'victoria') {
-      const halo = this.add.graphics().setDepth(901.8);
-      halo.fillStyle(0xFFD668, 0.45);
-      halo.fillCircle(0, 0, aroTam * 0.5);
-      halo.setPosition(400, avatarCy);
-      this._sprites.push(halo);
-      this._tweensFinal.push(this.tweens.add({ targets: halo, alpha: 0.35, scale: 1.06, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' }));
-    }
-    const disco = this.add.graphics().setDepth(902);
-    disco.fillStyle(discoColor, 1);
-    disco.fillCircle(400, avatarCy, huecoD / 2 + 2);
-    this._sprites.push(disco);
-    const caraFinal = this.add.image(400, avatarCy, gano ? 'caraVictorioso' : 'caraDerrotado').setDepth(902.2);
-    caraFinal.setDisplaySize(caraTam, caraTam);
-    this._sprites.push(caraFinal);
-    const aroFinal = this.add.image(400, avatarCy, 'aroAvatarEspera').setDisplaySize(aroTam, aroTam).setDepth(902.6);
-    this._sprites.push(aroFinal);
+      // Disco de fondo
+      const disco = this.add.graphics().setDepth(902.1);
+      disco.fillStyle(esGanadorGrupo ? 0xFFE9A8 : 0xB9AE9E, 1);
+      disco.fillCircle(cx, cyAv, radioFoto);
+      this._sprites.push(disco);
 
-    let y = avatarCy + aroTam / 2 + 6;
+      // Cara: foto real si usa foto; si no, la expresión (victoriosa / derrotada) de su personaje
+      const esFoto = info.avatar_tipo === 'foto' && !!info.foto_perfil_url;
+      const personaje = PERSONAJES_CANTO.includes(info.personaje) ? info.personaje : 'gaucho';
+      const esMio = j.nombre === this.usuario?.username;
+      let claveCara, urlCara;
+      if (esFoto) {
+        urlCara = info.foto_perfil_url;
+        claveCara = `avatarEspera_${this._hashSimple(urlCara)}`;
+      } else if (esMio && this.textures.exists(esGanadorGrupo ? 'caraVictorioso' : 'caraDerrotado')) {
+        claveCara = esGanadorGrupo ? 'caraVictorioso' : 'caraDerrotado';
+      } else {
+        claveCara = `caraFinal_${personaje}_${esGanadorGrupo ? 'v' : 'd'}`;
+        urlCara = `assets/expresionesGaucho/${personaje}_${esGanadorGrupo ? 'victorioso' : 'derrotado'}_cerca.png`;
+      }
+      const ponerCara = () => {
+        if (generacion !== this._finalGeneracion || !this.textures.exists(claveCara)) return;
+        const lado = esFoto ? radioFoto * 2 : radioFoto * 2.15;
+        const img = this.add.image(cx, cyAv, claveCara).setDisplaySize(lado, lado).setDepth(902.2);
+        const m = this.make.graphics();
+        m.fillStyle(0xffffff);
+        m.fillCircle(cx, cyAv, radioFoto);
+        img.setMask(m.createGeometryMask());
+        this._sprites.push(img, m);
+      };
+      if (this.textures.exists(claveCara)) ponerCara();
+      else pendientes.push({ clave: claveCara, url: urlCara, listo: ponerCara });
 
-    // 6) Frases debajo del avatar
-    if (esCampeon) {
-      const campeonTxt = this.add.text(400, y, '👑 ¡Sos el campeón del torneo!', {
-        fontFamily: 'Fredoka, Arial', fontSize: '15px', fontStyle: '600', color: '#C9860E', align: 'center',
-      }).setOrigin(0.5, 0).setDepth(902);
-      this._sprites.push(campeonTxt);
-      y += 22;
-    }
-    if (subtitulo) {
-      const textoSubtitulo = this.add.text(400, y, subtitulo, {
-        fontFamily: 'Nunito, Arial', fontSize: '13px', fontStyle: 'bold', color: '#7a6660', align: 'center',
-        wordWrap: { width: panelAncho - 60 },
-      }).setOrigin(0.5, 0).setDepth(902);
-      this._sprites.push(textoSubtitulo);
-      y += 24;
-    }
+      // Aro de caoba (o anillo del rango en Liga Criolla)
+      let claveAro = 'aroAvatarEspera';
+      if (rangoFicha && this.textures.exists(`aroRango_${info.rango_id}`)) claveAro = `aroRango_${info.rango_id}`;
+      const aro = this.add.image(cx, cyAv, claveAro).setDisplaySize(tamanoAro, tamanoAro).setDepth(902.6);
+      this._sprites.push(aro);
 
-    // 7) Placa de recompensas (pergamino ahuecado)
-    if (hayRecompensa) {
-      const ICONO = 22, GAP_ICONO = 6, GAP_ITEMS = 26;
-      const objs = itemsRec.map(it => {
-        const t = this.add.text(0, 0, it.texto, {
-          fontFamily: 'Fredoka, Arial', fontSize: '17px', fontStyle: '700', color: it.color,
-        }).setOrigin(0, 0.5).setDepth(902);
+      // Etiqueta de nombre (madera fina) con copa si ganó
+      const maxNombre = Math.max(70, tamano + gapIntra - 8);
+      let nombreMostrado = String(j.nombre || '');
+      const medida = this.add.text(0, 0, nombreMostrado, { fontFamily: 'Nunito, Arial', fontSize: total <= 2 ? '16px' : '13px', fontStyle: '800' });
+      while (medida.width > maxNombre - 24 && nombreMostrado.length > 3) {
+        nombreMostrado = nombreMostrado.slice(0, -2);
+        medida.setText(nombreMostrado + '…');
+      }
+      const textoNombre = nombreMostrado.length < String(j.nombre || '').length ? nombreMostrado + '…' : nombreMostrado;
+      medida.destroy();
+      const yNombre = cyAv + tamanoAro / 2 + 20;
+      const etiqueta = this.add.text(0, 0, textoNombre, {
+        fontFamily: 'Nunito, Arial', fontSize: total <= 2 ? '16px' : '13px', fontStyle: '800', color: '#FFF8ED',
+        stroke: '#2C160E', strokeThickness: 3,
+      }).setOrigin(0, 0.5).setDepth(904);
+      const icoTrofeo = esGanadorGrupo ? 22 : 0;
+      const anchoEtq = etiqueta.width + 24 + (icoTrofeo ? icoTrofeo + 4 : 0);
+      const placa = this.add.graphics().setDepth(903);
+      placa.fillStyle(0x000000, 0.4);
+      placa.fillRoundedRect(cx - anchoEtq / 2, yNombre - 13 + 3, anchoEtq, 26, 8);
+      placa.fillStyle(0x5C3317, 1);
+      placa.fillRoundedRect(cx - anchoEtq / 2, yNombre - 13, anchoEtq, 26, 8);
+      placa.fillStyle(0x7A4A26, 1);
+      placa.fillRoundedRect(cx - anchoEtq / 2 + 2, yNombre - 11, anchoEtq - 4, 10, { tl: 6, tr: 6, bl: 2, br: 2 });
+      placa.lineStyle(2, 0x1a0f08, 1);
+      placa.strokeRoundedRect(cx - anchoEtq / 2, yNombre - 13, anchoEtq, 26, 8);
+      this._sprites.push(placa, etiqueta);
+      let xTxt = cx - anchoEtq / 2 + 12;
+      if (icoTrofeo) {
+        const t = this.add.image(xTxt + icoTrofeo / 2, yNombre, 'trofeoFila').setDisplaySize(icoTrofeo, icoTrofeo).setDepth(904);
         this._sprites.push(t);
-        return t;
-      });
-      const anchoItems = objs.reduce((s, t) => s + ICONO + GAP_ICONO + t.width, 0) + GAP_ITEMS * (objs.length - 1);
-      const placaW = Math.min(panelAncho - 60, Math.max(200, anchoItems + 40));
-      const placaH = 38;
-      const placaX = 400 - placaW / 2;
-      const placa = this.add.graphics().setDepth(901);
-      placa.fillStyle(0x4A2C2A, 0.28);
-      placa.fillRoundedRect(placaX, y, placaW, placaH, 10);
-      placa.fillStyle(0xEAD9B5, 1);
-      placa.fillRoundedRect(placaX + 1.5, y + 3, placaW - 3, placaH - 5, 8);
-      placa.fillStyle(0xB89A6A, 0.45);                    // sombra interior superior
-      placa.fillRoundedRect(placaX + 1.5, y + 3, placaW - 3, 6, 8);
-      placa.lineStyle(2, 0x6b4a34, 1);
-      placa.strokeRoundedRect(placaX, y, placaW, placaH, 10);
-      this._sprites.push(placa);
+        xTxt += icoTrofeo + 4;
+      }
+      etiqueta.setPosition(xTxt, yNombre + 1);
 
-      let cx = 400 - anchoItems / 2;
-      const cyP = y + placaH / 2 + 1;
-      itemsRec.forEach((it, i) => {
-        const ic = cx + ICONO / 2;
-        if (it.tipo === 'moneda') {
-          const m = this.add.image(ic, cyP, 'monedaEsperaCara').setDisplaySize(ICONO + 2, ICONO + 2).setDepth(902);
-          this._sprites.push(m);
-        } else {
-          // cuadro de fósforos: 4 palitos + el tachado del quinto
-          const f = this.add.graphics().setDepth(902);
-          f.lineStyle(3, 0x3a2412, 1);
-          [-7, -2.5, 2, 6.5].forEach(dx => f.lineBetween(ic + dx, cyP - 8, ic + dx, cyP + 8));
-          f.lineStyle(3, 0xB0454B, 1);
-          f.lineBetween(ic - 10, cyP + 5, ic + 10, cyP - 5);
-          this._sprites.push(f);
-        }
-        objs[i].setPosition(cx + ICONO + GAP_ICONO, cyP);
-        cx += ICONO + GAP_ICONO + objs[i].width + GAP_ITEMS;
-      });
-      y += placaH + 10;
+      // Píldora de estado: "✓ Ganador" (verde) / "Derrotado" (gris)
+      const yPill = yNombre + 32;
+      const pillAlto = 26;
+      const estiloPill = { fontFamily: 'Fredoka, Arial', fontSize: '14px', fontStyle: '600' };
+      const textoPill = esGanadorGrupo ? '✓ Ganador' : 'Derrotado';
+      const medPill = this.add.text(0, 0, textoPill, estiloPill);
+      const anchoPill = Math.max(Math.ceil(medPill.width) + 30, 104);
+      medPill.destroy();
+      const pg = this.add.graphics().setDepth(903);
+      const ppx = cx - anchoPill / 2, ppy = yPill - pillAlto / 2;
+      pg.fillStyle(0x000000, 0.5);
+      pg.fillRoundedRect(ppx, ppy + 3, anchoPill, pillAlto, pillAlto / 2);
+      pg.fillStyle(esGanadorGrupo ? 0x3E8E5A : 0xCFC5B2, 1);
+      pg.fillRoundedRect(ppx, ppy, anchoPill, pillAlto, pillAlto / 2);
+      pg.lineStyle(2, esGanadorGrupo ? 0x1F5C38 : 0x6f6558, 1);
+      pg.strokeRoundedRect(ppx, ppy, anchoPill, pillAlto, pillAlto / 2);
+      const pt = this.add.text(cx, yPill, textoPill, esGanadorGrupo
+        ? { ...estiloPill, color: '#FFFFFF', stroke: '#14391f', strokeThickness: 3 }
+        : { ...estiloPill, color: '#FFFFFF', stroke: '#2C160E', strokeThickness: 1.5 }
+      ).setOrigin(0.5).setDepth(904);
+      this._sprites.push(pg, pt);
+    });
+
+    // Carga diferida de las caras que todavía no estaban en caché
+    if (pendientes.length > 0) {
+      const unicos = [];
+      pendientes.forEach(p => { if (!unicos.find(u => u.clave === p.clave) && !this.textures.exists(p.clave)) unicos.push(p); });
+      unicos.forEach(p => this.load.image(p.clave, p.url));
+      if (unicos.length > 0) {
+        this.load.once(Phaser.Loader.Events.COMPLETE, () => pendientes.forEach(p => p.listo()));
+        this.load.start();
+      } else {
+        pendientes.forEach(p => p.listo());
+      }
     }
 
-    // 8) Filas de jugadores: el ganador brilla, el perdedor queda sobrio
-    if (hayJugadores) {
-      y += 4;
-      const filaAncho = panelAncho - 80;
-      filas.forEach((j) => {
-        const alto = j.gano ? altoFilaGanador : altoFilaPerdedor;
-        const fx = 400 - filaAncho / 2;
-        const fy = y;
-        const cyF = fy + alto / 2;
-        const filaFondo = this.add.graphics().setDepth(901);
-        if (j.gano) {
-          const brillo = this.add.graphics().setDepth(900.9);
-          brillo.fillStyle(0xFFD668, 0.5);
-          brillo.fillRoundedRect(fx - 4, fy - 4, filaAncho + 8, alto + 8, 12);
-          this._sprites.push(brillo);
-          this._tweensFinal.push(this.tweens.add({ targets: brillo, alpha: 0.25, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' }));
+    // 3) Escudo central con el marcador final
+    if (total >= 2) {
+      const tantosGan = ganadores.length ? Number(ganadores[0].tantos) : NaN;
+      const tantosPer = perdedores.length ? Number(perdedores[0].tantos) : NaN;
+      if (this.textures.exists('vsEscudoEspera')) {
+        const esc = this.add.image(escudoX, cyAv, 'vsEscudoEspera').setDisplaySize(96, 96).setDepth(904);
+        this._sprites.push(esc);
+      }
+      if (Number.isFinite(tantosGan) && Number.isFinite(tantosPer)) {
+        const marcador = `${tantosGan} - ${tantosPer}`;
+        const txtM = this.add.text(escudoX, cyAv + 1, marcador, {
+          fontFamily: 'Fredoka, Arial', fontSize: '19px', fontStyle: '700', color: '#FFD98A',
+          stroke: '#2C160E', strokeThickness: 4,
+        }).setOrigin(0.5).setDepth(906);
+        const anchoM = Math.max(txtM.width + 18, 60);
+        const plaqueta = this.add.graphics().setDepth(905);
+        plaqueta.fillStyle(0x000000, 0.45);
+        plaqueta.fillRoundedRect(escudoX - anchoM / 2, cyAv - 14 + 3, anchoM, 30, 9);
+        plaqueta.fillStyle(0x5C3317, 1);
+        plaqueta.fillRoundedRect(escudoX - anchoM / 2, cyAv - 14, anchoM, 30, 9);
+        plaqueta.lineStyle(2.5, 0x1a0f08, 1);
+        plaqueta.strokeRoundedRect(escudoX - anchoM / 2, cyAv - 14, anchoM, 30, 9);
+        this._sprites.push(plaqueta, txtM);
+      }
+    }
 
-          filaFondo.fillStyle(0x4A2C2A, 0.3);
-          filaFondo.fillRoundedRect(fx, fy + 2, filaAncho, alto, 9);
-          filaFondo.fillStyle(0xFFE08A, 1);
-          filaFondo.fillRoundedRect(fx + 1.5, fy + 1.5, filaAncho - 3, alto - 4, 7.5);
-          filaFondo.fillStyle(0xFFF3C4, 1);
-          filaFondo.fillRoundedRect(fx + 1.5, fy + 1.5, filaAncho - 3, (alto - 4) * 0.5, 7.5);
-          filaFondo.lineStyle(2, 0xF5B041, 1);
-          filaFondo.strokeRoundedRect(fx + 3, fy + 3, filaAncho - 6, alto - 8, 6);
-          filaFondo.lineStyle(2, 0x6b4a34, 1);
-          filaFondo.strokeRoundedRect(fx, fy, filaAncho, alto, 9);
-        } else {
-          filaFondo.fillStyle(0x8a7b6a, 0.55);
-          filaFondo.fillRoundedRect(fx, fy, filaAncho, alto, 8);
-          filaFondo.fillStyle(0xD3C9B8, 1);
-          filaFondo.fillRoundedRect(fx + 1.5, fy + 3, filaAncho - 3, alto - 5, 6.5);
-          filaFondo.fillStyle(0x8a7b6a, 0.35);              // sombra interior: se ve hundida
-          filaFondo.fillRoundedRect(fx + 1.5, fy + 3, filaAncho - 3, 5, 6.5);
-          filaFondo.lineStyle(1, 0x8a7b6a, 1);
-          filaFondo.strokeRoundedRect(fx, fy, filaAncho, alto, 8);
-        }
-        this._sprites.push(filaFondo);
+    // 4) Moneda del mate + frase de la partida
+    const frase = esCampeon
+      ? '¡Sos el campeón del torneo!'
+      : (datos.motivo === 'abandono'
+        ? (gano ? '¡Victoria por abandono!' : 'Perdiste por desconexión')
+        : (modo === 'victoria' ? '¡Victoria!' : (modo === 'derrota' ? 'Derrota' : titulo || '')));
+    let y = total ? 384 : 250;
+    if (frase) {
+      const TAM = 34;
+      const txtFrase = this.add.text(0, y, frase, {
+        fontFamily: 'Fredoka, Arial', fontSize: '22px', fontStyle: '600', color: '#FFF8ED',
+        stroke: '#000000', strokeThickness: 4, align: 'center', wordWrap: { width: 560 },
+      }).setOrigin(0, 0.5).setDepth(905);
+      const anchoFila2 = TAM + 10 + txtFrase.width;
+      const x0 = 400 - anchoFila2 / 2;
+      const moneda = this.add.image(x0 + TAM / 2, y, 'monedaEsperaCara').setDisplaySize(TAM, TAM).setDepth(905);
+      txtFrase.setX(x0 + TAM + 10);
+      this._sprites.push(moneda, txtFrase);
+      let caraActual = 'cara';
+      const giro = { ang: 0 };
+      this._tweensFinal.push(this.tweens.add({
+        targets: giro, ang: 360, duration: 2600, repeat: -1, ease: 'Linear',
+        onUpdate: () => {
+          if (!moneda.scene) return;
+          const c = Math.cos((giro.ang * Math.PI) / 180);
+          const cara = c >= 0 ? 'cara' : 'dorso';
+          if (cara !== caraActual) {
+            caraActual = cara;
+            moneda.setTexture(cara === 'cara' ? 'monedaEsperaCara' : 'monedaEsperaDorso');
+          }
+          moneda.setDisplaySize(TAM * Math.max(Math.abs(c), 0.04), TAM);
+        },
+      }));
+    }
+    y += 34;
 
-        const filaTexto = this.add.text(fx + 14, cyF + 1, j.nombre, j.gano
-          ? { fontFamily: 'Nunito, Arial', fontSize: '15px', fontStyle: '800', color: '#3a2412' }
-          : { fontFamily: 'Nunito, Arial', fontSize: '12px', fontStyle: 'bold', color: '#6f6558' }
-        ).setOrigin(0, 0.5).setDepth(902);
-        this._sprites.push(filaTexto);
-
-        if (j.gano) {
-          const iconoTrofeo = this.add.image(fx + filaAncho - 18, cyF, 'trofeoFila').setDisplaySize(28, 28).setDepth(902);
-          this._sprites.push(iconoTrofeo);
-        } else {
-          const filaEtiqueta = this.add.text(fx + filaAncho - 12, cyF + 1, 'Paso', {
-            fontFamily: 'Nunito, Arial', fontSize: '11px', fontStyle: 'italic', color: '#7d7263',
-          }).setOrigin(1, 0.5).setDepth(902);
-          this._sprites.push(filaEtiqueta);
-        }
-        y += alto + gapEntreFilas;
-      });
-      y -= gapEntreFilas;
-      y += 14;
+    // 5) Puntos de Liga Criolla (solo partidas ranked): ficha con el cuadro de fósforos
+    const puntosRank = recompensa && recompensa.puntos != null && Number.isFinite(Number(recompensa.puntos))
+      ? Number(recompensa.puntos) : null;
+    if (datos.ranked && puntosRank !== null) {
+      const textoP = `${puntosRank > 0 ? '+' : ''}${puntosRank} Puntos`;
+      const colorP = puntosRank > 0 ? '#1f7a3c' : (puntosRank < 0 ? '#8c2a2a' : '#7a6660');
+      const tp = this.add.text(0, 0, textoP, { fontFamily: 'Fredoka, Arial', fontSize: '16px', fontStyle: '700', color: colorP }).setOrigin(0, 0.5).setDepth(905);
+      const ICONO = 26, PAD = 16, ALTO_F = 36;
+      const wF = PAD * 2 + ICONO + 6 + tp.width;
+      const fx0 = 400 - wF / 2;
+      const ficha = this.add.graphics().setDepth(904);
+      ficha.fillStyle(0x4A2C2A, 0.28);
+      ficha.fillRoundedRect(fx0, y, wF, ALTO_F, 11);
+      ficha.fillStyle(0xEAD9B5, 1);
+      ficha.fillRoundedRect(fx0 + 1.5, y + 3, wF - 3, ALTO_F - 5, 9);
+      ficha.fillStyle(0xB89A6A, 0.45);
+      ficha.fillRoundedRect(fx0 + 1.5, y + 3, wF - 3, 6, 9);
+      ficha.lineStyle(2, 0x6b4a34, 1);
+      ficha.strokeRoundedRect(fx0, y, wF, ALTO_F, 11);
+      const cyF = y + ALTO_F / 2 + 1;
+      const fosforos = this.add.image(fx0 + PAD + ICONO / 2, cyF, 'fosforosPuntos').setDisplaySize(ICONO, ICONO).setDepth(905);
+      tp.setPosition(fx0 + PAD + ICONO + 6, cyF);
+      this._sprites.push(ficha, fosforos, tp);
+      y += ALTO_F + 10;
     } else {
-      y += 8;
+      y += 6;
     }
 
-    // 9) Botones
+    // 6) Botonera vertical en cápsulas 3D
+    const altoBoton = 46;
     if (!esTorneo) {
-      this.fondoAlertaRevancha = this.add.graphics().setDepth(901).setVisible(false);
-      this._sprites.push(this.fondoAlertaRevancha);
-
-      this.textoEsperaRevancha = this.add.text(400, y, '', {
-        fontFamily: 'Nunito, Arial', fontSize: '12px', fontStyle: 'bold', color: '#7a6660', align: 'center',
-        wordWrap: { width: panelAncho - 40 },
-      }).setOrigin(0.5, 0).setDepth(902);
-      this._sprites.push(this.textoEsperaRevancha);
-      y += 18;
-
       const revanchaTexto = 'Pedir revancha';
-      const revanchaAncho = this._medirAnchoTextoOverlay(revanchaTexto, '14px') + 56;
+      const revanchaAncho = this._medirAnchoTextoOverlay(revanchaTexto, '17px') + 60;
       const { contenedor: contRevancha, img: imgRevancha } = this._crearBotonOverlay({
-        x: 400, y: y + altoBotonFinal / 2, ancho: revanchaAncho, alto: altoBotonFinal, variante: 'esmeralda', texto: revanchaTexto, tamanoFuente: 14,
+        x: 400, y: y + altoBoton / 2, ancho: revanchaAncho, alto: altoBoton, variante: 'esmeralda', texto: revanchaTexto, tamanoFuente: 17,
         onClick: () => {
           this.socket.emit('pedir-revancha', { codigoSala: this.codigoSala });
-          // El estado "ya pedida" se marca apagando el color (sigue 100% opaco).
           contRevancha.disableInteractive();
           if (imgRevancha) imgRevancha.setTint(0x8a9e8a);
         },
       });
       this.contRevancha = contRevancha;
       this.imgRevancha = imgRevancha;
-      y += altoBotonFinal + 8;
+      y += altoBoton + 10;
     }
-
     const labelBoton = esTorneo ? 'Ver bracket' : 'Volver al lobby';
-    const volverAncho = this._medirAnchoTextoOverlay(labelBoton, '14px') + 56;
+    const volverAncho = this._medirAnchoTextoOverlay(labelBoton, '17px') + 60;
     this._crearBotonOverlay({
-      x: 400, y: y + altoBotonFinal / 2, ancho: volverAncho, alto: altoBotonFinal, variante: 'oro', texto: labelBoton, tamanoFuente: 14,
+      x: 400, y: y + altoBoton / 2, ancho: volverAncho, alto: altoBoton, variante: 'oro', texto: labelBoton, tamanoFuente: 17,
       onClick: () => {
         if (esTorneo && this.onVerBracket) {
           this.onVerBracket(torneoId);
@@ -2612,11 +2834,22 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
         }
       },
     });
+    y += altoBoton + 8;
 
-    // 10) Destellos y papelitos de victoria
+    if (!esTorneo) {
+      this.fondoAlertaRevancha = this.add.graphics().setDepth(901).setVisible(false);
+      this._sprites.push(this.fondoAlertaRevancha);
+      this.textoEsperaRevancha = this.add.text(400, y, '', {
+        fontFamily: 'Nunito, Arial', fontSize: '12px', fontStyle: 'bold', color: '#F1D9A8', align: 'center',
+        stroke: '#000000', strokeThickness: 3, wordWrap: { width: 360 },
+      }).setOrigin(0.5, 0).setDepth(905);
+      this._sprites.push(this.textoEsperaRevancha);
+    }
+
+    // 7) Celebración: destellos junto al cartel y a los ganadores + papelitos
     if (modo === 'victoria') {
       const estrella = (ex, ey, tam, delay) => {
-        const s = this.add.graphics().setDepth(903);
+        const s = this.add.graphics().setDepth(907);
         s.fillStyle(0xFFFFFF, 1);
         s.fillTriangle(0, -tam, tam * 0.22, 0, -tam * 0.22, 0);
         s.fillTriangle(0, tam, tam * 0.22, 0, -tam * 0.22, 0);
@@ -2631,18 +2864,21 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
           ease: 'Sine.easeInOut',
         }));
       };
-      estrella(400 - pillW / 2 + 14, pillCenterY - pillH / 2 + 4, 11, 0);
-      estrella(400 + pillW / 2 - 14, pillCenterY + 2, 9, 450);
-      estrella(400 - pillW / 2 + 70, pillCenterY + pillH / 2 - 2, 7, 900);
-      estrella(400 + pillW / 2 - 80, pillCenterY - pillH / 2 + 2, 8, 1300);
-      estrella(400 - aroTam * 0.42, avatarCy - aroTam * 0.3, 9, 300);
-      estrella(400 + aroTam * 0.44, avatarCy + aroTam * 0.18, 10, 700);
-
+      const cartelAncho = cartel && cartel.getBounds ? cartel.getBounds().width : 300;
+      estrella(400 + cartelAncho / 2 - 22, 58, 12, 0);
+      estrella(400 - cartelAncho / 2 + 26, 104, 9, 500);
+      if (ganadores.length) {
+        const gx = 400 - anchoFila / 2 + tamano / 2;
+        estrella(gx - tamano * 0.5, cyAv - tamano * 0.4, 10, 250);
+        estrella(gx + tamano * 0.55, cyAv + tamano * 0.1, 8, 800);
+        estrella(gx + tamano * 0.1, cyAv - tamano * 0.62, 7, 1200);
+      }
       const colores = [0xFFB627, 0xFFD668, 0x4FB3E8, 0xFFFFFF, 0xE74C3C, 0x10B981];
-      for (let i = 0; i < 44; i++) {
-        const cx0 = px + 16 + Math.random() * (panelAncho - 32);
-        const cy0 = py - 4;
-        const pieza = this.add.graphics().setDepth(903.5);
+      const extraTopConfeti = this._L ? Math.max(0, (this._L.H8 - 600) / 2) : 0;   // layout angosto: caen desde el borde de arriba de la ventana
+      for (let i = 0; i < 50; i++) {
+        const cx0 = 20 + Math.random() * 760;
+        const cy0 = -6 - extraTopConfeti;
+        const pieza = this.add.graphics().setDepth(908);
         pieza.fillStyle(colores[i % colores.length], 1);
         if (i % 3 === 0) pieza.fillRect(-1.5, -5, 3, 10); else pieza.fillRect(-3, -3, 6, 6);
         pieza.setPosition(cx0, cy0);
@@ -2650,11 +2886,11 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
         this._sprites.push(pieza);
         this.tweens.add({
           targets: pieza,
-          y: cy0 + panelAlto * (0.55 + Math.random() * 0.45),
-          x: cx0 + (Math.random() * 70 - 35),
+          y: 300 + Math.random() * 300 + extraTopConfeti,
+          x: cx0 + (Math.random() * 80 - 40),
           angle: pieza.angle + (Math.random() > 0.5 ? 400 : -400),
           alpha: { from: 1, to: 0 },
-          duration: 1800 + Math.random() * 1400,
+          duration: 1800 + Math.random() * 1600,
           delay: Math.random() * 1500,
           ease: 'Cubic.easeIn',
         });
@@ -2722,6 +2958,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
 
 _renderizarEstado(animarReparto) {
      this._limpiarSprites();
+    if (this._L) this._modoCamaraAngosto('juego');
 
     if (this.mesaImg) this.mesaImg.setVisible(true);
     if (this.sombraMesa) this.sombraMesa.setVisible(true);
@@ -2798,6 +3035,7 @@ _renderizarEstado(animarReparto) {
     // no aplica a equipos: el nombre de un rival puntual y el ícono de
     // persona (ambos pensados para "un solo rival", no para un equipo).
     this.labelRival.setVisible(!esModoEquipos);
+    if (this.nombreRivalAngosto && esModoEquipos) this.nombreRivalAngosto.setVisible(false);
     if (this.manoIconoRival) this.manoIconoRival.setVisible(!esModoEquipos);
 
     // Trigésimo segundo pase: "Rival" + su ícono se prenden (dorado, con
@@ -2857,9 +3095,14 @@ _renderizarEstado(animarReparto) {
     if (esModoEquipos) {
       this._renderizarEquipos(e, animarReparto, hayCantoSinResolver);
     } else {
+      if (this._L) { this._eqMap = null; this._L.perspCY = this._L.feltCY; this._L.perspRY = this._L.feltRY; }
       this._ajustarMesaSegunAsientos(2);
       this._nombreRivalActual = e.nombreRival || null;
-      this.labelRival.setText(this._truncarNombre(e.nombreRival) || 'Rival');
+      this.labelRival.setText(this._L ? 'Rival' : (this._truncarNombre(e.nombreRival) || 'Rival'));
+      if (this.nombreRivalAngosto) {
+        const nr = e.nombreRival || '';
+        this.nombreRivalAngosto.setText(nr.length > 18 ? nr.slice(0, 17) + '…' : nr).setVisible(!!nr);
+      }
 
       // Pase siguiente: anillo de tiempo (paridad con el nativo, pase
       // 177) — antes usaba el rectángulo dinámico de la placa vieja;
@@ -2868,8 +3111,8 @@ _renderizarEstado(animarReparto) {
       // constantes en vez de medir texto.
       if (esTurnoRival) {
         this._anilloRect = {
-          x: this.PLACA_RIVAL_CX - 48, y: this.PLACA_RIVAL_CY - 24,
-          w: 96, h: 48, r: 9,
+          x: this.PLACA_RIVAL_CX - (this._L ? this._L.placaW : 96) / 2, y: this.PLACA_RIVAL_CY - (this._L ? this._L.placaH : 48) / 2,
+          w: this._L ? this._L.placaW : 96, h: this._L ? this._L.placaH : 48, r: 9,
         };
       }
 
@@ -2889,9 +3132,9 @@ _renderizarEstado(animarReparto) {
       // ver `_ajustarMesaSegunAsientos`), en vez de nacer más abajo, ya
       // sobre el paño.
       if (revelacionRival) {
-        this._dibujarFilaCartasReveladas(revelacionRival.cartas, 80);
+        this._dibujarFilaCartasReveladas(revelacionRival.cartas, this._L ? this._L.rivalY : 80);
       } else {
-        this._dibujarFilaDorso(e.cartasRivalEnMano, 80);
+        this._dibujarFilaDorso(e.cartasRivalEnMano, this._L ? this._L.rivalY : 80);
       }
 
       // Sexagésimo primer/segundo pase — punto 1 ("jerarquía visual y
@@ -2917,7 +3160,7 @@ _renderizarEstado(animarReparto) {
       // arriba (245→220) para que queden alineadas al centro geométrico
       // real del paño (la fila de botones ahora vive en una sola línea
       // más abajo, dentro del panel agrandado, así que hay más aire).
-      this._dibujarDueloCartas(e.jugadasRival, e.misJugadas, 220, 0.66, 60);
+      this._dibujarDueloCartas(e.jugadasRival, e.misJugadas, this._L ? this._L.dueloY : 220, this._L ? this._L.dueloEscala : 0.66, 60);
             // Pase siguiente (feedback del usuario: "deben nacer y apoyarse
             // directamente desde el marco de madera de la botonera
             // inferior, sin invadir la zona verde") — bajada 15px (490→505)
@@ -2933,7 +3176,7 @@ _renderizarEstado(animarReparto) {
             // ARRIBA (525→495), pedido explícito del usuario porque los
             // remaches de la botonera (agrandada en el pase anterior) ya
             // tapaban los números/índices de las cartas.
-            this._dibujarManoJugador(e.misCartas, 495, e.turno === 'mio' && !hayCantoSinResolver, animarReparto);
+            this._dibujarManoJugador(e.misCartas, this._L ? this._L.manoY : 495, e.turno === 'mio' && !hayCantoSinResolver, animarReparto);
     }
 
     this._dibujarBotonesCanto(e);
@@ -2960,6 +3203,11 @@ _renderizarEquipos(e, animarReparto, hayCantoSinResolver) {
     // hardcodeado por separado — se sincroniza acá para que las dos cuentas
     // usen siempre el mismo centro y no se desalineen entre sí.
     this._centroMesaYActual = centroY;
+    if (this._L) {
+      this._eqMap = esTresVTres ? this._L.eq3 : this._L.eq2;
+      this._L.perspCY = this._eqMap.cy;
+      this._L.perspRY = 170 * this._eqMap.gy;
+    }
     const radioX = esTresVTres ? 280 : 285;
     const radioY = esTresVTres ? 235 : 100;
 
@@ -3053,14 +3301,14 @@ _renderizarEquipos(e, animarReparto, hayCantoSinResolver) {
     // "carta rival" para enfrentar en este mismo lugar (las de compañeros/
     // rivales viven junto a cada asiento, ver _dibujarJugador), así que
     // sigue siendo una fila simple, sin DueloCartas.
-    this._dibujarFilaCartas(e.misJugadas, 340, false, false, 0.60, false, 30);
+    this._dibujarFilaCartas(e.misJugadas, this._yEq(340), false, false, this._L ? 0.60 * 1.4 : 0.60, false, 30);
     // Pase siguiente: mismo ajuste que en 1v1 (ver el otro call site,
     // dentro del bloque no-equipos de _renderizarEstado) — la mano
     // propia comparte la misma barra de botonera en cualquier modo.
     // Nonagésimo primer pase: mismo +10px (505→515) que el otro call site.
     // Nonagésimo segundo pase: mismo +10px (515→525) que el otro call site.
     // Nonagésimo tercer pase: mismo -30px (525→495) que el otro call site.
-    this._dibujarManoJugador(e.misCartas, 495, e.turno === 'mio' && !hayCantoSinResolver, animarReparto);
+    this._dibujarManoJugador(e.misCartas, this._L ? this._L.manoY : 495, e.turno === 'mio' && !hayCantoSinResolver, animarReparto);
 }
 
 _calcularAsientos(companeros, rivales) {
@@ -3272,7 +3520,8 @@ _dibujarPlacaMarcador(g, cx, cy, w, h) {
   // derecha (lo despega de la madera), anillo oscuro de base, cuerpo
   // bronce, una sombra interna hacia abajo-derecha (da volumen esférico,
   // no solo un disco) y un brillo especular arriba-izquierda.
-  const margen = 7.5;
+  // Pase 398: remaches a la mitad de tamaño (y mas cerca de la esquina) para dejar aire al texto.
+  const margen = 5;
   [
     { rx: x + margen, ry: y + margen },
     { rx: x + w - margen, ry: y + margen },
@@ -3280,15 +3529,15 @@ _dibujarPlacaMarcador(g, cx, cy, w, h) {
     { rx: x + w - margen, ry: y + h - margen },
   ].forEach(({ rx, ry }) => {
     g.fillStyle(0x000000, 0.35); // sombra proyectada
-    g.fillCircle(rx + 0.9, ry + 1.3, 4.8);
+    g.fillCircle(rx + 0.5, ry + 0.7, 2.4);
     g.fillStyle(0x3a1a0a, 1); // remacheOscuro (anillo de base)
-    g.fillCircle(rx, ry, 4.2);
+    g.fillCircle(rx, ry, 2.1);
     g.fillStyle(0xe3a94a, 1); // remache (cuerpo bronce, sampleado del PNG de la botonera)
-    g.fillCircle(rx, ry, 3.2);
+    g.fillCircle(rx, ry, 1.6);
     g.fillStyle(0x8a5a28, 0.6); // remacheOscuro (sombra interna, da esfericidad)
-    g.fillCircle(rx + 0.7, ry + 0.7, 2.3);
+    g.fillCircle(rx + 0.35, ry + 0.35, 1.15);
     g.fillStyle(0xf2d587, 0.95); // remacheClaro (brillo especular)
-    g.fillCircle(rx - 1, ry - 1, 1.3);
+    g.fillCircle(rx - 0.5, ry - 0.5, 0.65);
   });
 }
 
@@ -3382,6 +3631,9 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
     const cartasParaDibujar = revelacion ? revelacion.cartas : (manoCompartida ? j.cartas : null);
 
     const cantidad = j.cartasEnMano;
+    // Pase 394: layout angosto — cy sigue siendo la coordenada de diseño (mundo viejo); `cyN` es donde se dibuja.
+    const kS = this._L ? this._L.kSeat : 1;
+    const cyN = this._yEq(cy);
 
     if (manoCompartida) {
       // Cartas reales boca arriba (compañero compartiendo su mano, o
@@ -3391,8 +3643,8 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
       // que quedaban casi apiladas y giradas — imposibles de leer. Acá van
       // planas (sin rotación) y con más separación y tamaño, para poder
       // distinguir palo y número.
-      const anchoCarta = 50;
-      const altoCarta = 76;
+      const anchoCarta = 50 * kS;
+      const altoCarta = 76 * kS;
       const factor = this._factorEscalaTextura();
       const anchoR = Math.round(anchoCarta * factor);
       const altoR = Math.round(altoCarta * factor);
@@ -3408,7 +3660,7 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
         this._crearTexturaEscalada(keyOriginal, textureKey, anchoR, altoR);
 
         const px = inicioX + k * espaciadoX;
-        const carta = this.add.image(px, cy, textureKey)
+        const carta = this.add.image(px, cyN, textureKey)
           .setOrigin(0.5, 0.5)
           .setDepth(10 + k);
 
@@ -3419,8 +3671,8 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
       // importa la legibilidad porque todas las cartas son iguales.
       const anguloPorCarta = 9;
       const anguloTotalAbanico = (cantidad - 1) * anguloPorCarta;
-      const radioAbanico = 22;
-      const bulto = 3.5;
+      const radioAbanico = 22 * kS;
+      const bulto = 3.5 * kS;
 
       for (let k = 0; k < cantidad; k++) {
         const anguloCarta = -anguloTotalAbanico / 2 + k * anguloPorCarta;
@@ -3429,12 +3681,13 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
         const bulge = (1 - Math.cos(radCarta)) * bulto;
 
         const px = cx + spread;
-        const py = cy - bulge;
+        const py = cyN - bulge;
 
         const carta = this.add.image(px, py, this._claveDorsoMiniActual || 'cardBackMini')
           .setOrigin(0.5, 0.5)
           .setRotation(radCarta)
           .setDepth(10 + k);
+        if (this._L) carta.setDisplaySize(45 * kS, 69 * kS);
 
         this._sprites.push(carta);
       }
@@ -3442,8 +3695,8 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
 
     const colorFondo = esSuTurno ? '#00000099' : (tipo === 'companero' ? '#1565C0cc' : '#8B1A1Acc');
     const esManoDeEste = this.estado.manoId === j.id;
-    const nombreTxt = this.add.text(cx, cy - 40, `${j.nombre}${esSuTurno ? ' ●' : ''}${esManoDeEste ? ' 🂠' : ''}`, {
-      font: esSuTurno ? 'bold 12px Arial' : '12px Arial',
+    const nombreTxt = this.add.text(cx, cyN - 40 * kS, `${j.nombre}${esSuTurno ? ' ●' : ''}${esManoDeEste ? ' 🂠' : ''}`, {
+      font: esSuTurno ? `bold ${Math.round(12 * kS)}px Arial` : `${Math.round(12 * kS)}px Arial`,
       fill: esSuTurno ? '#FFD700' : '#ffffff',
       backgroundColor: colorFondo,
       padding: { x: 5, y: 2 }
@@ -3473,7 +3726,7 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
       const padX = 5, padY = 2;
       this._anilloRect = {
         x: cx - nombreTxt.width / 2 - padX,
-        y: (cy - 40) - nombreTxt.height / 2 - padY,
+        y: (cyN - 40 * kS) - nombreTxt.height / 2 - padY,
         w: nombreTxt.width + padX * 2,
         h: nombreTxt.height + padY * 2,
         r: 8,
@@ -3536,8 +3789,8 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
       // sube de 52x78 a 58x87 (misma proporción 2:3, ~1.12x), un ajuste
       // fino, no otro salto grande.
       const factorJugada = this._factorEscalaTextura();
-      const anchoBaseJugadaR = Math.round(58 * factorJugada);
-      const altoBaseJugadaR = Math.round(87 * factorJugada);
+      const anchoBaseJugadaR = Math.round(58 * kS * factorJugada);
+      const altoBaseJugadaR = Math.round(87 * kS * factorJugada);
 
       jugadas.forEach((carta, idx) => {
         const esUltima = idx === jugadas.length - 1;
@@ -3565,11 +3818,12 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
         // `persp.scale` (antes quedaba fijo en 40) — mismo criterio de
         // "más lejos = más chica en las dos dimensiones" que ya usan
         // _dibujarFilaCartas/_dibujarDueloCartas más abajo.
-        const persp = this._calcularPerspectiva(py);
-        const anchoCarta = 58 * persp.scale;
-        const altoCarta  = 87 * persp.scale;
+        const pyN = this._yEq(py);
+        const persp = this._calcularPerspectiva(pyN);
+        const anchoCarta = 58 * kS * persp.scale;
+        const altoCarta  = 87 * kS * persp.scale;
 
-        const img = this.add.image(px, py, keyEscalada)
+        const img = this.add.image(px, pyN, keyEscalada)
           .setDisplaySize(anchoCarta, altoCarta)
           .setDepth(60 + idx)
           .setAlpha(esUltima ? 1 : 0.85);
@@ -3634,18 +3888,19 @@ _dibujarManoJugador(cartas, yBase, jugable, animar = false) {
     // Nonagésimo tercer pase: +18% de tamaño (73x100 → 86x118, misma
     // proporción), pedido explícito del usuario para que se lean mejor
     // los números/índices de cada naipe.
-    const anchoCarta = 86;
-    const altoCarta  = 118;
+    const kM = this._L ? this._L.kMano : 1;   // Pase 394: mano mas grande en layout angosto
+    const anchoCarta = 86 * kM;
+    const altoCarta  = 118 * kM;
     const cantidad   = cartas.length;
 
     const anguloTotalMax = 26;
     const anguloPorCarta = cantidad > 1 ? anguloTotalMax / (cantidad - 1) : 0;
-    const espaciadoX = 70;
+    const espaciadoX = 70 * kM;
     // 19 (antes 25) — la carta del medio invadía bastante el centro del
     // tapete al levantarse; se acortó el "bulto" del abanico para que la
     // mano se sienta anclada más cerca de la botonera y no tan metida en la
     // mesa (punto 4 de la lista de diseño, "espaciado y respiración").
-    const bulto = 19;
+    const bulto = 19 * kM;
 
     const inicioX = 400 - ((cantidad - 1) * espaciadoX) / 2;
     const factor = this._factorEscalaTextura();
@@ -3978,6 +4233,7 @@ _dibujarFilaDorso(cantidad, y) {
     // que hay que mantener sincronizado a mano porque bakea el tamaño real
     // de display por separado) y se bajaron en el llamador (95→105) para
     // que apoyen limpiamente contra ese borde en vez de quedar en el aire.
+    const kR = this._L ? this._L.kRival : 1;   // Pase 394: cartas mas grandes en layout angosto
     const anguloPorCarta = 11;
     const anguloTotal = (cantidad - 1) * anguloPorCarta;
     // Pase siguiente (feedback del usuario: "se ven planas y muy
@@ -3986,11 +4242,11 @@ _dibujarFilaDorso(cantidad, y) {
     // tienen las cartas de la mano propia en _dibujarManoJugador) — antes
     // esta fila no tenía ninguna sombra, de ahí la sensación de "pegadas"
     // al fondo sin profundidad física.
-    const espacio = 58;
+    const espacio = 58 * kR;
     const inicioX = 400 - ((cantidad - 1) * espacio) / 2;
-    const bulto = 9;
-    const anchoCarta = 63;
-    const altoCarta = 95;
+    const bulto = 9 * kR;
+    const anchoCarta = 63 * kR;
+    const altoCarta = 95 * kR;
 
     for (let i = 0; i < cantidad; i++) {
       const anguloCarta = -anguloTotal / 2 + i * anguloPorCarta;
@@ -4020,9 +4276,10 @@ _dibujarFilaDorso(cantidad, y) {
 
 _dibujarFilaCartasReveladas(cartas, y) {
     const cantidad = cartas.length;
-    const anchoCarta = 75;
-    const altoCarta = 112;
-    const espacio = 85; // ancho de la carta + margen, sin superposición
+    const kR = this._L ? this._L.kRival : 1;
+    const anchoCarta = 75 * kR;
+    const altoCarta = 112 * kR;
+    const espacio = 85 * kR; // ancho de la carta + margen, sin superposición
     const inicioX = 400 - ((cantidad - 1) * espacio) / 2;
 
     // Mismo criterio que _dibujarFilaCartas/_dibujarManoJugador: escalado
@@ -4358,8 +4615,8 @@ _hashSimple(str) {
 }
 
 _calcularPerspectiva(y) {
-    const centroMesaY = 320;
-    const radioY = 170;
+    const centroMesaY = this._L ? this._L.perspCY : 320;
+    const radioY = this._L ? this._L.perspRY : 170;
     const t = Phaser.Math.Clamp((y - (centroMesaY - radioY)) / (radioY * 2), 0, 1);
     // Decimoséptimo pase: el usuario (revisando una captura real del juego)
     // pidió más sensación de profundidad en las cartas jugadas del centro —
@@ -4634,7 +4891,7 @@ _crearBannerTexto(x, y, texto, depth = 200, { tamanoFuente = 14, colorTexto = '#
 // imagen se reconstruye detrás de él cada vez que cambia el texto, del
 // mismo ancho/alto que ocupe.
 _mostrarCanto(texto) {
-  this.cantoText.setText(texto).setPosition(400, 300).setAlpha(1).setVisible(true);
+  this.cantoText.setText(texto).setPosition(400, this._L ? this._L.feltCY : 300).setAlpha(1).setVisible(true);
 
   if (this.cantoBanner) { this.cantoBanner.destroy(); this.cantoBanner = null; }
 
@@ -4652,7 +4909,7 @@ _mostrarCanto(texto) {
   const centroCanto = this.add.image(-anchoBanner / 2 + capW + midW / 2, 0, 'banner_centro').setDisplaySize(midW, altoBanner);
   const derCanto = this.add.image(anchoBanner / 2 - capWDer / 2, 0, 'banner_der').setDisplaySize(capWDer, altoBanner);
 
-  this.cantoBanner = this.add.container(400, 300, [izqCanto, centroCanto, derCanto]).setDepth(249);
+  this.cantoBanner = this.add.container(400, this._L ? this._L.feltCY : 300, [izqCanto, centroCanto, derCanto]).setDepth(249);
 }
 
 _ocultarCanto() {
@@ -4880,8 +5137,12 @@ _dibujarBotonesCanto(e) {
   // fila donde aparezca — `centrarFila`, más abajo, solo interviene con un
   // freno de emergencia (reducir TODOS por igual, nunca solo uno) si la
   // fila con más botones a la vez no entrara a ancho nativo.
-  const centrarFila = (specs, y, gap = GAP) => {
-    const anchoNatural = specs.reduce((acc, s) => acc + s.ancho, 0) + gap * (specs.length - 1);
+  // Pase 394: en layout angosto los botones crecen (la botonera es mas ancha).
+  const kB0 = this._L ? this._L.kBoton : 1;
+  const kB = kB0;
+  const centrarFila = (specs, y, gap = GAP, extraK = 1) => {
+    const kB = kB0 * extraK;   // Pase 396: escala extra opcional por fila (botonera en dos filas)
+    const anchoNatural = (specs.reduce((acc, s) => acc + s.ancho, 0) + gap * (specs.length - 1)) * kB;
     const anchoDisponible = this.anchoBotonera - 40;
     // Freno de emergencia: la única fila donde el ancho nativo de verdad no
     // entra es la fusionada de 5 (Truco+Envido+RealEnvido+FaltaEnvido+
@@ -4893,12 +5154,12 @@ _dibujarBotonesCanto(e) {
     // ancho nativo) el factor es siempre 1, nunca se activa, así que esos
     // botones miden siempre lo mismo sin importar la mano.
     const factor = anchoNatural > anchoDisponible ? anchoDisponible / anchoNatural : 1;
-    const gapFinal = gap * factor;
+    const gapFinal = gap * factor * kB;
     const anchoTotal = anchoNatural * factor;
     let cursorX = CENTRO_X - anchoTotal / 2;
     specs.forEach((s) => {
-      const anchoFinal = s.ancho * factor;
-      const altoFinal = s.alto * factor;
+      const anchoFinal = s.ancho * factor * kB;
+      const altoFinal = s.alto * factor * kB;
       cursorX += anchoFinal / 2;
       this._crearBoton({ ...s, ancho: anchoFinal, alto: altoFinal, x: cursorX, y });
       cursorX += anchoFinal / 2 + gapFinal;
@@ -4929,7 +5190,7 @@ _dibujarBotonesCanto(e) {
   // "los botones quedaron corridos hacia arriba" reportado por el usuario.
   const Y_FILA_UNICA = this.yCentroBotonera;
   const GAP_FILAS = 6;
-  const OFFSET_FILAS = (ALTO_BOTON_FIJO + GAP_FILAS) / 2;
+  const OFFSET_FILAS = ((ALTO_BOTON_FIJO + GAP_FILAS) / 2) * kB;
   const Y_FILA_SUPERIOR = Y_FILA_UNICA - OFFSET_FILAS;
   const Y_FILA_INFERIOR = Y_FILA_UNICA + OFFSET_FILAS;
 
@@ -5138,6 +5399,26 @@ _dibujarBotonesCanto(e) {
     // Metodología) — con el tamaño ya fijo (ver arriba) no hace falta nada
     // extra para evitar que la fila crezca de más con pocos botones.
     const specsFila = itemsFila.map(it => specImagen(it.id, it.onClick));
+    // Pase 396 (layout angosto): botonera "piramide" como en el nativo — arriba
+    // los tres cantos de tanto (Envido / Real Envido / Falta Envido), abajo
+    // Truco (mas grande) + Ir al Mazo. Si no hay Envido, queda una sola fila.
+    if (this._L && hayEnvido && itemsFila.length > 3) {
+      const ids = ['envido', 'real-envido', 'falta-envido'];
+      const K2 = 1.22;
+      const altoArriba = 34, altoAbajo = 44;
+      const filaArriba = itemsFila.filter(it => ids.includes(it.id))
+        .map(it => { const sp = specImagen(it.id, it.onClick); const c = CLAVE_IMAGEN_BOTON[it.id]; return { ...sp, alto: altoArriba, ancho: this._anchoBotonImagen(c, altoArriba) }; });
+      const filaAbajo = itemsFila.filter(it => !ids.includes(it.id))
+        .map(it => { const sp = specImagen(it.id, it.onClick); const esTruco = it.id !== 'ir-al-mazo'; const h = esTruco ? altoAbajo + 6 : altoAbajo; const c = CLAVE_IMAGEN_BOTON[it.id]; return { ...sp, alto: h, ancho: this._anchoBotonImagen(c, h) }; });
+      const kk = kB0 * K2;
+      const sep = 8 * kk;
+      const hA = altoArriba * kk, hB = (altoAbajo + 6) * kk;
+      const yTop = Y_FILA_UNICA + 10 - (hB + sep) / 2;
+      const yBot = Y_FILA_UNICA + 10 + (hA + sep) / 2;
+      centrarFila(filaArriba, yTop, 9, K2);
+      centrarFila(filaAbajo, yBot, 22, K2);
+      return;
+    }
     // Ducentésimo sexagésimo noveno pase: Y_FILA_UNICA en vez del 565 suelto
     // (coincidía por casualidad con el centro real de la placa — ahora es
     // la misma constante que usan todas las demás filas, en vez de un
