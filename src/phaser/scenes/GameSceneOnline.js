@@ -1197,17 +1197,18 @@ _crearElementosDeTexto() {
     const handTop = manoY - 0.85 * handH - 19 * kMano;
     const regionTop = hudBottomBase + 12;
     const tableBottomMax = panelTop + 20;
-    // Pase 398: la mesa baja hasta apoyarse en la mano (las patas quedan un poco
-    // detras de ella) y crece: escala 1.12 (el aro asoma apenas por los lados de
-    // la pantalla) + un estirado vertical moderado (nunca mas de +30 %), asi el
-    // paño ocupa el centro de la pantalla.
-    const CORTE_A = 255;                               // fila (de 895) donde empieza la franja estirable
+    // Pase 399: la mesa escala IGUAL en X e Y (nunca se estira solo en vertical,
+    // eso deformaba la madera y la perspectiva). Se usa la escala mas grande
+    // (hasta 1.30) que entra entre el mazo del rival y la mano; el aro puede
+    // asomar por los lados de la pantalla, como en el nativo. Las patas quedan
+    // detras de la mano y el mazo del rival va sobre el borde superior del paño.
+    const CORTE_A = 255;                               // fila (de 895) donde empieza la franja del medio (sin estirar)
     const CORTE_B = 267;
-    const filaTotal = CORTE_A + (895 - CORTE_B);       // alto "natural" en filas del PNG (sin la franja del medio)
-    const topExtras = rivalH / 2 + bultoR + nombreH - 12;   // lo que ocupa el bloque del rival sobre el borde de la mesa
-    const tableBottom = Math.min(tableBottomMax, handTop + handH * 0.30);
+    const filaTotal = CORTE_A + (895 - CORTE_B);       // alto "natural" en filas del PNG
+    const topExtras = rivalH / 2 + bultoR + nombreH + 28;   // lo que ocupa el mazo del rival + su nombre sobre el borde de la mesa
+    const tableBottom = Math.min(tableBottomMax, handTop + handH * 0.50);
     const htabDisp = tableBottom - (regionTop + topExtras);
-    let sT = 1.12;
+    let sT = 1.30;
     while (sT > 0.8 && filaTotal * (700 * sT / 1169) > htabDisp) sT -= 0.02;
     sT = Math.max(0.8, sT);
     const tableW = Math.round(700 * sT);
@@ -1215,14 +1216,14 @@ _crearElementosDeTexto() {
     const altoTopNat = CORTE_A * u;
     const altoBotNat = (895 - CORTE_B) * u;
     const hNat = altoTopNat + altoBotNat;
-    const E = Math.max(0, Math.min(0.30 * hNat, htabDisp - hNat));
-    const slackSobra = Math.max(0, htabDisp - hNat - E);
-    const tableTop = tableBottom - hNat - E;
-    const rivalY = tableTop + 12;
+    const E = 0;                                       // sin estirado vertical
+    const slackSobra = Math.max(0, htabDisp - hNat);
+    const tableTop = tableBottom - hNat;
+    const rivalY = tableTop - 28;
     const nombreY = rivalY - rivalH / 2 - bultoR - nombreH / 2 - 2;
-    const feltCY = tableTop + 149 * sT + E / 2;
-    const feltRY = 170 * sT + 170 * E / 198;
-    const feltH = 203 * sT + E;                        // alto visible del paño verde
+    const feltCY = tableTop + 149 * sT;
+    const feltRY = 170 * sT;
+    const feltH = 203 * sT;                            // alto visible del paño verde
     const dueloEscala = Math.min(0.66 * 1.9 * f, 0.82 * feltH / 234);
     const hudYFinal = hudYBase + slackSobra * 0.45;
     const hudBottom = hudYFinal + placaH / 2;
@@ -1234,7 +1235,7 @@ _crearElementosDeTexto() {
       tableW, u, CORTE_A, CORTE_B, altoTopNat, altoBotNat, E, tableTop, tableBottom, rivalY, kRival, nombreY, sT,
       feltCY, feltRY, dueloY: feltCY, dueloEscala, kBoton: 1.15 + 0.15 * f,
       kSeat: 1.35, perspCY: feltCY, perspRY: feltRY,
-      eq2: { cyOld: 250, cy: feltCY, gy: (137 * sT + E / 2) / 130 },
+      eq2: { cyOld: 250, cy: feltCY, gy: 137 * sT / 130 },
       eq3: (() => {
         const nTop = hudBottom + 28;
         const nBot = manoY + 25;
