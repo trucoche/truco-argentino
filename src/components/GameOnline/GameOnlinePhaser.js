@@ -8,6 +8,7 @@ import AudioMesaBoton from './AudioMesaBoton';
 import ConfiguracionMesaBoton from './ConfiguracionMesaBoton';
 import ConfiguracionMesaModal from './ConfiguracionMesaModal';
 import PerfilRivalModal from '../PerfilRival/PerfilRivalModal';
+import AnotadorCriollo from './AnotadorCriollo';
 
 export default function GameOnlinePhaser({
   token, usuario, codigoSala, onVolverLobby, onRevancha, onVerBracket,
@@ -36,6 +37,10 @@ export default function GameOnlinePhaser({
   // escena solo avisa vía `onVerPerfil`, mismo patrón que `onVolverLobby`/
   // `onRevancha`, y quien realmente abre el popup es este componente React).
   const [perfilAbierto, setPerfilAbierto] = useState(null);
+  // Pase 403: "Anotador Criollo" — la escena avisa los puntos (`onPuntos`) y que se tocó una
+  // placa (`onAbrirAnotador`); el popup con los fosforos lo dibuja React.
+  const [anotadorAbierto, setAnotadorAbierto] = useState(false);
+  const [puntosMesa, setPuntosMesa] = useState({ yo: 0, rival: 0, objetivo: 15 });
 
   // Pase siguiente: ver comentario junto a onLogrosDesbloqueados arriba —
   // la escena ahora llama a onVolverLobby(logros) en vez de onVolverLobby()
@@ -63,6 +68,8 @@ useEffect(() => {
           escena.onVerBracket = onVerBracket;
           escena.onInfoSala = setAudioInfo;
           escena.onVerPerfil = setPerfilAbierto;
+          escena.onAbrirAnotador = () => setAnotadorAbierto(true);
+          escena.onPuntos = setPuntosMesa;
         }
       });
 
@@ -74,6 +81,8 @@ useEffect(() => {
         escenaInmediata.onVerBracket = onVerBracket;
         escenaInmediata.onInfoSala = setAudioInfo;
         escenaInmediata.onVerPerfil = setPerfilAbierto;
+        escenaInmediata.onAbrirAnotador = () => setAnotadorAbierto(true);
+        escenaInmediata.onPuntos = setPuntosMesa;
       }
     }
 
@@ -123,6 +132,8 @@ useEffect(() => {
           escena.onVerBracket = onVerBracket;
           escena.onInfoSala = setAudioInfo;
           escena.onVerPerfil = setPerfilAbierto;
+          escena.onAbrirAnotador = () => setAnotadorAbierto(true);
+          escena.onPuntos = setPuntosMesa;
         });
       }
     }
@@ -155,6 +166,14 @@ useEffect(() => {
           onCambiarMusicaVolumen={onCambiarMusicaVolumen}
           vocesVolumen={vocesVolumen}
           onCambiarVocesVolumen={onCambiarVocesVolumen}
+        />
+        <AnotadorCriollo
+          visible={anotadorAbierto}
+          onCerrar={() => setAnotadorAbierto(false)}
+          yo={puntosMesa.yo}
+          rival={puntosMesa.rival}
+          objetivo={puntosMesa.objetivo}
+          esEquipos={esEquipos}
         />
         {perfilAbierto && perfilAbierto !== usuario?.username && token && (
           <PerfilRivalModal username={perfilAbierto} token={token} onClose={() => setPerfilAbierto(null)} />

@@ -1,0 +1,73 @@
+/* Pase 403 — Anotador Criollo (web) */
+.ac-tablita {
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 10px;
+  padding: 8px 10px 10px;
+  border-radius: 12px;
+  background: linear-gradient(160deg, #6b4a34 0%, #4a3226 55%, #2a1c14 100%);
+  border: 3px solid #1a1410;
+  box-shadow: inset 0 2px 0 rgba(240, 217, 160, 0.25), 0 3px 0 #1a1410;
+}
+.ac-cabecera {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 4px;
+  color: #fff8ed;
+  font-family: 'Fredoka', 'Nunito', Arial, sans-serif;
+  font-weight: 700;
+  text-shadow: 0 1px 0 #1a1410;
+}
+.ac-nombre { font-size: 17px; letter-spacing: 0.3px; }
+.ac-puntos { font-size: 22px; color: #ffd668; }
+
+.ac-bloque { margin-top: 2px; }
+.ac-titulo-fila {
+  font-family: 'Nunito', Arial, sans-serif;
+  font-weight: 800;
+  font-size: 11px;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: #f0d9a0;
+  opacity: 0.85;
+  margin-bottom: 1px;
+}
+.ac-fila {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  padding: 3px 4px;
+  border-radius: 8px;
+  background: #fff8ed;
+  box-shadow: inset 0 2px 4px rgba(74, 44, 42, 0.28);
+}
+.ac-caja {
+  position: relative;
+  flex: 1 1 0;
+  aspect-ratio: 1 / 1;
+  max-width: 88px;
+}
+.ac-caja img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+}
+.ac-fantasma { opacity: 0.1; filter: grayscale(1); }
+.ac-fosforos { opacity: 1; }
+
+@keyframes ac-aparece {
+  from { opacity: 0; transform: scale(1.2); }
+  to { opacity: 1; transform: scale(1); }
+}
+.ac-caja img.ac-aparece {
+  opacity: 0;
+  animation: ac-aparece 260ms ease-out forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ac-caja img.ac-aparece { animation-duration: 1ms; }
+}

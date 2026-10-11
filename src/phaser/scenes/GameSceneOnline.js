@@ -277,6 +277,7 @@ preload() {
     this.load.audio('jugar-carta', 'assets/sounds/CardGame-SoundEffect.mp3');
     this.load.audio('ganar',       'assets/sounds/ganarpartidasonido.mp3');
     this.load.audio('repartir',    'assets/sounds/repartir_cartas.mp3');
+    this.load.audio('sfx_fosforo', 'assets/sounds/sfx_fosforo_click.mp3');   // Pase 403: clic de fosforo al sumar un punto
     // Pase 206: pedido del usuario — la pantalla de "esperando rival" tenía
     // su propio fondo de boliche/bar (marrón), distinto al fondo verde
     // fotográfico que usa el resto de la app (lobby, torneos, bracket,
@@ -591,10 +592,14 @@ _crearElementosDeTexto() {
     // deja interactivo una sola vez acá afuera del render loop — el texto
     // se actualiza en cada `_renderizarEstado` pero el listener siempre lee
     // `this._nombreRivalActual`, que se guarda ahí mismo.
-    this.labelRival.setInteractive({ useHandCursor: true });
-    this.labelRival.on('pointerdown', () => {
-      if (this._nombreRivalActual && this.onVerPerfil) this.onVerPerfil(this._nombreRivalActual);
-    });
+    // Pase 403: en el layout angosto la placa entera abre el Anotador Criollo (el
+    // nombre del rival, que abre su perfil, va sobre sus cartas: nombreRivalAngosto).
+    if (!this._L) {
+      this.labelRival.setInteractive({ useHandCursor: true });
+      this.labelRival.on('pointerdown', () => {
+        if (this._nombreRivalActual && this.onVerPerfil) this.onVerPerfil(this._nombreRivalActual);
+      });
+    }
     // Pase 396 (layout angosto): las placas dicen "Vos" / "Rival" como en el
     // nativo; el nombre real del rival va sobre sus cartas (clickeable → perfil).
     if (this._L) {
@@ -809,6 +814,17 @@ _crearElementosDeTexto() {
       shadow: { offsetX: 0, offsetY: 1, color: '#4A2C2A', blur: 0, fill: true },
       resolution: this._factorEscalaTextura()
     }).setOrigin(0.5).setDepth(1002);
+
+    // Pase 403: tocar la placa VOS o RIVAL abre el "Anotador Criollo" (popup React con los
+    // cuadritos de fosforos). Las zonas quedan DEBAJO de los textos (depth 1001.5), asi que
+    // en escritorio el nombre del rival sigue abriendo su perfil.
+    const zonaAnotador = (cx, cy, w, h) => this.add.zone(cx, cy, w, h).setDepth(1001.5)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerdown', () => { if (this.onAbrirAnotador) this.onAbrirAnotador(); });
+    this.zonasAnotador = [
+      zonaAnotador(marcadorX, marcadorY, marcadorAncho, marcadorAlto),
+      zonaAnotador(this.PLACA_RIVAL_CX, this.PLACA_RIVAL_CY, placaAncho, placaAlto),
+    ];
 
     // Indicador de "mano" (1v1): antes era el emoji 🂠 metido en el texto,
     // ahora es la ficha circular ilustrada + el texto sin emoji al lado.
@@ -1744,6 +1760,7 @@ _mostrarMarcadores(visible) {
   [this.mesaMedio, this.mesaPatas, this.mesaPies, this.marcaTcMesa].forEach(o => { if (o && o.scene) o.setVisible(visible && this._mesaModoActual !== '3v3'); });
   [this.scoreBg, this.scoreText, this.labelPropio, this.fondoInfoRival, this.scoreTextRival]
     .forEach(o => { if (o && o.scene) o.setVisible(visible); });
+  (this.zonasAnotador || []).forEach(z => { if (z && z.scene) { z.setVisible(visible); if (z.input) z.input.enabled = visible; } });
   if (!visible) {
     [this.labelRival, this.manoIconoRival, this.nombreRivalAngosto].forEach(o => { if (o && o.scene) o.setVisible(false); });
   }
@@ -3033,6 +3050,7 @@ _renderizarEstado(animarReparto) {
     // tenía el texto combinado.
     this.scoreText.setText(String(e.scores.yo));
     if (this.scoreTextRival) this.scoreTextRival.setText(String(e.scores.rival));
+    this._notificarPuntos(e.scores.yo, e.scores.rival);
     this.miManoTexto.setText(e.esMano ? 'Sos mano' : '');
     if (this.manoIconoPropio) this.manoIconoPropio.setVisible(!!e.esMano);
     this.turnoText.setText(e.turno === 'mio' ? '● Tu turno' : '');
@@ -3463,6 +3481,24 @@ _dibujarMarcoMaderaConRemaches(g, x, y, w, h, rExterior = 20, rInterior = 14, pa
   ].forEach(({ rx, ry }) => {
     this._dibujarRemache(g, rx, ry, 6.5);
   });
+}
+
+// Pase 403: avisa los puntos a React (Anotador Criollo) y hace sonar un clic de
+// fosforo por cada punto que se suma (maximo 5 seguidos, separados 110 ms para no
+// trabar nada). Con el primer estado, o si el puntaje baja (revancha), no suena.
+_notificarPuntos(yo, rival) {
+  const ant = this._puntosPrevios;
+  this._puntosPrevios = { yo, rival };
+  const cambio = !ant || ant.yo !== yo || ant.rival !== rival;
+  if (cambio && this.onPuntos) this.onPuntos({ yo, rival, objetivo: this._puntosSala || 15 });
+  if (!ant) return;
+  const subio = Math.max(0, yo - ant.yo) + Math.max(0, rival - ant.rival);
+  const clics = Math.min(5, subio);
+  for (let i = 0; i < clics; i++) {
+    this.time.delayedCall(i * 110, () => {
+      try { this.sound.play('sfx_fosforo', { volume: 0.45 }); } catch (err) {}
+    });
+  }
 }
 
 // Pase siguiente (placa doble): las placas de "Vos"/Rival son de ancho
