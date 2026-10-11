@@ -102,6 +102,7 @@ const VARIANTES_RUSTICAS = {
   claro:   { marco: 0x7a4a24, marcoLuz: 0xb98350, campo: 0xf0dcae, campoLuz: 0xfcefcf, campoSombra: 0xc79f62, texto: '#3a1b0c', grabado: true,  prof: 0.10 },
   oro:     { marco: 0x4a2412, marcoLuz: 0x9a5e2c, campo: 0xe3a92e, campoLuz: 0xfad46c, campoSombra: 0xa56a16, texto: '#fff3c4', grabado: false, prof: 0.14 },
   caoba:   { marco: 0x3a1c10, marcoLuz: 0x7e4e2c, campo: 0x8a4b2a, campoLuz: 0xb77041, campoSombra: 0x5a2c16, texto: '#ffe9c2', grabado: false, prof: 0.10 },
+  oliva:   { marco: 0x26331a, marcoLuz: 0x5a7438, campo: 0x4f8a3a, campoLuz: 0x82bd5e, campoSombra: 0x2f5a22, texto: '#f4ffdc', grabado: false, prof: 0.10 },
   carmesi: { marco: 0x3a1010, marcoLuz: 0x7e2c24, campo: 0xb02a24, campoLuz: 0xdc564d, campoSombra: 0x7a1411, texto: '#ffe6d6', grabado: false, prof: 0.12 },
 };
 const RATIO_FUENTE_RUSTICO = 0.40;
@@ -4967,22 +4968,12 @@ _calcularPerspectiva(y) {
   // (misma tipografía/grosor que el label real, para que el ancho medido
   // coincida con el que después se dibuja).
   _anchoBotonTengo(texto, tamanoFuente, alto) {
-    const medidor = this.add.text(0, 0, texto, {
-      fontFamily: 'Nunito, Arial', fontSize: `${tamanoFuente}px`, fontStyle: 'bold',
-      stroke: '#000000', strokeThickness: 4,
-    });
-    const anchoTexto = medidor.width;
+    // Pase 408: "Tengo N" también es una tablita rústica (variante oliva); el ancho sale del texto real.
+    const fs = alto * RATIO_FUENTE_RUSTICO;
+    const medidor = this.add.text(0, 0, String(texto).toUpperCase(), { fontFamily: 'Nunito, Arial', fontSize: `${fs.toFixed(1)}px`, fontStyle: 'bold' });
+    const w = medidor.width;
     medidor.destroy();
-
-    const PAD_X = 20;
-    const texIzq = this.textures.get('tengoIzq').getSourceImage();
-    const texDer = this.textures.get('tengoDer').getSourceImage();
-    const capIzq = texIzq.width * (alto / texIzq.height);
-    const capDer = texDer.width * (alto / texDer.height);
-    // Igual que el "anchoSeguro" de `_crearBotonOverlay`: nunca más angosto
-    // que las dos puntas juntas + un tramo recto mínimo, para que no
-    // degenere en forma de almendra con puntajes de 1 dígito.
-    return Math.max(anchoTexto + PAD_X * 2, capIzq + capDer + 20);
+    return Math.max(alto * 2.0, w + alto * 1.1);
   }
 
   // Pase 406: tablita de madera rústica en relieve (ver BOTON_RUSTICO). Coordenadas
@@ -5053,7 +5044,24 @@ _calcularPerspectiva(y) {
   const contenedor = this.add.container(x, y).setDepth(200);
   const hijos = [];
 
-  if (imagen === 'Tengo') {
+  const defRus = imagen === 'Tengo' ? { txt: String(texto || '').toUpperCase(), v: 'oliva' } : (imagen ? BOTON_RUSTICO[imagen] : null);
+  if (defRus) {
+    // Pase 406/408: botón de madera rústica dibujado por código (ver BOTON_RUSTICO; "Tengo N" usa la variante oliva).
+    const def = defRus;
+    const P = VARIANTES_RUSTICAS[def.v];
+    const gRus = this.add.graphics();
+    const dCanto = this._dibujarBotonRustico(gRus, ancho, alto, def.v);
+    const fs = alto * RATIO_FUENTE_RUSTICO;
+    const yTxt = -dCanto / 2;
+    const estiloTxt = { fontFamily: 'Nunito, Arial', fontSize: `${fs.toFixed(1)}px`, fontStyle: 'bold' };
+    const partes = [gRus];
+    if (P.grabado) {
+      partes.push(this.add.text(0, yTxt + Math.max(1, fs * 0.07), def.txt, { ...estiloTxt, color: '#fff4d6' }).setOrigin(0.5).setAlpha(0.7));
+    }
+    partes.push(this.add.text(0, yTxt, def.txt, { ...estiloTxt, color: P.texto, stroke: '#2c160e', strokeThickness: P.grabado ? 1 : Math.max(2, fs * 0.17) }).setOrigin(0.5));
+    if (deshabilitado) partes.forEach(o => o.setAlpha(0.4));
+    hijos.push(...partes);
+  } else if (imagen === 'Tengo') {
     // Ducentésimo septuagésimo pase: "Tengo [N]" es la ÚNICA tablita de
     // este set sin texto horneado (el número lo dibuja el bloque `texto`
     // más abajo) — por eso, a diferencia de todos los demás botones-imagen
@@ -5086,22 +5094,6 @@ _calcularPerspectiva(y) {
     const imgDerTengo = this.add.image(ancho / 2 - capDerTengo / 2, 0, 'tengoDer').setDisplaySize(capDerTengo, alto);
     if (deshabilitado) { imgIzqTengo.setAlpha(0.4); imgCentroTengo.setAlpha(0.4); imgDerTengo.setAlpha(0.4); }
     hijos.push(imgIzqTengo, imgCentroTengo, imgDerTengo);
-  } else if (imagen && BOTON_RUSTICO[imagen]) {
-    // Pase 406: botón de madera rústica dibujado por código (ver BOTON_RUSTICO).
-    const def = BOTON_RUSTICO[imagen];
-    const P = VARIANTES_RUSTICAS[def.v];
-    const gRus = this.add.graphics();
-    const dCanto = this._dibujarBotonRustico(gRus, ancho, alto, def.v);
-    const fs = alto * RATIO_FUENTE_RUSTICO;
-    const yTxt = -dCanto / 2;
-    const estiloTxt = { fontFamily: 'Nunito, Arial', fontSize: `${fs.toFixed(1)}px`, fontStyle: 'bold' };
-    const partes = [gRus];
-    if (P.grabado) {
-      partes.push(this.add.text(0, yTxt + Math.max(1, fs * 0.07), def.txt, { ...estiloTxt, color: '#fff4d6' }).setOrigin(0.5).setAlpha(0.7));
-    }
-    partes.push(this.add.text(0, yTxt, def.txt, { ...estiloTxt, color: P.texto, stroke: '#2c160e', strokeThickness: P.grabado ? 1 : Math.max(2, fs * 0.17) }).setOrigin(0.5));
-    if (deshabilitado) partes.forEach(o => o.setAlpha(0.4));
-    hijos.push(...partes);
   } else if (imagen) {
     // Vigésimo noveno pase: sombra detrás de cada botón-imagen para que
     // tengan aspecto de "botón" real (despegado del fondo) en vez de una
@@ -5147,7 +5139,7 @@ _calcularPerspectiva(y) {
   // sexto pase: antes esto se decidía con `!imagen` (daba por sentado que
   // "hay texto" y "no hay imagen" eran lo mismo) — ahora que "Tengo" tiene
   // las dos cosas a la vez, el chequeo correcto es directamente `texto`.
-  if (texto) {
+  if (texto && !defRus) {
     // Blanco + contorno negro grueso para que el número dibujado a mano
     // se sienta parte de la misma familia que el texto horneado por el
     // diseñador en el resto de los botones-imagen (mismo tratamiento que
@@ -5790,10 +5782,11 @@ _dibujarBotonesCanto(e) {
     // Pase 396 (layout angosto): botonera "piramide" como en el nativo — arriba
     // los tres cantos de tanto (Envido / Real Envido / Falta Envido), abajo
     // Truco (mas grande) + Ir al Mazo. Si no hay Envido, queda una sola fila.
-    if (this._L && hayEnvido && itemsFila.length > 3) {
+    // Pase 408: la pirámide de 2 filas se usa SIEMPRE (también en escritorio), nunca una sola fila larga.
+    if (hayEnvido && itemsFila.length > 3) {
       const ids = ['envido', 'real-envido', 'falta-envido'];
-      const K2 = 1.22;
-      const altoArriba = 34, altoAbajo = 44;
+      const K2 = this._L ? 1.22 : 1;
+      const altoArriba = this._L ? 34 : 28, altoAbajo = this._L ? 44 : 34;
       const filaArriba = itemsFila.filter(it => ids.includes(it.id))
         .map(it => { const sp = specImagen(it.id, it.onClick); const c = CLAVE_IMAGEN_BOTON[it.id]; return { ...sp, alto: altoArriba, ancho: this._anchoBotonImagen(c, altoArriba) }; });
       const filaAbajo = itemsFila.filter(it => !ids.includes(it.id))
@@ -5801,8 +5794,14 @@ _dibujarBotonesCanto(e) {
       const kk = kB0 * K2;
       const sep = 8 * kk;
       const hA = altoArriba * kk, hB = Math.round(altoAbajo * 1.3) * kk;
-      const yTop = Y_FILA_UNICA + 10 - (hB + sep) / 2;
-      const yBot = Y_FILA_UNICA + 10 + (hA + sep) / 2;
+      let yTop = Y_FILA_UNICA + 10 - (hB + sep) / 2;
+      let yBot = Y_FILA_UNICA + 10 + (hA + sep) / 2;
+      if (!this._L) {
+        // Escritorio: la zona útil de la placa va de Y≈521 a 598 (el mundo termina en 600).
+        const sepD = 5, tope = 521;
+        yTop = tope + hA / 2;
+        yBot = tope + hA + sepD + hB / 2;
+      }
       centrarFila(filaArriba, yTop, 9, K2);
       centrarFila(filaAbajo, yBot, 22, K2);
       return;

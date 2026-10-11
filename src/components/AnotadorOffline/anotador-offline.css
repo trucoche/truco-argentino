@@ -326,13 +326,9 @@
   .ao-btn { transition: none; }
 }
 
-/* Zonas táctiles invisibles + destello de feedback */
-.ao-zona { position: relative; flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; cursor: pointer; }
+/* Zonas táctiles invisibles (sin destello) */
+.ao-zona { -webkit-tap-highlight-color: transparent; user-select: none; position: relative; flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; cursor: pointer; }
 .ao-zona .ao-tablero { flex: 1 1 auto; }
-.ao-flash { position: absolute; left: 0; right: 0; border-radius: 10px; pointer-events: none; animation: ao-flash 320ms ease-out both; }
-.ao-flash-mas { top: 0; height: 50%; background: rgba(255, 224, 138, 0.38); }
-.ao-flash-menos { bottom: 0; height: 50%; background: rgba(20, 8, 4, 0.40); }
-@keyframes ao-flash { from { opacity: 1; } to { opacity: 0; } }
 .ao-pista { margin: 0; text-align: center; font-size: 11.5px; font-weight: 700; color: #e9d3a5; opacity: 0.8; }
 @media (max-height: 520px) { .ao-pista { display: none; } }
-@media (prefers-reduced-motion: reduce) { .ao-flash { animation-duration: 1ms; } }
+@media (prefers-reduced-motion: reduce) { 

@@ -181,13 +181,11 @@ function SeccionCajas({ titulo, rango, elemento, puntos, desde }) {
 }
 
 function Columna({ lado, estado, editando, onEditar, onGuardar, onMas, onMenos }) {
-  const [flash, setFlash] = useState(null);
   const tocarZona = (ev) => {
     const r = ev.currentTarget.getBoundingClientRect();
     const arriba = ev.clientY - r.top < r.height / 2;
     if (arriba && estado.puntos[lado] >= estado.modo) return;
     if (!arriba && estado.puntos[lado] <= 0) return;
-    setFlash({ t: arriba ? 'mas' : 'menos', k: Date.now() });
     if (arriba) onMas(lado); else onMenos(lado);
   };
   const puntos = estado.puntos[lado];
@@ -214,7 +212,6 @@ function Columna({ lado, estado, editando, onEditar, onGuardar, onMas, onMenos }
             </>
           )}
         </div>
-        {flash && <div key={flash.k} className={`ao-flash ao-flash-${flash.t}`} aria-hidden="true" />}
       </div>
       <div className="ao-botones">
         <button type="button" className="ao-btn ao-btn-menos" onClick={() => onMenos(lado)} disabled={puntos <= 0} aria-label={`Restar un punto a ${nombre}`}><span className="ao-ico ao-ico-menos" aria-hidden="true" /></button>
