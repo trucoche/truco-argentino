@@ -101,14 +101,18 @@ export default function AvisosGlobales({ usuario, token, onAceptarDesafio, onCam
     const alInvitacionCancelada = ({ invitacionId }) =>
       setInvitacionesTorneo((lista) => lista.filter((i) => i.id !== invitacionId));
     const alEquipoCancelado = ({ titulo, motivo, por }) => {
-      const texto = motivo === 'rechazada'
+      const texto = motivo === 'torneo_eliminado'
+        ? `El creador eliminó el torneo "${titulo}": se te devolvió la entrada.`
+        : motivo === 'rechazada'
         ? `${por} rechazó la invitación: se canceló tu equipo en "${titulo}" y se te devolvió la entrada.`
         : motivo === 'sin_respuesta'
           ? `Tus amigos no respondieron a tiempo: se canceló tu equipo en "${titulo}" y se te devolvió la entrada.`
           : `${por} canceló el equipo en "${titulo}" y se te devolvió la entrada.`;
       mostrarToast(texto, 'info', 5000);
+      window.dispatchEvent(new Event('torneos-actualizados'));
     };
     const alInvitacionRespondida = ({ aceptada, username, titulo, equipoCompleto }) => {
+      window.dispatchEvent(new Event('torneos-actualizados'));
       if (!aceptada) return;
       mostrarToast(
         equipoCompleto

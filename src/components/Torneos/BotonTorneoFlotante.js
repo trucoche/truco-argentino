@@ -2,7 +2,8 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { API_URL as BASE_URL } from '../../config';
 
 // Pase 379: botón flotante "Mi torneo". Aparece (chico, en la esquina inferior izquierda, para que
-// no tape nada) mientras el usuario está anotado en un torneo en inscripción o en curso, y lo lleva
+// no tape nada) mientras el usuario está anotado en un torneo en inscripción o en curso — o creó un
+// torneo que sigue en inscripción (Pase 380: queda fijo mientras haya alguno) — y lo lleva
 // a la sala del torneo (BracketView) para ver cómo va todo: equipos listos, equipos armándose,
 // cupos libres y, ya en curso, los cruces. Con más de un torneo abre una listita para elegir.
 const API_URL = `${BASE_URL}/api/torneos`;
@@ -24,11 +25,16 @@ export default function BotonTorneoFlotante({ token, pantalla, onAbrir }) {
     }
   }, [token]);
 
-  // Se refresca al cambiar de pantalla y cada 20 s.
+  // Se refresca al cambiar de pantalla, cada 20 s y apenas la app avisa que algo cambió (crear /
+  // anotarse / desinscribirse / eliminar un torneo → evento 'torneos-actualizados').
   useEffect(() => {
     cargar();
     const id = setInterval(cargar, REFRESCO_MS);
-    return () => clearInterval(id);
+    window.addEventListener('torneos-actualizados', cargar);
+    return () => {
+      clearInterval(id);
+      window.removeEventListener('torneos-actualizados', cargar);
+    };
   }, [cargar, pantalla]);
 
   useEffect(() => { setMenuAbierto(false); }, [pantalla]);

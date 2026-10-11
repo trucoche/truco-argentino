@@ -620,13 +620,13 @@ useEffect(() => {
         <span style={{ ...estilos.remache, bottom: 8, right: 8 }} />
         <div style={estilos.accesoCard}>
       <div style={estilos.panelTitle}>
-        <img src="/assets/images/trofeo.png" alt="" style={estilos.iconoPanelTitle} /> Torneo en curso
+        <img src="/assets/images/vs-escudo.png" alt="" style={estilos.iconoPanelTitle} /> Partida en curso
       </div>
         <div style={estilos.indicadorEsperando}>
           <img src="/assets/images/reloj-arena.png" alt="" style={estilos.iconoIndicadorEsperando} />
           Partida esperando
         </div>
-        <div style={estilos.hint}>¿Tenés una partida de torneo esperando? Buscala acá.</div>
+        <div style={estilos.hint}>¿Tenés una partida esperando o en juego? Buscala acá.</div>
         {/* Pase siguiente: el emoji 🔍 se reemplaza por la lupa ilustrada
             que pasó el usuario — mismo criterio que iconoRayoBoton (alto
             fijo, ancho auto, contain).

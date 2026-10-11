@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
 import PantallaCarga from '../PantallaCarga/PantallaCarga';
-import PopupMadera from '../Popup/PopupMadera';
+import PopupMadera, { confirmarPopup } from '../Popup/PopupMadera';
 import { useToast } from '../../contexts/ToastContext';
 import { API_URL as BASE_URL } from '../../config';
 
@@ -197,6 +197,8 @@ export default function Torneos({ token, onVerBracket }) {
   const [torneoPorCodigo, setTorneoPorCodigo] = useState(null);
 
   const [inscribiendoId, setInscribiendoId] = useState(null);
+  const [misTorneos, setMisTorneos] = useState([]);
+  const [accionandoId, setAccionandoId] = useState(null);
   // Pase 377: amigos disponibles para invitar y los elegidos para el equipo.
   const [amigos, setAmigos] = useState([]);
   const [cargandoAmigos, setCargandoAmigos] = useState(false);
@@ -279,6 +281,31 @@ export default function Torneos({ token, onVerBracket }) {
     const intervalo = setInterval(cargarTorneos, 5000);
     return () => clearInterval(intervalo);
   }, [cargarTorneos]);
+
+  // Pase 380: tarjeta "Mis torneos" — los que creé o en los que estoy anotado (inscripción / en curso).
+  const cargarMisTorneos = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_URL}/mios/activos`, { headers });
+      const data = await res.json();
+      if (res.ok && Array.isArray(data)) setMisTorneos(data);
+    } catch (err) {
+      // Sin conexión: se deja lo último que se sabía.
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
+
+  useEffect(() => {
+    cargarMisTorneos();
+    const intervalo = setInterval(cargarMisTorneos, 5000);
+    return () => clearInterval(intervalo);
+  }, [cargarMisTorneos]);
+
+  // Refresca la lista, la tarjeta y avisa al botón flotante "Mi torneo" (BotonTorneoFlotante.js).
+  const refrescarTodo = () => {
+    cargarTorneos();
+    cargarMisTorneos();
+    window.dispatchEvent(new Event('torneos-actualizados'));
+  };
 
   // Carga el historial de torneos finalizados solo cuando el usuario
   // entra a esa pestaña por primera vez (no hace falta traerlo de
@@ -374,7 +401,7 @@ export default function Torneos({ token, onVerBracket }) {
       // Torneo privado: mostrar el código para compartirlo.
       if (data.privado && data.codigo) setCodigoCreado(data.codigo);
       setPrivado(false);
-      cargarTorneos();
+      refrescarTodo();
 
     } catch (err) {
       console.error('Error de conexión:', err);
@@ -448,7 +475,7 @@ export default function Torneos({ token, onVerBracket }) {
       if (data.pendiente) {
         mostrarToast('Invitaciones enviadas. Tu equipo se arma cuando tus amigos acepten.', 'exito');
       }
-      cargarTorneos();
+      refrescarTodo();
 
     } catch (err) {
       console.error('Error de conexión:', err);
@@ -470,10 +497,59 @@ export default function Torneos({ token, onVerBracket }) {
         return;
       }
 
-      cargarTorneos();
+      refrescarTodo();
     } catch (err) {
       console.error('Error de conexión:', err);
       setError('No se pudo conectar con el servidor');
+    }
+  };
+
+// Pase 380: acciones de "Mis torneos" (con confirmación en popup de madera).
+  const pedirDesinscripcion = async (t) => {
+    const ok = await confirmarPopup({
+      titulo: 'Desinscribirme',
+      mensaje: `¿Salir de "${t.titulo}"? Si tu equipo ya había pagado, se te devuelve la entrada y se cancela el equipo completo.`,
+      textoSi: 'Desinscribirme', textoNo: 'Volver', cinta: 'roja', tipoSi: 'carmesi',
+      icono: '/assets/images/trofeo.png',
+    });
+    if (!ok) return;
+    setAccionandoId(t.id);
+    await handleDesinscribirse(t);
+    setAccionandoId(null);
+  };
+
+  const pedirEliminar = async (t) => {
+    const hayOtros = Number(t.entradas_actuales) > (t.estoy_inscripto ? 1 : 0);
+    const ok = await confirmarPopup({
+      titulo: 'Eliminar torneo',
+      mensaje: hayOtros
+        ? `¿Eliminar "${t.titulo}"? Se cancela para todos y se devuelve la entrada a cada jugador anotado. El costo de crearlo no se devuelve porque ya había gente anotada.`
+        : `¿Eliminar "${t.titulo}"? Como todavía no se anotó nadie más, se te devuelve el costo de crearlo.`,
+      textoSi: 'Eliminar', textoNo: 'Volver', cinta: 'roja', tipoSi: 'carmesi',
+      icono: '/assets/images/trofeo.png',
+    });
+    if (!ok) return;
+    setError('');
+    setAccionandoId(t.id);
+    try {
+      const res = await fetch(`${API_URL}/${t.id}`, { method: 'DELETE', headers });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || 'No se pudo eliminar el torneo');
+      } else {
+        mostrarToast(
+          data.costoReembolsado > 0
+            ? `Torneo eliminado. Se te devolvieron ${Math.round(Number(data.costoReembolsado))} monedas.`
+            : 'Torneo eliminado.',
+          'exito'
+        );
+        refrescarTodo();
+      }
+    } catch (err) {
+      console.error('Error de conexión:', err);
+      setError('No se pudo conectar con el servidor');
+    } finally {
+      setAccionandoId(null);
     }
   };
 
@@ -632,6 +708,68 @@ return (
           necesitar una media query aparte (mismo truco que ya usa
           torneosGrid más abajo). */}
       <div style={estilos.crearYListaWrap}>
+      <div style={estilos.columnaIzquierda}>
+      {/* Pase 380: tarjeta "Mis torneos" — administrar los torneos que creé o en los que estoy anotado. */}
+      <div style={{ ...estilos.panelExterior, marginBottom: 0 }}>
+        <span style={{ ...estilos.remache, top: 10, left: 10 }} />
+        <span style={{ ...estilos.remache, top: 10, right: 10 }} />
+        <span style={{ ...estilos.remache, bottom: 10, left: 10 }} />
+        <span style={{ ...estilos.remache, bottom: 10, right: 10 }} />
+        <div style={estilos.panelInterior}>
+          <Filigrana />
+          <div style={estilos.panelTitle}>
+            <img src="/assets/images/trofeo.png" alt="" style={estilos.panelTitleIcono} />
+            Mis torneos
+          </div>
+          {misTorneos.length === 0 ? (
+            <div style={estilos.misTorneosVacio}>
+              Todavía no creaste ni te anotaste a ningún torneo. Cuando lo hagas, lo administrás desde acá.
+            </div>
+          ) : (
+            <div style={estilos.misTorneosLista}>
+              {misTorneos.map((t) => {
+                const inscripcion = t.estado === 'inscripcion';
+                const ocupado = accionandoId === t.id;
+                return (
+                  <div key={t.id} style={estilos.torneoCard}>
+                    <div style={estilos.torneoHeader}>
+                      <div style={estilos.torneoNombre}>{renderTituloTorneo(t.titulo)}</div>
+                      <div style={{ ...estilos.badge, ...(inscripcion ? estilos.badgeAbierta : estilos.badgeCurso) }}>
+                        {inscripcion ? 'Inscripción' : 'En curso'}
+                      </div>
+                    </div>
+                    <div style={{ ...estilos.torneoInfo, marginBottom: 6 }}>
+                      {t.modo} · {t.entradas_actuales}/{t.cupo_entradas} equipos
+                      {t.soy_creador ? ' · Lo creaste vos' : ' · Estás anotado'}
+                      {t.mi_equipo_pendiente ? ' · Tu equipo está armándose' : ''}
+                    </div>
+                    {t.soy_creador && t.privado && t.codigo && (
+                      <div style={estilos.misTorneosCodigo}>
+                        <span>Código: <strong>{t.codigo}</strong></span>
+                        <button type="button" onClick={() => copiarCodigo(t.codigo)} style={estilos.btnCopiarChico}>Copiar</button>
+                      </div>
+                    )}
+                    <div style={estilos.misTorneosAcciones}>
+                      <button onClick={() => onVerBracket(t.id)} style={estilos.btnCard}>Ver sala</button>
+                      {inscripcion && t.estoy_inscripto && (
+                        <button disabled={ocupado} onClick={() => pedirDesinscripcion(t)} style={{ ...estilos.btnCardSecondary, ...(ocupado ? { opacity: 0.6 } : null) }}>
+                          Desinscribirme
+                        </button>
+                      )}
+                      {inscripcion && t.soy_creador && (
+                        <button disabled={ocupado} onClick={() => pedirEliminar(t)} style={{ ...estilos.btnCardCrimson, ...(ocupado ? { opacity: 0.6 } : null) }}>
+                          Eliminar torneo
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Pase de rediseño estructural: mismo criterio de "placa de madera
           de taberna" que el resto de la app (exterior de madera oscura +
           remaches, interior de pergamino cálido) en vez del rectángulo
@@ -831,6 +969,7 @@ return (
             )}
           </div>
         )}
+      </div>
       </div>
       </div>
 
@@ -1198,6 +1337,19 @@ const estilos = {
     gap: 18, alignItems: 'start', marginBottom: 18,
   },
   listaColumna: { display: 'flex', flexDirection: 'column', minWidth: 0 },
+  // Pase 380: columna izquierda (Mis torneos + Crear torneo) y la tarjeta "Mis torneos".
+  columnaIzquierda: { display: 'flex', flexDirection: 'column', gap: 18, minWidth: 0 },
+  misTorneosVacio: { fontSize: 13, color: '#7a6660', fontWeight: 700, lineHeight: 1.4 },
+  misTorneosLista: { display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 380, overflowY: 'auto', paddingRight: 2 },
+  misTorneosAcciones: { display: 'flex', flexWrap: 'wrap', gap: 8 },
+  misTorneosCodigo: {
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8,
+    fontSize: 13, color: C.chocolate, fontWeight: 700,
+  },
+  btnCopiarChico: {
+    fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 12, color: C.chocolate, cursor: 'pointer',
+    background: '#FFF8ED', border: '2px solid #000', borderRadius: 999, padding: '3px 12px',
+  },
   // Pase 375: torneos privados y costo de crear.
   ayudaCosto: { fontSize: 12, color: '#7a6660', fontWeight: 700, marginTop: 6 },
   costoCrear: {

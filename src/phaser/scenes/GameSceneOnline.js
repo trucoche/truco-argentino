@@ -1954,7 +1954,8 @@ _dibujarRadarSiluetas(cx, cy, radioFoto) {
   registrar(punto);
 
   // Ciclo de siluetas: orden aleatorio sin repetir la misma dos veces seguidas.
-  const DURACION_CICLO = 560;
+  // Pase 380: más lento (560 → 900 ms por silueta).
+  const DURACION_CICLO = 900;
   let cola = [];
   let ultima = null;
   const siguiente = () => {
@@ -1980,7 +1981,7 @@ _dibujarRadarSiluetas(cx, cy, radioFoto) {
     sil.setX(cx + desplazamiento);
     sil.setAlpha(0);
     tweenX = this.tweens.add({ targets: sil, x: { from: cx + desplazamiento, to: cx - desplazamiento }, duration: DURACION_CICLO, ease: 'Linear' });
-    tweenAlpha = this.tweens.add({ targets: sil, alpha: { from: 0, to: 0.82 }, duration: 240, yoyo: true, hold: 80, ease: 'Sine.easeInOut' });
+    tweenAlpha = this.tweens.add({ targets: sil, alpha: { from: 0, to: 0.82 }, duration: 380, yoyo: true, hold: 140, ease: 'Sine.easeInOut' });
   };
   pasarSilueta();
   this._avataresEsperaTimers.push(this.time.addEvent({ delay: DURACION_CICLO, loop: true, callback: pasarSilueta }));
