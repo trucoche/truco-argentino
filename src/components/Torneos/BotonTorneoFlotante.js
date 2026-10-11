@@ -8,10 +8,33 @@ import { API_URL as BASE_URL } from '../../config';
 // cupos libres y, ya en curso, los cruces. Con más de un torneo abre una listita para elegir.
 const API_URL = `${BASE_URL}/api/torneos`;
 const REFRESCO_MS = 20000;
+// Pase 389: en pantallas angostas (< 900 px) la barra de navegación queda fija abajo (ver .ts-nav en app-shell.css)
+// y el botón caía justo encima de la pestaña "Salas". Ahí se sube por encima de la barra.
+const CONSULTA_MOVIL = '(max-width: 899px)';
+const ALTO_NAV_MOVIL = 108;
+
+function useEsMovil() {
+  const leer = () => (typeof window !== 'undefined' && window.matchMedia ? window.matchMedia(CONSULTA_MOVIL).matches : false);
+  const [esMovil, setEsMovil] = useState(leer);
+  useEffect(() => {
+    if (!window.matchMedia) return undefined;
+    const mq = window.matchMedia(CONSULTA_MOVIL);
+    const alCambiar = () => setEsMovil(mq.matches);
+    alCambiar();
+    if (mq.addEventListener) mq.addEventListener('change', alCambiar);
+    else mq.addListener(alCambiar);
+    return () => {
+      if (mq.removeEventListener) mq.removeEventListener('change', alCambiar);
+      else mq.removeListener(alCambiar);
+    };
+  }, []);
+  return esMovil;
+}
 
 export default function BotonTorneoFlotante({ token, pantalla, onAbrir }) {
   const [torneos, setTorneos] = useState([]);
   const [menuAbierto, setMenuAbierto] = useState(false);
+  const esMovil = useEsMovil();
 
   const cargar = useCallback(async () => {
     if (!token) return;
@@ -49,7 +72,7 @@ export default function BotonTorneoFlotante({ token, pantalla, onAbrir }) {
   };
 
   return (
-    <div style={estilos.contenedor}>
+    <div style={{ ...estilos.contenedor, ...(esMovil ? { bottom: `calc(${ALTO_NAV_MOVIL}px + env(safe-area-inset-bottom, 0px))` } : null) }}>
       {menuAbierto && (
         <div style={estilos.menu}>
           <div style={estilos.menuTitulo}>Mis torneos</div>
