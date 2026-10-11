@@ -69,4 +69,35 @@ render: {
   backgroundColor: '#2d2d2d'
 };
 
+// Pase 394 — layout vertical para ventanas angostas.
+// En una ventana de menos de 700px de ancho (y mas alta que ancha) el
+// canvas 4:3 de siempre queda chico en el centro con mucho marron alrededor.
+// En ese caso el canvas pasa a ocupar TODA la ventana (la relacion de
+// aspecto la da la ventana) y la escena (GameSceneOnline.js, `data.angosto`)
+// arma la mesa en vertical, como en la app nativa. En escritorio nada cambia.
+export const ANCHO_ANGOSTO_MAX = 700;
+export const RELACION_ALTO_ANGOSTO_MIN = 1.15;   // alto/ancho minimo para usar el layout vertical
+// Pase 400: el canvas llena toda la ventana (hasta 4x el ancho); la escena arma el juego como maximo a 1.8x el ancho,
+// apoyado abajo, y el sobrante de arriba queda con el fondo de madera.
+export const RELACION_ALTO_MAX = 4;
+
+export function esLayoutAngosto() {
+  if (typeof window === 'undefined') return false;
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  return w < ANCHO_ANGOSTO_MAX && h / w >= RELACION_ALTO_ANGOSTO_MIN;
+}
+
+export function crearConfigOnline(angosto) {
+  if (!angosto) return gameConfigOnline;
+  const ancho = window.innerWidth;
+  const alto = Math.min(window.innerHeight, ancho * RELACION_ALTO_MAX);
+  return {
+    ...gameConfigOnline,
+    width: Math.round(ancho * DPR),
+    height: Math.round(alto * DPR),
+    scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH, zoom: 1 },
+  };
+}
+
 export default gameConfigOnline;

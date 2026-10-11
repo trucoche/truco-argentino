@@ -1155,6 +1155,12 @@ _crearElementosDeTexto() {
     const ch = this.scale.height;
     const zoom = cw / WN;
     const H = ch / zoom;
+    // Pase 400: en ventanas muy altas (alto/ancho > 1.8) todo el juego se arma
+    // como si la ventana midiera 1.8x el ancho y se apoya abajo (botonera en
+    // el borde inferior); el sobrante queda ARRIBA con solo el fondo de madera.
+    // Los calculos de abajo usan `Hg` y al final se suma `yOff` a cada Y.
+    const Hg = Math.min(H, WN * 1.8);
+    const yOff = H - Hg;
     // Modo "estatico" (sala de espera / pantalla final): se muestra el mundo
     // 800x600 de siempre, centrado, con los fondos estirados a cubrir.
     const zoom8 = cw / 760;   // sala de espera / pantalla final: 760 de ancho de mundo visible
@@ -1162,7 +1168,7 @@ _crearElementosDeTexto() {
 
     // Factor de tamaño de cartas segun cuanto alto hay: en ventanas angostas pero
     // bajitas (alto/ancho ~1.2-1.5) las cartas grandes se pisarian entre si.
-    const f = Math.max(0.62, Math.min(1, 0.62 + ((H - 860) / 440) * 0.38));
+    const f = Math.max(0.62, Math.min(1, 0.62 + ((Hg - 860) / 440) * 0.38));
     const kp = 1.3;                      // placas del marcador
     const placaW = Math.round(96 * kp);
     const placaH = Math.round(48 * kp);
@@ -1174,8 +1180,8 @@ _crearElementosDeTexto() {
     // Botonera + mano (abajo, pegadas al borde inferior)
     const panelW = 700;
     const panelH = Math.round(panelW * 193 / 700);
-    const panelTop = H - panelH;
-    const panelCY = H - panelH / 2;
+    const panelTop = Hg - panelH;
+    const panelCY = Hg - panelH / 2;
     const kMano = 1.7 * f;
     const manoY = panelTop - 6;
 
@@ -1228,21 +1234,25 @@ _crearElementosDeTexto() {
     const hudYFinal = hudYBase + slackSobra * 0.45;
     const hudBottom = hudYFinal + placaH / 2;
 
+    // eq3 se calcula en el espacio del grupo (0..Hg) y luego se desplaza
+    const eq3 = (() => {
+      const nTop = hudBottom + 28;
+      const nBot = manoY + 25;
+      const gy = Math.max(0.8, Math.min(2.2, (nBot - nTop) / 490));
+      return { cyOld: 320, cy: nBot - 200 * gy + yOff, gy };
+    })();
+
     return {
-      zoom, H, zoom8, H8, WN,
-      kp, placaW, placaH, hudY: hudYFinal, placaVosX, placaRivalX,
-      panelW, panelH, panelTop, panelCY, kMano, manoY,
-      tableW, u, CORTE_A, CORTE_B, altoTopNat, altoBotNat, E, tableTop, tableBottom, rivalY, kRival, nombreY, sT,
-      feltCY, feltRY, dueloY: feltCY, dueloEscala, kBoton: 1.15 + 0.15 * f,
-      kSeat: 1.35, perspCY: feltCY, perspRY: feltRY,
-      eq2: { cyOld: 250, cy: feltCY, gy: 137 * sT / 130 },
-      eq3: (() => {
-        const nTop = hudBottom + 28;
-        const nBot = manoY + 25;
-        const gy = Math.max(0.8, Math.min(2.2, (nBot - nTop) / 490));
-        return { cyOld: 320, cy: nBot - 200 * gy, gy };
-      })(),
-      indicadoresX: 62, manoIndY: panelTop - 26, turnoX: 650, turnoY: panelTop - 26,
+      zoom, H, zoom8, H8, WN, yOff,
+      kp, placaW, placaH, hudY: hudYFinal + yOff, placaVosX, placaRivalX,
+      panelW, panelH, panelTop: panelTop + yOff, panelCY: panelCY + yOff, kMano, manoY: manoY + yOff,
+      tableW, u, CORTE_A, CORTE_B, altoTopNat, altoBotNat, E, tableTop: tableTop + yOff, tableBottom: tableBottom + yOff,
+      rivalY: rivalY + yOff, kRival, nombreY: nombreY + yOff, sT,
+      feltCY: feltCY + yOff, feltRY, dueloY: feltCY + yOff, dueloEscala, kBoton: 1.15 + 0.15 * f,
+      kSeat: 1.35, perspCY: feltCY + yOff, perspRY: feltRY,
+      eq2: { cyOld: 250, cy: feltCY + yOff, gy: 137 * sT / 130 },
+      eq3,
+      indicadoresX: 62, manoIndY: panelTop - 26 + yOff, turnoX: 650, turnoY: panelTop - 26 + yOff,
     };
   }
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Phaser from 'phaser';
-import gameConfigOnline, { ANCHO_MAX_CSS } from '../../phaser/config/gameConfigOnline';
+import { ANCHO_MAX_CSS, esLayoutAngosto, crearConfigOnline } from '../../phaser/config/gameConfigOnline';
 import GameSceneOnline from '../../phaser/scenes/GameSceneOnline';
 import ChatMesa from './ChatMesa';
 import CompartirManoBoton from './CompartirManoBoton';
@@ -20,6 +20,13 @@ export default function GameOnlinePhaser({
   onLogrosDesbloqueados,
 }) {
   const gameRef = useRef(null);
+  // Pase 394: layout vertical en ventanas angostas (<700px). `angosto` decide el
+  // estilo del contenedor y la config del canvas; `claveLayout` fuerza a
+  // recrear el juego cuando la ventana cruza el umbral (o cambia mucho de
+  // proporcion, por ejemplo al girar el celular).
+  const [angosto, setAngosto] = useState(() => esLayoutAngosto());
+  const [claveLayout, setClaveLayout] = useState(0);
+  const relacionInicialRef = useRef(typeof window !== 'undefined' ? window.innerHeight / window.innerWidth : 1);
   const codigoSalaRef = useRef(codigoSala);
   const [esEquipos, setEsEquipos] = useState(false);
   const [audioInfo, setAudioInfo] = useState({ privada: false, audioRoomUrl: null });
@@ -42,8 +49,10 @@ export default function GameOnlinePhaser({
 
 useEffect(() => {
     if (!gameRef.current) {
-      gameRef.current = new Phaser.Game(gameConfigOnline);
-      gameRef.current.scene.add('GameSceneOnline', GameSceneOnline, true, { usuario, codigoSala, vocesVolumen });
+      const angostoAhora = esLayoutAngosto();
+      relacionInicialRef.current = window.innerHeight / window.innerWidth;
+      gameRef.current = new Phaser.Game(crearConfigOnline(angostoAhora));
+      gameRef.current.scene.add('GameSceneOnline', GameSceneOnline, true, { usuario, codigoSala, vocesVolumen, angosto: angostoAhora });
 
       gameRef.current.events.once('ready', () => {
         const escena = gameRef.current.scene.getScene('GameSceneOnline');
@@ -75,7 +84,29 @@ useEffect(() => {
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [claveLayout]);
+
+  // Pase 394: al achicar/agrandar la ventana (o girar el celular) se vuelve a
+  // decidir el layout. Solo se recrea el juego si cruza el umbral de 700px o la
+  // proporcion cambia mucho; un ajuste chico (barra de direcciones del
+  // navegador) lo absorbe el canvas solo.
+  useEffect(() => {
+    let timer = null;
+    const alCambiarTamano = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        const ahora = esLayoutAngosto();
+        const relacion = window.innerHeight / window.innerWidth;
+        const cambioMucho = ahora && Math.abs(relacion - relacionInicialRef.current) / relacionInicialRef.current > 0.2;
+        if (ahora !== angosto || cambioMucho) {
+          setAngosto(ahora);
+          setClaveLayout(k => k + 1);
+        }
+      }, 300);
+    };
+    window.addEventListener('resize', alCambiarTamano);
+    return () => { clearTimeout(timer); window.removeEventListener('resize', alCambiarTamano); };
+  }, [angosto]);
 
 useEffect(() => {
     if (codigoSalaRef.current === codigoSala) return;
@@ -84,7 +115,7 @@ useEffect(() => {
     if (gameRef.current) {
       const escena = gameRef.current.scene.getScene('GameSceneOnline');
       if (escena) {
-        escena.scene.restart({ usuario, codigoSala, vocesVolumen });
+        escena.scene.restart({ usuario, codigoSala, vocesVolumen, angosto: esLayoutAngosto() });
         escena.events.once('create', () => {
           escena.onVolverLobby = manejarVolverLobby;
           escena.onRevancha = onRevancha;
@@ -109,7 +140,7 @@ useEffect(() => {
 
   return (
     <div style={estilosPagina.fondoPagina}>
-      <div style={estilosPagina.contenedorJuego}>
+      <div style={angosto ? estilosPagina.contenedorJuegoAngosto : estilosPagina.contenedorJuego}>
         <div id="game-container" style={{ width: '100%', height: '100%' }} />
         <ChatMesa codigoSala={codigoSala} esEquipos={esEquipos} personaje={usuario?.personaje || 'gaucho'} token={token} usuarioActual={usuario?.username} />
         <CompartirManoBoton codigoSala={codigoSala} esEquipos={esEquipos} />
@@ -199,6 +230,13 @@ const estilosPagina = {
   // visible real, así que este límite de ancho podía quedarse corto o
   // largo según el estado de esa barra en cada momento. 95dvh sigue el
   // alto visible real.
+  // Pase 394: ventana angosta — el canvas llena el ancho y el alto (con tope de
+  // proporcion, ver RELACION_ALTO_MAX en gameConfigOnline.js).
+  contenedorJuegoAngosto: {
+    position: 'relative',
+    width: '100%',
+    height: 'min(100dvh, calc(100vw * 4))',
+  },
   contenedorJuego: {
     position: 'relative',
     width: `min(100%, ${ANCHO_MAX_CSS}px, calc(95dvh * 4 / 3))`,
