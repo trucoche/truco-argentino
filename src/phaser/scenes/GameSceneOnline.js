@@ -76,6 +76,36 @@ const CLAVE_IMAGEN_BOTON = {
   'ir-al-mazo': 'IrAlMazo',
 };
 
+// Pase 406: botonera de cantos "RusticWoodButtons" — reemplaza las píldoras
+// (PNG con texto horneado) por tablitas de madera dibujadas por código:
+// 'claro' = pergamino/madera clara con marco de roble (Envido/Real/Falta y
+// familia de Flor), 'oro' = placa dorada/caoba (Truco/Retruco/Vale Cuatro),
+// 'caoba' = bronce oscuro (Quiero), 'carmesi' = madera rojiza (Ir al Mazo,
+// No quiero). La clave es la MISMA de CLAVE_IMAGEN_BOTON (así la lógica de
+// qué botón se muestra no cambia). "Tengo [N]" sigue con su imagen.
+const BOTON_RUSTICO = {
+  Truco: { txt: 'TRUCO', v: 'oro' },
+  Retruco: { txt: 'RETRUCO', v: 'oro' },
+  ValeCuatro: { txt: 'VALE CUATRO', v: 'oro' },
+  Envido: { txt: 'ENVIDO', v: 'claro' },
+  RealEnvido: { txt: 'REAL ENVIDO', v: 'claro' },
+  FaltaEnvido: { txt: 'FALTA ENVIDO', v: 'claro' },
+  Flor: { txt: 'FLOR', v: 'claro' },
+  ContraFlor: { txt: 'CONTRAFLOR', v: 'claro' },
+  ContraFlorResto: { txt: 'CONTRAFLOR AL RESTO', v: 'claro' },
+  SonBuenas: { txt: 'SON BUENAS', v: 'claro' },
+  Quiero: { txt: 'QUIERO', v: 'caoba' },
+  NoQuiero: { txt: 'NO QUIERO', v: 'carmesi' },
+  IrAlMazo: { txt: 'IR AL MAZO', v: 'carmesi' },
+};
+const VARIANTES_RUSTICAS = {
+  claro:   { marco: 0x7a4a24, marcoLuz: 0xb98350, campo: 0xf0dcae, campoLuz: 0xfcefcf, campoSombra: 0xc79f62, texto: '#3a1b0c', grabado: true,  prof: 0.10 },
+  oro:     { marco: 0x4a2412, marcoLuz: 0x9a5e2c, campo: 0xe3a92e, campoLuz: 0xfad46c, campoSombra: 0xa56a16, texto: '#fff3c4', grabado: false, prof: 0.14 },
+  caoba:   { marco: 0x3a1c10, marcoLuz: 0x7e4e2c, campo: 0x8a4b2a, campoLuz: 0xb77041, campoSombra: 0x5a2c16, texto: '#ffe9c2', grabado: false, prof: 0.10 },
+  carmesi: { marco: 0x3a1010, marcoLuz: 0x7e2c24, campo: 0xb02a24, campoLuz: 0xdc564d, campoSombra: 0x7a1411, texto: '#ffe6d6', grabado: false, prof: 0.12 },
+};
+const RATIO_FUENTE_RUSTICO = 0.40;
+
 export default class GameSceneOnline extends Phaser.Scene {
 
   constructor() {
@@ -89,6 +119,10 @@ export default class GameSceneOnline extends Phaser.Scene {
     // layout angosto esta condicionado a `this._L`, asi que en escritorio
     // nada cambia.
     this._angosto   = !!data.angosto;
+    // Pase 404: estilo del marcador de las placas VOS/RIVAL ('numeros' | 'fosforos').
+    this._marcadorEstilo = data.marcadorEstilo === 'fosforos' ? 'fosforos' : 'numeros';
+    this._fosObjs = null;
+    this._puntosPrevios = null;
     this._eqMap     = null;
     this._L         = null;
     this._modoCamara = null;
@@ -277,7 +311,10 @@ preload() {
     this.load.audio('jugar-carta', 'assets/sounds/CardGame-SoundEffect.mp3');
     this.load.audio('ganar',       'assets/sounds/ganarpartidasonido.mp3');
     this.load.audio('repartir',    'assets/sounds/repartir_cartas.mp3');
-    this.load.audio('sfx_fosforo', 'assets/sounds/sfx_fosforo_click.mp3');   // Pase 403: clic de fosforo al sumar un punto
+    this.load.audio('sfx_fosforo', 'assets/sounds/sfx_fosforo_click.mp3');
+    ['1_fosforo', '2_fosforos', '3_fosforos', '4_fosforos', '5_fosforos_cruz'].forEach((f, i) => {
+      this.load.image(`fos_${i + 1}`, conVersion(`assets/images/juego/fosforos/${f}.png`));
+    });   // Pase 403: clic de fosforo al sumar un punto
     // Pase 206: pedido del usuario — la pantalla de "esperando rival" tenía
     // su propio fondo de boliche/bar (marrón), distinto al fondo verde
     // fotográfico que usa el resto de la app (lobby, torneos, bracket,
@@ -425,6 +462,20 @@ preload() {
     // config en vez de repetirlo acá a mano, para que este zoom y
     // `_factorEscalaTextura()` nunca puedan quedar desincronizados entre sí
     // como pasó en el pase anterior.
+    // Pase 407: TODOS los textos de la escena se rasterizan a la resolución real del
+    // backing store (mismo factor que las texturas pre-escaladas). Antes solo 4 textos
+    // pasaban `resolution` y el resto (botones, banners, "Tu turno", timer, etc.) se
+    // dibujaba a 1x y el zoom de la cámara lo estiraba → borroso. Se parchea
+    // `this.add.text` una sola vez para que el default sea ese factor (tope 4x).
+    if (!this._addTextParcheado) {
+      this._addTextParcheado = true;
+      const addTextOriginal = this.add.text.bind(this.add);
+      this.add.text = (x, y, texto, estilo) => {
+        const st = (estilo && typeof estilo === 'object') ? estilo : {};
+        const res = Math.min(4, Math.max(1, this._factorEscalaTextura()));
+        return addTextOriginal(x, y, texto, { resolution: res, ...st });
+      };
+    }
     const dpr = window.devicePixelRatio || 1;
     if (this._angosto) {
       this._L = this._calcularLayoutAngosto();
@@ -825,6 +876,13 @@ _crearElementosDeTexto() {
       zonaAnotador(marcadorX, marcadorY, marcadorAncho, marcadorAlto),
       zonaAnotador(this.PLACA_RIVAL_CX, this.PLACA_RIVAL_CY, placaAncho, placaAlto),
     ];
+    // Pase 404: geometria original de las placas (para el modo "fosforos").
+    this._geoPlacas = {
+      kp: kpH,
+      vos: { cx: marcadorX, cy: marcadorY, w: marcadorAncho, h: marcadorAlto },
+      rival: { cx: this.PLACA_RIVAL_CX, cy: this.PLACA_RIVAL_CY, w: placaAncho, h: placaAlto },
+    };
+    this._aplicarMarcadorEstilo();
 
     // Indicador de "mano" (1v1): antes era el emoji 🂠 metido en el texto,
     // ahora es la ficha circular ilustrada + el texto sin emoji al lado.
@@ -1761,6 +1819,7 @@ _mostrarMarcadores(visible) {
   [this.scoreBg, this.scoreText, this.labelPropio, this.fondoInfoRival, this.scoreTextRival]
     .forEach(o => { if (o && o.scene) o.setVisible(visible); });
   (this.zonasAnotador || []).forEach(z => { if (z && z.scene) { z.setVisible(visible); if (z.input) z.input.enabled = visible; } });
+  this._aplicarMarcadorEstilo();
   if (!visible) {
     [this.labelRival, this.manoIconoRival, this.nombreRivalAngosto].forEach(o => { if (o && o.scene) o.setVisible(false); });
   }
@@ -2548,6 +2607,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
     const elementosMarcador = this._L ? [] : [
       this.scoreBg, this.scoreText, this.labelPropio,
       this.fondoInfoRival, this.scoreTextRival, this.labelRival, this.manoIconoRival,
+      ...(this._fosObjs ? this._fosObjs.todos : []),
     ];
     if (this._L) this._modoCamaraAngosto('estatica');
     this.children.list
@@ -3023,6 +3083,7 @@ _renderizarEstado(animarReparto) {
     // se va vaciando — no se puede dibujar de una sola vez acá porque el
     // porcentaje restante cambia entre un render de estado y el siguiente.
     this._anilloRect = null;
+    this._anilloEsRival = false;
     // Nonagésimo séptimo pase: acá vivía el reset de `turnoPlaca` (la
     // placa de madera detrás de "Tu turno", sacada a pedido del usuario —
     // ver comentario junto a `turnoText` en create()). Ya no hay nada que
@@ -3157,10 +3218,8 @@ _renderizarEstado(animarReparto) {
       // create()), así que el anillo se calcula directo de esas
       // constantes en vez de medir texto.
       if (esTurnoRival) {
-        this._anilloRect = {
-          x: this.PLACA_RIVAL_CX - (this._L ? this._L.placaW : 96) / 2, y: this.PLACA_RIVAL_CY - (this._L ? this._L.placaH : 48) / 2,
-          w: this._L ? this._L.placaW : 96, h: this._L ? this._L.placaH : 48, r: 9,
-        };
+        this._anilloRect = this._rectAnilloRival();
+        this._anilloEsRival = true;
       }
 
       const revelacionFlorRival = this._mostrandoRevelacionFlor
@@ -3483,12 +3542,176 @@ _dibujarMarcoMaderaConRemaches(g, x, y, w, h, rExterior = 20, rInterior = 14, pa
   });
 }
 
+// Pase 404: estilo del marcador. 'numeros' = placas de siempre; 'fosforos' = las
+// placas se vuelven minitableros con los cuadritos de 5 fosforos (malas y, si la
+// mesa es a 30, buenas). Se puede cambiar en cualquier momento desde Ajustes.
+setMarcadorEstilo(estilo) {
+  this._marcadorEstilo = estilo === 'fosforos' ? 'fosforos' : 'numeros';
+  this._aplicarMarcadorEstilo(false);
+}
+
+// Ancho de las placas en modo fosforos (mas anchas que las de numeros para que se lean).
+_anchoPlacaFosforos() {
+  const g = this._geoPlacas;
+  return this._L ? Math.round(g.vos.w * 1.3) : 110;
+}
+
+// Centro X de cada placa en modo fosforos (las dos crecen hacia afuera, sin pisarse).
+_cxPlacaFosforos(k) {
+  const g = this._geoPlacas;
+  const wF = this._anchoPlacaFosforos();
+  if (this._L) {
+    const d = (wF - g.vos.w) / 2;
+    return k === 'vos' ? g.vos.cx - d : g.rival.cx + d;
+  }
+  return k === 'vos' ? 12 + wF / 2 : 12 + wF + 14 + wF / 2;
+}
+
+_crearFosforosMarcador() {
+  if (this._fosObjs) return this._fosObjs;
+  const factor = this._factorEscalaTextura();
+  const g = this._geoPlacas;
+  const gap = 3 * g.kp;
+  const B = Math.floor((this._anchoPlacaFosforos() - 12 - 2 * gap) / 3);
+  const claves = [1, 2, 3, 4, 5].map((n) => {
+    const k = `fos_${n}_s`;
+    this._crearTexturaEscalada(`fos_${n}`, k, Math.round(B * factor), Math.round(B * factor));
+    return k;
+  });
+  const lado = () => ({ fantasma: [], caja: [], n: [0, 0, 0, 0, 0, 0] });
+  const objs = { B, gap, claves, vos: lado(), rival: lado(), todos: [] };
+  ['vos', 'rival'].forEach((nombre) => {
+    for (let i = 0; i < 6; i++) {
+      const f = this.add.image(0, 0, claves[3]).setDisplaySize(B, B).setDepth(1002).setAlpha(0.14).setTint(0x8a6a55).setVisible(false);
+      const c = this.add.image(0, 0, claves[0]).setDisplaySize(B, B).setDepth(1003).setVisible(false);
+      objs[nombre].fantasma.push(f);
+      objs[nombre].caja.push(c);
+      objs.todos.push(f, c);
+    }
+  });
+  this._fosObjs = objs;
+  return objs;
+}
+
+// Idempotente: deja las placas en el estilo elegido y refresca los fosforos.
+_aplicarMarcadorEstilo(animar = false) {
+  const g = this._geoPlacas;
+  if (!g || !this.scoreBg || !this.scoreBg.scene) return;
+  const fosforos = this._marcadorEstilo === 'fosforos';
+  const visiblePlacas = this.scoreBg.visible;
+  const pts = this._puntosPrevios || { yo: 0, rival: 0 };
+  const objetivo = this._puntosSala || 15;
+  const buenas = objetivo >= 30 || pts.yo > 15 || pts.rival > 15;
+
+  const lados = [
+    { k: 'vos', geo: g.vos, bg: this.scoreBg, num: this.scoreText, label: this.labelPropio, puntos: pts.yo, zona: (this.zonasAnotador || [])[0] },
+    { k: 'rival', geo: g.rival, bg: this.fondoInfoRival, num: this.scoreTextRival, label: this.labelRival, puntos: pts.rival, zona: (this.zonasAnotador || [])[1] },
+  ];
+
+  if (!fosforos) {
+    // Placas originales
+    lados.forEach(({ geo, bg, num, label, zona }) => {
+      if (this._placaFosforosActiva) {
+        this._dibujarPlacaMarcador(bg, geo.cx, geo.cy, geo.w, geo.h);
+        if (label && label.scene) label.setPosition(geo.cx, geo.cy - 11 * g.kp);
+        if (num && num.scene) num.setPosition(geo.cx, geo.cy + 11 * g.kp);
+        if (zona && zona.scene) zona.setSize(geo.w, geo.h).setPosition(geo.cx, geo.cy);
+      }
+      if (num && num.scene) num.setVisible(visiblePlacas);
+    });
+    if (this.manoIconoRival && this.manoIconoRival.scene && this._placaFosforosActiva) {
+      this.manoIconoRival.setPosition(g.rival.cx + g.rival.w / 2 + (this._L ? 14 : 11), g.rival.cy - 11 * g.kp);
+    }
+    if (this._fosObjs) this._fosObjs.todos.forEach(o => o.setVisible(false));
+    this._placaFosforosActiva = false;
+    this._rectPlacaRival = null;
+    if (this._anilloRect && this._anilloEsRival) this._anilloRect = this._rectAnilloRivalNumeros();
+    return;
+  }
+
+  const F = this._crearFosforosMarcador();
+  const hLabel = 18 * g.kp;
+  const alto = hLabel + (buenas ? 2 * F.B + F.gap : F.B) + 7;
+  const h2 = Math.max(g.vos.h, alto);
+  this._placaFosforosActiva = true;
+
+  const wF = this._anchoPlacaFosforos();
+  lados.forEach(({ k, geo, bg, num, label, puntos, zona }) => {
+    // Layout angosto: la placa crece hacia ARRIBA (su borde de abajo queda donde estaba);
+    // en escritorio crece hacia abajo desde el borde de arriba.
+    const top = this._L ? (geo.cy + geo.h / 2 - h2) : (geo.cy - geo.h / 2);
+    const cy2 = top + h2 / 2;
+    const cx2 = this._cxPlacaFosforos(k);
+    this._dibujarPlacaMarcador(bg, cx2, cy2, wF, h2);
+    // Papel crema adentro de la placa: los fosforos (madera + cabeza roja) se leen mejor que sobre la madera.
+    const px = cx2 - wF / 2 + 4, py = top + hLabel, pw = wF - 8, ph = h2 - hLabel - 4;
+    bg.fillStyle(0x6b271d, 0.55);
+    bg.fillRoundedRect(px, py, pw, ph, 5);
+    bg.fillStyle(0xFFF8ED, 1);
+    bg.fillRoundedRect(px + 1, py + 1.5, pw - 2, ph - 2.5, 4);
+    if (label && label.scene) label.setPosition(cx2, top + hLabel / 2 + 2);
+    if (num && num.scene) num.setVisible(false);
+    if (zona && zona.scene) zona.setSize(wF, h2).setPosition(cx2, cy2);
+    const L = F[k];
+    const filas = buenas ? 2 : 1;
+    for (let i = 0; i < 6; i++) {
+      const fila = Math.floor(i / 3), col = i % 3;
+      const mostrarCaja = fila < filas;
+      const x = cx2 + (col - 1) * (F.B + F.gap);
+      const y = top + hLabel + F.B / 2 + fila * (F.B + F.gap);
+      const n = Math.max(0, Math.min(5, (Number(puntos) || 0) - i * 5));
+      const f = L.fantasma[i], c = L.caja[i];
+      // Un solo dibujo por cuadro: el cuadrito fantasma solo se ve cuando el cuadro esta vacio
+      // (si no, asoma por los bordes del fosforo de arriba).
+      f.setPosition(x, y).setVisible(visiblePlacas && mostrarCaja && n === 0);
+      c.setPosition(x, y);
+      if (n > 0 && mostrarCaja) {
+        c.setTexture(F.claves[n - 1]).setDisplaySize(F.B, F.B).setVisible(visiblePlacas);
+        if (animar && n > L.n[i]) {
+          this.tweens.killTweensOf(c);
+          c.setAlpha(0.35).setScale(c.scaleX * 1.2, c.scaleY * 1.2);
+          const sx = F.B / c.width, sy = F.B / c.height;
+          this.tweens.add({ targets: c, alpha: 1, scaleX: sx, scaleY: sy, duration: 260, delay: Math.max(0, i % 3) * 120, ease: 'Quad.easeOut' });
+        } else if (!this.tweens.isTweening(c)) {
+          c.setAlpha(1);
+        }
+      } else {
+        c.setVisible(false);
+      }
+      L.n[i] = mostrarCaja ? n : 0;
+    }
+  });
+  // Rectangulo real de la placa del rival (el anillo del timer lo bordea en modo fosforos).
+  {
+    const topR2 = this._L ? (g.rival.cy + g.rival.h / 2 - h2) : (g.rival.cy - g.rival.h / 2);
+    this._rectPlacaRival = { x: this._cxPlacaFosforos('rival') - wF / 2, y: topR2, w: wF, h: h2, r: 9 };
+    if (this._anilloRect && this._anilloEsRival) this._anilloRect = { ...this._rectPlacaRival };
+  }
+  if (this.manoIconoRival && this.manoIconoRival.scene) {
+    const topR = this._L ? (g.rival.cy + g.rival.h / 2 - h2) : (g.rival.cy - g.rival.h / 2);
+    // Fuera del marco (y del anillo del timer, que sobresale ~3 px de la placa).
+    this.manoIconoRival.setPosition(this._cxPlacaFosforos('rival') + wF / 2 + (this._L ? 22 : 20), topR + hLabel / 2 + 2);
+  }
+}
+
+// Rectangulo del anillo del timer del rival con la placa de numeros (la de siempre).
+_rectAnilloRivalNumeros() {
+  const w = this._L ? this._L.placaW : 96, h = this._L ? this._L.placaH : 48;
+  return { x: this.PLACA_RIVAL_CX - w / 2, y: this.PLACA_RIVAL_CY - h / 2, w, h, r: 9 };
+}
+
+// Rectangulo actual (segun el estilo del marcador) sobre el que se dibuja el anillo del rival.
+_rectAnilloRival() {
+  return this._rectPlacaRival ? { ...this._rectPlacaRival } : this._rectAnilloRivalNumeros();
+}
+
 // Pase 403: avisa los puntos a React (Anotador Criollo) y hace sonar un clic de
 // fosforo por cada punto que se suma (maximo 5 seguidos, separados 110 ms para no
 // trabar nada). Con el primer estado, o si el puntaje baja (revancha), no suena.
 _notificarPuntos(yo, rival) {
   const ant = this._puntosPrevios;
   this._puntosPrevios = { yo, rival };
+  this._aplicarMarcadorEstilo(!!ant);
   const cambio = !ant || ant.yo !== yo || ant.rival !== rival;
   if (cambio && this.onPuntos) this.onPuntos({ yo, rival, objetivo: this._puntosSala || 15 });
   if (!ant) return;
@@ -4722,6 +4945,14 @@ _calcularPerspectiva(y) {
   // el aspecto real del archivo — cada botón tiene su propio ancho relativo
   // (el texto horneado varía de largo), así que no hay un ratio fijo único.
   _anchoBotonImagen(clave, alto) {
+    if (BOTON_RUSTICO[clave]) {
+      // Pase 406: ancho = lo que mida el texto a este alto + margen para los remaches.
+      const fs = alto * RATIO_FUENTE_RUSTICO;
+      const medidor = this.add.text(0, 0, BOTON_RUSTICO[clave].txt, { fontFamily: 'Nunito, Arial', fontSize: `${fs.toFixed(1)}px`, fontStyle: 'bold' });
+      const w = medidor.width;
+      medidor.destroy();
+      return Math.max(alto * 2.0, w + alto * 1.1);
+    }
     const tex = this.textures.get(`boton_img_${clave}`).getSourceImage();
     return alto * (tex.width / tex.height);
   }
@@ -4752,6 +4983,68 @@ _calcularPerspectiva(y) {
     // que las dos puntas juntas + un tramo recto mínimo, para que no
     // degenere en forma de almendra con puntajes de 1 dígito.
     return Math.max(anchoTexto + PAD_X * 2, capIzq + capDer + 20);
+  }
+
+  // Pase 406: tablita de madera rústica en relieve (ver BOTON_RUSTICO). Coordenadas
+  // locales centradas en (0,0). Todo con Graphics (rects redondeados apilados),
+  // sin sombras difusas: la "sombra inferior" es un canto sólido debajo.
+  _dibujarBotonRustico(g, w, h, v) {
+    const P = VARIANTES_RUSTICAS[v];
+    const OUT = 0x2c160e;
+    const d = Math.max(3, h * P.prof);      // alto del canto inferior (extrusión)
+    const hb = h - d;                        // alto de la cara frontal
+    const R = Math.min(h * 0.24, 11);
+    const top = -h / 2;
+    const b = Math.max(3, h * 0.13);         // grosor del marco de madera
+    // sombra dura de apoyo
+    g.fillStyle(0x000000, 0.35);
+    g.fillRoundedRect(-w / 2 + 1, top + d + 2, w, hb, R);
+    // canto (extrusión) en tono más oscuro que el marco
+    g.fillStyle(OUT, 1);
+    g.fillRoundedRect(-w / 2, top + d, w, hb, R);
+    g.fillStyle(P.marco, 1);
+    g.fillRoundedRect(-w / 2 + 1, top + d - 1, w - 2, hb - 1, R);
+    // cara frontal: marco + luz de bisel arriba
+    g.fillStyle(P.marco, 1);
+    g.fillRoundedRect(-w / 2, top, w, hb, R);
+    g.fillStyle(P.marcoLuz, 0.75);
+    g.fillRoundedRect(-w / 2 + 1.5, top + 1.5, w - 3, hb * 0.5, { tl: R - 1, tr: R - 1, bl: 0, br: 0 });
+    // veta de la madera en el marco
+    g.lineStyle(1, 0x000000, 0.18);
+    g.lineBetween(-w / 2 + R, top + hb - 2.5, w / 2 - R, top + hb - 2.5);
+    // campo interior (pergamino / placa)
+    const ix = -w / 2 + b, iy = top + b, iw = w - b * 2, ih = hb - b * 2;
+    const r2 = Math.max(2, R - b * 0.6);
+    g.fillStyle(P.campoSombra, 1);
+    g.fillRoundedRect(ix, iy, iw, ih, r2);
+    g.fillStyle(P.campo, 1);
+    g.fillRoundedRect(ix, iy, iw, ih - Math.max(1.5, ih * 0.10), r2);
+    g.fillStyle(P.campoLuz, 0.55);
+    g.fillRoundedRect(ix + 1, iy + 1, iw - 2, ih * 0.42, { tl: r2, tr: r2, bl: 1, br: 1 });
+    // vetas finas del campo
+    // (la placa dorada del Truco va lisa: sin vetas, desentonaban)
+    if (v !== 'oro') {
+      g.lineStyle(1, v === 'claro' ? 0x8a5a2a : 0x000000, v === 'claro' ? 0.13 : 0.12);
+      g.lineBetween(ix + r2, iy + ih * 0.62, ix + iw - r2, iy + ih * 0.62);
+      g.lineBetween(ix + r2 * 2, iy + ih * 0.80, ix + iw - r2, iy + ih * 0.80);
+    }
+    // bisel interior (hundido) + aro dorado en la placa de Truco
+    g.lineStyle(1.2, OUT, 0.6);
+    g.strokeRoundedRect(ix, iy, iw, ih, r2);
+    if (v === 'oro') {
+      g.lineStyle(1.2, 0xffe9a0, 0.7);
+      g.strokeRoundedRect(ix + 1.6, iy + 1.6, iw - 3.2, ih - 3.2, Math.max(1, r2 - 1.5));
+    }
+    // contorno exterior oscuro
+    g.lineStyle(2, OUT, 1);
+    g.strokeRoundedRect(-w / 2, top, w, hb, R);
+    // remaches dorados a los costados
+    const rr = Math.max(2.2, h * 0.075);
+    const ry = top + hb / 2;
+    const rx = w / 2 - Math.max(5, h * 0.2);
+    this._dibujarRemache(g, -rx, ry, rr);
+    this._dibujarRemache(g, rx, ry, rr);
+    return d;
   }
 
   _crearBoton({ x, y, ancho, alto = 44, texto, colorFondo, colorTexto, imagen = null,
@@ -4793,6 +5086,22 @@ _calcularPerspectiva(y) {
     const imgDerTengo = this.add.image(ancho / 2 - capDerTengo / 2, 0, 'tengoDer').setDisplaySize(capDerTengo, alto);
     if (deshabilitado) { imgIzqTengo.setAlpha(0.4); imgCentroTengo.setAlpha(0.4); imgDerTengo.setAlpha(0.4); }
     hijos.push(imgIzqTengo, imgCentroTengo, imgDerTengo);
+  } else if (imagen && BOTON_RUSTICO[imagen]) {
+    // Pase 406: botón de madera rústica dibujado por código (ver BOTON_RUSTICO).
+    const def = BOTON_RUSTICO[imagen];
+    const P = VARIANTES_RUSTICAS[def.v];
+    const gRus = this.add.graphics();
+    const dCanto = this._dibujarBotonRustico(gRus, ancho, alto, def.v);
+    const fs = alto * RATIO_FUENTE_RUSTICO;
+    const yTxt = -dCanto / 2;
+    const estiloTxt = { fontFamily: 'Nunito, Arial', fontSize: `${fs.toFixed(1)}px`, fontStyle: 'bold' };
+    const partes = [gRus];
+    if (P.grabado) {
+      partes.push(this.add.text(0, yTxt + Math.max(1, fs * 0.07), def.txt, { ...estiloTxt, color: '#fff4d6' }).setOrigin(0.5).setAlpha(0.7));
+    }
+    partes.push(this.add.text(0, yTxt, def.txt, { ...estiloTxt, color: P.texto, stroke: '#2c160e', strokeThickness: P.grabado ? 1 : Math.max(2, fs * 0.17) }).setOrigin(0.5));
+    if (deshabilitado) partes.forEach(o => o.setAlpha(0.4));
+    hijos.push(...partes);
   } else if (imagen) {
     // Vigésimo noveno pase: sombra detrás de cada botón-imagen para que
     // tengan aspecto de "botón" real (despegado del fondo) en vez de una
@@ -5256,7 +5565,9 @@ _dibujarBotonesCanto(e) {
   // futuro, pero ya no se usa para destacar nada.
   const specImagen = (idSemantico, onClick, opciones = {}) => {
     const clave = CLAVE_IMAGEN_BOTON[idSemantico];
-    return { alto: ALTO_BOTON_FIJO, imagen: clave, ancho: this._anchoBotonImagen(clave, ALTO_BOTON_FIJO), onClick, ...opciones };
+    // Pase 406: la placa del Truco (y Retruco/Vale Cuatro) es 1.3x más grande — jerarquía visual.
+    const altoB = (BOTON_RUSTICO[clave] && BOTON_RUSTICO[clave].v === 'oro') ? Math.round(ALTO_BOTON_FIJO * 1.3) : ALTO_BOTON_FIJO;
+    return { alto: altoB, imagen: clave, ancho: this._anchoBotonImagen(clave, altoB), onClick, ...opciones };
   };
 
   // Ducentésimo sexagésimo noveno pase: `yCentroBotonera` (ver create()) es
@@ -5486,10 +5797,10 @@ _dibujarBotonesCanto(e) {
       const filaArriba = itemsFila.filter(it => ids.includes(it.id))
         .map(it => { const sp = specImagen(it.id, it.onClick); const c = CLAVE_IMAGEN_BOTON[it.id]; return { ...sp, alto: altoArriba, ancho: this._anchoBotonImagen(c, altoArriba) }; });
       const filaAbajo = itemsFila.filter(it => !ids.includes(it.id))
-        .map(it => { const sp = specImagen(it.id, it.onClick); const esTruco = it.id !== 'ir-al-mazo'; const h = esTruco ? altoAbajo + 6 : altoAbajo; const c = CLAVE_IMAGEN_BOTON[it.id]; return { ...sp, alto: h, ancho: this._anchoBotonImagen(c, h) }; });
+        .map(it => { const sp = specImagen(it.id, it.onClick); const esTruco = it.id !== 'ir-al-mazo'; const h = esTruco ? Math.round(altoAbajo * 1.3) : altoAbajo; const c = CLAVE_IMAGEN_BOTON[it.id]; return { ...sp, alto: h, ancho: this._anchoBotonImagen(c, h) }; });
       const kk = kB0 * K2;
       const sep = 8 * kk;
-      const hA = altoArriba * kk, hB = (altoAbajo + 6) * kk;
+      const hA = altoArriba * kk, hB = Math.round(altoAbajo * 1.3) * kk;
       const yTop = Y_FILA_UNICA + 10 - (hB + sep) / 2;
       const yBot = Y_FILA_UNICA + 10 + (hA + sep) / 2;
       centrarFila(filaArriba, yTop, 9, K2);
