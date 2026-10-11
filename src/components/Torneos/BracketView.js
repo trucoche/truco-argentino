@@ -98,6 +98,14 @@ export default function BracketView({ torneoId, usuario, token, onVolver, onEntr
     }
   }
 
+  // Pase 379: datos de la "sala del torneo" (mientras el torneo está en inscripción).
+  const entradasSala = torneo.entradas || [];
+  const cupoTotal = torneo.cupo_entradas || entradasSala.length;
+  const equiposListos = entradasSala.filter((e) => e.estado !== 'pendiente').length;
+  const huecosLibres = Math.max(0, cupoTotal - entradasSala.length);
+  const nombreEntrada = (e) => e.nombre_equipo || (e.jugadores || []).join(' / ');
+  const esMiEntrada = (e) => (e.jugadores || []).includes(usuario.username);
+
   const yoJuegoEste = (partido) => {
     const enA = partido.jugadores_a && partido.jugadores_a.includes(usuario.username);
     const enB = partido.jugadores_b && partido.jugadores_b.includes(usuario.username);
@@ -126,7 +134,7 @@ export default function BracketView({ torneoId, usuario, token, onVolver, onEntr
             <div style={estilos.subInfo}>{torneo.modo}</div>
           </div>
           <div style={{ ...estilos.estadoPill, ...(torneo.estado === 'finalizada' ? estilos.estadoPillFinalizado : estilos.estadoPillEnCurso) }}>
-            {torneo.estado === 'finalizada' ? 'Finalizado' : 'En curso'}
+            {torneo.estado === 'finalizada' ? 'Finalizado' : torneo.estado === 'inscripcion' ? 'Inscripción abierta' : 'En curso'}
           </div>
         </div>
 
@@ -161,7 +169,42 @@ export default function BracketView({ torneoId, usuario, token, onVolver, onEntr
           </div>
         )}
 
-        {totalPartidos === 0 ? (
+        {totalPartidos === 0 && torneo.estado === 'inscripcion' ? (
+          <div style={estilos.salaCard}>
+            <div style={estilos.salaTitulo}>Sala del torneo</div>
+            <div style={estilos.salaSub}>
+              {equiposListos} de {cupoTotal} equipos listos · el bracket se arma cuando se completa el cupo
+            </div>
+            <div style={estilos.progresoBarraFondo}>
+              <div style={{ ...estilos.progresoBarraRelleno, width: `${cupoTotal ? Math.round((equiposListos / cupoTotal) * 100) : 0}%` }} />
+            </div>
+            <div style={estilos.salaLista}>
+              {entradasSala.map((e) => {
+                const pendiente = e.estado === 'pendiente';
+                const nombre = nombreEntrada(e);
+                return (
+                  <div key={e.id} style={{ ...estilos.salaFila, ...(esMiEntrada(e) ? estilos.salaFilaMia : {}) }}>
+                    <div style={estilos.avatarChip}>{iniciales(nombre)}</div>
+                    <div style={estilos.salaFilaTexto}>
+                      <div style={estilos.salaNombre}>{nombre}{esMiEntrada(e) ? ' (vos)' : ''}</div>
+                      {pendiente && (
+                        <div style={estilos.salaDetalle}>
+                          Esperando a que acepte{(e.invitados_pendientes || []).length === 1 ? '' : 'n'}: {(e.invitados_pendientes || []).join(', ') || 'sus compañeros'}
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ ...estilos.salaBadge, ...(pendiente ? estilos.salaBadgePendiente : estilos.salaBadgeListo) }}>
+                      {pendiente ? '⏳ Armando equipo' : '✓ Listo'}
+                    </div>
+                  </div>
+                );
+              })}
+              {Array.from({ length: huecosLibres }).map((_, i) => (
+                <div key={`libre-${i}`} style={estilos.salaFilaLibre}>Cupo libre</div>
+              ))}
+            </div>
+          </div>
+        ) : totalPartidos === 0 ? (
           <div style={estilos.vacioBox}>
             <div style={estilos.vacioIcono}>🃏</div>
             <div style={estilos.vacioTitulo}>El bracket todavía se está armando</div>
@@ -314,6 +357,30 @@ const estilos = {
     color: C.chocolate, boxShadow: `0 4px 0 ${C.doradoOscuro}, 0 0 0 3px rgba(255,214,104,0.4)`, marginBottom: 18
   },
   finalizadoBannerCorona: { fontSize: 20 },
+
+  // Pase 379: sala del torneo (inscripción abierta) — equipos listos, equipos armándose y cupos libres.
+  salaCard: {
+    background: 'rgba(255,248,237,0.92)', border: `3px solid ${C.chocolate}`, borderRadius: 20,
+    padding: '16px 16px 14px', marginBottom: 14, boxShadow: '0 4px 0 rgba(0,0,0,0.25)'
+  },
+  salaTitulo: { fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 17, color: C.chocolate },
+  salaSub: { fontWeight: 700, fontSize: 12.5, color: C.apagado, margin: '2px 0 10px' },
+  salaLista: { display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 },
+  salaFila: {
+    display: 'flex', alignItems: 'center', gap: 10, background: '#fff',
+    border: `2px solid ${C.chocolate}`, borderRadius: 12, padding: '8px 10px'
+  },
+  salaFilaMia: { background: '#FFF4D6', borderColor: C.doradoOscuro },
+  salaFilaTexto: { flex: 1, minWidth: 0 },
+  salaNombre: { fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 14, color: C.chocolate, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+  salaDetalle: { fontWeight: 700, fontSize: 11.5, color: '#7a6660', marginTop: 1 },
+  salaBadge: { fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 11.5, borderRadius: 999, padding: '4px 10px', flexShrink: 0, border: `2px solid ${C.chocolate}` },
+  salaBadgeListo: { background: '#CFF1DA', color: '#14532D' },
+  salaBadgePendiente: { background: '#FFE9B0', color: '#7A4B00' },
+  salaFilaLibre: {
+    border: `2px dashed ${C.apagado}`, borderRadius: 12, padding: '10px', textAlign: 'center',
+    fontWeight: 700, fontSize: 12.5, color: C.apagado
+  },
 
   vacioBox: {
     background: 'rgba(255,248,237,0.92)', border: `3px dashed ${C.chocolate}`, borderRadius: 20,

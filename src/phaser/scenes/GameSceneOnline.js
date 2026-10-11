@@ -304,6 +304,11 @@ preload() {
     // Pase 346: cara y dorso de la moneda para el spinner "Buscando rival...".
     // Pase 374: escudo con espadas y "VS" (PNG del usuario) entre los dos aros.
     this.load.image('vsEscudoEspera', conVersion('assets/images/vs-escudo.png'));
+    // Pase 378: los 4 personajes para las siluetas del "radar" del asiento vacío (se tiñen por
+    // código, ver _dibujarRadarSiluetas).
+    ['gaucho', 'gaucha', 'gaucho2', 'gaucha2'].forEach(p => {
+      this.load.image(`siluetaEspera_${p}`, conVersion(`assets/${p}-avatar.png`));
+    });
     this.load.image('monedaEsperaCara', conVersion('assets/images/moneda.png'));
     this.load.image('monedaEsperaDorso', conVersion('assets/images/moneda-dorso.png'));
     // Pase 267, punto 4: este tablón ya NO se usa — el botón "Volver al
@@ -1793,15 +1798,19 @@ _dibujarTileEspera(cx, cy, radio, jugador, pendientes) {
   this._sprites.push(burbuja);
 
   if (!conectado) {
-    const signo = this.add.text(cx, cy, '?', {
-      fontFamily: 'Fredoka, Arial', fontSize: `${Math.round(radioFoto * 1.25)}px`, fontStyle: '700',
-      color: '#FFF8ED',
-    }).setOrigin(0.5).setAlpha(0.55).setDepth(412);
-    this._avataresEsperaSprites.push(signo);
-    this._sprites.push(signo);
-    // Respiración suave: aro, burbuja y "?" suben/bajan de opacidad juntos.
+    // Respiración suave: aro y burbuja suben/bajan de opacidad juntos.
     this.tweens.add({ targets: [marco, burbuja], alpha: { from: 1, to: 0.5 }, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-    this.tweens.add({ targets: signo, alpha: { from: 0.7, to: 0.25 }, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    // Pase 378: en vez del "?" quieto, pasan siluetas de los personajes (efecto radar). Si las
+    // texturas no cargaron, se cae al "?" de siempre.
+    if (!this._dibujarRadarSiluetas(cx, cy, radioFoto)) {
+      const signo = this.add.text(cx, cy, '?', {
+        fontFamily: 'Fredoka, Arial', fontSize: `${Math.round(radioFoto * 1.25)}px`, fontStyle: '700',
+        color: '#FFF8ED',
+      }).setOrigin(0.5).setAlpha(0.55).setDepth(412);
+      this._avataresEsperaSprites.push(signo);
+      this._sprites.push(signo);
+      this.tweens.add({ targets: signo, alpha: { from: 0.7, to: 0.25 }, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    }
   }
 
   // Pase 267, punto 3: "✓ Conectado" pasa de una pill plana (Graphics,
@@ -1877,6 +1886,105 @@ _dibujarTileEspera(cx, cy, radio, jugador, pendientes) {
 
   // Pase 346: se saca la píldora/etiqueta con el nombre de usuario debajo de
   // "✓ Conectado" (redundante, a pedido).
+}
+
+// Pase 378: efecto "radar" del asiento vacío — mientras se busca rival, dentro del aro pasan
+// siluetas oscuras de los personajes (gaucho, gaucha...) que entran por la derecha y salen por
+// la izquierda, cambiando rápido, con un resplandor dorado que respira y un barrido de radar
+// que gira. Devuelve false si las texturas no están (el llamador dibuja el "?" de respaldo).
+// Cuando entra un rival, la fila entera se reconstruye (_limpiarAvataresEspera) y el timer se
+// frena ahí, así que la silueta "se fija" en la foto real del jugador.
+_dibujarRadarSiluetas(cx, cy, radioFoto) {
+  const personajes = ['gaucho', 'gaucha', 'gaucho2', 'gaucha2'];
+  const claves = personajes.map(p => `siluetaEspera_${p}`).filter(k => this.textures.exists(k));
+  if (claves.length < 2) return false;
+
+  const registrar = (...objs) => {
+    objs.forEach(o => { this._avataresEsperaSprites.push(o); this._sprites.push(o); });
+  };
+
+  // Resplandor dorado detrás de las siluetas (3 discos concéntricos muy tenues).
+  const brillo = this.add.graphics().setDepth(411.7);
+  [[1.0, 0.07], [0.82, 0.08], [0.62, 0.09]].forEach(([k, a]) => {
+    brillo.fillStyle(0xFFD98A, a);
+    brillo.fillCircle(cx, cy, radioFoto * k);
+  });
+  registrar(brillo);
+  this.tweens.add({ targets: brillo, alpha: { from: 0.4, to: 1 }, duration: 800, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+
+  // Silueta: el PNG del personaje teñido de marrón oscuro, recortado al círculo del aro.
+  const tam = radioFoto * 2;
+  const desplazamiento = radioFoto * 0.45;
+  const sil = this.add.image(cx, cy, claves[0]).setDisplaySize(tam, tam).setDepth(412);
+  sil.setTintFill(0x24140C);
+  sil.setAlpha(0);
+  const mascara = this.make.graphics();
+  mascara.fillStyle(0xffffff);
+  mascara.fillCircle(cx, cy, radioFoto);
+  sil.setMask(mascara.createGeometryMask());
+  registrar(sil, mascara);
+
+  // Barrido de radar: cuña dorada translúcida que gira alrededor del centro, con sus dos
+  // bordes gruesos (la línea que guía y la de atrás) y un puntito fijo en el centro.
+  // Pase 379: antes solo tenía la línea de adelante; ahora el contorno completo de la cuña.
+  const barrido = this.add.graphics({ x: cx, y: cy }).setDepth(412.3);
+  barrido.fillStyle(0xFFE8A3, 0.20);
+  barrido.slice(0, 0, radioFoto, Phaser.Math.DegToRad(-55), Phaser.Math.DegToRad(0), false);
+  barrido.fillPath();
+  barrido.lineStyle(2, 0xFFF3C4, 0.55);
+  barrido.beginPath();
+  barrido.moveTo(0, 0);
+  barrido.lineTo(radioFoto, 0);
+  barrido.strokePath();
+  barrido.beginPath();
+  barrido.moveTo(0, 0);
+  barrido.lineTo(radioFoto * Math.cos(Phaser.Math.DegToRad(-55)), radioFoto * Math.sin(Phaser.Math.DegToRad(-55)));
+  barrido.strokePath();
+  const mascaraBarrido = this.make.graphics();
+  mascaraBarrido.fillStyle(0xffffff);
+  mascaraBarrido.fillCircle(cx, cy, radioFoto);
+  barrido.setMask(mascaraBarrido.createGeometryMask());
+  registrar(barrido, mascaraBarrido);
+  // Más lento que en el Pase 378 (2,2 s → 4 s por vuelta).
+  this.tweens.add({ targets: barrido, angle: 360, duration: 4000, repeat: -1, ease: 'Linear' });
+  // Puntito central (mismo color que las líneas del barrido, fijo, no gira).
+  const punto = this.add.graphics().setDepth(412.4);
+  punto.fillStyle(0xFFF3C4, 0.9);
+  punto.fillCircle(cx, cy, Math.max(3, radioFoto * 0.045));
+  registrar(punto);
+
+  // Ciclo de siluetas: orden aleatorio sin repetir la misma dos veces seguidas.
+  const DURACION_CICLO = 560;
+  let cola = [];
+  let ultima = null;
+  const siguiente = () => {
+    if (cola.length === 0) {
+      cola = claves.slice().sort(() => Math.random() - 0.5);
+      if (cola.length > 1 && cola[0] === ultima) cola.push(cola.shift());
+    }
+    ultima = cola.shift();
+    return ultima;
+  };
+  let tweenX = null;
+  let tweenAlpha = null;
+  const pasarSilueta = () => {
+    if (!sil.scene) return;
+    // Pase 379: se frenan los tweens del ciclo anterior. Antes el viejo todavía terminaba su
+    // último cuadro DESPUÉS de que yo reposicionaba la silueta a la derecha, así que el tween
+    // nuevo arrancaba leyendo x ≈ izquierda y no se movía (solo hacía fade en el lugar).
+    if (tweenX && tweenX.stop) tweenX.stop();
+    if (tweenAlpha && tweenAlpha.stop) tweenAlpha.stop();
+    sil.setTexture(siguiente());
+    sil.setDisplaySize(tam, tam);
+    sil.setTintFill(0x24140C);
+    sil.setX(cx + desplazamiento);
+    sil.setAlpha(0);
+    tweenX = this.tweens.add({ targets: sil, x: { from: cx + desplazamiento, to: cx - desplazamiento }, duration: DURACION_CICLO, ease: 'Linear' });
+    tweenAlpha = this.tweens.add({ targets: sil, alpha: { from: 0, to: 0.82 }, duration: 240, yoyo: true, hold: 80, ease: 'Sine.easeInOut' });
+  };
+  pasarSilueta();
+  this._avataresEsperaTimers.push(this.time.addEvent({ delay: DURACION_CICLO, loop: true, callback: pasarSilueta }));
+  return true;
 }
 
 // Pase 346: badge "VS" — placa dorada 3D (borde negro 3px, relieve inferior

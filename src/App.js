@@ -8,6 +8,7 @@ import Ranking from './components/Ranking/Ranking';
 import Ranked from './components/Ranked/Ranked';
 import Torneos from './components/Torneos/Torneos';
 import BracketView from './components/Torneos/BracketView';
+import BotonTorneoFlotante from './components/Torneos/BotonTorneoFlotante';
 import AppShell from './components/AppShell/AppShell';
 import Historial from './components/Historial/Historial';
 import Configuracion from './components/Configuracion/Configuracion';
@@ -755,6 +756,18 @@ function AppInterna() {
       {elementoAudio}
       {contenido}
       <LogroDesbloqueadoPopup logros={logrosParaPopup} onCerrarTodos={() => setLogrosParaPopup([])} />
+      {/* Pase 379: botón flotante "Mi torneo" — lleva a la sala del torneo en el que estoy anotado.
+          Solo en las pantallas normales de la app (no en la partida ni en el propio bracket). */}
+      {usuario && token && ['lobby', 'torneos', 'ranking', 'ranked', 'historial', 'perfil', 'config', 'tienda', 'chat'].includes(pantalla) && (
+        <BotonTorneoFlotante
+          token={token}
+          pantalla={pantalla}
+          onAbrir={(torneoId) => {
+            setTorneoIdActual(torneoId);
+            setPantalla('bracket');
+          }}
+        />
+      )}
       {/* Pase siguiente: puente de "Desafiar"/mensaje privado — ver el
           comentario grande en AvisosGlobales.js sobre por qué vive ACÁ
           adentro (dentro de ToastProvider) y no arriba en App() mismo. */}

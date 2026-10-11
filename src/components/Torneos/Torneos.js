@@ -20,12 +20,11 @@ const CUPO_OPCIONES = [4, 8, 16];
 // cambiarlo acá). Se reembolsa si el torneo vence sin llenarse.
 const COSTO_CREAR_TORNEO = { 4: 5, 8: 10, 16: 20 };
 const PUNTOS_OPCIONES = [15, 30];
+// Pase 379: igual que el Lobby, se sacaron "Sin límite" y "60s" (mesas colgadas); 15s por defecto.
 const TIEMPO_OPCIONES = [
-  { valor: '', label: 'Sin límite' },
   { valor: '15', label: '15s' },
   { valor: '30', label: '30s' },
   { valor: '45', label: '45s' },
-  { valor: '60', label: '60s' },
 ];
 
 // Pase de rediseño estructural: se suman los tonos de madera+bronce que ya
@@ -183,10 +182,13 @@ export default function Torneos({ token, onVerBracket }) {
   const [creando, setCreando] = useState(false);
 
   const [titulo, setTitulo] = useState('');
+  // Pase 379: aviso rojo pegado al campo Título (antes el error salía arriba de todo y no se veía).
+  const [errorTitulo, setErrorTitulo] = useState(false);
+  const inputTituloRef = useRef(null);
   const [modo, setModo] = useState('1v1');
   const [cupoEntradas, setCupoEntradas] = useState(4);
   const [puntosParaGanar, setPuntosParaGanar] = useState(15);
-  const [tiempoPorTurno, setTiempoPorTurno] = useState('');
+  const [tiempoPorTurno, setTiempoPorTurno] = useState('15');
   // Pase 375: torneo privado (se entra con código) y unirse por código.
   const { mostrarToast } = useToast();
   const [privado, setPrivado] = useState(false);
@@ -337,7 +339,12 @@ export default function Torneos({ token, onVerBracket }) {
     setError('');
 
     if (!titulo.trim()) {
-      setError('Ingresá un título para el torneo');
+      setErrorTitulo(true);
+      mostrarToast('Poné un nombre para el torneo', 'error');
+      if (inputTituloRef.current) {
+        inputTituloRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        inputTituloRef.current.focus({ preventScroll: true });
+      }
       return;
     }
 
@@ -350,7 +357,7 @@ export default function Torneos({ token, onVerBracket }) {
           modo,
           cupoEntradas: Number(cupoEntradas),
           puntosParaGanar,
-          tiempoPorTurno: tiempoPorTurno || null,
+          tiempoPorTurno: tiempoPorTurno || '15',
           privado
         })
       });
@@ -362,6 +369,7 @@ export default function Torneos({ token, onVerBracket }) {
       }
 
       setTitulo('');
+      setErrorTitulo(false);
       setCreando(false);
       // Torneo privado: mostrar el código para compartirlo.
       if (data.privado && data.codigo) setCodigoCreado(data.codigo);
@@ -647,13 +655,14 @@ return (
             <div style={estilos.field}>
               <label style={estilos.label}>Título</label>
               <input
+                ref={inputTituloRef}
                 type="text"
                 placeholder="Copa TrucoChe"
                 value={titulo}
-                onChange={(e) => setTitulo(e.target.value)}
-                required
-                style={estilos.input}
+                onChange={(e) => { setTitulo(e.target.value); if (errorTitulo) setErrorTitulo(false); }}
+                style={{ ...estilos.input, ...(errorTitulo ? estilos.inputError : null) }}
               />
+              {errorTitulo && <div style={estilos.avisoCampo}>Falta el nombre del torneo</div>}
             </div>
 
             {/* Pase siguiente: los 4 <select> de acá se reemplazan por chips
@@ -1261,6 +1270,8 @@ const estilos = {
     color: C.chocolate, background: '#fff', border: `2.5px solid ${C.chocolate}`,
     borderRadius: 12, padding: '9px 11px'
   },
+  inputError: { borderColor: '#E74C3C', background: '#FFF1EF' },
+  avisoCampo: { marginTop: 6, fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 12.5, color: '#C0392B' },
   // Botón primario del form ("✓ Crear torneo", y "Confirmar" reutilizando
   // este mismo estilo) — mismo pill 100% CSS que "Anotarme ahora", así el
   // dorado queda consistente como "acción principal" en toda la pantalla.

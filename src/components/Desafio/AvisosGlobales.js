@@ -255,8 +255,8 @@ export default function AvisosGlobales({ usuario, token, onAceptarDesafio, onCam
         visible={!!desafioRecibido}
         titulo="¡Desafío!"
         cinta="roja"
-        emojiIcono="⚔️"
-        tamIcono={64}
+        icono="/assets/images/vs-escudo.png"
+        tamIcono={92}
         onCerrar={() => responder(false)}
         botones={[
           { texto: '✔ Aceptar', tipo: 'verde', onClick: () => responder(true) },
