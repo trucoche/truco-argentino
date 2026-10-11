@@ -331,4 +331,3 @@
 .ao-zona .ao-tablero { flex: 1 1 auto; }
 .ao-pista { margin: 0; text-align: center; font-size: 11.5px; font-weight: 700; color: #e9d3a5; opacity: 0.8; }
 @media (max-height: 520px) { .ao-pista { display: none; } }
-@media (prefers-reduced-motion: reduce) { 
