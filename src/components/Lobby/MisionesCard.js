@@ -36,6 +36,19 @@ const C = {
 // tarjeta entera, sin tocar ningún otro estilo.
 const MISIONES_POR_PAGINA = 1;
 
+// Pase 382: chevron dibujado en SVG (antes era el carácter ‹ ›, que la tipografía deja por debajo del centro del
+// círculo). El trazo queda centrado en el cuadro y el cuadro centrado por flex.
+function FlechaChevron({ dir }) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" style={{ display: 'block' }}>
+      <polyline
+        points={dir === 'der' ? '7,3 16,12 7,21' : '17,3 8,12 17,21'}
+        fill="none" stroke={C.chocolate} strokeWidth="5" strokeLinecap="round" strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export default function MisionesCard({ token, onMisionReclamada }) {
   const [datos, setDatos] = useState(null);
   const [error, setError] = useState('');
@@ -138,7 +151,7 @@ export default function MisionesCard({ token, onMisionReclamada }) {
           aria-label="Misiones anteriores"
           style={{ ...estilos.flechaSlide, ...(esPrimera ? estilos.flechaSlideDisabled : {}) }}
         >
-          ‹
+          <FlechaChevron dir="izq" />
         </button>
 
         <div style={estilos.lista}>
@@ -194,7 +207,7 @@ export default function MisionesCard({ token, onMisionReclamada }) {
           aria-label="Más misiones"
           style={{ ...estilos.flechaSlide, ...(esUltima ? estilos.flechaSlideDisabled : {}) }}
         >
-          ›
+          <FlechaChevron dir="der" />
         </button>
       </div>
 

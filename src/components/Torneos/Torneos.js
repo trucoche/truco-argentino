@@ -212,6 +212,7 @@ export default function Torneos({ token, onVerBracket }) {
   const [codigoCreado, setCodigoCreado] = useState(null);
   const [codigoBuscar, setCodigoBuscar] = useState('');
   const [torneoPorCodigo, setTorneoPorCodigo] = useState(null);
+  const tarjetaCodigoRef = useRef(null);
 
   const [inscribiendoId, setInscribiendoId] = useState(null);
   const [misTorneos, setMisTorneos] = useState([]);
@@ -370,6 +371,25 @@ export default function Torneos({ token, onVerBracket }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
+
+  // Pase 382: un amigo me invitó a un cupo de un torneo 2v2/3v3 y acepté → se abre la tarjeta de anotarme
+  // (la misma de "Unirme con código") con el torneo cargado, para elegir a mi compañero.
+  useEffect(() => {
+    const tomarInvitado = () => {
+      const invitado = window.__torneoInvitado;
+      if (!invitado) return;
+      window.__torneoInvitado = null;
+      setTorneoPorCodigo(invitado);
+      setInscribiendoId(null);
+      setAmigosElegidos([]);
+      setTimeout(() => {
+        if (tarjetaCodigoRef.current) tarjetaCodigoRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 350);
+    };
+    tomarInvitado();
+    window.addEventListener('torneo-invitado', tomarInvitado);
+    return () => window.removeEventListener('torneo-invitado', tomarInvitado);
+  }, []);
 
   // Al abrir "Inscribirse" (o un torneo encontrado por código) se refresca la lista de amigos.
   useEffect(() => {
@@ -963,10 +983,10 @@ return (
         </form>
 
         {torneoPorCodigo && (
-          <div style={estilos.codigoEncontrado}>
+          <div style={estilos.codigoEncontrado} ref={tarjetaCodigoRef}>
             <div style={estilos.torneoHeader}>
               <div style={estilos.torneoNombre}>{renderTituloTorneo(torneoPorCodigo.titulo)}</div>
-              <div style={{ ...estilos.badge, ...estilos.badgeAbierta }}>Privado</div>
+              <div style={{ ...estilos.badge, ...estilos.badgeAbierta }}>{torneoPorCodigo.privado ? 'Privado' : 'Invitación'}</div>
             </div>
             <div style={estilos.torneoInfo}>
               {torneoPorCodigo.modo} · Cupo {torneoPorCodigo.entradas_actuales}/{torneoPorCodigo.cupo_entradas} · {torneoPorCodigo.puntos_para_ganar} pts · {torneoPorCodigo.creador_nombre}

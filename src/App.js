@@ -779,6 +779,12 @@ function AppInterna() {
           setPantalla('juego');
         }}
         onCambioSolicitudesPendientes={setSolicitudesAmistadPendientes}
+        onIrAInscripcionTorneo={(torneo) => {
+          // Pase 382: invitación a un cupo de un torneo 2v2/3v3 → pantalla Torneos con la tarjeta de anotarse.
+          window.__torneoInvitado = torneo || null;
+          setPantalla('torneos');
+          window.dispatchEvent(new Event('torneo-invitado'));
+        }}
         onIrASolicitudesAmistad={() => {
           setPantalla('chat');
           setSenialAbrirSolicitudes((n) => n + 1);

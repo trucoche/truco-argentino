@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import PantallaCarga from '../PantallaCarga/PantallaCarga';
+import PopupMadera from '../Popup/PopupMadera';
+import { useToast } from '../../contexts/ToastContext';
 import { API_URL as BASE_URL } from '../../config';
 
 const API_URL = `${BASE_URL}/api/torneos`;
@@ -16,8 +18,52 @@ export default function BracketView({ torneoId, usuario, token, onVolver, onEntr
   const [partidos, setPartidos] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
+  // Pase 382: "Invitar a un amigo" en cada cupo libre de la sala (selector de amigos).
+  const { mostrarToast } = useToast();
+  const [selectorAbierto, setSelectorAbierto] = useState(false);
+  const [amigos, setAmigos] = useState([]);
+  const [cargandoAmigos, setCargandoAmigos] = useState(false);
+  const [invitandoId, setInvitandoId] = useState(null);
 
   const headers = { 'Authorization': `Bearer ${token}` };
+
+  const abrirSelectorAmigos = async () => {
+    setSelectorAbierto(true);
+    setCargandoAmigos(true);
+    try {
+      const res = await fetch(`${BASE_URL}/api/usuarios/amigos`, { headers });
+      const data = await res.json();
+      if (res.ok) setAmigos(Array.isArray(data.amigos) ? data.amigos : []);
+    } catch (err) {
+      console.error('Error cargando amigos:', err);
+    } finally {
+      setCargandoAmigos(false);
+    }
+  };
+
+  const invitarAmigo = async (amigo) => {
+    if (invitandoId) return;
+    setInvitandoId(amigo.id);
+    try {
+      const res = await fetch(`${API_URL}/${torneoId}/invitar-cupo`, {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amigoId: amigo.id })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        mostrarToast(data.error || 'No se pudo enviar la invitación', 'error', 5000);
+      } else {
+        mostrarToast(data.mensaje || 'Invitación enviada', 'exito', 3500);
+        setSelectorAbierto(false);
+        cargar();
+      }
+    } catch (err) {
+      mostrarToast('No se pudo conectar con el servidor', 'error');
+    } finally {
+      setInvitandoId(null);
+    }
+  };
 
   const cargar = useCallback(async () => {
     try {
@@ -105,6 +151,16 @@ export default function BracketView({ torneoId, usuario, token, onVolver, onEntr
   const huecosLibres = Math.max(0, cupoTotal - entradasSala.length);
   const nombreEntrada = (e) => e.nombre_equipo || (e.jugadores || []).join(' / ');
   const esMiEntrada = (e) => (e.jugadores || []).includes(usuario.username);
+  // Pase 382: invitaciones a un cupo ya enviadas (cada una ocupa visualmente un hueco libre) y amigos que
+  // todavía se pueden invitar (no anotados, ni con invitación pendiente).
+  const invitacionesCupo = torneo.invitaciones_cupo || [];
+  const invitacionesVisibles = invitacionesCupo.slice(0, huecosLibres);
+  const huecosSinInvitar = Math.max(0, huecosLibres - invitacionesVisibles.length);
+  const ocupados = new Set([
+    ...entradasSala.flatMap((e) => [...(e.jugadores || []), ...(e.invitados_pendientes || [])]),
+    ...invitacionesCupo.map((i) => i.invitado),
+  ]);
+  const amigosInvitables = amigos.filter((a) => !ocupados.has(a.username));
 
   const yoJuegoEste = (partido) => {
     const enA = partido.jugadores_a && partido.jugadores_a.includes(usuario.username);
@@ -126,6 +182,41 @@ export default function BracketView({ torneoId, usuario, token, onVolver, onEntr
 
   return (
       <div style={estilos.contenedor}>
+
+        <PopupMadera
+          visible={selectorAbierto}
+          titulo="Invitar a un amigo"
+          cinta="verde"
+          icono="/assets/images/trofeo.png"
+          tamIcono={56}
+          onCerrar={() => setSelectorAbierto(false)}
+          botones={[{ texto: 'Cerrar', tipo: 'neutro', onClick: () => setSelectorAbierto(false) }]}
+        >
+          <p style={{ margin: '0 0 10px', fontWeight: 800, fontSize: 14, color: '#2C160E', textAlign: 'center' }}>
+            Tocá a un amigo para mandarle la invitación. Paga su entrada ({Math.round(Number(torneo.apuesta || 0))} monedas) recién cuando acepta.
+          </p>
+          {cargandoAmigos && amigos.length === 0 ? (
+            <p style={{ margin: 0, fontWeight: 700, fontSize: 13, color: '#7a6660', textAlign: 'center' }}>Cargando tus amigos…</p>
+          ) : amigosInvitables.length === 0 ? (
+            <p style={{ margin: 0, fontWeight: 700, fontSize: 13, color: '#7a6660', textAlign: 'center' }}>
+              No tenés amigos disponibles para invitar. Agregalos desde su perfil en el Chat Global.
+            </p>
+          ) : (
+            <div style={estilos.selectorAmigosLista}>
+              {amigosInvitables.map((a) => (
+                <button
+                  key={a.id}
+                  type="button"
+                  disabled={!!invitandoId}
+                  onClick={() => invitarAmigo(a)}
+                  style={{ ...estilos.amigoChip, ...(invitandoId === a.id ? { opacity: 0.6 } : null) }}
+                >
+                  {a.username}
+                </button>
+              ))}
+            </div>
+          )}
+        </PopupMadera>
 
         <div style={estilos.headerCard}>
           <button onClick={onVolver} style={estilos.btnVolver}>← Volver</button>
@@ -199,8 +290,20 @@ export default function BracketView({ torneoId, usuario, token, onVolver, onEntr
                   </div>
                 );
               })}
-              {Array.from({ length: huecosLibres }).map((_, i) => (
-                <div key={`libre-${i}`} style={estilos.salaFilaLibre}>Cupo libre</div>
+              {invitacionesVisibles.map((inv) => (
+                <div key={`inv-${inv.id}`} style={estilos.salaFilaInvitada}>
+                  ⏳ Invitación enviada a <strong>{inv.invitado}</strong>
+                </div>
+              ))}
+              {Array.from({ length: huecosSinInvitar }).map((_, i) => (
+                <div key={`libre-${i}`} style={{ ...estilos.salaFilaLibre, ...(torneo.puedo_invitar ? estilos.salaFilaLibreInvitable : {}) }}>
+                  <span>Cupo libre</span>
+                  {torneo.puedo_invitar && (
+                    <button type="button" onClick={abrirSelectorAmigos} style={estilos.btnInvitarAmigo}>
+                      + Invitar amigo
+                    </button>
+                  )}
+                </div>
               ))}
             </div>
           </div>
@@ -381,6 +484,24 @@ const estilos = {
   salaFilaLibre: {
     border: `2px dashed ${C.apagado}`, borderRadius: 12, padding: '10px', textAlign: 'center',
     fontWeight: 700, fontSize: 12.5, color: C.apagado
+  },
+  // Pase 382: cupo libre con botón "Invitar amigo" a la derecha.
+  salaFilaLibreInvitable: {
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, textAlign: 'left'
+  },
+  btnInvitarAmigo: {
+    fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 12.5, color: C.chocolate,
+    background: C.dorado, border: `2px solid ${C.chocolate}`, borderRadius: 999,
+    boxShadow: `0 2px 0 ${C.doradoOscuro}`, padding: '4px 12px', cursor: 'pointer', flexShrink: 0
+  },
+  salaFilaInvitada: {
+    border: `2px dashed ${C.doradoOscuro}`, borderRadius: 12, padding: '10px', textAlign: 'center',
+    fontWeight: 700, fontSize: 12.5, color: '#7A4B00', background: '#FFF3D1'
+  },
+  selectorAmigosLista: { display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', margin: '4px 0 12px' },
+  amigoChip: {
+    fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 13, color: C.chocolate,
+    background: '#fff', border: `2px solid ${C.chocolate}`, borderRadius: 999, padding: '5px 12px', cursor: 'pointer'
   },
 
   vacioBox: {

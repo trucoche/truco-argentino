@@ -21,7 +21,7 @@ const C = {
   dorado: '#FFB627', doradoClaro: '#FFD668', chocolate: '#4A2C2A', crema: '#FFF8ED',
 };
 
-export default function AvisosGlobales({ usuario, token, onAceptarDesafio, onCambioSolicitudesPendientes, onIrASolicitudesAmistad }) {
+export default function AvisosGlobales({ usuario, token, onAceptarDesafio, onCambioSolicitudesPendientes, onIrASolicitudesAmistad, onIrAInscripcionTorneo }) {
   const { mostrarToast } = useToast();
   const [desafioRecibido, setDesafioRecibido] = useState(null); // { idDesafio, de }
   // Pase siguiente: tocar el toast de "mensaje privado nuevo" ahora abre
@@ -99,7 +99,22 @@ export default function AvisosGlobales({ usuario, token, onAceptarDesafio, onCam
     // cualquier novedad simplemente se vuelve a pedir).
     const alInvitacionTorneo = () => cargarInvitacionesTorneo();
     const alInvitacionCancelada = ({ invitacionId }) =>
-      setInvitacionesTorneo((lista) => lista.filter((i) => i.id !== invitacionId));
+      setInvitacionesTorneo((lista) => lista.filter((i) => !(i.tipo !== 'cupo' && i.id === invitacionId)));
+    // Pase 382: respuesta a una invitación a un cupo libre de mi torneo.
+    const alCupoRespondido = ({ aceptada, username, titulo, requiereEquipo }) => {
+      window.dispatchEvent(new Event('torneos-actualizados'));
+      mostrarToast(
+        aceptada
+          ? (requiereEquipo
+              ? `${username} aceptó tu invitación a "${titulo}" y va a armar su equipo.`
+              : `${username} aceptó tu invitación y se anotó a "${titulo}".`)
+          : `${username} rechazó tu invitación a "${titulo}".`,
+        aceptada ? 'exito' : 'info',
+        4000
+      );
+    };
+    // Pase 382: anti-spam — el servidor frenó un mensaje por escribir muy rápido o repetido.
+    const alLimite = ({ mensaje }) => mostrarToast(mensaje, 'info', 3000);
     const alEquipoCancelado = ({ titulo, motivo, por }) => {
       const texto = motivo === 'torneo_eliminado'
         ? `El creador eliminó el torneo "${titulo}": se te devolvió la entrada.`
@@ -126,6 +141,8 @@ export default function AvisosGlobales({ usuario, token, onAceptarDesafio, onCam
     socket.on('torneo:invitacion-cancelada', alInvitacionCancelada);
     socket.on('torneo:equipo-cancelado', alEquipoCancelado);
     socket.on('torneo:invitacion-respondida', alInvitacionRespondida);
+    socket.on('torneo:invitacion-cupo-respondida', alCupoRespondido);
+    socket.on('aviso:limite', alLimite);
 
     socket.on('desafio:recibido', alRecibirDesafio);
     socket.on('desafio:rechazado', alRechazarse);
@@ -140,6 +157,8 @@ export default function AvisosGlobales({ usuario, token, onAceptarDesafio, onCam
       socket.off('torneo:invitacion-cancelada', alInvitacionCancelada);
       socket.off('torneo:equipo-cancelado', alEquipoCancelado);
       socket.off('torneo:invitacion-respondida', alInvitacionRespondida);
+      socket.off('torneo:invitacion-cupo-respondida', alCupoRespondido);
+      socket.off('aviso:limite', alLimite);
       socket.off('desafio:recibido', alRecibirDesafio);
       socket.off('desafio:rechazado', alRechazarse);
       socket.off('desafio:expirado', alExpirarse);
@@ -214,18 +233,27 @@ export default function AvisosGlobales({ usuario, token, onAceptarDesafio, onCam
   }, [token, usuario?.id]);
 
   const invitacionTorneo = invitacionesTorneo[0] || null;
+  const esInvitacionCupo = invitacionTorneo?.tipo === 'cupo';
+  const cupoEs1v1 = invitacionTorneo?.modo === '1v1';
 
   const responderInvitacionTorneo = async (aceptar) => {
     if (!invitacionTorneo || respondiendoInvitacion) return;
     setRespondiendoInvitacion(true);
     try {
+      const base = invitacionTorneo.tipo === 'cupo' ? 'invitaciones-cupo' : 'invitaciones';
       const res = await fetch(
-        `${API_URL}/api/torneos/invitaciones/${invitacionTorneo.id}/${aceptar ? 'aceptar' : 'rechazar'}`,
+        `${API_URL}/api/torneos/${base}/${invitacionTorneo.id}/${aceptar ? 'aceptar' : 'rechazar'}`,
         { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } }
       );
       const data = await res.json();
       if (!res.ok) {
         mostrarToast(data.error || 'No se pudo responder la invitación', 'error');
+      } else if (aceptar && data.requiereEquipo) {
+        // Invitación a un cupo de un torneo 2v2/3v3: lo lleva a anotarse eligiendo a su compañero.
+        mostrarToast('Elegí a tu compañero para anotarte al torneo.', 'exito', 4500);
+        onIrAInscripcionTorneo?.(data.torneo);
+      } else if (aceptar && invitacionTorneo.tipo === 'cupo') {
+        mostrarToast(`¡Listo! Te anotaste a "${invitacionTorneo.titulo}".`, 'exito', 4500);
       } else if (aceptar) {
         mostrarToast(
           data.equipoCompleto
@@ -280,15 +308,22 @@ export default function AvisosGlobales({ usuario, token, onAceptarDesafio, onCam
         tamIcono={64}
         onCerrar={() => responderInvitacionTorneo(false)}
         botones={[
-          { texto: '✔ Aceptar', tipo: 'verde', disabled: respondiendoInvitacion, onClick: () => responderInvitacionTorneo(true) },
+          { texto: esInvitacionCupo && cupoEs1v1 ? '✔ Anotarme' : '✔ Aceptar', tipo: 'verde', disabled: respondiendoInvitacion, onClick: () => responderInvitacionTorneo(true) },
           { texto: '✖ Rechazar', tipo: 'carmesi', disabled: respondiendoInvitacion, onClick: () => responderInvitacionTorneo(false) },
         ]}
       >
         <p style={{ margin: '0 0 8px', fontWeight: 800, fontSize: 15, color: '#2C160E', textAlign: 'center' }}>
-          <strong>{invitacionTorneo?.invitador_nombre}</strong> te invitó a su equipo en <strong>{invitacionTorneo?.titulo}</strong>.
+          {esInvitacionCupo ? (
+            <><strong>{invitacionTorneo?.invitador_nombre}</strong> te invitó a sumarte al torneo <strong>{invitacionTorneo?.titulo}</strong>.</>
+          ) : (
+            <><strong>{invitacionTorneo?.invitador_nombre}</strong> te invitó a su equipo en <strong>{invitacionTorneo?.titulo}</strong>.</>
+          )}
         </p>
         <p style={{ margin: '0 0 14px', fontWeight: 700, fontSize: 13, color: '#7a6660', textAlign: 'center' }}>
-          {invitacionTorneo?.modo} · {invitacionTorneo?.puntos_para_ganar} pts · Entrada {Math.round(Number(invitacionTorneo?.apuesta || 0))} monedas (se descuenta al aceptar)
+          {invitacionTorneo?.modo} · {invitacionTorneo?.puntos_para_ganar} pts · Entrada {Math.round(Number(invitacionTorneo?.apuesta || 0))} monedas{' '}
+          {esInvitacionCupo && !cupoEs1v1
+            ? '(al aceptar elegís a tu compañero y pagás recién al anotarte)'
+            : '(se descuenta al aceptar)'}
         </p>
       </PopupMadera>
       {conversacionAbierta && token && (
