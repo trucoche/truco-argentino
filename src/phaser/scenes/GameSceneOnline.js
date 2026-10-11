@@ -222,8 +222,11 @@ preload() {
     // y más liviana a la vez).
     // Decimosexto pase: mismo criterio para el fondo de modo noche (arte
     // nuevo del usuario, misma composición pero de noche) — también a .jpg.
-    // Pase 412: el fondo detras de la mesa es la madera rustica vertical del Anotador de Asado, dibujada por código
-    // (ver _crearTexturaPano). Vale para 1v1, 2v2 y 3v3. El paño verde queda solo en la mesa.
+    // Pase 414: detras de la mesa vuelve el piso de tablas de la cantina (arte del usuario). La madera caoba
+    // vertical queda SOLO en el contenedor externo de la pagina (ver GameOnlinePhaser.js).
+    this.load.image('fondoMesa', conVersion(modoOscuro
+      ? 'assets/images/juego/fondo-cantina-web-noche.jpg'
+      : 'assets/images/juego/fondo-cantina-web.jpg'));
     // Pedido del usuario ("vamos a colocar ahora la nueva mesa, así ya
     // completamos el diseño definitivo de la pantalla de juego 1v1"):
     // nuevo asset de mesa (paño verde + isotipo "TC", ya recortado a su
@@ -354,6 +357,7 @@ preload() {
     // Pase 346: cara y dorso de la moneda para el spinner "Buscando rival...".
     // Pase 374: escudo con espadas y "VS" (PNG del usuario) entre los dos aros.
     this.load.image('vsEscudoEspera', conVersion('assets/images/vs-escudo.png'));
+    this.load.image('escudoSinTexto', conVersion('assets/images/escudo-sin-texto.png'));   // Pase 413: escudo liso de la pantalla final (el marcador va encima)
     // Pase 378: los 4 personajes para las siluetas del "radar" del asiento vacío (se tiñen por
     // código, ver _dibujarRadarSiluetas).
     ['gaucho', 'gaucha', 'gaucho2', 'gaucha2'].forEach(p => {
@@ -501,7 +505,6 @@ preload() {
   }
 
 _crearElementosDeTexto() {
-    this._crearTexturaPano();
     const fondo = this.add.image(400, 300, 'fondoMesa').setDisplaySize(800, 600).setDepth(0);
     this.fondoMesaImg = fondo;
 
@@ -1620,43 +1623,6 @@ _aplicarUnsharpMask(ctx, ancho, alto, cantidad = 0.35, radioBlur = 1.0, umbral =
   ctx.putImageData(salida, 0, 0);
 }
 
-// Pase 412: fondo de madera rustica vertical (tablas de caoba) detras de la mesa, igual que el del
-// Anotador de Asado: degradé #5a3b28 -> #2d1b14, luz suave arriba, juntas verticales cada tabla y
-// vetas finas. El paño verde queda solo en la mesa. En modo noche se oscurece. Se guarda como 'fondoMesa'.
-_crearTexturaPano() {
-  if (this.textures.exists('fondoMesa')) this.textures.remove('fondoMesa');   // se rehace: el modo noche puede haber cambiado
-  const W = 1000, H = 1500, TABLA = 58;
-  const cv = document.createElement('canvas');
-  cv.width = W; cv.height = H;
-  const ctx = cv.getContext('2d');
-  const v = ctx.createLinearGradient(0, 0, 0, H);
-  v.addColorStop(0, '#5A3B28'); v.addColorStop(1, '#2D1B14');
-  ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
-  // cada tabla con un tono apenas distinto + vetas
-  let seed = 7;
-  const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
-  for (let x = 0; x < W; x += TABLA) {
-    ctx.fillStyle = rnd() < 0.5 ? 'rgba(255,225,190,0.035)' : 'rgba(0,0,0,0.05)';
-    ctx.fillRect(x, 0, TABLA, H);
-    for (let k = 0; k < 9; k++) {
-      const vx = x + 4 + rnd() * (TABLA - 8);
-      ctx.fillStyle = rnd() < 0.5 ? 'rgba(0,0,0,0.07)' : 'rgba(255,225,190,0.04)';
-      ctx.fillRect(vx, rnd() * H * 0.4, 1 + rnd() * 1.5, H * (0.3 + rnd() * 0.7));
-    }
-  }
-  // juntas verticales
-  for (let x = 0; x < W; x += TABLA) {
-    ctx.fillStyle = 'rgba(0,0,0,0.26)'; ctx.fillRect(x, 0, 2.5, H);
-    ctx.fillStyle = 'rgba(255,225,190,0.05)'; ctx.fillRect(x + 2.5, 0, 1.5, H);
-  }
-  // luz suave arriba
-  const luz = ctx.createRadialGradient(W / 2, 0, 0, W / 2, 0, H * 0.55);
-  luz.addColorStop(0, 'rgba(255,255,255,0.08)'); luz.addColorStop(1, 'rgba(255,255,255,0)');
-  ctx.fillStyle = luz; ctx.fillRect(0, 0, W, H);
-  if (this.modoOscuro) { ctx.fillStyle = 'rgba(0,0,0,0.38)'; ctx.fillRect(0, 0, W, H); }
-  this.textures.addCanvas('fondoMesa', cv);
-}
-
 
 // Vigésimo primer pase ("iluminación y atmósfera"): dos texturas de
 // gradiente radial generadas con canvas 2D (mismo mecanismo que
@@ -2534,6 +2500,7 @@ _conectarSocket() {
       this._actualizarMensajeEstado(data.mensaje, '#ff5555');
     });
     this.socket.off('error-jugada').on('error-jugada', (data) => {
+      this._jugadaEnviada = false;
       this._actualizarMensajeEstado(data.mensaje, '#ff5555');
       this.time.delayedCall(2000, () => this.mensajeText.setColor('#ffffaa'));
     });
@@ -2707,6 +2674,16 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
     const infoSala = (nombre) => (this._jugadoresSala || []).find(s => s.username === nombre) || {};
     const pendientes = [];
     let escudoX = 400;
+    // Pase 414: todos los carteles de nombre y las pildoras Ganador/Derrotado van en la MISMA linea Y
+    // (antes dependian del aro de rango de cada uno), con carteles de 36 px de alto.
+    const ALTO_CARTEL = 36;
+    const aroRef = Math.max(...todos.map((j) => {
+      const rid = j.rango_id != null ? j.rango_id : infoSala(j.nombre).rango_id;
+      const rf = rid ? RANGOS_UI[Number(rid)] : null;
+      return Math.round((radioFoto * 2) / ((rf ? rf.hueco : 0.62) + 0.02));
+    }), 0);
+    const yNombreComun = cyAv + aroRef / 2 + 22;
+    const yPillComun = yNombreComun + ALTO_CARTEL / 2 + 6 + 13;
 
     todos.forEach((j, idx) => {
       const esGanadorGrupo = j.gano;
@@ -2801,7 +2778,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
       }
       const textoNombre = nombreMostrado.length < String(j.nombre || '').length ? nombreMostrado + '…' : nombreMostrado;
       medida.destroy();
-      const yNombre = cyAv + tamanoAro / 2 + 20;
+      const yNombre = yNombreComun;
       const etiqueta = this.add.text(0, 0, textoNombre, {
         fontFamily: 'Nunito, Arial', fontSize: total <= 2 ? '16px' : '13px', fontStyle: '800', color: '#FFF8ED',
         stroke: '#2C160E', strokeThickness: 3,
@@ -2809,14 +2786,15 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
       const icoTrofeo = esGanadorGrupo ? 22 : 0;
       const anchoEtq = etiqueta.width + 24 + (icoTrofeo ? icoTrofeo + 4 : 0);
       const placa = this.add.graphics().setDepth(903);
+      const hP = ALTO_CARTEL, mP = hP / 2;
       placa.fillStyle(0x000000, 0.4);
-      placa.fillRoundedRect(cx - anchoEtq / 2, yNombre - 13 + 3, anchoEtq, 26, 8);
+      placa.fillRoundedRect(cx - anchoEtq / 2, yNombre - mP + 3, anchoEtq, hP, 9);
       placa.fillStyle(0x5C3317, 1);
-      placa.fillRoundedRect(cx - anchoEtq / 2, yNombre - 13, anchoEtq, 26, 8);
+      placa.fillRoundedRect(cx - anchoEtq / 2, yNombre - mP, anchoEtq, hP, 9);
       placa.fillStyle(0x7A4A26, 1);
-      placa.fillRoundedRect(cx - anchoEtq / 2 + 2, yNombre - 11, anchoEtq - 4, 10, { tl: 6, tr: 6, bl: 2, br: 2 });
+      placa.fillRoundedRect(cx - anchoEtq / 2 + 2, yNombre - mP + 2, anchoEtq - 4, 12, { tl: 7, tr: 7, bl: 2, br: 2 });
       placa.lineStyle(2, 0x1a0f08, 1);
-      placa.strokeRoundedRect(cx - anchoEtq / 2, yNombre - 13, anchoEtq, 26, 8);
+      placa.strokeRoundedRect(cx - anchoEtq / 2, yNombre - mP, anchoEtq, hP, 9);
       this._sprites.push(placa, etiqueta);
       let xTxt = cx - anchoEtq / 2 + 12;
       if (icoTrofeo) {
@@ -2827,7 +2805,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
       etiqueta.setPosition(xTxt, yNombre);
 
       // Píldora de estado: "✓ Ganador" (verde) / "Derrotado" (gris)
-      const yPill = yNombre + 32;
+      const yPill = yPillComun;
       const pillAlto = 26;
       const estiloPill = { fontFamily: 'Fredoka, Arial', fontSize: '14px', fontStyle: '600' };
       const textoPill = esGanadorGrupo ? '✓ Ganador' : 'Derrotado';
@@ -2866,8 +2844,8 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
     if (total >= 2) {
       const tantosGan = ganadores.length ? Number(ganadores[0].tantos) : NaN;
       const tantosPer = perdedores.length ? Number(perdedores[0].tantos) : NaN;
-      if (this.textures.exists('vsEscudoEspera')) {
-        const esc = this.add.image(escudoX, cyAv, 'vsEscudoEspera').setDisplaySize(96, 96).setDepth(904);
+      if (this.textures.exists('escudoSinTexto')) {
+        const esc = this.add.image(escudoX, cyAv, 'escudoSinTexto').setDisplaySize(96, 96).setDepth(904);
         this._sprites.push(esc);
       }
       if (Number.isFinite(tantosGan) && Number.isFinite(tantosPer)) {
@@ -2894,7 +2872,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
       : (datos.motivo === 'abandono'
         ? (gano ? '¡Victoria por abandono!' : 'Perdiste por desconexión')
         : (modo === 'victoria' ? '¡Victoria!' : (modo === 'derrota' ? 'Derrota' : titulo || '')));
-    let y = total ? 384 : 250;
+    let y = total ? Math.max(384, yPillComun + 13 + 24) : 250;
     if (frase) {
       const TAM = 34;
       const txtFrase = this.add.text(0, y, frase, {
@@ -3105,6 +3083,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
 
 _renderizarEstado(animarReparto) {
      this._limpiarSprites();
+    this._jugadaEnviada = false;   // Pase 414: llego un estado nuevo, se puede volver a jugar
     if (this._L) this._modoCamaraAngosto('juego');
 
     if (this.mesaImg) this.mesaImg.setVisible(true);
@@ -3143,7 +3122,8 @@ _renderizarEstado(animarReparto) {
     const hayCantoSinResolver =
       (!!e.truco.nivel && !e.truco.resuelto) ||
       (!!e.envido.tipo && !e.envido.resuelto) ||
-      (!!e.flor.nivel && !e.flor.resuelto);
+      (!!e.flor.nivel && !e.flor.resuelto) ||
+      !!e.declaracionEnvido;   // Pase 414: tambien durante la declaracion del envido ("Tengo N" / "Son buenas")
 
     // Pase siguiente (placa doble): cada lado tiene su propia placa/texto
     // ahora (antes un solo "N - N" combinado en `scoreText`) — cada
@@ -3672,7 +3652,9 @@ _aplicarMarcadorEstilo(animar = false) {
 
   const F = this._crearFosforosMarcador();
   const hLabel = 18 * g.kp;
-  const alto = hLabel + (buenas ? 2 * F.B + F.gap : F.B) + 7;
+  // Pase 414: el cuadro de fosforos queda centrado en el papel (mismo margen arriba y abajo).
+  const PADV = 4;
+  const alto = hLabel + (buenas ? 2 * F.B + F.gap : F.B) + 2 * PADV + 4;
   const h2 = Math.max(g.vos.h, alto);
   this._placaFosforosActiva = true;
 
@@ -3695,17 +3677,21 @@ _aplicarMarcadorEstilo(animar = false) {
     if (zona && zona.scene) zona.setSize(wF, h2).setPosition(cx2, cy2);
     const L = F[k];
     const filas = buenas ? 2 : 1;
+    // Grilla estricta de 3 columnas iguales, centrada en el papel en horizontal y en vertical.
+    const altoGrilla = filas * F.B + (filas - 1) * F.gap;
+    const gy0 = py + (ph - altoGrilla) / 2;
     for (let i = 0; i < 6; i++) {
       const fila = Math.floor(i / 3), col = i % 3;
       const mostrarCaja = fila < filas;
       const x = cx2 + (col - 1) * (F.B + F.gap);
-      const y = top + hLabel + F.B / 2 + fila * (F.B + F.gap);
+      const y = gy0 + F.B / 2 + fila * (F.B + F.gap);
       const n = Math.max(0, Math.min(5, (Number(puntos) || 0) - i * 5));
       const f = L.fantasma[i], c = L.caja[i];
       // Un solo dibujo por cuadro: el cuadrito fantasma solo se ve cuando el cuadro esta vacio
       // (si no, asoma por los bordes del fosforo de arriba).
       f.setPosition(x, y).setVisible(visiblePlacas && mostrarCaja && n === 0);
-      c.setPosition(x, y);
+      // El PNG de 1 fosforo trae el palito pegado arriba del cuadro: se baja al centro de la celda.
+      c.setPosition(x, y + (n === 1 ? F.B * 0.36 : 0));
       if (n > 0 && mostrarCaja) {
         c.setTexture(F.claves[n - 1]).setDisplaySize(F.B, F.B).setVisible(visiblePlacas);
         if (animar && n > L.n[i]) {
@@ -4291,27 +4277,30 @@ _dibujarManoJugador(cartas, yBase, jugable, animar = false) {
       // 10+i-0.5) y se mete en los mismos `targets` de cada tween/posición
       // que ya mueve a `img` (animación de reparto, hover al jugar) — así
       // los dos quedan siempre pegados, sin código de sincronización aparte.
+      // Pase 414: cartas bloqueadas (fuera de turno / canto sin resolver) a 0.75 de opacidad y sin interaccion.
+      const alfaCarta = jugable ? 1 : 0.75;
       const borde = this._dibujarBordeSticker(
         animar ? 400 : destinoX, animar ? 300 : destinoY,
         anchoCarta, altoCarta, animar ? 0 : radCarta, 0.5, 0.85, 10 + i - 0.5
-      ).setAlpha(animar ? 0 : 1);
+      ).setAlpha(animar ? 0 : alfaCarta);
 
       const img = this.add.image(animar ? 400 : destinoX, animar ? 300 : destinoY, keyMano)
         .setDisplaySize(anchoCarta, altoCarta)
         .setOrigin(0.5, 0.85)
         .setDepth(10 + i)
-        .setAlpha(animar ? 0 : 1)
+        .setAlpha(animar ? 0 : alfaCarta)
         .setRotation(animar ? 0 : radCarta);
 
       if (!jugable) {
-        img.setTint(0x888888);
+        img.setTint(0xBBBBBB);
+        img.disableInteractive();
       }
 
       if (animar) {
         this.time.delayedCall(i * 130, () => {
           if (!img.scene) return;
-          img.setAlpha(1);
-          borde.setAlpha(1);
+          img.setAlpha(alfaCarta);
+          borde.setAlpha(alfaCarta);
           this.tweens.add({
             targets: [img, borde], x: destinoX, y: destinoY, rotation: radCarta,
             duration: 300, ease: 'Power2.easeOut'
@@ -4332,6 +4321,8 @@ _dibujarManoJugador(cartas, yBase, jugable, animar = false) {
           borde.setDepth(10 + i - 0.5);
         });
         img.on('pointerdown', () => {
+          if (this._jugadaEnviada) return;   // Pase 414: un solo toque por turno (evita el aviso "no es tu turno")
+          this._jugadaEnviada = true;
           try { this.sound.play('jugar-carta', { volume: 0.6 }); } catch (err) {}
           this.socket.emit('jugar-carta', { codigoSala: this.codigoSala, cartaId: carta.id });
         });

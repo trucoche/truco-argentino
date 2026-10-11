@@ -10,6 +10,12 @@ import ConfiguracionMesaModal from './ConfiguracionMesaModal';
 import PerfilRivalModal from '../PerfilRival/PerfilRivalModal';
 import AnotadorCriollo from './AnotadorCriollo';
 
+// Pase 404: estilo del marcador de la mesa ('numeros' | 'fosforos'), recordado entre partidas.
+const CLAVE_MARCADOR_ESTILO = 'tc_marcador_estilo';
+function leerMarcadorEstilo() {
+  try { return localStorage.getItem(CLAVE_MARCADOR_ESTILO) === 'fosforos' ? 'fosforos' : 'numeros'; } catch (e) { return 'numeros'; }
+}
+
 export default function GameOnlinePhaser({
   token, usuario, codigoSala, onVolverLobby, onRevancha, onVerBracket,
   musicaVolumen, onCambiarMusicaVolumen,
@@ -41,6 +47,17 @@ export default function GameOnlinePhaser({
   // placa (`onAbrirAnotador`); el popup con los fosforos lo dibuja React.
   const [anotadorAbierto, setAnotadorAbierto] = useState(false);
   const [puntosMesa, setPuntosMesa] = useState({ yo: 0, rival: 0, objetivo: 15 });
+  // Pase 404: 'numeros' (placas con dígitos) o 'fosforos' (mini-tablitas de fósforos).
+  const [marcadorEstilo, setMarcadorEstilo] = useState(leerMarcadorEstilo);
+  const marcadorEstiloRef = useRef(marcadorEstilo);
+  marcadorEstiloRef.current = marcadorEstilo;
+  const cambiarMarcadorEstilo = (estilo) => {
+    const e = estilo === 'fosforos' ? 'fosforos' : 'numeros';
+    setMarcadorEstilo(e);
+    try { localStorage.setItem(CLAVE_MARCADOR_ESTILO, e); } catch (err) { /* sin storage */ }
+    const escena = gameRef.current?.scene.getScene('GameSceneOnline');
+    if (escena && escena.setMarcadorEstilo) escena.setMarcadorEstilo(e);
+  };
 
   // Pase siguiente: ver comentario junto a onLogrosDesbloqueados arriba —
   // la escena ahora llama a onVolverLobby(logros) en vez de onVolverLobby()
@@ -57,7 +74,7 @@ useEffect(() => {
       const angostoAhora = esLayoutAngosto();
       relacionInicialRef.current = window.innerHeight / window.innerWidth;
       gameRef.current = new Phaser.Game(crearConfigOnline(angostoAhora));
-      gameRef.current.scene.add('GameSceneOnline', GameSceneOnline, true, { usuario, codigoSala, vocesVolumen, angosto: angostoAhora });
+      gameRef.current.scene.add('GameSceneOnline', GameSceneOnline, true, { usuario, codigoSala, vocesVolumen, angosto: angostoAhora, marcadorEstilo: marcadorEstiloRef.current });
 
       gameRef.current.events.once('ready', () => {
         const escena = gameRef.current.scene.getScene('GameSceneOnline');
@@ -124,7 +141,7 @@ useEffect(() => {
     if (gameRef.current) {
       const escena = gameRef.current.scene.getScene('GameSceneOnline');
       if (escena) {
-        escena.scene.restart({ usuario, codigoSala, vocesVolumen, angosto: esLayoutAngosto() });
+        escena.scene.restart({ usuario, codigoSala, vocesVolumen, angosto: esLayoutAngosto(), marcadorEstilo: marcadorEstiloRef.current });
         escena.events.once('create', () => {
           escena.onVolverLobby = manejarVolverLobby;
           escena.onRevancha = onRevancha;
@@ -166,6 +183,8 @@ useEffect(() => {
           onCambiarMusicaVolumen={onCambiarMusicaVolumen}
           vocesVolumen={vocesVolumen}
           onCambiarVocesVolumen={onCambiarVocesVolumen}
+          marcadorEstilo={marcadorEstilo}
+          onCambiarMarcadorEstilo={cambiarMarcadorEstilo}
         />
         <AnotadorCriollo
           visible={anotadorAbierto}
@@ -206,7 +225,8 @@ const estilosPagina = {
   fondoPagina: {
     width: '100vw',
     height: '100dvh',
-    background: '#2D1B14',
+    // Pase 414: madera caoba rustica vertical (la misma del Anotador de Asado) en vez del marron liso.
+    background: 'radial-gradient(120% 90% at 50% 0%, rgba(255,255,255,0.07), transparent 60%), repeating-linear-gradient(90deg, rgba(0,0,0,0.18) 0 2px, transparent 2px 46px), linear-gradient(180deg, #5a3b28, #2d1b14)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
