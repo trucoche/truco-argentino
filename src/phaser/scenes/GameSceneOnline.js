@@ -1407,6 +1407,10 @@ _crearElementosDeTexto() {
   const modo = cantidadAsientos === 5 ? '3v3' : 'normal';
   if (modo === this._mesaModoActual) return;
   this._mesaModoActual = modo;
+  // Pase 440: en 3v3 no va el halo cálido de atrás de la mesa (se leía como un haz de luz
+  // descentrado); queda el fondo de madera con el viñeteado de las esquinas.
+  if (this.resplandorMesaImg) this.resplandorMesaImg.setVisible(modo !== '3v3');
+  if (this.luzCalidaMesaImg && !this._L) this.luzCalidaMesaImg.setVisible(modo !== '3v3');
 
   // Multiplica el alto por encima de la proporción real del dibujo.
   // 1.0 = fiel al original (lo que se ve "aplastado").
@@ -3597,7 +3601,7 @@ _renderizarEquipos(e, animarReparto, hayCantoSinResolver) {
     // "carta rival" para enfrentar en este mismo lugar (las de compañeros/
     // rivales viven junto a cada asiento, ver _dibujarJugador), así que
     // sigue siendo una fila simple, sin DueloCartas.
-    this._dibujarFilaCartas(e.misJugadas, this._yEq(340), false, false, this._L ? 0.60 * 1.4 : 0.60, false, 30);
+    this._dibujarFilaCartas(e.misJugadas, this._yEq(esTresVTres ? 322 : 340), false, false, this._L ? 0.60 * 1.4 : 0.60, false, 30);
     // Pase siguiente: mismo ajuste que en 1v1 (ver el otro call site,
     // dentro del bloque no-equipos de _renderizarEstado) — la mano
     // propia comparte la misma barra de botonera en cualquier modo.
@@ -4111,6 +4115,9 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
     // Pase 394: layout angosto — cy sigue siendo la coordenada de diseño (mundo viejo); `cyN` es donde se dibuja.
     const kS = this._L ? this._L.kSeat : 1;
     const cyN = this._yEq(cy);
+    // Pase 440: en 3v3 los mazos de compañeros y rivales van un 20% más chicos.
+    const esTres = ((this.estado.companeros || []).length + (this.estado.rivales || []).length) === 5;
+    const fD = esTres ? 0.8 : 1;
 
     if (manoCompartida) {
       // Cartas reales boca arriba (compañero compartiendo su mano, o
@@ -4153,8 +4160,8 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
       // importa la legibilidad porque todas las cartas son iguales.
       const anguloPorCarta = 9;
       const anguloTotalAbanico = (cantidad - 1) * anguloPorCarta;
-      const radioAbanico = 22 * kS;
-      const bulto = 3.5 * kS;
+      const radioAbanico = 22 * kS * fD;
+      const bulto = 3.5 * kS * fD;
 
       for (let k = 0; k < cantidad; k++) {
         const anguloCarta = -anguloTotalAbanico / 2 + k * anguloPorCarta;
@@ -4169,29 +4176,63 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
           .setOrigin(0.5, 0.5)
           .setRotation(radCarta)
           .setDepth(10 + k);
-        if (this._L) carta.setDisplaySize(45 * kS, 69 * kS);
+        if (this._L) carta.setDisplaySize(45 * kS * fD, 69 * kS * fD);
+        else if (fD !== 1) carta.setScale(carta.scaleX * fD, carta.scaleY * fD);
 
         this._sprites.push(carta);
       }
     }
 
-    const colorFondo = esSuTurno ? '#00000099' : (tipo === 'companero' ? '#1565C0cc' : '#8B1A1Acc');
+    // Pase 440: placa de pergamino con marco de madera en lugar del cuadro plano azul/rojo.
+    // Compañeros: filete verde oliva; rivales: filete borgoña. En su turno la placa se dora.
     const esManoDeEste = this.estado.manoId === j.id;
-    const nombreTxt = this.add.text(cx, cyN - 40 * kS, `${j.nombre}${esSuTurno ? ' ●' : ''}${esManoDeEste ? ' 🂠' : ''}`, {
-      font: esSuTurno ? `bold ${Math.round(12 * kS)}px Arial` : `${Math.round(12 * kS)}px Arial`,
-      fill: esSuTurno ? '#FFD700' : '#ffffff',
-      backgroundColor: colorFondo,
-      padding: { x: 5, y: 2 }
+    const esCompa = tipo === 'companero';
+    const fsN = Math.round(12 * kS);
+    let nombreCorto = String(j.nombre || '');
+    if (nombreCorto.length > 14) nombreCorto = nombreCorto.slice(0, 13) + '…';
+    const yNombre = cyN - (esTres ? 34 : 40) * kS;
+    const iconoMano = esManoDeEste && this.textures.exists('icono_rival');
+    const nombreTxt = this.add.text(0, yNombre, nombreCorto + (esSuTurno ? ' ●' : ''), {
+      fontFamily: 'Nunito, Arial', fontSize: `${fsN}px`, fontStyle: '800',
+      color: esSuTurno ? '#5A2A00' : '#3B2312',
     }).setOrigin(0.5).setDepth(50);
-    // Centésimo décimo quinto pase: nombre clickeable en equipos (2v2/3v3),
-    // mismo criterio que 1v1 (ver labelRival) — acá se recrea en cada
-    // render, así que el listener puede capturar `j.nombre` directo del
-    // closure, sin necesitar una variable de instancia aparte.
-    nombreTxt.setInteractive({ useHandCursor: true });
-    nombreTxt.on('pointerdown', () => {
+    const padXp = 10 * kS, extraMano = iconoMano ? 15 * kS : 0;
+    const pw = Math.ceil(nombreTxt.width + padXp * 2 + extraMano);
+    const ph = Math.ceil(fsN + 11 * kS);
+    const px0 = cx - pw / 2, py0 = yNombre - ph / 2;
+    nombreTxt.setX(px0 + padXp + nombreTxt.width / 2);
+    const acento = esCompa ? 0x7F8F38 : 0x8E2B35;
+    const placa = this.add.graphics().setDepth(49);
+    placa.fillStyle(0x000000, 0.35);
+    placa.fillRoundedRect(px0, py0 + 2, pw, ph, 7);
+    if (esSuTurno) {
+      placa.fillStyle(0xFFD36B, 0.28);
+      placa.fillRoundedRect(px0 - 3, py0 - 3, pw + 6, ph + 6, 10);
+    }
+    placa.fillStyle(esSuTurno ? 0xB9791A : 0x5C3317, 1);
+    placa.fillRoundedRect(px0, py0, pw, ph, 7);
+    placa.fillStyle(esSuTurno ? 0xE9A31B : 0x7A4A26, 1);
+    placa.fillRoundedRect(px0 + 1.5, py0 + 1.5, pw - 3, Math.max(4, ph * 0.4), { tl: 6, tr: 6, bl: 1, br: 1 });
+    placa.lineStyle(2, 0x1a0f08, 1);
+    placa.strokeRoundedRect(px0, py0, pw, ph, 7);
+    placa.fillStyle(esSuTurno ? 0xFFE9A8 : 0xEAD9B5, 1);
+    placa.fillRoundedRect(px0 + 3, py0 + 3, pw - 6, ph - 6, 4);
+    placa.lineStyle(1.6, acento, 1);
+    placa.strokeRoundedRect(px0 + 4, py0 + 4, pw - 8, ph - 8, 3);
+    this._sprites.push(placa);
+    if (iconoMano) {
+      const ic = this.add.image(px0 + pw - padXp - 3 * kS, yNombre, 'icono_rival').setDisplaySize(12 * kS, 14 * kS).setDepth(51);
+      this._sprites.push(ic);
+    }
+    this._sprites.push(nombreTxt);
+    // Centésimo décimo quinto pase: nombre clickeable en equipos (2v2/3v3), mismo criterio
+    // que 1v1 (ver labelRival). Pase 440: la zona clickeable es toda la placa.
+    const zonaNombre = this.add.rectangle(cx, yNombre, pw, ph, 0x000000, 0.001).setDepth(52);
+    zonaNombre.setInteractive({ useHandCursor: true });
+    zonaNombre.on('pointerdown', () => {
       if (j.nombre && this.onVerPerfil) this.onVerPerfil(j.nombre);
     });
-    this._sprites.push(nombreTxt);
+    this._sprites.push(zonaNombre);
 
     // Pase siguiente: anillo de tiempo en equipos (paridad con el
     // nativo) — mismo criterio que el bloque 1v1 de _renderizarEstado:
@@ -4205,14 +4246,7 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
     // perdía el indicador de tiempo en esos turnos. Ahora aplica a
     // cualquier asiento (rival o compañero) que tenga el turno.
     if (esSuTurno) {
-      const padX = 5, padY = 2;
-      this._anilloRect = {
-        x: cx - nombreTxt.width / 2 - padX,
-        y: (cyN - 40 * kS) - nombreTxt.height / 2 - padY,
-        w: nombreTxt.width + padX * 2,
-        h: nombreTxt.height + padY * 2,
-        r: 8,
-      };
+      this._anilloRect = { x: px0 - 2, y: py0 - 2, w: pw + 4, h: ph + 4, r: 8 };
     }
 
       const jugadas = j.jugadas;
@@ -4241,8 +4275,14 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
       // más lejos del centro y más cerca del asiento real (outX/outY/outLen
       // ya apuntan en la dirección correcta para cada jugador).
       const fraccionHaciaAsiento = 0.68;
-      const baseX = centroMesaX + outX * outLen * fraccionHaciaAsiento;
-      const baseY = centroMesaY + outY * outLen * fraccionHaciaAsiento;
+      let baseX = centroMesaX + outX * outLen * fraccionHaciaAsiento;
+      let baseY = centroMesaY + outY * outLen * fraccionHaciaAsiento;
+      // Pase 440: en 3v3 las cartas jugadas de los dos rivales de abajo no deben pisar la mano
+      // propia ni los mazos: suben y se corren un poco hacia afuera.
+      if (esTres && outY > 0.15) {
+        baseX += outX * 12;
+        baseY -= 18;
+      }
       // Pase 215 — bug real encontrado: "únicamente se ven las primeras
       // cartas jugadas, las que le siguen no se ven" en 2v2. Los datos ya
       // estaban confirmados correctos (log DIAG del pase anterior), así que
