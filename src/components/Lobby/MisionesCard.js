@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { API_URL as BASE_URL } from '../../config';
+import MonedaGirando from '../MonedaGirando';
 
 const API_URL = `${BASE_URL}/api/misiones`;
 
@@ -189,7 +190,8 @@ export default function MisionesCard({ token, onMisionReclamada }) {
                   >
                     {reclamando === m.tipo ? 'Reclamando...' : (
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                        <img src="/assets/images/moneda.png" alt="" style={estilos.iconoMonedaChico} />
+                        {/* Pase 434: moneda girando (antes la moneda estática). */}
+                        <MonedaGirando tam={18} />
                         {`Reclamar +${datos.recompensa}`}
                       </span>
                     )}

@@ -363,8 +363,6 @@ preload() {
     ['gaucho', 'gaucha', 'gaucho2', 'gaucha2'].forEach(p => {
       this.load.image(`siluetaEspera_${p}`, conVersion(`assets/${p}-avatar.png`));
     });
-    this.load.image('monedaEsperaCara', conVersion('assets/images/moneda.png'));
-    this.load.image('monedaEsperaDorso', conVersion('assets/images/moneda-dorso.png'));
     // Pase 267, punto 4: este tablón ya NO se usa — el botón "Volver al
     // Lobby" pasa a ser el mismo Botón 3D Pill-shaped (nine-slice) que la
     // pantalla final (ver botonVolverEspera en create()). Se deja la
@@ -1140,7 +1138,7 @@ _crearElementosDeTexto() {
     // con el resto de la sala de espera en 'partida-iniciada'/preview (ver
     // _destruirBannerEsperaTitulo en esos puntos, _conectarSocket).
     this._actualizarBannerEsperaTitulo('Conectando con la sala...');
-    // Pase 346: moneda 3D girando + "Buscando rival..." debajo del VS.
+    // Pase 434: solo el texto de estado (sin moneda) debajo de la fila de avatares.
     this._crearCentroEspera();
 
     // Pase siguiente: bug de coordenadas — `_crearBoton` crea su propio
@@ -1949,43 +1947,28 @@ _actualizarBannerEsperaTitulo(texto, modo = null, detalle = null, opts = {}) {
   this._sprites.push(this._bannerEsperaTitulo);
 }
 
-// Pase 346: bloque central "moneda 3D girando (44px) + Buscando rival..." —
-// se crea una sola vez (no se redibuja con cada 'jugador-unido', así el giro
-// no se reinicia) y se destruye junto con el título (ver
-// _destruirBannerEsperaTitulo).
+// Pase 434: bloque central de la sala de espera — SOLO el texto de estado ("Buscando rival..." /
+// "Buscando jugadores... (X/6)"). Se sacó la moneda 3D girando (Pase 346) en todos los modos.
+// Se crea una sola vez y se destruye junto con el título (ver _destruirBannerEsperaTitulo).
 _crearCentroEspera() {
   if (this._centroEspera) return;
-  const TAM = 44;
-  const cy = 418;
-  const moneda = this.add.image(400, cy, 'monedaEsperaCara').setDisplaySize(TAM, TAM).setDepth(405);
-  const texto = this.add.text(400, cy + 46, 'Buscando rival...', {
+  const texto = this.add.text(400, 450, 'Buscando rival...', {
     fontFamily: 'Fredoka, Arial', fontSize: '22px', fontStyle: '600', color: '#FFF8ED',
     stroke: '#000000', strokeThickness: 4,
   }).setOrigin(0.5).setDepth(405);
-  let carasActual = 'cara';
-  const giro = { ang: 0 };
-  const tween = this.tweens.add({
-    targets: giro, ang: 360, duration: 2600, repeat: -1, ease: 'Linear',
-    onUpdate: () => {
-      if (!moneda.scene) return;
-      const c = Math.cos((giro.ang * Math.PI) / 180);
-      const cara = c >= 0 ? 'cara' : 'dorso';
-      if (cara !== carasActual) {
-        carasActual = cara;
-        moneda.setTexture(cara === 'cara' ? 'monedaEsperaCara' : 'monedaEsperaDorso');
-      }
-      moneda.setDisplaySize(TAM * Math.max(Math.abs(c), 0.04), TAM);
-    },
-  });
-  this._centroEspera = { moneda, texto, tween };
-  this._sprites.push(moneda, texto);
+  this._centroEspera = { texto };
+  this._sprites.push(texto);
 }
 
 _actualizarTextoBuscando() {
   const t = this._centroEspera && this._centroEspera.texto;
   if (!t || !t.scene) return;
   const lleno = this._capacidadSala && this._jugadoresSala && this._jugadoresSala.length >= this._capacidadSala;
-  t.setText(lleno ? 'Iniciando partida...' : (this._capacidadSala > 2 ? 'Buscando jugadores...' : 'Buscando rival...'));
+  const equipos = this._capacidadSala > 2;
+  const unidos = (this._jugadoresSala || []).length;
+  t.setText(lleno ? 'Iniciando partida...' : (equipos ? `Buscando jugadores... (${unidos}/${this._capacidadSala})` : 'Buscando rival...'));
+  // Pase 434: en 2v2/3v3 la grilla de dos filas ocupa más alto, el texto baja.
+  t.setY(equipos ? (this._capacidadSala > 4 ? 506 : 515) : 450);
 }
 
 // Destruye (no solo oculta) el título de la sala de espera — se llama en
@@ -1995,10 +1978,9 @@ _actualizarTextoBuscando() {
 // esta pantalla.
 _destruirBannerEsperaTitulo() {
   if (this._centroEspera) {
-    const { moneda, texto, tween } = this._centroEspera;
-    if (tween && tween.stop) tween.stop();
-    [moneda, texto].forEach(o => { if (o && o.scene) o.destroy(); });
-    this._sprites = this._sprites.filter(s => s !== moneda && s !== texto);
+    const { texto } = this._centroEspera;
+    if (texto && texto.scene) texto.destroy();
+    this._sprites = this._sprites.filter(s => s !== texto);
     this._centroEspera = null;
   }
   if (this._bannerEsperaTitulo) {
@@ -2037,6 +2019,9 @@ _redibujarFilaEspera() {
   this._actualizarTextoBuscando();
 
   const total = this._capacidadSala;
+  const equipos = total > 2;
+  // Pase 434: en 2v2/3v3 el botón "Volver al Lobby" baja para dejar lugar a las dos filas.
+  if (this.botonVolverEspera && this.botonVolverEspera.scene) this.botonVolverEspera.setY(equipos ? 556 : 518);
   // Pase 209: pedido del usuario ("en la pantalla nueva de carga,
   // agrandemos todo") — tiles, huecos y tipografía de toda la fila (ver
   // también _dibujarTileEspera más abajo) subieron de tamaño.
@@ -2049,10 +2034,14 @@ _redibujarFilaEspera() {
   const cy = 270;
 
   const pendientes = [];
-  for (let i = 0; i < total; i++) {
-    const jugador = this._jugadoresSala[i] || null;
-    const cx = inicioX + i * paso;
-    this._dibujarTileEspera(cx, cy, tamano / 2, jugador, pendientes);
+  if (equipos) {
+    this._dibujarGrillaEquiposEspera(total, pendientes);
+  } else {
+    for (let i = 0; i < total; i++) {
+      const jugador = this._jugadoresSala[i] || null;
+      const cx = inicioX + i * paso;
+      this._dibujarTileEspera(cx, cy, tamano / 2, jugador, pendientes);
+    }
   }
 
   // Pase 346: badge "VS" amarillo 3D, centrado entre los dos avatares (solo 1v1).
@@ -2085,6 +2074,59 @@ _redibujarFilaEspera() {
   }
 }
 
+// Pase 434: sala de espera de 2v2/3v3 en GRILLA de dos filas horizontales (antes una sola fila
+// de 4/6 tiles donde las píldoras de estado se encimaban):
+//   TU EQUIPO → fila de tiles → escudo VS → fila del equipo rival → EQUIPO RIVAL.
+// Mi equipo se toma del roster (`equipo` de mi usuario); si todavía no estoy, es 'A'.
+// Entre píldoras de tiles contiguos queda siempre un hueco de 16 px.
+_dibujarGrillaEquiposEspera(total, pendientes) {
+  const n = total / 2;
+  const T = n === 3 ? 64 : 68;              // diámetro "nominal" del tile
+  const radioAro = T * 0.5625;              // el aro mide 1.125 × T (ver _dibujarTileEspera)
+  const jugadores = this._jugadoresSala || [];
+  const miNombre = this.usuario && this.usuario.username;
+  const yo = jugadores.find(j => j && j.username === miNombre);
+  const miEquipo = (yo && yo.equipo) || 'A';
+  const otroEquipo = miEquipo === 'A' ? 'B' : 'A';
+  const armar = (eq) => {
+    const m = jugadores.filter(j => j && j.username && j.equipo === eq);
+    return Array.from({ length: n }, (_, i) => m[i] || null);
+  };
+
+  const ESTILO_ETIQUETA = {
+    fontFamily: 'Fredoka, Arial', fontSize: '15px', fontStyle: '700', color: '#F1D9A8',
+    stroke: '#2C160E', strokeThickness: 4,
+  };
+  const etiqueta = (texto, y) => {
+    const t = this.add.text(400, y, texto, ESTILO_ETIQUETA).setOrigin(0.5).setDepth(414);
+    t.setLetterSpacing && t.setLetterSpacing(2);
+    this._avataresEsperaSprites.push(t);
+    this._sprites.push(t);
+  };
+
+  // Ancho de las píldoras (mismo cálculo que en _dibujarTileEspera, modo compacto) para que el
+  // paso entre tiles deje 16 px libres entre una píldora y la siguiente.
+  const med = this.add.text(0, 0, '✓ Conectado', { fontFamily: 'Fredoka, Arial', fontSize: '13px', fontStyle: '600' });
+  const med2 = this.add.text(0, 0, 'Conectando...', { fontFamily: 'Fredoka, Arial', fontSize: '13px', fontStyle: '600' });
+  const anchoPill = Math.max(Math.ceil(Math.max(med.width, med2.width)) + 28, 100);
+  med.destroy(); med2.destroy();
+  const GAP = 16;
+  const paso = Math.max(radioAro * 2, anchoPill) + GAP;
+  const inicioX = 400 - ((n - 1) * paso) / 2;
+
+  const yEtiqueta1 = 190;
+  const cy1 = yEtiqueta1 + 14 + radioAro;
+  const yVs = cy1 + radioAro + 60;
+  const cy2 = yVs + 24 + 4 + radioAro;
+  const yEtiqueta2 = cy2 + radioAro + 42;
+
+  etiqueta('TU EQUIPO', yEtiqueta1);
+  armar(miEquipo).forEach((j, i) => this._dibujarTileEspera(inicioX + i * paso, cy1, T / 2, j, pendientes, true));
+  this._dibujarBadgeVsEspera(400, yVs, 52);
+  armar(otroEquipo).forEach((j, i) => this._dibujarTileEspera(inicioX + i * paso, cy2, T / 2, j, pendientes, true));
+  etiqueta('EQUIPO RIVAL', yEtiqueta2);
+}
+
 // Un tile de la fila: sello circular de madera (cálido si ya se unió, gris
 // pulsando si no), la foto/avatar real (o un "?" placeholder si el asiento
 // está vacío), una pill de estado ("Conectado"/"Conectando...") y el
@@ -2092,7 +2134,7 @@ _redibujarFilaEspera() {
 // `pendientes` acumula los avatares que todavía no están en la caché de
 // texturas de Phaser, para cargarlos todos juntos en un solo batch (ver
 // _redibujarFilaEspera) en vez de un load.start() por jugador.
-_dibujarTileEspera(cx, cy, radio, jugador, pendientes) {
+_dibujarTileEspera(cx, cy, radio, jugador, pendientes, compacto = false) {
   const conectado = !!jugador;
 
   // Pase 267, punto 2: `marcoAvatarEspera` (placa cuadrada con esquineros
@@ -2182,17 +2224,18 @@ _dibujarTileEspera(cx, cy, radio, jugador, pendientes) {
   // mismo criterio de capas (sombra + relleno + brillo superior) que ya
   // usan las filas de la pantalla final (pase 265) para que se lea
   // "3D"/ahuecada y no plana — más los 3 puntitos parpadeantes pedidos.
-  const pillY = cy + radio + 30;
-  const pillAlto = 30;
+  // Pase 434: `compacto` (grilla de equipos) — píldora más baja y más cerca del aro.
+  const pillY = compacto ? cy + radio * 1.125 + 15 : cy + radio + 30;
+  const pillAlto = compacto ? 24 : 30;
 
   // Pase 349: las dos píldoras ("✓ Conectado" verde / "Conectando..." crema) se dibujan por
   // código, planas y con relieve duro — igual que en el nativo — en vez de los PNG nine-slice
   // de la pantalla final (que dejaban los bordes cortados). Las dos miden lo mismo (ancho
   // fijo, calculado con el texto más largo) y NO cambian al aparecer los puntitos.
-  const ESTILO_PILL = { fontFamily: 'Fredoka, Arial', fontSize: '15px', fontStyle: '600' };
+  const ESTILO_PILL = { fontFamily: 'Fredoka, Arial', fontSize: compacto ? '13px' : '15px', fontStyle: '600' };
   const medA = this.add.text(0, 0, '✓ Conectado', ESTILO_PILL);
   const medB = this.add.text(0, 0, 'Conectando...', ESTILO_PILL);
-  const anchoPill = Math.max(Math.ceil(Math.max(medA.width, medB.width)) + 36, 120);
+  const anchoPill = compacto ? Math.max(Math.ceil(Math.max(medA.width, medB.width)) + 28, 100) : Math.max(Math.ceil(Math.max(medA.width, medB.width)) + 36, 120);
   const anchoConectando = medB.width;
   medA.destroy();
   medB.destroy();
@@ -2349,11 +2392,11 @@ _dibujarRadarSiluetas(cx, cy, radioFoto) {
 
 // Pase 346: badge "VS" — placa dorada 3D (borde negro 3px, relieve inferior
 // ocre) con "VS" en Fredoka chocolate, levemente inclinada.
-_dibujarBadgeVsEspera(x, y) {
+_dibujarBadgeVsEspera(x, y, tam = 88) {
   // Pase 374: escudo con espadas y "VS" (PNG del usuario). Si por algo la textura no cargó,
   // se cae al badge dibujado por código de antes.
   if (this.textures.exists('vsEscudoEspera')) {
-    const img = this.add.image(x, y, 'vsEscudoEspera').setDisplaySize(88, 88).setDepth(414);
+    const img = this.add.image(x, y, 'vsEscudoEspera').setDisplaySize(tam, tam).setDepth(414);
     this._avataresEsperaSprites.push(img);
     this._sprites.push(img);
     return;

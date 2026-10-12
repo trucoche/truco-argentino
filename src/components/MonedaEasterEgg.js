@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { API_URL as BASE_URL } from '../config';
+import MonedaGirando from './MonedaGirando';
 
 const API_URL = `${BASE_URL}/api/easter-eggs`;
 
@@ -89,7 +90,8 @@ return (
       {montoGanado !== null ? (
         <span style={estilos.montoTexto}>+{montoGanado}</span>
       ) : (
-        <img src="/assets/images/moneda.png" alt="" style={estilos.imagen} />
+        // Pase 434: la moneda del evento semanal gira sobre su eje (cara + dorso).
+        <MonedaGirando tam={42} />
       )}
     </button>
   );
