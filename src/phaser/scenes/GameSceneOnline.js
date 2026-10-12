@@ -241,6 +241,10 @@ preload() {
     // Pase 394: la misma mesa SIN la marca "TC" (que va como imagen aparte) — la usa el layout angosto, que estira el paño.
     this.load.image('mesaRedondaLimpia', conVersion('assets/images/juego/mesa-truco-nueva-sin-marca.png'));
     this.load.image('marcaTcMesa', conVersion('assets/images/juego/marca-tc-mesa.png'));
+    // Pase 446: mazos laterales en abanico (2v2). Una imagen por lado y por cantidad de cartas en mano (3, 2 y 1).
+    ['izq', 'der'].forEach(lado => [3, 2, 1].forEach(n => {
+      this.load.image(`mazoAbanico_${lado}_${n}`, conVersion(`assets/images/juego/mazos-abanico/mazo-abanico-${lado}-${n}.png`));
+    }));
     // Fase 6 — fondo de la barra de acciones ("madera + filete dorado"),
     // reemplaza el rectángulo de color plano que había antes (ver
     // _crearElementosDeTexto). Imagen de 800x110, misma proporción que el
@@ -732,6 +736,7 @@ _crearElementosDeTexto() {
     // real de ESTA placa (más angosta que el canvas completo) en vez de un
     // ancho fijo — si se vuelve a ensanchar la placa (ver comentario de
     // arriba sobre el asset en 3 franjas), este número se actualiza solo.
+    this._anchoPanelBotonera = anchoBotonera;   // Pase 443: borde derecho real de la placa (para el botón de cartas)
     this.anchoBotonera = this._L ? anchoBotonera - 90 : anchoBotonera;   // angosto: deja libre la esquina de la tuerca de ajustes (React)
     // Ducentésimo sexagésimo noveno pase: guardado también el centro
     // vertical real de la placa (`yBotonera`, ya calculado arriba a partir
@@ -1425,6 +1430,9 @@ _crearElementosDeTexto() {
   // usándose tal cual para 3v3 (mesa vieja, sin cambios), pero la rama
   // "normal" de acá abajo ahora tiene su propio factor, bien separado.
   const FACTOR_ALTURA = 1.95;
+  // Pase 442: la mesa de 3v3 sube 40 px de diseño (asientos y zonas de cartas suben con ella) para dejar
+  // aire entre las cartas tiradas y la mano propia.
+  const ELEVACION_MESA_3V3 = 40;
 
   // Pase 394: en layout angosto la mesa de 1v1 se arma partida en dos
   // (aro estirado + patas), ver _calcularLayoutAngosto.
@@ -1489,11 +1497,11 @@ _crearElementosDeTexto() {
       .setOrigin(0.5, 0.5)
       .setCrop(CROP.x, CROP.y, CROP.width, CROP.height)
       .setDisplaySize(anchoDisplay, altoDisplay)
-      .setPosition(400, 220);
+      .setPosition(400, 220 - ELEVACION_MESA_3V3);
     if (this._L) {
       // Pase 394: la mesa de 3v3 se estira en vertical para llenar la ventana (ver eq3 en _calcularLayoutAngosto)
       const m = this._L.eq3;
-      this.mesaImg.setScale(this.mesaImg.scaleX, this.mesaImg.scaleY * m.gy).setPosition(400, m.cy + (220 - m.cyOld) * m.gy);
+      this.mesaImg.setScale(this.mesaImg.scaleX, this.mesaImg.scaleY * m.gy).setPosition(400, m.cy + (220 - ELEVACION_MESA_3V3 - m.cyOld) * m.gy);
       [this.mesaMedio, this.mesaPatas, this.mesaPies, this.marcaTcMesa].forEach(o => { if (o && o.scene) o.setVisible(false); });
     }
   } else {
@@ -1570,6 +1578,58 @@ _crearTexturaDorsoMini() {
   const altoR  = Math.round(ALTO_FINAL * factor);
   this._claveDorsoMiniActual = `cardBackMini_${anchoR}x${altoR}`;
   this._crearTexturaEscalada('cardBackMiniMaster', this._claveDorsoMiniActual, anchoR, altoR);
+  this._crearTexturasDorsoPerspectiva(this._claveDorsoMiniActual, anchoR, altoR);
+}
+
+// Pase 441: mazos en perspectiva para los asientos de 3v3. Se hornean en canvas a partir del
+// mismo dorso elegido (clásico o nuevo): 'izq' y 'der' son el dorso visto de tres cuartos (el
+// borde que mira a la mesa se achica y se oscurece), 'arriba' es el dorso visto en fuga (el borde
+// lejano se angosta). Se cortan en tiras para lograr el trapecio, que un transform 2D no da.
+_crearTexturasDorsoPerspectiva(claveBase, anchoR, altoR) {
+  const src = this.textures.get(claveBase).getSourceImage();
+  this._clavesDorsoPersp = this._clavesDorsoPersp || {};
+  ['izq', 'der', 'arriba'].forEach((lado) => {
+    const clave = `${claveBase}_p_${lado}`;
+    this._clavesDorsoPersp[lado] = clave;
+    if (this.textures.exists(clave)) return;
+    const cv = document.createElement('canvas');
+    cv.width = anchoR;
+    cv.height = altoR;
+    const ctx = cv.getContext('2d');
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    if (lado === 'arriba') {
+      const N = Math.max(10, Math.round(altoR / 2));
+      const hd = altoR * 0.88, y0 = (altoR - hd) / 2;
+      for (let i = 0; i < N; i++) {
+        const t = (i + 0.5) / N;               // 0 = borde lejano (arriba)
+        const g = 0.86 + 0.14 * t;
+        const sy = (i * altoR) / N;
+        ctx.drawImage(src, 0, sy, anchoR, altoR / N, anchoR * (1 - g) / 2, y0 + (i * hd) / N, anchoR * g, hd / N + 0.8);
+      }
+    } else {
+      const N = Math.max(10, Math.round(anchoR / 2));
+      const wd = anchoR * 0.84, x0 = (anchoR - wd) / 2;
+      for (let i = 0; i < N; i++) {
+        const t = (i + 0.5) / N;               // 0 = borde izquierdo
+        const lejos = lado === 'izq' ? t : 1 - t;   // el borde que mira a la mesa es el lejano
+        const f = 1 - 0.14 * lejos;
+        const sh = altoR * f;
+        ctx.drawImage(src, (i * anchoR) / N, 0, anchoR / N, altoR, x0 + (i * wd) / N, (altoR - sh) / 2, wd / N + 0.8, sh);
+      }
+    }
+    // sombreado: el lado lejano se oscurece
+    ctx.globalCompositeOperation = 'source-atop';
+    const gr = lado === 'arriba'
+      ? ctx.createLinearGradient(0, 0, 0, altoR)
+      : (lado === 'izq' ? ctx.createLinearGradient(0, 0, anchoR, 0) : ctx.createLinearGradient(anchoR, 0, 0, 0));
+    if (lado === 'arriba') { gr.addColorStop(0, 'rgba(0,0,0,0.32)'); gr.addColorStop(0.7, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); }
+    else { gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(0.35, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,0,0.34)'); }
+    ctx.fillStyle = gr;
+    ctx.fillRect(0, 0, anchoR, altoR);
+    ctx.globalCompositeOperation = 'source-over';
+    this.textures.addCanvas(clave, cv);
+  });
 }
 
 _factorEscalaTextura() {
@@ -3308,7 +3368,7 @@ _renderizarEstado(animarReparto) {
     this._notificarPuntos(e.scores.yo, e.scores.rival);
     this.miManoTexto.setText(e.esMano ? 'Sos mano' : '');
     if (this.manoIconoPropio) this.manoIconoPropio.setVisible(!!e.esMano);
-    this.turnoText.setText(e.turno === 'mio' ? '● Tu turno' : '');
+    this.turnoText.setText((e.turno === 'mio' && !Array.isArray(e.companeros)) ? '● Tu turno' : '');   // Pase 445: en equipos lo reemplaza mi placa
     // Pase siguiente: anillo del propio turno — mismo mecanismo que el
     // del rival, pero alrededor de "● Tu turno" (que ya vive justo
     // arriba de "Sos mano"/el ícono de mano propia, a pedido del
@@ -3316,7 +3376,7 @@ _renderizarEstado(animarReparto) {
     // depende de esModoEquipos). Antes no había NINGÚN indicador de
     // tiempo para el turno propio en la web — solo el número ⏱ arriba,
     // lejos de las cartas.
-    if (e.turno === 'mio') {
+    if (e.turno === 'mio' && !Array.isArray(e.companeros)) {
       const padX = 6, padY = 3;
       this._anilloRect = {
         x: this.turnoText.x - this.turnoText.width / 2 - padX,
@@ -3497,7 +3557,7 @@ _renderizarEquipos(e, animarReparto, hayCantoSinResolver) {
     // debajo de dónde 1v1 dibuja a su único rival (y=105, ver
     // _dibujarFilaDorso). Se sube centroY solo para el modo "normal" (2v2),
     // sin tocar 3v3 (que no tenía este reclamo).
-    const centroY = esTresVTres ? 320 : 250;
+    const centroY = esTresVTres ? 280 : 250;   // Pase 442: 320 - 40 (mesa elevada)
     // _dibujarJugador hace su propia clasificación de ángulo (para ubicar
     // las cartas jugadas de cada asiento) contra un centro de mesa
     // hardcodeado por separado — se sincroniza acá para que las dos cuentas
@@ -3589,8 +3649,19 @@ _renderizarEquipos(e, animarReparto, hayCantoSinResolver) {
         radioYAsiento = radioY * (esTresVTres ? 1.05 : 1.3);
       }
 
-      const px = centroX + Math.cos(rad) * radioXAsiento;
-      const py = centroY + Math.sin(rad) * radioYAsiento;
+      let px = centroX + Math.cos(rad) * radioXAsiento;
+      let py = centroY + Math.sin(rad) * radioYAsiento;
+      // Pase 441 (3v3): los dos de abajo suben y se abren hacia los costados (no pisan la mano ni la
+      // botonera); los de arriba bajan para quedar pegados al borde de la mesa.
+      if (esTresVTres) {
+        if (esAbajo) { py -= 40; px += (px < centroX ? -35 : 35); }
+        else if (esArribaCostado) py += 30;
+        else if (esArribaCentro) py += 20;
+      } else if (totalAsientos === 3) {
+        // Pase 444/446 (2v2): el compañero sube 10% (60 px) hasta el borde de madera de la mesa; los dos
+        // rivales de los costados quedan a y=215, la misma altura que sus cartas jugadas.
+        if (tipo === 'companero') py -= 60; else py -= 35;   // Pase 446: mazo lateral a la altura de su carta jugada (y=215)
+      }
       this._dibujarJugador(jugador, px, py, angulo, tipo);
     });
 
@@ -3601,7 +3672,7 @@ _renderizarEquipos(e, animarReparto, hayCantoSinResolver) {
     // "carta rival" para enfrentar en este mismo lugar (las de compañeros/
     // rivales viven junto a cada asiento, ver _dibujarJugador), así que
     // sigue siendo una fila simple, sin DueloCartas.
-    this._dibujarFilaCartas(e.misJugadas, this._yEq(esTresVTres ? 322 : 340), false, false, this._L ? 0.60 * 1.4 : 0.60, false, 30);
+    this._dibujarFilaCartas(e.misJugadas, this._yEq(esTresVTres ? 276 : 269), false, false, (this._L ? 0.60 * 1.4 : 0.60) * 0.85, false, 30, esTresVTres ? 0 : -3);   // Pase 443: 2v2 sube 15% (340 -> 299) y cartas -15%
     // Pase siguiente: mismo ajuste que en 1v1 (ver el otro call site,
     // dentro del bloque no-equipos de _renderizarEstado) — la mano
     // propia comparte la misma barra de botonera en cualquier modo.
@@ -3609,6 +3680,7 @@ _renderizarEquipos(e, animarReparto, hayCantoSinResolver) {
     // Nonagésimo segundo pase: mismo +10px (515→525) que el otro call site.
     // Nonagésimo tercer pase: mismo -30px (525→495) que el otro call site.
     this._dibujarManoJugador(e.misCartas, this._L ? this._L.manoY : 485, e.turno === 'mio' && !hayCantoSinResolver, animarReparto);
+    if (e.turno === 'mio') this._dibujarPlacaTurnoPropia();   // Pase 445
 }
 
 _calcularAsientos(companeros, rivales) {
@@ -4116,7 +4188,9 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
     const kS = this._L ? this._L.kSeat : 1;
     const cyN = this._yEq(cy);
     // Pase 440: en 3v3 los mazos de compañeros y rivales van un 20% más chicos.
-    const esTres = ((this.estado.companeros || []).length + (this.estado.rivales || []).length) === 5;
+    const totalSentados = (this.estado.companeros || []).length + (this.estado.rivales || []).length;
+    const esTres = totalSentados === 5;
+    const esDos = totalSentados === 3;
     const fD = esTres ? 0.8 : 1;
 
     if (manoCompartida) {
@@ -4162,19 +4236,35 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
       const anguloTotalAbanico = (cantidad - 1) * anguloPorCarta;
       const radioAbanico = 22 * kS * fD;
       const bulto = 3.5 * kS * fD;
+      // Pase 441/443: en 2v2 y 3v3 el mazo se dibuja en perspectiva según el lado de la mesa y girado ±20°.
+      const lado = (esTres || esDos) ? (cx < 340 ? 'izq' : (cx > 460 ? 'der' : 'arriba')) : null;   // Pase 443: también en 2v2
+      const claveDorso = (lado && this._clavesDorsoPersp && this.textures.exists(this._clavesDorsoPersp[lado]))
+        ? this._clavesDorsoPersp[lado] : (this._claveDorsoMiniActual || 'cardBackMini');
+      const rotBase = (lado === 'izq' ? 20 : (lado === 'der' ? -20 : 0)) * (Math.PI / 180);
 
-      for (let k = 0; k < cantidad; k++) {
+      // Pase 446: en 2v2 los rivales de los costados usan el abanico ilustrado (una sola imagen con 3, 2 o 1
+      // cartas según lo que les queda); la imagen derecha trae el logo TC derecho (sin espejar).
+      const claveAbanico = (esDos && (lado === 'izq' || lado === 'der') && cantidad > 0)
+        ? `mazoAbanico_${lado}_${Math.min(cantidad, 3)}` : null;
+      if (claveAbanico && this.textures.exists(claveAbanico)) {
+        const altoAbanico = 88 * kS;
+        const abanico = this.add.image(cx, cyN, claveAbanico).setOrigin(0.5, 0.5).setDepth(10);
+        abanico.setDisplaySize(altoAbanico * (abanico.width / abanico.height), altoAbanico);
+        abanico.setAngle(lado === 'izq' ? 21 : -18);   // Pase 447: inclinación exacta para acompañar la elipse de la mesa
+        this._sprites.push(abanico);
+      } else for (let k = 0; k < cantidad; k++) {
         const anguloCarta = -anguloTotalAbanico / 2 + k * anguloPorCarta;
         const radCarta = anguloCarta * (Math.PI / 180);
         const spread = Math.sin(radCarta) * radioAbanico;
         const bulge = (1 - Math.cos(radCarta)) * bulto;
 
-        const px = cx + spread;
-        const py = cyN - bulge;
+        const ox = spread, oy = -bulge;
+        const px = cx + ox * Math.cos(rotBase) - oy * Math.sin(rotBase);
+        const py = cyN + ox * Math.sin(rotBase) + oy * Math.cos(rotBase);
 
-        const carta = this.add.image(px, py, this._claveDorsoMiniActual || 'cardBackMini')
+        const carta = this.add.image(px, py, claveDorso)
           .setOrigin(0.5, 0.5)
-          .setRotation(radCarta)
+          .setRotation(radCarta + rotBase)
           .setDepth(10 + k);
         if (this._L) carta.setDisplaySize(45 * kS * fD, 69 * kS * fD);
         else if (fD !== 1) carta.setScale(carta.scaleX * fD, carta.scaleY * fD);
@@ -4187,44 +4277,10 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
     // Compañeros: filete verde oliva; rivales: filete borgoña. En su turno la placa se dora.
     const esManoDeEste = this.estado.manoId === j.id;
     const esCompa = tipo === 'companero';
-    const fsN = Math.round(12 * kS);
-    let nombreCorto = String(j.nombre || '');
-    if (nombreCorto.length > 14) nombreCorto = nombreCorto.slice(0, 13) + '…';
-    const yNombre = cyN - (esTres ? 34 : 40) * kS;
-    const iconoMano = esManoDeEste && this.textures.exists('icono_rival');
-    const nombreTxt = this.add.text(0, yNombre, nombreCorto + (esSuTurno ? ' ●' : ''), {
-      fontFamily: 'Nunito, Arial', fontSize: `${fsN}px`, fontStyle: '800',
-      color: esSuTurno ? '#5A2A00' : '#3B2312',
-    }).setOrigin(0.5).setDepth(50);
-    const padXp = 10 * kS, extraMano = iconoMano ? 15 * kS : 0;
-    const pw = Math.ceil(nombreTxt.width + padXp * 2 + extraMano);
-    const ph = Math.ceil(fsN + 11 * kS);
-    const px0 = cx - pw / 2, py0 = yNombre - ph / 2;
-    nombreTxt.setX(px0 + padXp + nombreTxt.width / 2);
-    const acento = esCompa ? 0x7F8F38 : 0x8E2B35;
-    const placa = this.add.graphics().setDepth(49);
-    placa.fillStyle(0x000000, 0.35);
-    placa.fillRoundedRect(px0, py0 + 2, pw, ph, 7);
-    if (esSuTurno) {
-      placa.fillStyle(0xFFD36B, 0.28);
-      placa.fillRoundedRect(px0 - 3, py0 - 3, pw + 6, ph + 6, 10);
-    }
-    placa.fillStyle(esSuTurno ? 0xB9791A : 0x5C3317, 1);
-    placa.fillRoundedRect(px0, py0, pw, ph, 7);
-    placa.fillStyle(esSuTurno ? 0xE9A31B : 0x7A4A26, 1);
-    placa.fillRoundedRect(px0 + 1.5, py0 + 1.5, pw - 3, Math.max(4, ph * 0.4), { tl: 6, tr: 6, bl: 1, br: 1 });
-    placa.lineStyle(2, 0x1a0f08, 1);
-    placa.strokeRoundedRect(px0, py0, pw, ph, 7);
-    placa.fillStyle(esSuTurno ? 0xFFE9A8 : 0xEAD9B5, 1);
-    placa.fillRoundedRect(px0 + 3, py0 + 3, pw - 6, ph - 6, 4);
-    placa.lineStyle(1.6, acento, 1);
-    placa.strokeRoundedRect(px0 + 4, py0 + 4, pw - 8, ph - 8, 3);
-    this._sprites.push(placa);
-    if (iconoMano) {
-      const ic = this.add.image(px0 + pw - padXp - 3 * kS, yNombre, 'icono_rival').setDisplaySize(12 * kS, 14 * kS).setDepth(51);
-      this._sprites.push(ic);
-    }
-    this._sprites.push(nombreTxt);
+    const yNombre = cyN - ((esDos && tipo !== 'companero') ? 58 : (esTres ? 34 : 40)) * kS;   // Pase 446: el abanico lateral es más alto
+    const { pw, ph, px0, py0 } = this._dibujarPlacaNombre(cx, yNombre, j.nombre, kS, {
+      turno: esSuTurno, acento: esCompa ? 0x7F8F38 : 0x8E2B35, mano: esManoDeEste, rival: !esCompa,
+    });
     // Centésimo décimo quinto pase: nombre clickeable en equipos (2v2/3v3), mismo criterio
     // que 1v1 (ver labelRival). Pase 440: la zona clickeable es toda la placa.
     const zonaNombre = this.add.rectangle(cx, yNombre, pw, ph, 0x000000, 0.001).setDepth(52);
@@ -4277,11 +4333,32 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
       const fraccionHaciaAsiento = 0.68;
       let baseX = centroMesaX + outX * outLen * fraccionHaciaAsiento;
       let baseY = centroMesaY + outY * outLen * fraccionHaciaAsiento;
-      // Pase 440: en 3v3 las cartas jugadas de los dos rivales de abajo no deben pisar la mano
-      // propia ni los mazos: suben y se corren un poco hacia afuera.
-      if (esTres && outY > 0.15) {
-        baseX += outX * 12;
-        baseY -= 18;
+      let dirX = outX, dirY = outY;
+      let rotZona = 0;
+      // Pase 441: en 3v3 las cartas jugadas caen en 6 zonas fijas DENTRO del paño (dos filas de tres:
+      // arriba compa/rival/compa, abajo rival/yo/rival). Las más viejas se apilan hacia el costado.
+      if (esDos) {
+        // Pase 443: cruz de 4 zonas dentro del paño (norte = compañero, oeste/este = rivales, el sur es mi fila).
+        const ZONAS_2V2 = {
+          180: { x: 235, y: 215, sx: -1, sy: 0, rot: -6 },   // Rival1 (oeste)
+          270: { x: 400, y: 162, sx: 1, sy: 0, rot: 2 },     // Compañero (norte)
+          0: { x: 565, y: 215, sx: 1, sy: 0, rot: 6 },       // Rival2 (este)
+        };
+        const z2 = ZONAS_2V2[Math.round(((angulo % 360) + 360) % 360)];
+        if (z2) { baseX = z2.x; baseY = z2.y; dirX = z2.sx; dirY = z2.sy; rotZona = z2.rot * (Math.PI / 180); }
+      }
+      if (esTres) {
+        // Pase 442: trayectoria ovalada alrededor del centro del paño (ya con la mesa elevada), en vez de la
+        // grilla 2x3: norte, noroeste/noreste, oeste/este y sur (mi fila). `rot` en grados.
+        const ZONAS_3V3 = {
+          150: { x: 250, y: 236, sx: -1, sy: 0, rot: -12 },   // Rival1 (oeste)
+          210: { x: 268, y: 160, sx: -1, sy: 0, rot: -8 },    // Compa1 (noroeste)
+          270: { x: 400, y: 140, sx: 1, sy: 0, rot: 0 },      // Rival2 (norte)
+          330: { x: 532, y: 160, sx: 1, sy: 0, rot: 8 },      // Compa2 (noreste)
+          30: { x: 550, y: 236, sx: 1, sy: 0, rot: 12 },      // Rival3 (este)
+        };
+        const z = ZONAS_3V3[Math.round(((angulo % 360) + 360) % 360)];
+        if (z) { baseX = z.x; baseY = z.y; dirX = z.sx; dirY = z.sy; rotZona = z.rot * (Math.PI / 180); }
       }
       // Pase 215 — bug real encontrado: "únicamente se ven las primeras
       // cartas jugadas, las que le siguen no se ven" en 2v2. Los datos ya
@@ -4317,8 +4394,8 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
       jugadas.forEach((carta, idx) => {
         const esUltima = idx === jugadas.length - 1;
         const offset = (jugadas.length - 1 - idx) * pasoApilado;
-        const px = baseX + outX * offset;
-        const py = baseY + outY * offset;
+        const px = baseX + dirX * offset;
+        const py = baseY + dirY * offset;
         const keyOriginal = `${carta.valor}_${carta.palo}`;
         const keyEscalada = `${keyOriginal}_${anchoBaseJugadaR}x${altoBaseJugadaR}`;
         this._crearTexturaEscalada(keyOriginal, keyEscalada, anchoBaseJugadaR, altoBaseJugadaR);
@@ -4342,11 +4419,14 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
         // _dibujarFilaCartas/_dibujarDueloCartas más abajo.
         const pyN = this._yEq(py);
         const persp = this._calcularPerspectiva(pyN);
-        const anchoCarta = 58 * kS * persp.scale;
-        const altoCarta  = 87 * kS * persp.scale;
+        const fJug = (esTres || esDos) ? 0.85 : 1;   // Pase 442/443: cartas tiradas -15% en 2v2 y 3v3
+        // Pase 446: todas las cartas jugadas se dibujan igual, planas (sin aura, brillo ni escala extra en la ganadora).
+        const anchoCarta = 58 * kS * persp.scale * fJug;
+        const altoCarta  = 87 * kS * persp.scale * fJug;
 
         const img = this.add.image(px, pyN, keyEscalada)
           .setDisplaySize(anchoCarta, altoCarta)
+          .setRotation(rotZona)
           .setDepth(60 + idx)
           .setAlpha(esUltima ? 1 : 0.85);
         this._sprites.push(img);
@@ -5045,7 +5125,7 @@ _dibujarDueloCartas(cartasRivalArr, cartasMiasArr, yCentro, escala, depthBase) {
     }
 }
 
-_dibujarFilaCartas(cartas, y, jugable, esMiMano = false, escala = 1, animar = false, depthBase = 10) {
+_dibujarFilaCartas(cartas, y, jugable, esMiMano = false, escala = 1, animar = false, depthBase = 10, rotGrados = 0) {
     if (!cartas || cartas.length === 0) return;
     const anchoBase = 90 * escala;
     const altoBase  = 135 * escala;
@@ -5076,7 +5156,7 @@ _dibujarFilaCartas(cartas, y, jugable, esMiMano = false, escala = 1, animar = fa
       // cartas jugadas (el usuario pidió que queden derechas sobre la
       // mesa) — se deja el jitter chico de posición, mismo criterio que en
       // _dibujarDueloCartas.
-      const rotacion = 0;
+      const rotacion = rotGrados * (Math.PI / 180);   // Pase 444: inclinación sutil de mi carta jugada en 2v2
 
       if (esCartaJugada) {
         const semilla = this._hashSimple(carta.id);
@@ -5092,7 +5172,7 @@ _dibujarFilaCartas(cartas, y, jugable, esMiMano = false, escala = 1, animar = fa
       // chica en las dos dimensiones, no "aplastada" solo verticalmente. Ver
       // _calcularPerspectiva para el rango nuevo y el empujón extra en Y.
       destinoY += persp.offsetY;
-      const anchoFinal = anchoBase * persp.scale;
+      const anchoFinal = anchoBase * persp.scale;   // Pase 446: sin destaque de carta ganadora
       const altoFinal = altoBase * persp.scale;
 
       let sombra = null;
@@ -5149,6 +5229,91 @@ _dibujarFilaCartas(cartas, y, jugable, esMiMano = false, escala = 1, animar = fa
 
       this._sprites.push(img);
     });
+}
+
+// Pase 444/445: placa de pergamino con marco de madera para el nombre de un asiento. Acento verde
+// oliva (equipo propio) o borgoña (rivales). En su turno se dora y recibe un resplandor dorado que
+// respira (reemplaza al cartel flotante "Tu turno" en equipos). Devuelve la geometría para el anillo
+// de tiempo y la zona clickeable.
+_dibujarPlacaNombre(cx, yNombre, nombre, kS, { turno = false, acento = 0x7F8F38, mano = false, rival = false } = {}) {
+  const fsN = Math.round(12 * kS);
+  let nombreCorto = String(nombre || '');
+  if (nombreCorto.length > 14) nombreCorto = nombreCorto.slice(0, 13) + '…';
+  const iconoMano = mano && this.textures.exists('icono_rival');
+  const nombreTxt = this.add.text(0, yNombre, nombreCorto + (turno ? ' ●' : ''), {
+    fontFamily: 'Nunito, Arial', fontSize: `${fsN}px`, fontStyle: '800',
+    // Pase 447: nombre en verde oliva (mi equipo) o bronce rojizo (rivales); en turno se oscurece un poco para leerse sobre el dorado.
+    color: rival ? (turno ? '#7A2E12' : '#8A3A1E') : (turno ? '#4F5A0E' : '#5D6B14'),
+  }).setOrigin(0.5).setDepth(50);
+  const padXp = 10 * kS, extraMano = iconoMano ? 15 * kS : 0;
+  const pw = Math.ceil(nombreTxt.width + padXp * 2 + extraMano);
+  const ph = Math.ceil(fsN + 11 * kS);
+  const px0 = cx - pw / 2, py0 = yNombre - ph / 2;
+  nombreTxt.setX(px0 + padXp + nombreTxt.width / 2);
+  if (turno) {
+    const brillo = this.add.graphics().setDepth(48);
+    [[10, 0.08], [7, 0.12], [5, 0.18], [3, 0.28]].forEach(([m, a]) => {
+      brillo.fillStyle(0xFFD36B, a);
+      brillo.fillRoundedRect(px0 - m, py0 - m, pw + 2 * m, ph + 2 * m, 7 + m);
+    });
+    this._sprites.push(brillo);
+    if (!this._tweensFinal) this._tweensFinal = [];
+    this._tweensFinal.push(this.tweens.add({ targets: brillo, alpha: { from: 1, to: 0.55 }, duration: 800, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' }));
+  }
+  const placa = this.add.graphics().setDepth(49);
+  placa.fillStyle(0x000000, 0.35);
+  placa.fillRoundedRect(px0, py0 + 2, pw, ph, 7);
+  placa.fillStyle(turno ? 0xB9791A : (rival ? 0x3A1F0F : 0x8A5B2F), 1);   // Pase 447: madera clara (equipo) / oscura (rivales)
+  placa.fillRoundedRect(px0, py0, pw, ph, 7);
+  placa.fillStyle(turno ? 0xE9A31B : (rival ? 0x57331B : 0xB07A42), 1);
+  placa.fillRoundedRect(px0 + 1.5, py0 + 1.5, pw - 3, Math.max(4, ph * 0.4), { tl: 6, tr: 6, bl: 1, br: 1 });
+  placa.lineStyle(2, 0x1a0f08, 1);
+  placa.strokeRoundedRect(px0, py0, pw, ph, 7);
+  placa.fillStyle(turno ? 0xFFE9A8 : (rival ? 0xDDC9A1 : 0xF0E2C0), 1);
+  placa.fillRoundedRect(px0 + 3, py0 + 3, pw - 6, ph - 6, 4);
+  placa.lineStyle(1.6, acento, 1);
+  placa.strokeRoundedRect(px0 + 4, py0 + 4, pw - 8, ph - 8, 3);
+  this._sprites.push(placa);
+  // Pase 447: mini-escudos decorativos en los extremos de la placa. Mi equipo: dorado con centro verde oliva;
+  // rivales: bronce con centro rojo apagado.
+  const sw = 12 * kS, sh = 15 * kS;
+  [px0 - 3 * kS, px0 + pw + 3 * kS].forEach(sx => {
+    const esc = this.add.graphics().setDepth(51);
+    const forma = (k) => {
+      const w = sw * k / 2, h = sh * k / 2;
+      return [
+        { x: -w, y: -h }, { x: 0, y: -h * 0.82 }, { x: w, y: -h },
+        { x: w, y: h * 0.05 }, { x: w * 0.55, y: h * 0.55 }, { x: 0, y: h },
+        { x: -w * 0.55, y: h * 0.55 }, { x: -w, y: h * 0.05 },
+      ];
+    };
+    esc.fillStyle(0x000000, 0.35);
+    esc.fillPoints(forma(1).map(p => ({ x: p.x, y: p.y + 1.5 })), true);
+    esc.fillStyle(rival ? 0xA8692F : 0xD9A82A, 1);
+    esc.fillPoints(forma(1), true);
+    esc.lineStyle(1.4, 0x1a0f08, 1);
+    esc.strokePoints(forma(1), true, true);
+    esc.fillStyle(rival ? 0x8B2A2A : 0x6F8A2B, 1);
+    esc.fillPoints(forma(0.55), true);
+    esc.setPosition(sx, yNombre);
+    this._sprites.push(esc);
+  });
+  if (iconoMano) {
+    const ic = this.add.image(px0 + pw - padXp - 3 * kS, yNombre, 'icono_rival').setDisplaySize(12 * kS, 14 * kS).setDepth(51);
+    this._sprites.push(ic);
+  }
+  this._sprites.push(nombreTxt);
+  return { pw, ph, px0, py0 };
+}
+
+// Pase 445: en equipos mi turno ya no se anuncia con el texto "● Tu turno": aparece mi propia placa
+// (con mi nombre) dorada y con resplandor donde estaba ese texto, y el anillo de tiempo la rodea.
+_dibujarPlacaTurnoPropia() {
+  const kS = this._L ? this._L.kSeat : 1;
+  const cx = this._L ? this._L.turnoX : 690;
+  const cy = this._L ? this._L.turnoY : 500;
+  const r = this._dibujarPlacaNombre(cx, cy, (this.usuario && this.usuario.username) || 'Vos', kS, { turno: true, acento: 0x7F8F38 });
+  this._anilloRect = { x: r.px0 - 2, y: r.py0 - 2, w: r.pw + 4, h: r.ph + 4, r: 8 };
 }
 
 _hashSimple(str) {
@@ -5766,6 +5931,11 @@ _crearBotonOverlay({ x, y, ancho, alto = 44, texto, variante = 'dorado', tamanoF
 _dibujarBotonesCanto(e) {
   const CENTRO_X = 400;
   const GAP = 30;
+  // Pase 443: en equipos va el botón circular de cartas a la derecha de la botonera; las filas
+  // dejan libre ese margen y Truco / Ir al mazo pierden un 15% de ancho.
+  const esEq = Array.isArray(e.companeros);
+  if (esEq) this._dibujarBotonCartasEquipo(e);
+  const F_ANCHO_EQ = esEq ? 0.85 : 1;
 
   // Nonagésimo séptimo pase (resumen histórico — ver el pase 269 más abajo
   // para el esquema actual): el usuario pidió que el TAMAÑO no cambiara de
@@ -5807,7 +5977,7 @@ _dibujarBotonesCanto(e) {
   const centrarFila = (specs, y, gap = GAP, extraK = 1) => {
     const kB = kB0 * extraK;   // Pase 396: escala extra opcional por fila (botonera en dos filas)
     const anchoNatural = (specs.reduce((acc, s) => acc + s.ancho, 0) + gap * (specs.length - 1)) * kB;
-    const anchoDisponible = this.anchoBotonera - 40;
+    const anchoDisponible = this.anchoBotonera - 40 - (esEq && !this._L ? 111 : 0);
     // Freno de emergencia: la única fila donde el ancho nativo de verdad no
     // entra es la fusionada de 5 (Truco+Envido+RealEnvido+FaltaEnvido+
     // IrAlMazo, gap 8 — ver pase 97). Si no entra, se achica TODA la fila
@@ -6064,7 +6234,7 @@ _dibujarBotonesCanto(e) {
     // límite duro de Y=600 (nada calculado más allá de ese borde se ve, ver
     // Metodología) — con el tamaño ya fijo (ver arriba) no hace falta nada
     // extra para evitar que la fila crezca de más con pocos botones.
-    const specsFila = itemsFila.map(it => specImagen(it.id, it.onClick));
+    const specsFila = itemsFila.map(it => { const sp = specImagen(it.id, it.onClick); return (it.id === 'envido' || it.id === 'real-envido' || it.id === 'falta-envido') ? sp : { ...sp, ancho: sp.ancho * F_ANCHO_EQ }; });
     // Pase 396 (layout angosto): botonera "piramide" como en el nativo — arriba
     // los tres cantos de tanto (Envido / Real Envido / Falta Envido), abajo
     // Truco (mas grande) + Ir al Mazo. Si no hay Envido, queda una sola fila.
@@ -6076,7 +6246,7 @@ _dibujarBotonesCanto(e) {
       const filaArriba = itemsFila.filter(it => ids.includes(it.id))
         .map(it => { const sp = specImagen(it.id, it.onClick); const c = CLAVE_IMAGEN_BOTON[it.id]; return { ...sp, alto: altoArriba, ancho: this._anchoBotonImagen(c, altoArriba) }; });
       const filaAbajo = itemsFila.filter(it => !ids.includes(it.id))
-        .map(it => { const sp = specImagen(it.id, it.onClick); const esTruco = it.id !== 'ir-al-mazo'; const h = esTruco ? Math.round(altoAbajo * 1.3) : altoAbajo; const c = CLAVE_IMAGEN_BOTON[it.id]; return { ...sp, alto: h, ancho: this._anchoBotonImagen(c, h) }; });
+        .map(it => { const sp = specImagen(it.id, it.onClick); const esTruco = it.id !== 'ir-al-mazo'; const h = esTruco ? Math.round(altoAbajo * 1.3) : altoAbajo; const c = CLAVE_IMAGEN_BOTON[it.id]; return { ...sp, alto: h, ancho: this._anchoBotonImagen(c, h) * F_ANCHO_EQ }; });
       const kk = kB0 * K2;
       const sep = 8 * kk;
       const hA = altoArriba * kk, hB = Math.round(altoAbajo * 1.3) * kk;
@@ -6098,6 +6268,87 @@ _dibujarBotonesCanto(e) {
     // número que había que mantener sincronizado a mano con `yBotonera`).
     centrarFila(specsFila, Y_FILA_UNICA, 8);
   }
+}
+
+// Pase 443: botón circular de "mostrar / esconder mis cartas" (equipos), dibujado en la propia botonera,
+// a la derecha de la fila de abajo. Antes era un botón de React flotando en una esquina (tapaba el
+// marcador). Los íconos de seña se dibujan en canvas con los mismos trazos que usaba el SVG.
+_crearTexturasSenas() {
+  if (this.textures.exists('senaOcultar') && this.textures.exists('senaMostrar')) return;
+  const hacer = (clave, color, dibujar) => {
+    const cv = document.createElement('canvas');
+    cv.width = 112; cv.height = 112;
+    const ctx = cv.getContext('2d');
+    ctx.scale(4, 4);
+    ctx.strokeStyle = color; ctx.fillStyle = color;
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    dibujar(ctx);
+    this.textures.addCanvas(clave, cv);
+  };
+  const trazo = (ctx, d, lw) => { ctx.lineWidth = lw; ctx.stroke(new Path2D(d)); };
+  hacer('senaOcultar', '#FFF3D2', (ctx) => {
+    trazo(ctx, 'M4 12 Q14 20 24 12', 2.4);
+    trazo(ctx, 'M7 16.2 L5.2 19', 2.4);
+    trazo(ctx, 'M14 18 L14 21.2', 2.4);
+    trazo(ctx, 'M21 16.2 L22.8 19', 2.4);
+    trazo(ctx, 'M5 7.5 Q14 3 23 7.5', 2);
+  });
+  hacer('senaMostrar', '#3B1F08', (ctx) => {
+    trazo(ctx, 'M3 15 Q14 5 25 15 Q14 25 3 15 Z', 2.2);
+    ctx.beginPath(); ctx.arc(14, 15, 4.2, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#FFF8E1'; ctx.beginPath(); ctx.arc(15.6, 13.4, 1.5, 0, Math.PI * 2); ctx.fill();
+    trazo(ctx, 'M6 7.6 Q13 1.6 22 5.4', 2);
+    trazo(ctx, 'M24.5 3 L24.5 6.5 M22.8 4.8 L26.2 4.8', 1.6);
+  });
+}
+
+_dibujarBotonCartasEquipo(e) {
+  if (!this._anchoPanelBotonera) return;
+  this._crearTexturasSenas();
+  const kB0 = this._L ? this._L.kBoton : 1;
+  const d = Math.round(44 * kB0);
+  const x = 400 + this._anchoPanelBotonera / 2 - 46 * kB0;
+  const y = this.yCentroBotonera + (this._L ? 14 : 8);
+  const activo = !!e.compartiendoMiMano;
+  const r = d / 2;
+
+  const g = this.add.graphics().setDepth(200);
+  g.fillStyle(activo ? 0x9A5F0A : 0x2A1507, 1);
+  g.fillCircle(x, y + 3, r);
+  g.fillStyle(activo ? 0xE9A31B : 0x7A4A22, 1);
+  g.fillCircle(x, y, r);
+  g.fillStyle(activo ? 0xFFD36B : 0xA9713A, 1);
+  g.fillCircle(x, y - r * 0.12, r * 0.86);
+  g.lineStyle(3, activo ? 0x5A3200 : 0x2A1507, 1);
+  g.strokeCircle(x, y, r);
+  const ico = this.add.image(x, y, activo ? 'senaMostrar' : 'senaOcultar').setDisplaySize(d * 0.64, d * 0.64).setDepth(201);
+  const velo = this.add.graphics().setDepth(202);
+  velo.fillStyle(0x000000, 1);
+  velo.fillCircle(x, y, r);
+  velo.setAlpha(0);
+  this._veloCartas = velo;
+  const zona = this.add.zone(x, y, d, d).setDepth(203).setInteractive({ useHandCursor: true });
+  zona.on('pointerdown', () => this._alternarCompartirMano());
+  this._sprites.push(g, ico, velo, zona);
+
+  const restante = (this._cartasCooldownHasta || 0) - Date.now();
+  if (restante > 0) this._animarVeloCartas(restante);
+}
+
+_animarVeloCartas(ms) {
+  const velo = this._veloCartas;
+  if (!velo || !velo.scene) return;
+  if (this._tweenVeloCartas) { try { this._tweenVeloCartas.stop(); } catch (err) {} }
+  velo.setAlpha(0.62);
+  this._tweenVeloCartas = this.tweens.add({ targets: velo, alpha: 0, duration: ms, ease: 'Linear' });
+}
+
+_alternarCompartirMano() {
+  // Enfriamiento de 3 s (antispam, mismo criterio que el botón de React que reemplaza).
+  if (Date.now() < (this._cartasCooldownHasta || 0)) return;
+  this._cartasCooldownHasta = Date.now() + 3000;
+  this.socket.emit('alternar-compartir-mano', { codigoSala: this.codigoSala });
+  this._animarVeloCartas(3000);
 }
 
 _declararSonBuenas() {
@@ -6140,6 +6391,7 @@ _irseAlMazo() {
   _limpiarSprites() {
     // Pase 391: frena los tweens infinitos de la pantalla final (rayos, destellos).
     if (this._tweensFinal) { this._tweensFinal.forEach(t => { try { t.stop(); } catch (e) {} }); this._tweensFinal = []; }
+    if (this._tweenVeloCartas) { try { this._tweenVeloCartas.stop(); } catch (e) {} this._tweenVeloCartas = null; }
     this._sprites.forEach(s => { if (s && s.destroy) s.destroy(); });
     this._sprites = [];
   }
