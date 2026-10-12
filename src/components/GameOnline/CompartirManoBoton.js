@@ -1,8 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { getSocket } from '../../services/socket';
 
 export default function CompartirManoBoton({ codigoSala, esEquipos }) {
   const [activo, setActivo] = useState(false);
+  // Pase 432: enfriamiento de 3 s tras cada clic (antispam) — el botón queda oscurecido y sin respuesta.
+  const [enfriando, setEnfriando] = useState(false);
+  const timerEnfriamiento = useRef(null);
+  useEffect(() => () => clearTimeout(timerEnfriamiento.current), []);
 
   useEffect(() => {
     const socket = getSocket();
@@ -14,12 +18,17 @@ export default function CompartirManoBoton({ codigoSala, esEquipos }) {
   if (!esEquipos) return null;
 
   const alternar = () => {
+    if (enfriando) return;
     getSocket().emit('alternar-compartir-mano', { codigoSala });
+    setEnfriando(true);
+    timerEnfriamiento.current = setTimeout(() => setEnfriando(false), 3000);
   };
 
   return (
-    <button onClick={alternar} title={activo ? 'Dejar de mostrar mis cartas' : 'Mostrar mis cartas al equipo'} aria-label="Compartir mis cartas con el equipo" style={{ ...estilos.boton, ...(activo ? estilos.activo : {}) }}>
+    <button onClick={alternar} disabled={enfriando} title={activo ? 'Dejar de mostrar mis cartas' : 'Mostrar mis cartas al equipo'} aria-label="Compartir mis cartas con el equipo" style={{ ...estilos.boton, ...(activo ? estilos.activo : {}), ...(enfriando ? estilos.enfriando : {}) }}>
       {activo ? '👁️' : '🙈'}
+      {enfriando && <span key="velo" style={estilos.velo} />}
+      <style>{'@keyframes veloEnfriamientoMano { from { opacity: 0.62; } to { opacity: 0; } }'}</style>
     </button>
   );
 }
@@ -36,6 +45,12 @@ const estilos = {
     fontSize: 19, cursor: 'pointer', zIndex: 1000, padding: 0,
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     boxShadow: '0 3px 0 #4A2C11, inset 0 2px 0 rgba(255,255,255,0.28), 0 5px 8px rgba(0,0,0,0.35)'
+  },
+  enfriando: { cursor: 'default' },
+  // Velo oscuro que se va aclarando durante los 3 s de espera.
+  velo: {
+    position: 'absolute', inset: 0, borderRadius: 9, background: '#000', pointerEvents: 'none',
+    animation: 'veloEnfriamientoMano 3s linear forwards'
   },
   activo: {
     background: 'linear-gradient(160deg, #FFD36B, #E9A31B)',

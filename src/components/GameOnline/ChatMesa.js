@@ -97,7 +97,11 @@ export default function ChatMesa({ codigoSala, esEquipos, personaje = 'gaucho', 
     const socket = getSocket();
 
     const handler = (msg) => {
-      setMensajes((prev) => [...prev, msg]);
+      // Pase 432: el aviso de cartas compartidas es UN solo mensaje por jugador: el nuevo reemplaza al
+      // anterior (y queda al final del chat) en vez de acumular uno por cada clic.
+      setMensajes((prev) => (msg.claveCartas
+        ? [...prev.filter((m) => m.claveCartas !== msg.claveCartas), msg]
+        : [...prev, msg]));
 
       // Un mensaje de alguien bloqueado no debe marcar "nuevo mensaje" en
       // la pestaña que no está activa, ya que nunca se va a mostrar.
@@ -220,13 +224,17 @@ export default function ChatMesa({ codigoSala, esEquipos, personaje = 'gaucho', 
         {mensajesVisibles.map((m, i) => (
           m.sistema ? (
             <div key={i} style={estilos.mensajeSistema}>⚡ {m.texto}</div>
+          ) : m.cartasEscondidas ? (
+            <div key={i} style={estilos.mensajeCartasOculto}>
+              <span style={estilos.nombre}>{m.usuario === usuarioActual ? 'Vos' : m.usuario}</span> escondió sus cartas
+            </div>
           ) : m.cartasCompartidas ? (
             <div key={i} style={estilos.mensajeCartas}>
               <span
                 style={{ ...estilos.nombre, cursor: m.usuario !== usuarioActual ? 'pointer' : 'default' }}
                 onClick={() => abrirPerfilDe(m.usuario)}
               >{m.usuario === usuarioActual ? 'Vos' : m.usuario}</span>
-              <span style={estilos.textoCartas}>compartió sus cartas</span>
+              <span style={estilos.textoCartas}>{m.usuario === usuarioActual ? 'estás mostrando tus cartas' : 'está mostrando sus cartas'}</span>
               <div style={estilos.filaCartas}>
                 {m.cartasCompartidas.map((c, k) => (
                   <img
@@ -451,6 +459,7 @@ const estilos = {
     background: '#FAF5E8', border: '1.5px solid #6b4a3466', borderRadius: 10,
   },
   textoCartas: { fontSize: 12, color: '#6b4a34', fontStyle: 'italic' },
+  mensajeCartasOculto: { fontSize: 12, color: '#6b4a34', fontStyle: 'italic', opacity: 0.55, padding: '4px 8px', margin: '4px 0' },
   filaCartas: { display: 'flex', gap: 4 },
   miniCarta: { width: 34, height: 'auto', borderRadius: 3, boxShadow: '0 1px 3px rgba(0,0,0,0.35)' },
   tab: {
