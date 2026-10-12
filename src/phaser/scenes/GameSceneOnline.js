@@ -361,7 +361,7 @@ preload() {
     // Pase 378: los 4 personajes para las siluetas del "radar" del asiento vacío (se tiñen por
     // código, ver _dibujarRadarSiluetas).
     ['gaucho', 'gaucha', 'gaucho2', 'gaucha2'].forEach(p => {
-      this.load.image(`siluetaEspera_${p}`, conVersion(`assets/${p}-avatar.png`));
+      this.load.image(`siluetaEspera_${p}`, conVersion(`assets/${p}-avatar-cara.png`));   // Pase 437: la silueta del asiento vacío es el rostro, no el cuerpo entero
     });
     // Pase 267, punto 4: este tablón ya NO se usa — el botón "Volver al
     // Lobby" pasa a ser el mismo Botón 3D Pill-shaped (nine-slice) que la
@@ -1968,7 +1968,7 @@ _actualizarTextoBuscando() {
   const unidos = (this._jugadoresSala || []).length;
   t.setText(lleno ? 'Iniciando partida...' : (equipos ? `Buscando jugadores... (${unidos}/${this._capacidadSala})` : 'Buscando rival...'));
   // Pase 434: en 2v2/3v3 la grilla de dos filas ocupa más alto, el texto baja.
-  t.setY(equipos ? (this._capacidadSala > 4 ? 506 : 515) : 450);
+  t.setY(equipos ? 520 : 470);
 }
 
 // Destruye (no solo oculta) el título de la sala de espera — se llama en
@@ -2015,23 +2015,25 @@ _redibujarFilaEspera() {
   if (!this._modoSala || !this._capacidadSala) return;
 
   // Pase 346: el modo ("1v1") va en una mini píldora dorada dentro del cartel.
-  this._actualizarBannerEsperaTitulo('Esperando jugadores', this._modoSala, this._textoDetalleSala());
+  // Pase 436: en 2v2/3v3 el cartel sube (y=100, antes 130) para aprovechar la franja vacía de arriba.
+  this._actualizarBannerEsperaTitulo('Esperando jugadores', this._modoSala, this._textoDetalleSala(), this._capacidadSala > 2 ? { y: 100 } : { y: 105 });
   this._actualizarTextoBuscando();
 
   const total = this._capacidadSala;
   const equipos = total > 2;
   // Pase 434: en 2v2/3v3 el botón "Volver al Lobby" baja para dejar lugar a las dos filas.
-  if (this.botonVolverEspera && this.botonVolverEspera.scene) this.botonVolverEspera.setY(equipos ? 556 : 518);
+  if (this.botonVolverEspera && this.botonVolverEspera.scene) this.botonVolverEspera.setY(equipos ? 562 : 540);
   // Pase 209: pedido del usuario ("en la pantalla nueva de carga,
   // agrandemos todo") — tiles, huecos y tipografía de toda la fila (ver
   // también _dibujarTileEspera más abajo) subieron de tamaño.
-  const tamano = total <= 2 ? 140 : total <= 4 ? 115 : 92;
-  // Pase 346: en 1v1 el hueco crece (76) para alojar el badge VS entre los dos aros.
-  const gap = total <= 2 ? 96 : total <= 4 ? 30 : 20;
+  // Pase 437: en 1v1 los aros crecen (140 → 170) y el hueco (96 → 125) para rellenar el paño.
+  const tamano = total <= 2 ? 170 : total <= 4 ? 115 : 92;
+  // Pase 346: en 1v1 el hueco crece para alojar el badge VS entre los dos aros.
+  const gap = total <= 2 ? 125 : total <= 4 ? 30 : 20;
   const paso = tamano + gap;
   const anchoTotal = total * paso - gap;
   const inicioX = 400 - anchoTotal / 2 + tamano / 2;
-  const cy = 270;
+  const cy = 290;   // Pase 437: 270 → 290 (bloque más centrado, el cartel sube a y=105)
 
   const pendientes = [];
   if (equipos) {
@@ -2045,7 +2047,7 @@ _redibujarFilaEspera() {
   }
 
   // Pase 346: badge "VS" amarillo 3D, centrado entre los dos avatares (solo 1v1).
-  if (total === 2) this._dibujarBadgeVsEspera(400, cy);
+  if (total === 2) this._dibujarBadgeVsEspera(400, cy, 104);
 
   if (pendientes.length > 0) {
     const generacionDeEstaCarga = this._filaEsperaGeneracion;
@@ -2081,8 +2083,9 @@ _redibujarFilaEspera() {
 // Entre píldoras de tiles contiguos queda siempre un hueco de 16 px.
 _dibujarGrillaEquiposEspera(total, pendientes) {
   const n = total / 2;
-  const T = n === 3 ? 64 : 68;              // diámetro "nominal" del tile
-  const radioAro = T * 0.5625;              // el aro mide 1.125 × T (ver _dibujarTileEspera)
+  // Pase 436: tiles +25 % (T 64 → 80; el aro mide 1.125 × T = 90 px) — antes quedaba mucho paño vacío.
+  const T = 80;
+  const radioAro = T * 0.5625;
   const jugadores = this._jugadoresSala || [];
   const miNombre = this.usuario && this.usuario.username;
   const yo = jugadores.find(j => j && j.username === miNombre);
@@ -2094,7 +2097,7 @@ _dibujarGrillaEquiposEspera(total, pendientes) {
   };
 
   const ESTILO_ETIQUETA = {
-    fontFamily: 'Fredoka, Arial', fontSize: '15px', fontStyle: '700', color: '#F1D9A8',
+    fontFamily: 'Fredoka, Arial', fontSize: '16px', fontStyle: '700', color: '#F1D9A8',
     stroke: '#2C160E', strokeThickness: 4,
   };
   const etiqueta = (texto, y) => {
@@ -2104,25 +2107,30 @@ _dibujarGrillaEquiposEspera(total, pendientes) {
     this._sprites.push(t);
   };
 
-  // Ancho de las píldoras (mismo cálculo que en _dibujarTileEspera, modo compacto) para que el
-  // paso entre tiles deje 16 px libres entre una píldora y la siguiente.
-  const med = this.add.text(0, 0, '✓ Conectado', { fontFamily: 'Fredoka, Arial', fontSize: '13px', fontStyle: '600' });
-  const med2 = this.add.text(0, 0, 'Conectando...', { fontFamily: 'Fredoka, Arial', fontSize: '13px', fontStyle: '600' });
-  const anchoPill = Math.max(Math.ceil(Math.max(med.width, med2.width)) + 28, 100);
+  // Ancho de las píldoras (mismo cálculo que en _dibujarTileEspera, modo compacto: 15 px negrita)
+  // para que el paso entre tiles deje 16 px libres entre una píldora y la siguiente.
+  const ESTILO_MED = { fontFamily: 'Fredoka, Arial', fontSize: '15px', fontStyle: '700' };
+  const med = this.add.text(0, 0, '✓ Conectado', ESTILO_MED);
+  const med2 = this.add.text(0, 0, 'Conectando...', ESTILO_MED);
+  const anchoPill = Math.max(Math.ceil(Math.max(med.width, med2.width)) + 32, 110);
   med.destroy(); med2.destroy();
   const GAP = 16;
   const paso = Math.max(radioAro * 2, anchoPill) + GAP;
   const inicioX = 400 - ((n - 1) * paso) / 2;
 
-  const yEtiqueta1 = 190;
-  const cy1 = yEtiqueta1 + 14 + radioAro;
-  const yVs = cy1 + radioAro + 60;
-  const cy2 = yVs + 24 + 4 + radioAro;
-  const yEtiqueta2 = cy2 + radioAro + 42;
+  // Distribución vertical (lienzo de 600 de alto): título arriba (y=100), etiqueta, fila 1, escudo VS,
+  // fila 2, etiqueta, texto de estado y botón abajo (y=562). La píldora (alto 30) cuelga a
+  // radioAro + 37 px del centro del tile.
+  const VS = 62;                                        // Pase 436: escudo +20 % (52 → 62)
+  const yEtiqueta1 = 154;
+  const cy1 = yEtiqueta1 + 12 + radioAro;
+  const yVs = cy1 + radioAro + 37 + 2 + VS / 2;
+  const cy2 = yVs + VS / 2 + 2 + radioAro;
+  const yEtiqueta2 = cy2 + radioAro + 37 + 10;
 
   etiqueta('TU EQUIPO', yEtiqueta1);
   armar(miEquipo).forEach((j, i) => this._dibujarTileEspera(inicioX + i * paso, cy1, T / 2, j, pendientes, true));
-  this._dibujarBadgeVsEspera(400, yVs, 52);
+  this._dibujarBadgeVsEspera(400, yVs, VS);
   armar(otroEquipo).forEach((j, i) => this._dibujarTileEspera(inicioX + i * paso, cy2, T / 2, j, pendientes, true));
   etiqueta('EQUIPO RIVAL', yEtiqueta2);
 }
@@ -2160,13 +2168,16 @@ _dibujarTileEspera(cx, cy, radio, jugador, pendientes, compacto = false) {
 
   if (conectado) {
     const esFoto = jugador.avatar_tipo === 'foto' && !!jugador.foto_perfil_url;
-    const url = esFoto ? jugador.foto_perfil_url : `/assets/${jugador.personaje || 'gaucho'}-avatar.png`;
+    // Pase 437: nada de cuerpo entero dentro del aro — el personaje se muestra con su ROSTRO
+    // (`-avatar-cara.png`) a 120 % de zoom interno para llenar el hueco; las fotos de perfil van tal cual.
+    const url = esFoto ? jugador.foto_perfil_url : `/assets/${jugador.personaje || 'gaucho'}-avatar-cara.png`;
+    const zoom = esFoto ? 1 : 1.2;
     const key = `avatarEspera_${this._hashSimple(url)}`;
 
     if (this.textures.exists(key)) {
-      this._dibujarImagenAvatarEspera({ key, cx, cy, radio: radioFoto });
+      this._dibujarImagenAvatarEspera({ key, cx, cy, radio: radioFoto, zoom });
     } else {
-      pendientes.push({ key, url, cx, cy, radio: radioFoto });
+      pendientes.push({ key, url, cx, cy, radio: radioFoto, zoom });
     }
   }
 
@@ -2224,18 +2235,18 @@ _dibujarTileEspera(cx, cy, radio, jugador, pendientes, compacto = false) {
   // mismo criterio de capas (sombra + relleno + brillo superior) que ya
   // usan las filas de la pantalla final (pase 265) para que se lea
   // "3D"/ahuecada y no plana — más los 3 puntitos parpadeantes pedidos.
-  // Pase 434: `compacto` (grilla de equipos) — píldora más baja y más cerca del aro.
-  const pillY = compacto ? cy + radio * 1.125 + 15 : cy + radio + 30;
-  const pillAlto = compacto ? 24 : 30;
+  // Pase 434 (ajustado en 436): `compacto` (grilla de equipos) — píldora de 30 px y fuente 15 negrita, más cerca del aro.
+  const pillY = compacto ? cy + radio * 1.125 + 19 : cy + radio + 30;
+  const pillAlto = 30;
 
   // Pase 349: las dos píldoras ("✓ Conectado" verde / "Conectando..." crema) se dibujan por
   // código, planas y con relieve duro — igual que en el nativo — en vez de los PNG nine-slice
   // de la pantalla final (que dejaban los bordes cortados). Las dos miden lo mismo (ancho
   // fijo, calculado con el texto más largo) y NO cambian al aparecer los puntitos.
-  const ESTILO_PILL = { fontFamily: 'Fredoka, Arial', fontSize: compacto ? '13px' : '15px', fontStyle: '600' };
+  const ESTILO_PILL = { fontFamily: 'Fredoka, Arial', fontSize: '15px', fontStyle: compacto ? '700' : '600' };
   const medA = this.add.text(0, 0, '✓ Conectado', ESTILO_PILL);
   const medB = this.add.text(0, 0, 'Conectando...', ESTILO_PILL);
-  const anchoPill = compacto ? Math.max(Math.ceil(Math.max(medA.width, medB.width)) + 28, 100) : Math.max(Math.ceil(Math.max(medA.width, medB.width)) + 36, 120);
+  const anchoPill = compacto ? Math.max(Math.ceil(Math.max(medA.width, medB.width)) + 32, 110) : Math.max(Math.ceil(Math.max(medA.width, medB.width)) + 36, 120);
   const anchoConectando = medB.width;
   medA.destroy();
   medB.destroy();
@@ -2426,7 +2437,7 @@ _dibujarBadgeVsEspera(x, y, tam = 88) {
 // directo a `border-radius:50%` para imágenes — el criterio estándar es
 // una Graphics con un círculo relleno, convertida a máscara vía
 // `createGeometryMask()`, aplicada sobre la imagen real).
-_dibujarImagenAvatarEspera({ key, cx, cy, radio }) {
+_dibujarImagenAvatarEspera({ key, cx, cy, radio, zoom = 1 }) {
   // Si falló la carga (loaderror — foto rota, URL vieja, sin conexión a
   // ese host, etc.) la textura nunca llega a existir; nos quedamos con el
   // fondo verde liso ya dibujado en _dibujarTileEspera en vez de romper
@@ -2440,7 +2451,7 @@ _dibujarImagenAvatarEspera({ key, cx, cy, radio }) {
   // una plaqueta opaca sin agujero real en el medio (ver comentario en
   // _dibujarTileEspera), así que la foto tiene que quedar ENCIMA del
   // marco, no detrás, para poder verse.
-  const img = this.add.image(cx, cy, key).setDisplaySize(radio * 2, radio * 2).setDepth(412);
+  const img = this.add.image(cx, cy, key).setDisplaySize(radio * 2 * zoom, radio * 2 * zoom).setDepth(412);
   const mask = this.make.graphics();
   mask.fillStyle(0xffffff);
   mask.fillCircle(cx, cy, radio);
