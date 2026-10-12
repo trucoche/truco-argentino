@@ -33,6 +33,7 @@ const C = {
 // default por uno dorado, mismo criterio de color que la ficha "mano".
 export default function ConfiguracionMesaModal({
   visible, onCerrar, musicaVolumen, onCambiarMusicaVolumen, vocesVolumen, onCambiarVocesVolumen,
+  marcadorEstilo = 'numeros', onCambiarMarcadorEstilo,
 }) {
   if (!visible) return null;
 
@@ -84,6 +85,51 @@ export default function ConfiguracionMesaModal({
             onChange={(e) => onCambiarVocesVolumen(Number(e.target.value))}
             className="tc-slider tc-slider-grande"
           />
+        </div>
+      </div>
+
+      {/* Pase 404: estilo del marcador de arriba (placas VOS / RIVAL). */}
+      <div style={estilos.fila}>
+        <label style={estilos.label}>
+          Marcador de la mesa
+        </label>
+        {/* Pase 435: vista previa grande y centrada — cartel rústico "15 - 12" (22 px, negrita) si el marcador
+            es de números, o los 5 fósforos en cruz. El cartel se dibuja por código (antes un PNG chico con "15 / 12"). */}
+        <div style={estilos.previewCaja}>
+          {marcadorEstilo === 'fosforos' ? (
+            <img src="/assets/images/juego/fosforos/5_fosforos_cruz.png" alt="" style={estilos.previewFosforos} />
+          ) : (
+            <div style={estilos.cartelNum} aria-label="Ejemplo: 15 a 12">
+              {/* Pase 457: mismo panel que el marcador de la partida (marco de madera + pergamino + remaches); oro = nosotros, bronce = rivales */}
+              <span style={estilos.cartelNumPergamino} />
+              <span style={estilos.cartelNumTexto}>
+                <span style={{ color: '#E0A72A' }}>15</span>
+                <span style={{ color: '#2B1608' }}> - </span>
+                <span style={{ color: '#C98A48' }}>12</span>
+              </span>
+              <span style={{ ...estilos.cartelNumRemache, top: -1, left: -1 }} />
+              <span style={{ ...estilos.cartelNumRemache, top: -1, right: -1 }} />
+              <span style={{ ...estilos.cartelNumRemache, bottom: -1, left: -1 }} />
+              <span style={{ ...estilos.cartelNumRemache, bottom: -1, right: -1 }} />
+            </div>
+          )}
+        </div>
+        <div style={estilos.segmento} role="radiogroup" aria-label="Estilo del marcador">
+          {[['numeros', 'Números'], ['fosforos', 'Fósforos']].map(([valor, texto]) => {
+            const activo = marcadorEstilo === valor;
+            return (
+              <button
+                key={valor}
+                type="button"
+                role="radio"
+                aria-checked={activo}
+                onClick={() => onCambiarMarcadorEstilo && onCambiarMarcadorEstilo(valor)}
+                style={{ ...estilos.segmentoBoton, ...(activo ? estilos.segmentoActivo : null) }}
+              >
+                {texto}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -147,6 +193,28 @@ const estilos = {
   cuerpo: { padding: '18px 22px 22px' },
   fila: { marginBottom: 16 },
   labelIcono: { width: 22, height: 22, objectFit: 'contain', flexShrink: 0 },
+  previewCaja: { height: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
+  previewFosforos: { width: 56, height: 56, objectFit: 'contain' },
+  cartelNum: {
+    position: 'relative', width: 132, height: 52, boxSizing: 'border-box', borderRadius: 9,
+    background: 'repeating-linear-gradient(180deg, #b07a43 0px, #b07a43 7px, #a5703a 7px, #a5703a 8px)',
+    borderStyle: 'solid', borderWidth: 2.5, borderColor: '#dcae72 #5c3718 #5c3718 #dcae72',
+    boxShadow: '0 3px 0 rgba(0,0,0,0.3)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+  },
+  cartelNumPergamino: {
+    position: 'absolute', left: 5, top: 5, right: 5, bottom: 5, borderRadius: 4,
+    background: 'radial-gradient(ellipse at 50% 40%, #f3e6bf 0%, #e8d6a2 100%)',
+    boxShadow: '0 0 0 1.5px rgba(32,18,10,0.85), inset 0 0 6px rgba(122,84,38,0.45)',
+  },
+  cartelNumTexto: {
+    position: 'relative', fontFamily: "'Rye', Georgia, serif", fontSize: 22, lineHeight: 1, letterSpacing: 0.5,
+    textShadow: '2px 2px 4px rgba(0,0,0,0.8)', WebkitTextStroke: '1px #2B1608', paintOrder: 'stroke fill',
+  },
+  cartelNumRemache: {
+    position: 'absolute', width: 6, height: 6, borderRadius: '50%', boxSizing: 'border-box',
+    background: '#C9973E', border: '1.5px solid #5A3A14',
+  },
   label: { display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, color: C.chocolate, fontWeight: 700, fontSize: 13 },
   // Nonagésimo cuarto pase: mismo contenedor de "tronco de madera" a
   // tamaño fijo que Configuracion.js (250x54, sin estirar nunca) —
@@ -161,6 +229,20 @@ const estilos = {
     backgroundImage: 'url(/assets/images/slider-fondo.png)',
     backgroundSize: '100% 100%',
     backgroundRepeat: 'no-repeat',
+  },
+  segmento: {
+    display: 'flex', gap: 0, margin: '0 auto', width: 250, maxWidth: '100%',
+    border: `2.5px solid ${C.chocolate}`, borderRadius: 12, overflow: 'hidden',
+    background: '#EAD9BC',
+  },
+  segmentoBoton: {
+    flex: 1, padding: '9px 0', border: 'none', cursor: 'pointer',
+    background: 'transparent', color: C.chocolate,
+    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 14,
+  },
+  segmentoActivo: {
+    background: 'linear-gradient(160deg, #FFD668, #FFB627)',
+    boxShadow: 'inset 0 -3px 0 rgba(74,44,42,0.28)',
   },
   notaFutura: { color: '#8c7a6b', fontSize: 11, fontStyle: 'italic', margin: '4px 0 18px' },
   botonCerrar: {

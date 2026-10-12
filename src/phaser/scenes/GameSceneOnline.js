@@ -22,6 +22,9 @@ import { RANGOS_UI } from '../../components/Perfil/rangosUi';
 const ASSET_VERSION = Date.now();
 const conVersion = (ruta) => `${ruta}?v=${ASSET_VERSION}`;
 
+// Pase 457: margen interno mínimo (px) entre el borde de la placa de fósforos y los cuadritos, para no chocar con los remaches dorados.
+const MARGEN_INTERNO_FOS = 12;
+
 function proximoNivelTruco(nivelActual) {
   const niveles = ['truco', 'retruco', 'vale-cuatro'];
   const idx = niveles.indexOf(nivelActual);
@@ -242,6 +245,10 @@ preload() {
     this.load.image('mesaRedondaLimpia', conVersion('assets/images/juego/mesa-truco-nueva-sin-marca.png'));
     this.load.image('marcaTcMesa', conVersion('assets/images/juego/marca-tc-mesa.png'));
     // Pase 446: mazos laterales en abanico (2v2). Una imagen por lado y por cantidad de cartas en mano (3, 2 y 1).
+    // Pase 449: abanico de frente (rival de 1v1, compañero de 2v2 y rival de enfrente de 3v3), también con 3, 2 y 1 cartas.
+    [3, 2, 1].forEach(n => {
+      this.load.image(`mazoAbanicoFrente_${n}`, conVersion(`assets/images/juego/mazos-abanico/mazo-abanico-frente-${n}.png`));
+    });
     ['izq', 'der'].forEach(lado => [3, 2, 1].forEach(n => {
       this.load.image(`mazoAbanico_${lado}_${n}`, conVersion(`assets/images/juego/mazos-abanico/mazo-abanico-${lado}-${n}.png`));
     }));
@@ -453,6 +460,14 @@ preload() {
   }
 
   create() {
+    // Pase 456: tipografía western (Rye) del marcador; los textos de Phaser no disparan la descarga, así que se pide acá y se redibujan al llegar.
+    try {
+      if (typeof document !== 'undefined' && document.fonts && document.fonts.load) {
+        document.fonts.load('24px Rye').then(() => {
+          [this.scoreText, this.scoreTextRival, this.labelPropio, this.labelRival].forEach((t) => { if (t && t.scene) t.updateText(); });
+        }).catch(() => {});
+      }
+    } catch (err) { /* sin fuentes: queda la tipografía de respaldo */ }
     // El canvas ahora renderiza a 1200x900*devicePixelRatio en vez de a
     // 800x600 reales (ver gameConfigOnline.js, con el diagnóstico completo
     // del bug de nitidez) — pero TODAS las coordenadas de este archivo
@@ -636,14 +651,15 @@ _crearElementosDeTexto() {
     this.PLACA_RIVAL_CY = this._L ? this._L.hudY : 36;
     const kpH = this._L ? this._L.kp : 1;   // Pase 394: escala del HUD en layout angosto
     const placaAncho = this._L ? this._L.placaW : 96;
-    const placaAlto = this._L ? this._L.placaH : 48;
+    const placaAlto = this._L ? this._L.placaH : 60;
     // Nonagésimo tercer pase: color sólido (sin alpha en el hex) +
     // contorno fino, en vez de '#ffffffdd' sin stroke — pedido explícito
     // del usuario, el nombre del rival se perdía sobre la madera. Mismo
     // criterio que `labelPropio` (ver más abajo), para que las dos placas
     // sean igual de legibles.
-    this.labelRival = this.add.text(this.PLACA_RIVAL_CX, this.PLACA_RIVAL_CY - 11 * kpH, 'Rival', {
-      font: `${Math.round(12 * kpH)}px Arial`, fill: '#FFF8ED', stroke: '#2a1c14', strokeThickness: 2.5,
+    this.labelRival = this.add.text(this.PLACA_RIVAL_CX, this.PLACA_RIVAL_CY - 17 * kpH, 'Rival', {
+      fontFamily: 'Rye, Georgia, serif', fontSize: `${Math.round(10 * kpH)}px`, color: '#3B1F0F',   // Pase 456: Rye (western) sobre el pergamino
+      resolution: this._factorEscalaTextura(),
     }).setOrigin(0.5).setDepth(1002);
     // Centésimo décimo quinto pase: nombre del rival clickeable, mismo
     // criterio que Ranking/Lobby/chat/Perfil (abre PerfilRivalModal). Se
@@ -674,13 +690,13 @@ _crearElementosDeTexto() {
     // solo texto "N - N" adentro de la placa "Vos" (`scoreText`); ahora
     // cada placa muestra sus propios puntos, en el mismo estilo (cifras
     // doradas) que ya tenía ese texto combinado.
-    this.scoreTextRival = this.add.text(this.PLACA_RIVAL_CX, this.PLACA_RIVAL_CY + 11 * kpH, '0', {
-      fontFamily: 'Nunito, Arial', fontSize: `${Math.round(18 * kpH)}px`, fontStyle: 'bold',
-      color: '#FFF8ED', stroke: '#4A2C2A', strokeThickness: 2,
-      shadow: { offsetX: 0, offsetY: 1, color: '#4A2C2A', blur: 0, fill: true },
+    this.scoreTextRival = this.add.text(this.PLACA_RIVAL_CX, this.PLACA_RIVAL_CY + 10 * kpH, '0', {
+      fontFamily: 'Rye, Georgia, serif', fontSize: `${Math.round(24 * kpH)}px`,
+      color: '#C98A48', stroke: '#2B1608', strokeThickness: 3,   // Pase 456: bronce para rivales, contorno oscuro y sombra paralela
+      shadow: { offsetX: 2, offsetY: 2, color: 'rgba(0,0,0,0.8)', blur: 4, fill: true, stroke: true },
       resolution: this._factorEscalaTextura()
     }).setOrigin(0.5).setDepth(1002);
-    this._dibujarPlacaMarcador(this.fondoInfoRival, this.PLACA_RIVAL_CX, this.PLACA_RIVAL_CY, placaAncho, placaAlto);
+    this._dibujarPlacaMarcador(this.fondoInfoRival, this.PLACA_RIVAL_CX, this.PLACA_RIVAL_CY, placaAncho, placaAlto, true);
     // Trigésimo segundo pase: antes era el circulito de "es mano" (solo
     // visible cuando el rival era mano) — ahora es un ícono de persona
     // siempre visible junto al label, y el que "se prende" (dorado, con
@@ -690,7 +706,7 @@ _crearElementosDeTexto() {
     // dinámica); con la placa fija, se fija por fuera de su borde derecho
     // (mismo lugar relativo que antes — el ícono siempre quedaba DESPUÉS
     // del nombre, nunca superpuesto) en vez de recalcularse en cada estado.
-    this.manoIconoRival = this.add.image(this.PLACA_RIVAL_CX + placaAncho / 2 + (this._L ? 14 : 11), this.PLACA_RIVAL_CY - 11 * kpH, 'icono_rival').setDisplaySize(17 * kpH, 19 * kpH).setDepth(1002).setVisible(false);
+    this.manoIconoRival = this.add.image(this.PLACA_RIVAL_CX + placaAncho / 2 + (this._L ? 14 : 11), this.PLACA_RIVAL_CY - 17 * kpH, 'icono_rival').setDisplaySize(17 * kpH, 19 * kpH).setDepth(1002).setVisible(false);
 
     // Barra de fondo para los botones de acción — línea divisoria subida de
     // 521 a 500 (y panel agrandado a juego) para ganarle ~21px al área de la
@@ -766,7 +782,7 @@ _crearElementosDeTexto() {
     // (`placaAncho`/`placaAlto`, definidos junto a esa placa) para que el
     // par se vea como un solo bloque de HUD parejo.
     const marcadorAncho = this._L ? this._L.placaW : 96;
-    const marcadorAlto = this._L ? this._L.placaH : 48;
+    const marcadorAlto = this._L ? this._L.placaH : 60;
     // Decimoctavo pase: el marcador vivía centrado en (400,18), justo en el
     // mismo punto donde caen el texto de estado ("Conectando...") y las
     // cartas boca abajo del rival (fila que arranca en Y=95 más abajo) —
@@ -813,8 +829,9 @@ _crearElementosDeTexto() {
     // nombre de usuario largo nunca estire la placa.
     // Nonagésimo tercer pase: mismo color sólido + contorno que
     // `labelRival` (ver más arriba) en vez de '#ffffffdd' sin stroke.
-    this.labelPropio = this.add.text(marcadorX, marcadorY - 11 * kpH, this._L ? 'Vos' : (this._truncarNombre(this.usuario?.username) || 'Vos'), {
-      font: `${Math.round(12 * kpH)}px Arial`, fill: '#FFF8ED', stroke: '#2a1c14', strokeThickness: 2.5,
+    this.labelPropio = this.add.text(marcadorX, marcadorY - 17 * kpH, this._L ? 'Vos' : (this._truncarNombre(this.usuario?.username) || 'Vos'), {
+      fontFamily: 'Rye, Georgia, serif', fontSize: `${Math.round(10 * kpH)}px`, color: '#3B1F0F',   // Pase 456
+      resolution: this._factorEscalaTextura(),
     }).setOrigin(0.5).setDepth(1002);
 
     // Texto crema con SOMBRA chocolate en vez del chocolate plano de antes:
@@ -864,14 +881,13 @@ _crearElementosDeTexto() {
     // `scoreTextRival`, en su propia placa. Tamaño 20→18 y baja un poco
     // (21→marcadorY+11) para convivir con `labelPropio` arriba, mismo
     // layout de dos líneas que la placa del rival.
-    this.scoreText = this.add.text(marcadorX, marcadorY + 11 * kpH, '0', {
-      fontFamily: 'Nunito, Arial',
-      fontSize: `${Math.round(18 * kpH)}px`,
-      fontStyle: 'bold',
-      color: '#FFF8ED',
-      stroke: '#4A2C2A',
-      strokeThickness: 2,
-      shadow: { offsetX: 0, offsetY: 1, color: '#4A2C2A', blur: 0, fill: true },
+    this.scoreText = this.add.text(marcadorX, marcadorY + 10 * kpH, '0', {
+      fontFamily: 'Rye, Georgia, serif',
+      fontSize: `${Math.round(24 * kpH)}px`,
+      color: '#E0A72A',   // Pase 456: oro para aliados
+      stroke: '#2B1608',
+      strokeThickness: 3,
+      shadow: { offsetX: 2, offsetY: 2, color: 'rgba(0,0,0,0.8)', blur: 4, fill: true, stroke: true },
       resolution: this._factorEscalaTextura()
     }).setOrigin(0.5).setDepth(1002);
 
@@ -1260,7 +1276,7 @@ _crearElementosDeTexto() {
     const f = Math.max(0.62, Math.min(1, 0.62 + ((Hg - 860) / 440) * 0.38));
     const kp = 1.3;                      // placas del marcador
     const placaW = Math.round(96 * kp);
-    const placaH = Math.round(48 * kp);
+    const placaH = Math.round(60 * kp);   // Pase 450/451: placa más alta para nombre (13px) + puntaje (28px)
     // Pase 396: marcador VOS | RIVAL centrado arriba del mazo del rival (igual que el nativo)
     const hudYBase = 100;
     const placaVosX = 400 - 8 - placaW / 2;
@@ -1414,8 +1430,9 @@ _crearElementosDeTexto() {
   this._mesaModoActual = modo;
   // Pase 440: en 3v3 no va el halo cálido de atrás de la mesa (se leía como un haz de luz
   // descentrado); queda el fondo de madera con el viñeteado de las esquinas.
-  if (this.resplandorMesaImg) this.resplandorMesaImg.setVisible(modo !== '3v3');
-  if (this.luzCalidaMesaImg && !this._L) this.luzCalidaMesaImg.setVisible(modo !== '3v3');
+  // Pase 451: tampoco en 1v1 ni 2v2 — fondo de madera parejo en todos los modos (sin halo cálido ni luz arriba).
+  if (this.resplandorMesaImg) this.resplandorMesaImg.setVisible(false);
+  if (this.luzCalidaMesaImg) this.luzCalidaMesaImg.setVisible(false);
 
   // Multiplica el alto por encima de la proporción real del dibujo.
   // 1.0 = fiel al original (lo que se ve "aplastado").
@@ -3654,8 +3671,10 @@ _renderizarEquipos(e, animarReparto, hayCantoSinResolver) {
       // Pase 441 (3v3): los dos de abajo suben y se abren hacia los costados (no pisan la mano ni la
       // botonera); los de arriba bajan para quedar pegados al borde de la mesa.
       if (esTresVTres) {
-        if (esAbajo) { py -= 40; px += (px < centroX ? -35 : 35); }
-        else if (esArribaCostado) py += 30;
+        // Pase 448: los rivales de abajo suben 9% (54 px) más para despegarse de la mano propia y de mi placa;
+        // los compañeros de arriba se corren 8% (64 px) hacia adentro, pegados al borde de la mesa.
+        if (esAbajo) { py -= 40 + 54; px += (px < centroX ? -35 : 35); }
+        else if (esArribaCostado) { py += 30; px += (px < centroX ? 64 : -64); }
         else if (esArribaCentro) py += 20;
       } else if (totalAsientos === 3) {
         // Pase 444/446 (2v2): el compañero sube 10% (60 px) hasta el borde de madera de la mesa; los dos
@@ -3819,7 +3838,7 @@ setMarcadorEstilo(estilo) {
 // Ancho de las placas en modo fosforos (mas anchas que las de numeros para que se lean).
 _anchoPlacaFosforos() {
   const g = this._geoPlacas;
-  return this._L ? Math.round(g.vos.w * 1.3) : 110;
+  return this._L ? Math.round(g.vos.w * 1.3) : 116;
 }
 
 // Centro X de cada placa en modo fosforos (las dos crecen hacia afuera, sin pisarse).
@@ -3838,7 +3857,7 @@ _crearFosforosMarcador() {
   const factor = this._factorEscalaTextura();
   const g = this._geoPlacas;
   const gap = 3 * g.kp;
-  const B = Math.floor((this._anchoPlacaFosforos() - 12 - 2 * gap) / 3);
+  const B = Math.floor((this._anchoPlacaFosforos() - 2 * MARGEN_INTERNO_FOS - 2 * gap) / 3);   // Pase 457: 12 px de margen interno a cada lado
   const claves = [1, 2, 3, 4, 5].map((n) => {
     const k = `fos_${n}_s`;
     this._crearTexturaEscalada(`fos_${n}`, k, Math.round(B * factor), Math.round(B * factor));
@@ -3878,15 +3897,15 @@ _aplicarMarcadorEstilo(animar = false) {
     // Placas originales
     lados.forEach(({ geo, bg, num, label, zona }) => {
       if (this._placaFosforosActiva) {
-        this._dibujarPlacaMarcador(bg, geo.cx, geo.cy, geo.w, geo.h);
-        if (label && label.scene) label.setPosition(geo.cx, geo.cy - 11 * g.kp);
-        if (num && num.scene) num.setPosition(geo.cx, geo.cy + 11 * g.kp);
+        this._dibujarPlacaMarcador(bg, geo.cx, geo.cy, geo.w, geo.h, bg === this.fondoInfoRival);
+        if (label && label.scene) label.setPosition(geo.cx, geo.cy - 17 * g.kp);
+        if (num && num.scene) num.setPosition(geo.cx, geo.cy + 10 * g.kp);
         if (zona && zona.scene) zona.setSize(geo.w, geo.h).setPosition(geo.cx, geo.cy);
       }
       if (num && num.scene) num.setVisible(visiblePlacas);
     });
     if (this.manoIconoRival && this.manoIconoRival.scene && this._placaFosforosActiva) {
-      this.manoIconoRival.setPosition(g.rival.cx + g.rival.w / 2 + (this._L ? 14 : 11), g.rival.cy - 11 * g.kp);
+      this.manoIconoRival.setPosition(g.rival.cx + g.rival.w / 2 + (this._L ? 14 : 11), g.rival.cy - 17 * g.kp);
     }
     if (this._fosObjs) this._fosObjs.todos.forEach(o => o.setVisible(false));
     this._placaFosforosActiva = false;
@@ -3897,9 +3916,11 @@ _aplicarMarcadorEstilo(animar = false) {
 
   const F = this._crearFosforosMarcador();
   const hLabel = 18 * g.kp;
-  // Pase 414: el cuadro de fosforos queda centrado en el papel (mismo margen arriba y abajo).
-  const PADV = 4;
-  const alto = hLabel + (buenas ? 2 * F.B + F.gap : F.B) + 2 * PADV + 4;
+  // Pase 457: la placa de fósforos usa el MISMO marco rústico (madera + pergamino + remaches) que la numérica; los cuadritos
+  // respetan 12 px de margen interno (laterales e inferior) para no chocar con los tornillos dorados de las esquinas.
+  const PAD = MARGEN_INTERNO_FOS;
+  const altoGrillaF = buenas ? 2 * F.B + F.gap : F.B;
+  const alto = hLabel + 4 + altoGrillaF + PAD;
   const h2 = Math.max(g.vos.h, alto);
   this._placaFosforosActiva = true;
 
@@ -3910,21 +3931,15 @@ _aplicarMarcadorEstilo(animar = false) {
     const top = this._L ? (geo.cy + geo.h / 2 - h2) : (geo.cy - geo.h / 2);
     const cy2 = top + h2 / 2;
     const cx2 = this._cxPlacaFosforos(k);
-    this._dibujarPlacaMarcador(bg, cx2, cy2, wF, h2);
-    // Papel crema adentro de la placa: los fosforos (madera + cabeza roja) se leen mejor que sobre la madera.
-    const px = cx2 - wF / 2 + 4, py = top + hLabel, pw = wF - 8, ph = h2 - hLabel - 4;
-    bg.fillStyle(0x6b271d, 0.55);
-    bg.fillRoundedRect(px, py, pw, ph, 5);
-    bg.fillStyle(0xFFF8ED, 1);
-    bg.fillRoundedRect(px + 1, py + 1.5, pw - 2, ph - 2.5, 4);
+    this._dibujarPlacaMarcador(bg, cx2, cy2, wF, h2, k === 'rival');
+    const py = top + hLabel + 4;
     if (label && label.scene) label.setPosition(cx2, top + hLabel / 2 + 2);
     if (num && num.scene) num.setVisible(false);
     if (zona && zona.scene) zona.setSize(wF, h2).setPosition(cx2, cy2);
     const L = F[k];
     const filas = buenas ? 2 : 1;
-    // Grilla estricta de 3 columnas iguales, centrada en el papel en horizontal y en vertical.
-    const altoGrilla = filas * F.B + (filas - 1) * F.gap;
-    const gy0 = py + (ph - altoGrilla) / 2;
+    // Grilla estricta de 3 columnas iguales, centrada en horizontal; arriba justo bajo la etiqueta y 12 px libres abajo.
+    const gy0 = py + (h2 - hLabel - 4 - PAD - filas * F.B - (filas - 1) * F.gap) / 2;
     for (let i = 0; i < 6; i++) {
       const fila = Math.floor(i / 3), col = i % 3;
       const mostrarCaja = fila < filas;
@@ -3968,7 +3983,7 @@ _aplicarMarcadorEstilo(animar = false) {
 
 // Rectangulo del anillo del timer del rival con la placa de numeros (la de siempre).
 _rectAnilloRivalNumeros() {
-  const w = this._L ? this._L.placaW : 96, h = this._L ? this._L.placaH : 48;
+  const w = this._L ? this._L.placaW : 96, h = this._L ? this._L.placaH : 60;
   return { x: this.PLACA_RIVAL_CX - w / 2, y: this.PLACA_RIVAL_CY - h / 2, w, h, r: 9 };
 }
 
@@ -4016,81 +4031,80 @@ _truncarNombre(nombre) {
 // el Graphics de destino (`g`) como primer parámetro, para poder
 // reutilizarla tal cual en la placa del rival (`this.fondoInfoRival`) sin
 // duplicar todo el dibujo.
-_dibujarPlacaMarcador(g, cx, cy, w, h) {
+_dibujarPlacaMarcador(g, cx, cy, w, h, oscura = false) {
+  // Pase 456: marco de madera labrada (veta, bisel y ranura tallada) con inserto de pergamino. Madera clara = mi equipo,
+  // madera oscura = rivales. Los remaches viven en el marco (7 px), nunca sobre el pergamino.
   g.clear();
   const x = cx - w / 2;
   const y = cy - h / 2;
-  const r = 6;
+  const r = 8;
+  const M = 7;   // grosor del marco
+  const T = oscura
+    ? { cuerpo: 0x5a3824, veta: 0x2e1a10, luz: 0x8b6244, sombra: 0x20120a, remache: 0xc79a55, remacheSombra: 0x1d1109 }
+    : { cuerpo: 0xb07a43, veta: 0x7a4a22, luz: 0xdcae72, sombra: 0x5c3718, remache: 0xe8c27a, remacheSombra: 0x3a2210 };
 
-  // Sombra de caída, apenas desplazada hacia abajo — mismo truco que el
-  // boxShadow con capas oscuras del CSS, para dar sensación de placa con
-  // volumen en vez de un rectángulo plano.
-  g.fillStyle(0x000000, 0.35);
-  g.fillRoundedRect(x, y + 2, w, h, r);
+  g.fillStyle(0x000000, 0.32);   // sombra de caída
+  g.fillRoundedRect(x, y + 3, w, h, r);
 
-  // Cuerpo: Graphics no tiene un gradiente confiable entre Canvas/WebGL,
-  // así que el degradé madera del CSS (maderaClara→maderaMedia→
-  // maderaOscura, 160deg) se aproxima con 3 capas sólidas apiladas: base
-  // oscura, cuerpo medio, y una franja clara arriba a modo de bisel.
-  // Nonagésimo pase: colores re-calibrados a mano (con el cuentagotas)
-  // sobre el asset nuevo de la placa de la botonera, para que el
-  // marcador use "la misma textura" que pidió el usuario — el tono
-  // viejo (marrón casi negro, 0x2a1c14/0x4a3226/0x6b4a34) era el mismo
-  // lenguaje que Lobby/Torneos/Ranking, pero más oscuro y menos rojizo
-  // que la madera terracota del asset nuevo.
-  g.fillStyle(0x431c10, 1); // maderaOscura
+  g.fillStyle(T.cuerpo, 1);      // madera
   g.fillRoundedRect(x, y, w, h, r);
-  g.fillStyle(0xa84e31, 1); // maderaMedia
-  g.fillRoundedRect(x, y, w, h * 0.72, r);
-  g.fillStyle(0xd37a4a, 0.55); // maderaClara (bisel superior)
-  g.fillRoundedRect(x + 2, y + 2, w - 4, h * 0.32, r * 0.7);
 
-  // Borde — mismo tono (sampleado directo del PNG de la botonera) en vez
-  // del negro pulido viejo.
-  g.lineStyle(2, 0x6b271d, 1);
+  // veta: líneas onduladas horizontales sobre todo el marco
+  g.lineStyle(1, T.veta, 0.3);
+  [0.12, 0.27, 0.43, 0.6, 0.76, 0.9].forEach((f, k) => {
+    const yy = y + h * f;
+    g.beginPath();
+    g.moveTo(x + 5, yy);
+    for (let t = 1; t <= 8; t++) {
+      g.lineTo(x + 5 + ((w - 10) * t) / 8, yy + Math.sin(t * 1.3 + k * 1.7) * 1.2);
+    }
+    g.strokePath();
+  });
+
+  // bisel: luz arriba/izquierda, sombra abajo/derecha
+  g.lineStyle(2, T.luz, 0.75);
+  g.beginPath(); g.moveTo(x + r, y + 1); g.lineTo(x + w - r, y + 1); g.strokePath();
+  g.beginPath(); g.moveTo(x + 1, y + r); g.lineTo(x + 1, y + h - r); g.strokePath();
+  g.lineStyle(2, T.sombra, 0.7);
+  g.beginPath(); g.moveTo(x + r, y + h - 1); g.lineTo(x + w - r, y + h - 1); g.strokePath();
+  g.beginPath(); g.moveTo(x + w - 1, y + r); g.lineTo(x + w - 1, y + h - r); g.strokePath();
+  g.lineStyle(2, T.sombra, 1);
   g.strokeRoundedRect(x, y, w, h, r);
 
-  // Pase siguiente (feedback: "fondo marrón oscuro muy simple"): una
-  // sola línea de borde + 3 rectángulos apilados se leía plano a este
-  // tamaño chico — se agrega un filete claro fino, apenas adentro del
-  // borde negro, solo en el semi-perímetro superior (mismo truco que un
-  // `border-top`/`border-left` más claro en CSS para simular el canto
-  // recibiendo luz de una placa con volumen real).
-  g.lineStyle(1, 0xc98a5e, 0.5);
-  g.beginPath();
-  g.moveTo(x + r, y + 1);
-  g.lineTo(x + w - r, y + 1);
-  g.strokePath();
+  // ranura tallada alrededor del pergamino
+  g.lineStyle(2, T.sombra, 0.85);
+  g.strokeRoundedRect(x + M - 1, y + M - 1, w - 2 * M + 2, h - 2 * M + 2, 4);
 
-  // 4 remaches de bronce en las esquinas, mismo criterio que los <span>
-  // circulares del CSS (radial-gradient remacheClaro→remache→
-  // remacheOscuro). Pase siguiente (feedback del usuario: "se ven como
-  // círculos agregados sin sombra ni relieve 3D") — la versión anterior
-  // era 3 círculos concéntricos con el MISMO centro, que a este tamaño se
-  // leen como un solo punto plano. Ahora cada remache es una composición
-  // de 5 capas con luz viniendo de arriba-izquierda (mismo criterio que
-  // el resto de esta escena): sombra blanda proyectada hacia abajo-
-  // derecha (lo despega de la madera), anillo oscuro de base, cuerpo
-  // bronce, una sombra interna hacia abajo-derecha (da volumen esférico,
-  // no solo un disco) y un brillo especular arriba-izquierda.
-  // Pase 398: remaches a la mitad de tamaño (y mas cerca de la esquina) para dejar aire al texto.
-  const margen = 5;
+  // pergamino
+  const ix = x + M, iy = y + M, iw = w - 2 * M, ih = h - 2 * M;
+  g.fillStyle(0xe8d6a2, 1);
+  g.fillRoundedRect(ix, iy, iw, ih, 3);
+  g.fillStyle(0xf3e6bf, 0.7);    // zona más clara al centro
+  g.fillRoundedRect(ix + 3, iy + 3, iw - 6, ih - 6, 3);
+  g.fillStyle(0xc9a46a, 0.14);   // manchas del papel
+  [[0.2, 0.3, 7], [0.72, 0.62, 9], [0.5, 0.85, 5], [0.88, 0.2, 5]].forEach(([fx, fy, rr]) => g.fillCircle(ix + iw * fx, iy + ih * fy, rr));
+  [[3, 0.18], [2, 0.14], [1, 0.12]].forEach(([k, a]) => {   // bordes quemados
+    g.lineStyle(1.2, 0x7a5426, a * 1.6);
+    g.strokeRoundedRect(ix + k - 1, iy + k - 1, iw - 2 * (k - 1), ih - 2 * (k - 1), 3);
+  });
+  // filete que separa la etiqueta del puntaje
+  g.lineStyle(1, 0x7a5426, 0.4);
+  g.beginPath(); g.moveTo(ix + 8, cy - 9); g.lineTo(ix + iw - 8, cy - 9); g.strokePath();
+
+  // remaches en las esquinas del marco
+  const margen = 3.6;
   [
     { rx: x + margen, ry: y + margen },
     { rx: x + w - margen, ry: y + margen },
     { rx: x + margen, ry: y + h - margen },
     { rx: x + w - margen, ry: y + h - margen },
   ].forEach(({ rx, ry }) => {
-    g.fillStyle(0x000000, 0.35); // sombra proyectada
-    g.fillCircle(rx + 0.5, ry + 0.7, 2.4);
-    g.fillStyle(0x3a1a0a, 1); // remacheOscuro (anillo de base)
-    g.fillCircle(rx, ry, 2.1);
-    g.fillStyle(0xe3a94a, 1); // remache (cuerpo bronce, sampleado del PNG de la botonera)
-    g.fillCircle(rx, ry, 1.6);
-    g.fillStyle(0x8a5a28, 0.6); // remacheOscuro (sombra interna, da esfericidad)
-    g.fillCircle(rx + 0.35, ry + 0.35, 1.15);
-    g.fillStyle(0xf2d587, 0.95); // remacheClaro (brillo especular)
-    g.fillCircle(rx - 0.5, ry - 0.5, 0.65);
+    g.fillStyle(T.remacheSombra, 1);
+    g.fillCircle(rx + 0.3, ry + 0.4, 2);
+    g.fillStyle(T.remache, 1);
+    g.fillCircle(rx, ry, 1.5);
+    g.fillStyle(0xffffff, 0.55);
+    g.fillCircle(rx - 0.45, ry - 0.45, 0.55);
   });
 }
 
@@ -4244,13 +4258,14 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
 
       // Pase 446: en 2v2 los rivales de los costados usan el abanico ilustrado (una sola imagen con 3, 2 o 1
       // cartas según lo que les queda); la imagen derecha trae el logo TC derecho (sin espejar).
-      const claveAbanico = (esDos && (lado === 'izq' || lado === 'der') && cantidad > 0)
-        ? `mazoAbanico_${lado}_${Math.min(cantidad, 3)}` : null;
+      const nAbanico = Math.min(cantidad, 3);
+      const claveAbanico = ((esDos || esTres) && cantidad > 0)
+        ? (lado === 'arriba' ? `mazoAbanicoFrente_${nAbanico}` : `mazoAbanico_${(esDos || esTres) ? (lado === 'izq' ? 'der' : 'izq') : lado}_${nAbanico}`) : null;   // Pase 456/457: en 2v2 y 3v3 los sprites laterales van intercambiados (izquierda usa el PNG "der", derecha el "izq"); los ángulos no cambian (3v3: +7°/-7°)
       if (claveAbanico && this.textures.exists(claveAbanico)) {
-        const altoAbanico = 88 * kS;
+        const altoAbanico = (lado === 'arriba' ? 80 : 88) * kS * fD;   // Pase 448/449: también en 3v3 (con la escala -20% de los mazos); el de enfrente un poco más bajo para no pisar su placa
         const abanico = this.add.image(cx, cyN, claveAbanico).setOrigin(0.5, 0.5).setDepth(10);
         abanico.setDisplaySize(altoAbanico * (abanico.width / abanico.height), altoAbanico);
-        abanico.setAngle(lado === 'izq' ? 21 : -18);   // Pase 447: inclinación exacta para acompañar la elipse de la mesa
+        abanico.setAngle(esTres ? (lado === 'izq' ? 7 : (lado === 'der' ? -7 : 0)) : (lado === 'izq' ? 21 : (lado === 'der' ? -18 : 0)));   // Pase 450: 3v3 = ±7°, 2v2 = +21°/-18°   // Pase 447: inclinación exacta para acompañar la elipse de la mesa
         this._sprites.push(abanico);
       } else for (let k = 0; k < cantidad; k++) {
         const anguloCarta = -anguloTotalAbanico / 2 + k * anguloPorCarta;
@@ -4277,7 +4292,9 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
     // Compañeros: filete verde oliva; rivales: filete borgoña. En su turno la placa se dora.
     const esManoDeEste = this.estado.manoId === j.id;
     const esCompa = tipo === 'companero';
-    const yNombre = cyN - ((esDos && tipo !== 'companero') ? 58 : (esTres ? 34 : 40)) * kS;   // Pase 446: el abanico lateral es más alto
+    const ladoPlaca = cx < 340 ? 'izq' : (cx > 460 ? 'der' : 'arriba');
+    const conAbanico = (esDos || esTres) && ladoPlaca !== 'arriba' && !manoCompartida && cantidad > 0;   // Pase 446/448: el abanico lateral es más alto
+    const yNombre = cyN - (conAbanico ? (esTres ? 50 : 58) : (esTres ? 34 : 40)) * kS;
     const { pw, ph, px0, py0 } = this._dibujarPlacaNombre(cx, yNombre, j.nombre, kS, {
       turno: esSuTurno, acento: esCompa ? 0x7F8F38 : 0x8E2B35, mano: esManoDeEste, rival: !esCompa,
     });
@@ -4859,6 +4876,17 @@ _dibujarFilaDorso(cantidad, y) {
     // de display por separado) y se bajaron en el llamador (95→105) para
     // que apoyen limpiamente contra ese borde en vez de quedar en el aire.
     const kR = this._L ? this._L.kRival : 1;   // Pase 394: cartas mas grandes en layout angosto
+    // Pase 449: el mazo del rival de enfrente es una sola imagen en abanico (3, 2 o 1 cartas).
+    const claveFrente = `mazoAbanicoFrente_${Math.min(cantidad, 3)}`;
+    if (cantidad > 0 && this.textures.exists(claveFrente)) {
+      const altoF = 116 * kR;
+      const frente = this.add.image(400, y, claveFrente).setOrigin(0.5, 0.5).setDepth(10);
+      const anchoF = altoF * (frente.width / frente.height);
+      frente.setDisplaySize(anchoF, altoF);
+      const sombraF = this.add.ellipse(400, y + altoF * 0.4, anchoF * 0.75, altoF * 0.14, 0x000000, 0.22).setDepth(9);
+      this._sprites.push(sombraF, frente);
+      return;
+    }
     const anguloPorCarta = 11;
     const anguloTotal = (cantidad - 1) * anguloPorCarta;
     // Pase siguiente (feedback del usuario: "se ven planas y muy
@@ -5250,16 +5278,7 @@ _dibujarPlacaNombre(cx, yNombre, nombre, kS, { turno = false, acento = 0x7F8F38,
   const ph = Math.ceil(fsN + 11 * kS);
   const px0 = cx - pw / 2, py0 = yNombre - ph / 2;
   nombreTxt.setX(px0 + padXp + nombreTxt.width / 2);
-  if (turno) {
-    const brillo = this.add.graphics().setDepth(48);
-    [[10, 0.08], [7, 0.12], [5, 0.18], [3, 0.28]].forEach(([m, a]) => {
-      brillo.fillStyle(0xFFD36B, a);
-      brillo.fillRoundedRect(px0 - m, py0 - m, pw + 2 * m, ph + 2 * m, 7 + m);
-    });
-    this._sprites.push(brillo);
-    if (!this._tweensFinal) this._tweensFinal = [];
-    this._tweensFinal.push(this.tweens.add({ targets: brillo, alpha: { from: 1, to: 0.55 }, duration: 800, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' }));
-  }
+  // Pase 450: sin resplandor ni animación de luz; el turno se marca solo con el dorado liso de la placa.
   const placa = this.add.graphics().setDepth(49);
   placa.fillStyle(0x000000, 0.35);
   placa.fillRoundedRect(px0, py0 + 2, pw, ph, 7);
