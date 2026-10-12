@@ -2698,13 +2698,24 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
       const hueco = rangoFicha ? rangoFicha.hueco : 0.62;
       const tamanoAro = Math.round((radioFoto * 2) / (hueco + 0.02));
 
-      // Halo dorado + estrellitas detrás del ganador
-      if (esGanadorGrupo) {
+      // Pase 415: halo DORADO solo cuando el resultado es "¡GANASTE!" (sobre los ganadores);
+      // en "PERDISTE" el aura va sobre MI avatar, en rojo carmesí (rgba(220,38,38,0.45)), y el ganador
+      // queda con su marco estandar.
+      const haloVictoria = modo === 'victoria' && esGanadorGrupo;
+      const haloDerrota = modo === 'derrota' && j.nombre === this.usuario?.username;
+      if (haloVictoria || haloDerrota) {
         // Pase 395: halo circular más llamativo — anillos concéntricos que se
         // desvanecen hacia afuera (desborde de luz), un núcleo cálido y un
         // anillo de destello que respira.
         const halo = this.add.graphics().setDepth(902);
-        const anillosHalo = [
+        // Pase 417: derrota = borgoña/vino sutil rgba(180,40,40,0.25), con menos dispersión (resplandor cálido, sin encandilar)
+        const anillosHalo = haloDerrota ? [
+          [1.14, 0xB42828, 0.07],
+          [0.98, 0xB42828, 0.10],
+          [0.84, 0xB42828, 0.14],
+          [0.72, 0xB42828, 0.19],
+          [0.60, 0xB42828, 0.25],
+        ] : [
           [1.30, 0xFFC94A, 0.10],
           [1.10, 0xFFD668, 0.16],
           [0.92, 0xFFE08A, 0.22],
@@ -2715,18 +2726,18 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
           halo.fillStyle(col, al);
           halo.fillCircle(0, 0, tamanoAro * k);
         });
-        halo.lineStyle(3, 0xFFF3CC, 0.9);
+        if (haloDerrota) halo.lineStyle(2, 0xB42828, 0.45); else halo.lineStyle(3, 0xFFF3CC, 0.9);
         halo.strokeCircle(0, 0, tamanoAro * 0.62);
         halo.setPosition(cx, cyAv);
         this._sprites.push(halo);
-        this._tweensFinal.push(this.tweens.add({ targets: halo, alpha: 0.7, scale: 1.1, duration: 1000, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' }));
+        this._tweensFinal.push(this.tweens.add({ targets: halo, alpha: haloDerrota ? 0.45 : 0.7, scale: haloDerrota ? 1.12 : 1.1, duration: haloDerrota ? 1300 : 1000, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' }));
         // Destello exterior que se expande y se apaga, en bucle
         const onda = this.add.graphics().setDepth(901.9);
-        onda.lineStyle(4, 0xFFE08A, 1);
+        if (haloDerrota) onda.lineStyle(3, 0xB42828, 0.6); else onda.lineStyle(4, 0xFFE08A, 1);
         onda.strokeCircle(0, 0, tamanoAro * 0.62);
         onda.setPosition(cx, cyAv);
         this._sprites.push(onda);
-        this._tweensFinal.push(this.tweens.add({ targets: onda, alpha: { from: 0.85, to: 0 }, scale: { from: 1, to: 1.75 }, duration: 1800, repeat: -1, ease: 'Cubic.easeOut' }));
+        this._tweensFinal.push(this.tweens.add({ targets: onda, alpha: { from: haloDerrota ? 0.7 : 0.85, to: 0 }, scale: { from: 1, to: haloDerrota ? 1.5 : 1.75 }, duration: haloDerrota ? 2000 : 1800, repeat: -1, ease: 'Cubic.easeOut' }));
       }
 
       // Disco de fondo
@@ -2872,35 +2883,54 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
       : (datos.motivo === 'abandono'
         ? (gano ? '¡Victoria por abandono!' : 'Perdiste por desconexión')
         : (modo === 'victoria' ? '¡Victoria!' : (modo === 'derrota' ? 'Derrota' : titulo || '')));
-    let y = total ? Math.max(384, yPillComun + 13 + 24) : 250;
-    if (frase) {
-      const TAM = 34;
-      const txtFrase = this.add.text(0, y, frase, {
+    // Pase 417: sin moneda ni frase "Derrota"/"¡Victoria!" (redundantes con el cartel): la botonera sube. Solo queda,
+    // como texto simple, una frase que aporta información (campeón del torneo / abandono).
+    const fraseInfo = (esCampeon || datos.motivo === 'abandono') ? frase : '';
+    let y = total ? yPillComun + 13 + 22 : 250;
+    if (modo === 'neutro') {
+      // Pase 415: "Sala cancelada" — medallon de madera con reloj de arena + mensaje en un pergamino
+      // con borde de madera. No hubo partida: nada de moneda ni de revancha.
+      const cyIcono = 186;
+      this._dibujarRelojArena(400, cyIcono, 40, 904);
+      const mensajeCancel = String(titulo || 'La sala se canceló.');
+      const txtMsg = this.add.text(400, 0, mensajeCancel, {
+        fontFamily: 'Nunito, Arial', fontSize: '17px', fontStyle: '800', color: '#3B2312',
+        align: 'center', wordWrap: { width: 360 }, lineSpacing: 5,
+      }).setOrigin(0.5, 0.5).setDepth(906);
+      const wP = 440, hP2 = Math.ceil(txtMsg.height) + 48, xP = 400 - wP / 2, yP = cyIcono + 40 + 14;
+      txtMsg.setY(yP + hP2 / 2);
+      const pg2 = this.add.graphics().setDepth(905);
+      pg2.fillStyle(0x000000, 0.45);
+      pg2.fillRoundedRect(xP, yP + 4, wP, hP2, 14);
+      pg2.fillStyle(0x5C3317, 1);
+      pg2.fillRoundedRect(xP, yP, wP, hP2, 14);
+      pg2.fillStyle(0x7A4A26, 1);
+      pg2.fillRoundedRect(xP + 2, yP + 2, wP - 4, 10, { tl: 12, tr: 12, bl: 2, br: 2 });
+      pg2.fillStyle(0xEAD9B5, 1);
+      pg2.fillRoundedRect(xP + 9, yP + 9, wP - 18, hP2 - 18, 8);
+      pg2.fillStyle(0xB89A6A, 0.45);
+      pg2.fillRoundedRect(xP + 9, yP + 9, wP - 18, 8, { tl: 8, tr: 8, bl: 2, br: 2 });
+      pg2.lineStyle(2, 0x6b4a34, 1);
+      pg2.strokeRoundedRect(xP + 9, yP + 9, wP - 18, hP2 - 18, 8);
+      pg2.lineStyle(3, 0x1a0f08, 1);
+      pg2.strokeRoundedRect(xP, yP, wP, hP2, 14);
+      [[xP + 5, yP + 5], [xP + wP - 5, yP + 5], [xP + 5, yP + hP2 - 5], [xP + wP - 5, yP + hP2 - 5]].forEach(([rx, ry]) => {
+        pg2.fillStyle(0xC9A25A, 1);
+        pg2.fillCircle(rx, ry, 2.6);
+        pg2.lineStyle(1, 0x1a0f08, 1);
+        pg2.strokeCircle(rx, ry, 2.6);
+      });
+      this._sprites.push(pg2, txtMsg);
+      y = yP + hP2 + 26;
+    }
+    if (fraseInfo && modo !== 'neutro') {
+      const txtFrase = this.add.text(400, y + 4, fraseInfo, {
         fontFamily: 'Fredoka, Arial', fontSize: '22px', fontStyle: '600', color: '#FFF8ED',
         stroke: '#000000', strokeThickness: 4, align: 'center', wordWrap: { width: 560 },
-      }).setOrigin(0, 0.5).setDepth(905);
-      const anchoFila2 = TAM + 10 + txtFrase.width;
-      const x0 = 400 - anchoFila2 / 2;
-      const moneda = this.add.image(x0 + TAM / 2, y, 'monedaEsperaCara').setDisplaySize(TAM, TAM).setDepth(905);
-      txtFrase.setX(x0 + TAM + 10);
-      this._sprites.push(moneda, txtFrase);
-      let caraActual = 'cara';
-      const giro = { ang: 0 };
-      this._tweensFinal.push(this.tweens.add({
-        targets: giro, ang: 360, duration: 2600, repeat: -1, ease: 'Linear',
-        onUpdate: () => {
-          if (!moneda.scene) return;
-          const c = Math.cos((giro.ang * Math.PI) / 180);
-          const cara = c >= 0 ? 'cara' : 'dorso';
-          if (cara !== caraActual) {
-            caraActual = cara;
-            moneda.setTexture(cara === 'cara' ? 'monedaEsperaCara' : 'monedaEsperaDorso');
-          }
-          moneda.setDisplaySize(TAM * Math.max(Math.abs(c), 0.04), TAM);
-        },
-      }));
+      }).setOrigin(0.5, 0.5).setDepth(905);
+      this._sprites.push(txtFrase);
+      y += 38;
     }
-    y += 34;
 
     // 5) Puntos de Liga Criolla (solo partidas ranked): ficha con el cuadro de fósforos
     const puntosRank = recompensa && recompensa.puntos != null && Number.isFinite(Number(recompensa.puntos))
@@ -2927,12 +2957,12 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
       this._sprites.push(ficha, fosforos, tp);
       y += ALTO_F + 10;
     } else {
-      y += 6;
+      y += modo === 'neutro' ? 0 : 6;
     }
 
     // 6) Botonera vertical en cápsulas 3D
     const altoBoton = 46;
-    if (!esTorneo) {
+    if (!esTorneo && modo !== 'neutro') {
       const revanchaTexto = 'Pedir revancha';
       const revanchaAncho = this._medirAnchoTextoOverlay(revanchaTexto, '17px') + 60;
       const { contenedor: contRevancha, img: imgRevancha } = this._crearBotonOverlay({
@@ -2947,7 +2977,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
       this.imgRevancha = imgRevancha;
       y += altoBoton + 10;
     }
-    const labelBoton = esTorneo ? 'Ver bracket' : 'Volver al lobby';
+    const labelBoton = esTorneo ? 'Ver bracket' : 'Volver al lobby';   // Pase 415: en sala cancelada es el unico boton
     const volverAncho = this._medirAnchoTextoOverlay(labelBoton, '17px') + 60;
     this._crearBotonOverlay({
       x: 400, y: y + altoBoton / 2, ancho: volverAncho, alto: altoBoton, variante: 'oro', texto: labelBoton, tamanoFuente: 17,
@@ -2961,7 +2991,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
     });
     y += altoBoton + 8;
 
-    if (!esTorneo) {
+    if (!esTorneo && modo !== 'neutro') {
       this.fondoAlertaRevancha = this.add.graphics().setDepth(901).setVisible(false);
       this._sprites.push(this.fondoAlertaRevancha);
       this.textoEsperaRevancha = this.add.text(400, y, '', {
@@ -3021,6 +3051,46 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
         });
       }
     }
+  }
+
+  // Pase 415: medallon de caoba con un reloj de arena dibujado (para "Sala cancelada").
+  _dibujarRelojArena(cx, cy, tam, depth) {
+    const r = tam;
+    const g = this.add.graphics().setDepth(depth);
+    g.fillStyle(0x000000, 0.45);
+    g.fillCircle(cx, cy + 4, r);
+    g.fillStyle(0x5C3317, 1);
+    g.fillCircle(cx, cy, r);
+    g.lineStyle(3, 0x1a0f08, 1);
+    g.strokeCircle(cx, cy, r);
+    g.fillStyle(0x7A4A26, 1);
+    g.fillCircle(cx, cy, r - 6);
+    g.lineStyle(2, 0x1a0f08, 0.8);
+    g.strokeCircle(cx, cy, r - 6);
+    const k = r / 40;
+    const cw = 34 * k, ch = 6 * k, hh = 22 * k, gw = 25 * k;
+    // vidrio
+    g.fillStyle(0xF4E3B8, 0.28);
+    g.fillTriangle(cx - gw / 2, cy - hh + ch / 2, cx + gw / 2, cy - hh + ch / 2, cx, cy);
+    g.fillTriangle(cx - gw / 2, cy + hh - ch / 2, cx + gw / 2, cy + hh - ch / 2, cx, cy);
+    // arena (casi toda abajo; un hilo cayendo)
+    g.fillStyle(0xE9C46A, 1);
+    g.fillTriangle(cx - gw * 0.38, cy + hh - ch / 2, cx + gw * 0.38, cy + hh - ch / 2, cx, cy + hh * 0.34);
+    g.fillTriangle(cx - gw * 0.14, cy - hh * 0.30, cx + gw * 0.14, cy - hh * 0.30, cx, cy - hh * 0.06);
+    g.fillRect(cx - 0.9 * k, cy - hh * 0.06, 1.8 * k, hh * 0.42);
+    // contorno del vidrio
+    g.lineStyle(2 * k, 0x1a0f08, 1);
+    g.strokeTriangle(cx - gw / 2, cy - hh + ch / 2, cx + gw / 2, cy - hh + ch / 2, cx, cy);
+    g.strokeTriangle(cx - gw / 2, cy + hh - ch / 2, cx + gw / 2, cy + hh - ch / 2, cx, cy);
+    // tapas de madera clara
+    [cy - hh, cy + hh].forEach((ty) => {
+      g.fillStyle(0xC9965A, 1);
+      g.fillRoundedRect(cx - cw / 2, ty - ch / 2, cw, ch, 2 * k);
+      g.lineStyle(2 * k, 0x1a0f08, 1);
+      g.strokeRoundedRect(cx - cw / 2, ty - ch / 2, cw, ch, 2 * k);
+    });
+    this._sprites.push(g);
+    return g;
   }
 
   // Mide el ancho real que ocuparía un texto con la fuente/tamaño de los
@@ -3951,15 +4021,17 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
       // que quedaban casi apiladas y giradas — imposibles de leer. Acá van
       // planas (sin rotación) y con más separación y tamaño, para poder
       // distinguir palo y número.
-      const anchoCarta = 50 * kS;
-      const altoCarta = 76 * kS;
+      // Pase 430: la mano COMPARTIDA del compañero pasa a mini-cartas (~38px en vez de 50) en
+      // abanico suave; la revelación de Flor/Envido conserva el tamaño grande de siempre.
+      const anchoCarta = (revelacion ? 50 : 38) * kS;
+      const altoCarta = (revelacion ? 76 : 58) * kS;
       const factor = this._factorEscalaTextura();
       const anchoR = Math.round(anchoCarta * factor);
       const altoR = Math.round(altoCarta * factor);
       // La revelación de Flor/Envido separa más las cartas (hay tiempo de
       // sobra para mirarlas); compartir mano en vivo las solapa un poco más
       // para no tapar tanto el resto de la mesa.
-      const espaciadoX = revelacion ? anchoCarta * 0.62 : anchoCarta * 0.42;
+      const espaciadoX = revelacion ? anchoCarta * 0.62 : anchoCarta * 0.58;
       const inicioX = cx - ((cantidad - 1) * espaciadoX) / 2;
 
       for (let k = 0; k < cantidad; k++) {
@@ -3968,9 +4040,12 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
         this._crearTexturaEscalada(keyOriginal, textureKey, anchoR, altoR);
 
         const px = inicioX + k * espaciadoX;
-        const carta = this.add.image(px, cyN, textureKey)
+        // Abanico suave (±6° por carta, el centro sube un poco) solo en la mano compartida.
+        const posAbanico = k - (cantidad - 1) / 2;
+        const carta = this.add.image(px, revelacion ? cyN : cyN + Math.abs(posAbanico) * 2.5 * kS, textureKey)
           .setOrigin(0.5, 0.5)
           .setDepth(10 + k);
+        if (!revelacion) carta.setRotation(posAbanico * 6 * (Math.PI / 180));
 
         this._sprites.push(carta);
       }
@@ -4495,19 +4570,25 @@ _chequearFinDeRondaEnvido(e) {
   const anterior = this.estadoAnterior;
   if (!anterior) return;
 
-  const rondaRecienTerminada = anterior.rondaActiva && !e.rondaActiva;
+  // Pase 419: si un Envido cerró la PARTIDA, la ronda nunca "termina" (rondaActiva sigue en true), así que la
+  // revelación de las cartas del ganador nunca se disparaba. Ahora también se dispara cuando el juego pasa a
+  // terminado; en ese caso NO se pisa el cartel "X ganó el envido con N" (ya está en pantalla).
+  const juegoRecienTerminadoEnMedioDeRonda = !anterior.juegoTerminado && !!e.juegoTerminado && !!e.rondaActiva;
+  const rondaRecienTerminada = (anterior.rondaActiva && !e.rondaActiva) || juegoRecienTerminadoEnMedioDeRonda;
   if (!rondaRecienTerminada) return;
   if (!e.envidoPendienteDeMostrar || e.envidoPendienteDeMostrar.length === 0) return;
 
-  const puntos = e.ultimoResultadoEnvido?.puntosGanador;
-  const texto = puntos != null ? `${puntos} tantos en mesa` : 'Tantos en mesa';
+  if (!juegoRecienTerminadoEnMedioDeRonda) {
+    const puntos = e.ultimoResultadoEnvido?.puntosGanador;
+    const texto = puntos != null ? `${puntos} tantos en mesa` : 'Tantos en mesa';
 
-  if (this._tantosEnMesaTimer) { this._tantosEnMesaTimer.remove(); this._tantosEnMesaTimer = null; }
-  this._mostrarCanto(texto);
-  this._tantosEnMesaTimer = this.time.delayedCall(3200, () => {
-    this._ocultarCanto();
-    this._tantosEnMesaTimer = null;
-  });
+    if (this._tantosEnMesaTimer) { this._tantosEnMesaTimer.remove(); this._tantosEnMesaTimer = null; }
+    this._mostrarCanto(texto);
+    this._tantosEnMesaTimer = this.time.delayedCall(3200, () => {
+      this._ocultarCanto();
+      this._tantosEnMesaTimer = null;
+    });
+  }
 
   // Reutiliza el mismo mecanismo de revelación que ya usa el Envido al
   // resolverse (mismo flag, mismo renderizado en _dibujarJugador /

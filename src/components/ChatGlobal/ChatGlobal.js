@@ -10,6 +10,7 @@ import { getSocket } from '../../services/socket';
 // real con toasts, igual que ya tiene "Desafiar" (ver AvisosGlobales.js).
 import { useToast } from '../../contexts/ToastContext';
 import { API_URL as BASE_URL } from '../../config';
+import { RANGOS_UI } from '../Perfil/rangosUi';
 
 const API_URL = `${BASE_URL}/api/chat-global`;
 // Pase siguiente: el menú "⋮" de cada jugador en línea ahora pega contra
@@ -59,7 +60,25 @@ function avatarSrcDe(u) {
 function caraSrcDe(u) {
   return u?.avatar_tipo === 'foto' && u?.foto_perfil_url
     ? u.foto_perfil_url
-    : `/assets/expresionesGaucho/${u?.personaje || 'gaucho'}_victorioso.png`;
+    : `/assets/${u?.personaje || 'gaucho'}-avatar-cara.png`;
+}
+
+// Pase 427: zoom interno de la CARA ilustrada dentro de los anillos (las fotos reales no se agrandan).
+// El recorte circular lo hace un contenedor con overflow hidden: escalar solo la <img> con su border-radius
+// se saldría del hueco del aro.
+const ZOOM_CARA = 1.15;
+function FotoEnAro({ u, tam, aro }) {
+  const foto = Math.round(tam * aro.hueco) + 2;
+  const esFoto = u?.avatar_tipo === 'foto' && u?.foto_perfil_url;
+  return (
+    <div style={{ position: 'absolute', top: (tam - foto) / 2, left: (tam - foto) / 2, width: foto, height: foto, borderRadius: '50%', overflow: 'hidden', background: '#FFFBEB' }}>
+      <img
+        src={caraSrcDe(u)}
+        alt=""
+        style={{ display: 'block', width: '100%', height: '100%', objectFit: 'cover', transform: esFoto ? 'none' : `scale(${ZOOM_CARA})` }}
+      />
+    </div>
+  );
 }
 
 // Ducentésimo quincuagésimo tercer pase: primer paso del sistema de
@@ -101,6 +120,67 @@ function horaCorta(fecha) {
   return new Date(fecha).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
 }
 
+
+// Pase 423: aro de RANGO alrededor de cada avatar de la lista (reemplaza al viejo `bordeSrcDe`, que
+// apuntaba a PNG que nunca existieron). El backend manda el rango como texto ("Gaucho II",
+// "Martín Fierro"): se le saca la división, se normaliza y se busca en RANGOS_UI.
+const ID_RANGO_POR_NOMBRE = {
+  mancebo: 1, paisano: 2, resero: 3, gaucho: 4, capataz: 5, baqueano: 6,
+  payador: 7, caudillo: 8, 'don segundo': 9, 'martin fierro': 10,
+};
+const TAM_ARO_LISTA = 46;
+const TAM_ARO_AMIGO = 80;
+const ARO_MADERA = { anillo: '/assets/images/juego/aro-avatar-espera.png', hueco: 0.64 };
+function aroDeRango(rangoTexto) {
+  if (!rangoTexto) return ARO_MADERA;
+  const nombre = rangoTexto.replace(/\s+(III|II|I)$/, '').trim().toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '');
+  return RANGOS_UI[ID_RANGO_POR_NOMBRE[nombre]] || ARO_MADERA;
+}
+
+// Pase 423: iconos vectoriales de amistad (hasta que existan PNG ilustrados: icono-agregar-amigo.png,
+// icono-eliminar-amigo.png, icono-amigos.png).
+function IconoPersona({ signo, size = 18, color = '#3B2312', colorSigno }) {
+  const cs = colorSigno || color;
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ flexShrink: 0 }}>
+      <circle cx="10" cy="8" r="4" fill={color} />
+      <path d="M2.5 21c0-4.2 3.4-6.5 7.5-6.5s7.5 2.3 7.5 6.5z" fill={color} />
+      {signo === 'mas' && <path d="M20 6v6M17 9h6" stroke={cs} strokeWidth="2.4" strokeLinecap="round" />}
+      {signo === 'menos' && <path d="M17 9h6" stroke={cs} strokeWidth="2.4" strokeLinecap="round" />}
+    </svg>
+  );
+}
+function IconoTilde({ size = 14, color = '#fff' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M4.5 12.8l5 5L19.5 6.8" stroke={color} strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+function IconoEquis({ size = 14, color = '#fff' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M6 6l12 12M18 6L6 18" stroke={color} strokeWidth="4" strokeLinecap="round" />
+    </svg>
+  );
+}
+function IconoFlechaAbajo({ abierta, color = '#3B2312' }) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"
+      style={{ flexShrink: 0, transition: 'transform .2s', transform: abierta ? 'rotate(180deg)' : 'none' }}>
+      <path d="M5 9l7 7 7-7" stroke={color} strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+const IMG = {
+  desafiar: '/assets/images/icono-desafios.png',
+  chat: '/assets/images/icono-chat.png',
+  bloquear: '/assets/images/icono-bloqueados.png',
+  check: '/assets/images/icono-check.png',
+  cruz: '/assets/images/historial-cruz.png',
+};
+
 export default function ChatGlobal({ token, usuario, abrirSolicitudesSenial }) {
   const { mostrarToast } = useToast();
   const usuarioActual = usuario?.username;
@@ -111,6 +191,8 @@ export default function ChatGlobal({ token, usuario, abrirSolicitudesSenial }) {
   const [mensajes, setMensajes] = useState([]);
   const [usuariosOnline, setUsuariosOnline] = useState([]);
   const [busqueda, setBusqueda] = useState('');
+  // Pase 425: buscador de la pestaña Privado (independiente del de "Jugadores en línea").
+  const [busquedaAmigos, setBusquedaAmigos] = useState('');
   const [texto, setTexto] = useState('');
   const [sidebarAbierto, setSidebarAbierto] = useState(false);
   const [emojisAbiertos, setEmojisAbiertos] = useState(false);
@@ -127,6 +209,8 @@ export default function ChatGlobal({ token, usuario, abrirSolicitudesSenial }) {
   // ese detalle a la lista completa de en línea, que no lo necesita).
   const [accionAbierta, setAccionAbierta] = useState(null);
   const [accionInfo, setAccionInfo] = useState(null);
+  // Pase 423: si el menú no entra debajo de la fila (última tarjeta de la lista), se abre hacia arriba.
+  const [accionArriba, setAccionArriba] = useState(false);
   // Pase siguiente: panel de solicitudes de amistad RECIBIDAS — sin esto,
   // la única forma de enterarse de una solicitud pendiente sería abrir el
   // menú de ESE jugador puntual en la lista de en línea (y ni siquiera
@@ -318,11 +402,20 @@ export default function ChatGlobal({ token, usuario, abrirSolicitudesSenial }) {
   // Pase siguiente: abre/cierra el menú de un jugador puntual de la lista
   // de en línea. Al abrirlo (no al cerrarlo) pide su estado de amistad y
   // bloqueo — mismo endpoint que ya usa el popup de perfil completo.
-  const abrirMenuAccion = (nombreUsuario) => {
+  const abrirMenuAccion = (nombreUsuario, fila) => {
     if (accionAbierta === nombreUsuario) {
       setAccionAbierta(null);
       return;
     }
+    // Pase 423: alto aproximado del menú (la fila + ~270 px) contra el borde inferior de la lista.
+    try {
+      const lista = fila && fila.parentElement;
+      if (fila && lista) {
+        const espacioAbajo = lista.getBoundingClientRect().bottom - fila.getBoundingClientRect().bottom;
+        const espacioArriba = fila.getBoundingClientRect().top - lista.getBoundingClientRect().top;
+        setAccionArriba(espacioAbajo < 270 && espacioArriba > espacioAbajo);
+      } else setAccionArriba(false);
+    } catch (e) { setAccionArriba(false); }
     setAccionAbierta(nombreUsuario);
     setAccionInfo({ cargando: true, amistad: 'ninguna', bloqueado: false, procesando: false });
     fetch(`${API_USUARIOS}/perfil-publico/${encodeURIComponent(nombreUsuario)}`, {
@@ -416,6 +509,15 @@ export default function ChatGlobal({ token, usuario, abrirSolicitudesSenial }) {
     setFrasesAbiertas(false);
   };
 
+  // Pase 425: amigos a mostrar en "Privado" — con mensajes sin leer primero, después los que están en línea, después el
+  // resto (alfabético, como ya viene del backend), filtrados por el buscador.
+  const enLineaSet = new Set(usuariosOnline.map((u) => u.username));
+  const amigosVisibles = amigos
+    .filter((a) => a.username.toLowerCase().includes(busquedaAmigos.trim().toLowerCase()))
+    .map((a, i) => ({ a, i }))
+    .sort((x, y) => (Number(!!y.a.sin_leer) - Number(!!x.a.sin_leer)) || (Number(enLineaSet.has(y.a.username)) - Number(enLineaSet.has(x.a.username))) || (x.i - y.i))
+    .map(({ a }) => a);
+
   const usuariosFiltrados = usuariosOnline.filter((u) =>
     u.username.toLowerCase().includes(busqueda.toLowerCase())
   );
@@ -476,7 +578,7 @@ export default function ChatGlobal({ token, usuario, abrirSolicitudesSenial }) {
           style={estilos.botonUsuariosMobile}
           onClick={() => setSidebarAbierto(true)}
         >
-          👥 {usuariosOnline.length}
+          <IconoPersona size={16} color={C.chocolate} /> {usuariosOnline.length}
         </button>
       </div>
 
@@ -505,7 +607,9 @@ export default function ChatGlobal({ token, usuario, abrirSolicitudesSenial }) {
           style={estilos.bannerSolicitudes}
           onClick={() => { setSidebarAbierto(true); setSolicitudesAbiertas(true); }}
         >
-          🔔 Tenés {solicitudesAmistad.length} solicitud{solicitudesAmistad.length === 1 ? '' : 'es'} de amistad
+          <IconoPersona signo="mas" size={20} color="#3B2312" colorSigno="#1f7a3c" />
+          <span>Tenés {solicitudesAmistad.length} solicitud{solicitudesAmistad.length === 1 ? '' : 'es'} de amistad</span>
+          <IconoFlechaAbajo color="#3B2312" />
         </button>
       )}
 
@@ -662,39 +766,82 @@ export default function ChatGlobal({ token, usuario, abrirSolicitudesSenial }) {
           // pestaña YA es esa lista). Tocar una tarjeta abre esa
           // conversación con MensajePrivadoModal, igual que antes se abría
           // desde el menú "⋮" de un jugador en línea.
-          <div style={estilos.listaAmigosContenido}>
-            {amigos.length === 0 ? (
-              <div style={estilos.avisoSinAmigos}>
-                Todavía no tenés amigos agregados — agregá desde el perfil de otro jugador (tocando su nombre) para poder chatear acá.
+          <div style={estilos.privadoContenedor}>
+            {amigos.length > 0 && (
+              <div style={estilos.buscadorAmigosContenedor}>
+                <svg
+                  width="14" height="14" viewBox="0 0 24 24" fill="none"
+                  stroke={C.dorado} strokeWidth="3" strokeLinecap="round"
+                  style={estilos.iconoLupa} aria-hidden="true"
+                >
+                  <circle cx="10" cy="10" r="7" />
+                  <line x1="20" y1="20" x2="15.5" y2="15.5" />
+                </svg>
+                <input
+                  type="text"
+                  value={busquedaAmigos}
+                  onChange={(e) => setBusquedaAmigos(e.target.value)}
+                  placeholder="Buscar amigo..."
+                  className="cg-buscador"
+                  style={estilos.buscador}
+                />
               </div>
-            ) : (
-              amigos.map((a) => (
-                <div key={a.username} style={estilos.tarjetaAmigo}>
-                  <button
-                    type="button"
-                    style={estilos.tarjetaAmigoBoton}
-                    onClick={() => setMensajePrivadoAbierto(a.username)}
-                  >
-                    <div style={estilos.avatarAmigoContenedor}>
-                      <img src={avatarSrcDe(a)} alt="" style={estilos.avatarAmigo} />
-                      {a.sin_leer && <span style={estilos.puntoSinLeer} />}
-                    </div>
-                    <span style={estilos.tarjetaAmigoNombre}>{a.username}</span>
-                  </button>
-                  {/* Pase 197: desafío rápido — mismo emit que ya usa el
-                      menú "⋮" de "Jugadores en línea" para "⚔️ Desafiar",
-                      así no hay que ir a buscar al amigo en esa lista si
-                      ya lo tenés a mano acá. */}
-                  <button
-                    type="button"
-                    style={estilos.botonDesafiarAmigo}
-                    onClick={() => getSocket().emit('desafio:enviar', { paraUsername: a.username })}
-                  >
-                    ⚔️ Desafiar
-                  </button>
-                </div>
-              ))
             )}
+            <div style={estilos.listaAmigosContenido}>
+              {amigos.length === 0 ? (
+                <div style={estilos.avisoSinAmigos}>
+                  Todavía no tenés amigos agregados — agregá desde el perfil de otro jugador (tocando su nombre) para poder chatear acá.
+                </div>
+              ) : amigosVisibles.length === 0 ? (
+                <div style={estilos.avisoSinAmigos}>Ningún amigo coincide con "{busquedaAmigos}"</div>
+              ) : (
+                amigosVisibles.map((a) => {
+                  // Pase 424/425: tarjeta horizontal compacta de madera/pergamino — avatar con el aro de su RANGO,
+                  // punto rojo de "sin leer" (o verde si está en línea), y dos botones 3D: Chatear / Desafiar.
+                  const aro = aroDeRango(a.rango);
+                  const enLinea = enLineaSet.has(a.username);
+                  return (
+                    <div key={a.username} style={estilos.tarjetaAmigo}>
+                      <button
+                        type="button"
+                        style={estilos.tarjetaAmigoBoton}
+                        onClick={() => setMensajePrivadoAbierto(a.username)}
+                        aria-label={`Abrir chat con ${a.username}`}
+                      >
+                        <div style={{ ...estilos.avatarAmigoContenedor, width: TAM_ARO_AMIGO, height: TAM_ARO_AMIGO }}>
+                          <FotoEnAro u={a} tam={TAM_ARO_AMIGO} aro={aro} />
+                          <img src={aro.anillo} alt="" style={estilos.bordeRangoChico} />
+                          {a.sin_leer && <span style={estilos.puntoSinLeer} />}
+                          {enLinea && <span style={{ ...estilos.puntoOnlineChico, width: 15, height: 15, bottom: 4, right: 4 }} title="En línea" />}
+                        </div>
+                        <div style={estilos.tarjetaAmigoTextos}>
+                          <span style={estilos.tarjetaAmigoNombre}>{a.username}</span>
+                          {a.sin_leer
+                            ? <span style={estilos.chipMensajeNuevo}>Mensaje nuevo</span>
+                            : (a.rango ? <span style={{ ...estilos.usuarioRango, fontSize: 11.5, padding: '2px 9px', borderRadius: 6 }}>{a.rango}</span> : null)}
+                        </div>
+                      </button>
+                      <div style={estilos.tarjetaAmigoAcciones}>
+                        <button
+                          type="button"
+                          style={{ ...estilos.botonPildoraAmigo, ...estilos.botonChatearAmigo }}
+                          onClick={() => setMensajePrivadoAbierto(a.username)}
+                        >
+                          <img src={IMG.chat} alt="" style={estilos.iconoPildoraAmigo} /> Chatear
+                        </button>
+                        <button
+                          type="button"
+                          style={{ ...estilos.botonPildoraAmigo, ...estilos.botonDesafiarAmigo }}
+                          onClick={() => getSocket().emit('desafio:enviar', { paraUsername: a.username })}
+                        >
+                          <img src={IMG.desafiar} alt="" style={estilos.iconoPildoraAmigo} /> Desafiar
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </div>
         )}
         </div>
@@ -718,30 +865,43 @@ export default function ChatGlobal({ token, usuario, abrirSolicitudesSenial }) {
                 style={estilos.botonSolicitudesToggle}
                 onClick={() => setSolicitudesAbiertas((v) => !v)}
               >
-                🔔 Solicitudes de amistad ({solicitudesAmistad.length})
+                <IconoPersona signo="mas" size={18} color="#3B2312" colorSigno="#1f7a3c" />
+                <span style={{ flex: 1, textAlign: 'left' }}>Solicitudes de amistad</span>
+                <span style={estilos.contadorSolicitudes}>{solicitudesAmistad.length}</span>
+                <IconoFlechaAbajo abierta={solicitudesAbiertas} />
               </button>
-              {solicitudesAbiertas && solicitudesAmistad.map((s) => (
+              {solicitudesAbiertas && solicitudesAmistad.map((s) => {
+                return (
                 <div key={s.username} style={estilos.filaSolicitud}>
-                  <img src={avatarSrcDe(s)} alt="" style={estilos.avatarChico} />
+                  <div style={estilos.avatarSolicitudContenedor}>
+                    <FotoEnAro u={s} tam={40} aro={ARO_MADERA} />
+                    <img src={ARO_MADERA.anillo} alt="" style={{ position: 'absolute', inset: 0, width: 40, height: 40, pointerEvents: 'none' }} />
+                  </div>
                   <div style={estilos.usuarioInfo}>
                     <div style={estilos.usuarioNombre}>{s.username}</div>
+                    <div style={estilos.solicitudLeyenda}>quiere ser tu amigo</div>
                   </div>
                   <button
                     style={estilos.botonSolicitudAceptar}
                     onClick={() => responderSolicitud(s.username, true)}
                     disabled={procesandoSolicitud === s.username}
+                    title="Aceptar"
+                    aria-label={`Aceptar a ${s.username}`}
                   >
-                    ✔
+                    <IconoTilde />
                   </button>
                   <button
                     style={estilos.botonSolicitudRechazar}
                     onClick={() => responderSolicitud(s.username, false)}
                     disabled={procesandoSolicitud === s.username}
+                    title="Rechazar"
+                    aria-label={`Rechazar a ${s.username}`}
                   >
-                    ✖
+                    <IconoEquis />
                   </button>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
           {/* Ducentésimo cuadragésimo sexto pase: "campo estilo madera
@@ -775,6 +935,7 @@ export default function ChatGlobal({ token, usuario, abrirSolicitudesSenial }) {
               return (
               <div
                 key={u.username}
+                data-fila-usuario="1"
                 style={estilos.filaUsuario}
                 onClick={() => abrirPerfilDe(u.username)}
               >
@@ -800,20 +961,16 @@ export default function ChatGlobal({ token, usuario, abrirSolicitudesSenial }) {
                     no hay assets de borde, así que por ahora el `onError`
                     hace que no se vea nada hasta que existan (se van
                     sumando de a uno, sin tocar este código de nuevo). */}
-                <div style={estilos.avatarChicoContenedor}>
-                  <img src={caraSrcDe(u)} alt="" style={estilos.avatarChico} />
-                  {/* El borde va ANTES que el puntito verde en el DOM (a
-                      pesar de dibujarse "por fuera") para que el puntito
-                      siempre quede por encima del marco de rango — nunca
-                      tapado por él — cuando el asset real exista. */}
-                  <img
-                    src={bordeSrcDe(u.rango)}
-                    alt=""
-                    style={estilos.bordeRangoChico}
-                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                  />
-                  <span style={estilos.puntoOnlineChico} />
-                </div>
+                {(() => {
+                  const aro = aroDeRango(u.rango);
+                  return (
+                    <div style={{ ...estilos.avatarChicoContenedor, width: TAM_ARO_LISTA, height: TAM_ARO_LISTA }}>
+                      <FotoEnAro u={u} tam={TAM_ARO_LISTA} aro={aro} />
+                      <img src={aro.anillo} alt="" style={estilos.bordeRangoChico} />
+                      <span style={estilos.puntoOnlineChico} />
+                    </div>
+                  );
+                })()}
                 <div style={estilos.usuarioInfo}>
                   <div style={estilos.usuarioNombre}>
                     {u.username}{esUnoMismo && ' (vos)'}
@@ -825,7 +982,7 @@ export default function ChatGlobal({ token, usuario, abrirSolicitudesSenial }) {
                     style={estilos.botonAccionUsuario}
                     onClick={(e) => {
                       e.stopPropagation();
-                      abrirMenuAccion(u.username);
+                      abrirMenuAccion(u.username, e.currentTarget.closest('[data-fila-usuario]'));
                     }}
                     title="Opciones"
                   >
@@ -833,17 +990,13 @@ export default function ChatGlobal({ token, usuario, abrirSolicitudesSenial }) {
                   </button>
                 )}
                 {accionAbierta === u.username && (
-                  <div style={estilos.tooltipAccionUsuario} onClick={(e) => e.stopPropagation()}>
+                  <div style={{ ...estilos.tooltipAccionUsuario, ...(accionArriba ? estilos.tooltipArriba : {}) }} onClick={(e) => e.stopPropagation()}>
                     {accionInfo?.cargando ? (
                       <div style={estilos.accionCargando}>Cargando...</div>
                     ) : accionInfo?.error ? (
                       <div style={estilos.accionCargando}>No se pudo cargar</div>
                     ) : (
                       <>
-                        {/* Pase siguiente: faltaba la opción de desafiar
-                            directamente desde este menú — antes solo se
-                            podía desde el popup de perfil completo. Con
-                            cualquier usuario, igual que "Desafiar" ahí. */}
                         <button
                           style={estilos.botonAccionMenu}
                           onClick={() => {
@@ -851,38 +1004,35 @@ export default function ChatGlobal({ token, usuario, abrirSolicitudesSenial }) {
                             setAccionAbierta(null);
                           }}
                         >
-                          ⚔️ Desafiar
+                          <img src={IMG.desafiar} alt="" style={estilos.iconoBotonAccionMenu} /> Desafiar
                         </button>
                         {accionInfo.amistad === 'ninguna' && (
                           <button style={estilos.botonAccionMenu} onClick={() => ejecutarAccionAmistad('solicitar')} disabled={accionInfo.procesando}>
-                            ➕ Agregar amigo
+                            <IconoPersona signo="mas" size={18} color="#3B2312" colorSigno="#1f7a3c" /> Agregar amigo
                           </button>
                         )}
                         {accionInfo.amistad === 'pendiente_enviada' && (
                           <button style={estilos.botonAccionMenu} onClick={() => ejecutarAccionAmistad('quitar')} disabled={accionInfo.procesando}>
-                            ✖ Cancelar solicitud
+                            <img src={IMG.cruz} alt="" style={estilos.iconoBotonAccionMenu} /> Cancelar solicitud
                           </button>
                         )}
                         {accionInfo.amistad === 'pendiente_recibida' && (
                           <>
                             <button style={estilos.botonAccionMenu} onClick={() => ejecutarAccionAmistad('aceptar')} disabled={accionInfo.procesando}>
-                              ✔ Aceptar solicitud
+                              <img src={IMG.check} alt="" style={estilos.iconoBotonAccionMenu} /> Aceptar solicitud
                             </button>
                             <button style={estilos.botonAccionMenu} onClick={() => ejecutarAccionAmistad('quitar')} disabled={accionInfo.procesando}>
-                              ✖ Rechazar
+                              <img src={IMG.cruz} alt="" style={estilos.iconoBotonAccionMenu} /> Rechazar
                             </button>
                           </>
                         )}
                         {accionInfo.amistad === 'amigos' && (
                           <>
-                            <button style={estilos.botonAccionMenu} onClick={() => ejecutarAccionAmistad('quitar')} disabled={accionInfo.procesando}>
-                              🗑 Eliminar amigo
+                            <button style={estilos.botonAccionMenu} onClick={() => { setMensajePrivadoAbierto(u.username); setAccionAbierta(null); }}>
+                              <img src={IMG.chat} alt="" style={estilos.iconoBotonAccionMenu} /> Mensaje privado
                             </button>
-                            <button
-                              style={{ ...estilos.botonAccionMenu, ...estilos.botonAccionMenuConIcono }}
-                              onClick={() => { setMensajePrivadoAbierto(u.username); setAccionAbierta(null); }}
-                            >
-                              <img src="/assets/images/icono-chat.png" alt="" style={estilos.iconoBotonAccionMenu} /> Mensaje privado
+                            <button style={estilos.botonAccionMenu} onClick={() => ejecutarAccionAmistad('quitar')} disabled={accionInfo.procesando}>
+                              <IconoPersona signo="menos" size={18} color="#3B2312" colorSigno="#B4402A" /> Eliminar amigo
                             </button>
                           </>
                         )}
@@ -891,7 +1041,7 @@ export default function ChatGlobal({ token, usuario, abrirSolicitudesSenial }) {
                           onClick={toggleBloqueoDesdeMenu}
                           disabled={accionInfo.procesando}
                         >
-                          {accionInfo.bloqueado ? '✓ Desbloquear' : '🚫 Bloquear'}
+                          <img src={accionInfo.bloqueado ? IMG.check : IMG.bloquear} alt="" style={estilos.iconoBotonAccionMenu} /> {accionInfo.bloqueado ? 'Desbloquear' : 'Bloquear'}
                         </button>
                       </>
                     )}
@@ -1006,6 +1156,7 @@ const estilos = {
   },
   headerTabActivo: { background: C.dorado, color: C.chocolate, boxShadow: '0 2px 0 rgba(0,0,0,0.2)' },
   botonUsuariosMobile: {
+    alignItems: 'center', gap: 6,
     fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 13, color: C.chocolate,
     background: C.doradoClaro, border: `2px solid ${C.chocolate}`, borderRadius: 10,
     padding: '7px 12px', cursor: 'pointer',
@@ -1020,52 +1171,63 @@ const estilos = {
   // dorado translúcido encima, no sobre un panel claro — chocolate casi
   // no se leía ahí.
   bannerSolicitudes: {
-    display: 'block', width: '100%', border: 'none', cursor: 'pointer',
-    fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 12.5, color: C.crema,
-    background: `${C.dorado}55`, borderBottom: `1.5px solid ${C.doradoOscuro}`,
-    padding: '9px 18px', textAlign: 'center',
+    width: '100%', border: 'none', cursor: 'pointer', alignItems: 'center', justifyContent: 'center', gap: 8,
+    fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 12.5, color: '#3B2312',
+    background: 'linear-gradient(180deg, #F3E6C6, #E3CF9F)', borderBottom: '2.5px solid #6b4a34',
+    boxShadow: 'inset 0 2px 0 rgba(255,255,255,0.55)', padding: '8px 14px',
   },
 
   // Pase 196: tarjetas de amigos de la pestaña "Privado" — mismo criterio
   // de "tarjeta" que pidió el usuario (avatar + nombre + punto rojo si hay
   // algo sin leer), en una grilla que se acomoda sola al ancho disponible.
+  // Pase 425: la pestaña Privado = buscador arriba + grilla densa de tarjetas horizontales (una columna que scrollea).
+  privadoContenedor: { flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' },
+  buscadorAmigosContenedor: { position: 'relative', margin: '14px 16px 0', flexShrink: 0 },
   listaAmigosContenido: {
-    flex: 1, overflowY: 'auto', display: 'flex', flexWrap: 'wrap',
-    alignContent: 'flex-start', gap: 16, padding: '20px 18px',
+    flex: 1, minHeight: 0, overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(310px, 1fr))',
+    alignContent: 'start', gap: 8, padding: '12px 16px 20px',
   },
   avisoSinAmigos: {
-    width: '100%', fontSize: 13, color: '#cfe9d6', textAlign: 'center',
+    gridColumn: '1 / -1', fontSize: 13, color: '#cfe9d6', textAlign: 'center',
     fontStyle: 'italic', padding: '20px 10px',
   },
-  // Pase 197: `tarjetaAmigo` pasa a ser el contenedor (div, no botón —
-  // ahora tiene DOS acciones adentro: abrir el chat y desafiar, no puede
-  // ser un solo elemento clickeable). El botón de abrir chat es
-  // `tarjetaAmigoBoton`, con los mismos estilos que antes tenía la
-  // tarjeta entera.
-  tarjetaAmigo: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, width: 96 },
+  tarjetaAmigo: {
+    display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 10, minWidth: 0, boxSizing: 'border-box',
+    padding: '5px 2px',
+    borderStyle: 'solid', borderColor: 'transparent', borderWidth: 12,
+    borderImageSource: 'url(/assets/images/tarjeta-jugador.png)',
+    borderImageSlice: '22 fill', borderImageRepeat: 'stretch',
+  },
   tarjetaAmigoBoton: {
-    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-    width: '100%', border: 'none', background: 'transparent', cursor: 'pointer', padding: 0,
+    display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 10, textAlign: 'left',
+    flex: 1, minWidth: 0, border: 'none', background: 'transparent', cursor: 'pointer', padding: 0,
   },
-  avatarAmigoContenedor: { position: 'relative' },
-  avatarAmigo: {
-    width: 62, height: 62, borderRadius: '50%', objectFit: 'cover',
-    border: `2px solid ${C.doradoClaro}`, background: C.cremaSutil,
-  },
+  tarjetaAmigoTextos: { display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3, minWidth: 0, flex: 1 },
+  avatarAmigoContenedor: { position: 'relative', flexShrink: 0 },
+  avatarAmigo: { position: 'absolute', borderRadius: '50%', objectFit: 'cover', display: 'block' },
+  // punto rojo de "mensaje sin leer", en la esquina del aro
   puntoSinLeer: {
-    position: 'absolute', top: -2, right: -2, width: 15, height: 15, borderRadius: '50%',
-    background: C.crimson, border: `2px solid ${C.verdeProfundo}`, display: 'block',
+    position: 'absolute', top: 1, right: 1, width: 17, height: 17, borderRadius: '50%', boxSizing: 'border-box',
+    background: 'radial-gradient(circle at 32% 28%, #ff9a8f 0%, #E74C3C 45%, #a8281c 100%)',
+    border: '2px solid #FFFBEB', boxShadow: '0 1px 3px rgba(0,0,0,0.55)', display: 'block',
   },
   tarjetaAmigoNombre: {
-    fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 12, color: C.crema,
-    textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%',
+    fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 17, color: '#3B2312',
+    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%',
   },
-  // Pase 197: botón de desafío rápido, debajo del nombre.
-  botonDesafiarAmigo: {
-    marginTop: 2, fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 10.5, color: C.doradoClaro,
-    background: `${C.doradoOscuro}33`, border: `1px solid ${C.doradoOscuro}`, borderRadius: 8,
-    padding: '4px 8px', cursor: 'pointer',
+  chipMensajeNuevo: {
+    fontSize: 11, fontWeight: 800, color: '#fff', background: '#E74C3C', border: '1.5px solid #78281F',
+    borderRadius: 999, padding: '0 9px', lineHeight: '16px',
   },
+  tarjetaAmigoAcciones: { display: 'flex', flexDirection: 'column', gap: 6, width: 104, flexShrink: 0, padding: '0 2px', boxSizing: 'border-box' },
+  botonPildoraAmigo: {
+    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, width: '100%', boxSizing: 'border-box',
+    fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 12, color: '#fff', textShadow: '0 1px 0 rgba(0,0,0,0.35)', flex: 1, minWidth: 0,
+    border: '2.5px solid #000', borderRadius: 999, padding: '3px 6px', cursor: 'pointer',
+  },
+  botonChatearAmigo: { background: '#10B981', boxShadow: '0 3px 0 #065F46' },
+  botonDesafiarAmigo: { background: '#E74C3C', boxShadow: '0 3px 0 #78281F' },
+  iconoPildoraAmigo: { width: 17, height: 17, objectFit: 'contain', flexShrink: 0 },
 
   // Ducentésimo cuadragésimo noveno pase: el degradé verde vive acá ahora
   // (antes vivía en `.pagina`, ver el comentario grande de `pagina` más
@@ -1245,20 +1407,35 @@ const estilos = {
     borderRadius: 10, padding: '8px 10px 8px 30px', fontSize: 13, color: C.crema, outline: 'none',
     boxShadow: 'inset 0 2px 5px rgba(0,0,0,0.4)',
   },
-  panelSolicitudes: { margin: '0 16px 10px', display: 'flex', flexDirection: 'column', gap: 4 },
+  panelSolicitudes: { margin: '0 16px 10px', display: 'flex', flexDirection: 'column', gap: 6 },
   botonSolicitudesToggle: {
-    fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 12, textAlign: 'left',
-    background: `${C.dorado}33`, color: C.chocolate, border: `1.5px solid ${C.doradoOscuro}`,
-    borderRadius: 10, padding: '8px 10px', cursor: 'pointer',
+    display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+    fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 12.5, color: '#3B2312',
+    background: 'linear-gradient(180deg, #F3E6C6, #E3CF9F)', border: '2.5px solid #6b4a34',
+    borderRadius: 12, padding: '7px 10px', cursor: 'pointer',
+    boxShadow: '0 3px 0 #4A2C11, inset 0 2px 0 rgba(255,255,255,0.55)',
   },
-  filaSolicitud: { display: 'flex', alignItems: 'center', gap: 6, padding: '4px 2px' },
+  contadorSolicitudes: {
+    minWidth: 20, height: 20, borderRadius: 10, padding: '0 6px', boxSizing: 'border-box',
+    background: '#E74C3C', color: '#fff', fontSize: 11.5, fontWeight: 800, lineHeight: '16px', textAlign: 'center',
+    border: '2px solid #78281F',
+  },
+  avatarSolicitudContenedor: { position: 'relative', width: 40, height: 40, flexShrink: 0 },
+  solicitudLeyenda: { fontSize: 10.5, fontWeight: 700, color: '#7a5a3a', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
+  filaSolicitud: {
+    display: 'flex', alignItems: 'center', gap: 8, padding: '5px 8px 5px 6px',
+    background: '#EAD9B5', border: '2px solid #6b4a34', borderRadius: 12,
+    boxShadow: '0 2px 0 #4A2C11, inset 0 2px 0 rgba(255,255,255,0.5)',
+  },
   botonSolicitudAceptar: {
-    flexShrink: 0, width: 24, height: 24, borderRadius: 7, border: 'none',
-    background: C.verde, color: '#fff', fontSize: 12, fontWeight: 800, cursor: 'pointer',
+    flexShrink: 0, width: 30, height: 30, borderRadius: '50%', border: '2.5px solid #000', padding: 0,
+    background: '#10B981', boxShadow: '0 3px 0 #065F46', cursor: 'pointer',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
   },
   botonSolicitudRechazar: {
-    flexShrink: 0, width: 24, height: 24, borderRadius: 7, border: 'none',
-    background: `${C.crimson}22`, color: C.crimsonOscuro, fontSize: 12, fontWeight: 800, cursor: 'pointer',
+    flexShrink: 0, width: 30, height: 30, borderRadius: '50%', border: '2.5px solid #000', padding: 0,
+    background: '#E74C3C', boxShadow: '0 3px 0 #78281F', cursor: 'pointer',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
   },
   listaUsuarios: { flex: 1, overflowY: 'auto', padding: '0 10px 12px', display: 'flex', flexDirection: 'column', gap: 6 },
   // Ducentésimo cuadragésimo séptimo pase: llegó el asset real de la
@@ -1314,7 +1491,6 @@ const estilos = {
   avatarChicoContenedor: { position: 'relative', flexShrink: 0, zIndex: 1 },
   avatarChico: {
     width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', display: 'block',
-    border: `2px solid ${C.doradoOscuro}`, boxShadow: `0 0 0 1.5px ${C.chocolate}, 0 1px 3px rgba(0,0,0,0.35)`,
   },
   // Ducentésimo quincuagésimo tercer pase: marco de rango — se dibuja
   // ENCIMA del aro dorado/chocolate de `avatarChico` (mismo criterio de
@@ -1322,7 +1498,7 @@ const estilos = {
   // más grande que el avatar para que lo enmarque en vez de taparlo.
   // `pointerEvents:'none'` para no robarle el click al avatar/fila.
   bordeRangoChico: {
-    position: 'absolute', top: -6, left: -6, width: 44, height: 44,
+    position: 'absolute', inset: 0, width: '100%', height: '100%',
     pointerEvents: 'none', objectFit: 'contain',
   },
   // Ducentésimo cuadragésimo sexto pase: "punto verde neón tipo gema
@@ -1371,22 +1547,22 @@ const estilos = {
   // el `cursor:'default'` (los botones de adentro ya tienen su propio
   // cursor de pointer).
   tooltipAccionUsuario: {
-    position: 'absolute', top: '100%', right: 6, marginTop: 4, zIndex: 5,
-    width: 190, background: C.chocolate, display: 'flex', flexDirection: 'column', gap: 5,
-    padding: 7, borderRadius: 10,
-    boxShadow: '0 4px 10px rgba(0,0,0,0.25)',
+    position: 'absolute', top: '100%', right: 4, marginTop: 4, zIndex: 20,
+    width: 208, background: '#FFFBEB', display: 'flex', flexDirection: 'column', gap: 6,
+    padding: 8, borderRadius: 14, border: '2.5px solid #4A2C2A',
+    boxShadow: '0 6px 0 rgba(0,0,0,0.35), 0 10px 18px rgba(0,0,0,0.45)',
   },
-  accionCargando: {
-    color: C.crema, fontSize: 11.5, fontStyle: 'italic', padding: '4px 6px', opacity: 0.8,
-  },
+  tooltipArriba: { top: 'auto', bottom: '100%', marginTop: 0, marginBottom: 4 },
+  accionCargando: { color: '#7a5a3a', fontSize: 12, fontStyle: 'italic', padding: '6px 8px' },
   botonAccionMenu: {
-    fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 12, textAlign: 'left',
-    background: 'rgba(255,255,255,0.08)', color: C.crema, border: 'none',
-    borderRadius: 7, padding: '7px 8px', cursor: 'pointer',
+    display: 'flex', alignItems: 'center', gap: 8,
+    fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 12.5, textAlign: 'left',
+    background: '#F3E6C6', color: '#3B2312', border: '2px solid #6b4a34',
+    borderRadius: 10, padding: '6px 9px', cursor: 'pointer', boxShadow: '0 2px 0 #A8977A',
   },
-  botonAccionMenuPeligro: { background: 'rgba(232,72,58,0.25)', color: '#ffd9d5' },
+  botonAccionMenuPeligro: { background: '#FFE0DD', color: '#9B2C20', borderColor: '#B4402A', boxShadow: '0 2px 0 #C98A84' },
   botonAccionMenuConIcono: { display: 'flex', alignItems: 'center', gap: 5 },
-  iconoBotonAccionMenu: { width: 13, height: 13, objectFit: 'contain' },
+  iconoBotonAccionMenu: { width: 18, height: 18, objectFit: 'contain', flexShrink: 0 },
   sinResultados: { fontSize: 12.5, color: '#a09085', fontStyle: 'italic', textAlign: 'center', padding: '14px 8px' },
 };
 

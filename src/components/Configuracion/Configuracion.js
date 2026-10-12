@@ -131,6 +131,32 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
     guardarPreferenciasDesafio(aceptaDesafiosAmigos, siguiente);
   };
 
+  // Pase 427: privacidad de estado — "Mostrar estado en línea" (por defecto sí). Apagado: el usuario deja de
+  // aparecer en "Jugadores en línea" y sin punto verde en las tarjetas de amigos de los demás (para el resto
+  // figura como desconectado). Se aplica en vivo desde el servidor, sin recargar nada.
+  const [mostrarEstadoEnLinea, setMostrarEstadoEnLinea] = useState(true);
+
+  useEffect(() => {
+    if (!usuario) return;
+    setMostrarEstadoEnLinea(usuario.mostrar_estado_en_linea !== false);
+  }, [usuario]);
+
+  const alternarMostrarEstadoEnLinea = async () => {
+    const siguiente = !mostrarEstadoEnLinea;
+    setMostrarEstadoEnLinea(siguiente);
+    try {
+      const res = await fetch(`${API_BASE}/usuarios/privacidad-estado`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ mostrarEstadoEnLinea: siguiente }),
+      });
+      if (!res.ok) throw new Error('No se pudo guardar');
+    } catch (err) {
+      console.error('Error guardando privacidad de estado:', err);
+      setMostrarEstadoEnLinea(!siguiente); // se revierte: el servidor no lo guardó
+    }
+  };
+
   // ---------- Centésimo quinto pase: usuarios bloqueados ----------
   const [bloqueados, setBloqueados] = useState([]);
   const [cargandoBloqueados, setCargandoBloqueados] = useState(true);
@@ -337,6 +363,26 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
             style={estilos.switchImagen}
           />
         </label>
+      </PlacaMadera>
+
+      {/* Pase 427: Privacidad — mostrar (o no) el estado en línea. */}
+      <PlacaMadera>
+        <div style={estilos.panelTitulo}>
+          <img src="/assets/images/icono-bloqueados.png" alt="" style={estilos.panelTituloIcono} />
+          Privacidad
+        </div>
+        <label style={estilos.filaSwitch}>
+          <span style={estilos.switchTexto}>Mostrar estado en línea</span>
+          <img
+            src={mostrarEstadoEnLinea ? '/assets/images/switch-on.png' : '/assets/images/switch-off.png'}
+            alt=""
+            onClick={alternarMostrarEstadoEnLinea}
+            style={estilos.switchImagen}
+          />
+        </label>
+        <div style={estilos.switchAyuda}>
+          Si lo apagás, no aparecés en "Jugadores en línea" y los demás te ven desconectado (no podrán desafiarte). Seguís pudiendo chatear y recibir mensajes.
+        </div>
       </PlacaMadera>
 
       {/* Pase siguiente: preferencia de "Desafiar" — dos switches
@@ -639,6 +685,7 @@ const estilos = {
   // es una ilustración de mazo, sin recorte circular ni borde propio.
   previewCartas: { width: 46, height: 46, objectFit: 'contain' },
   opcionAvatarLabel: { fontWeight: 700, fontSize: 12.5, color: C.chocolate },
+  switchAyuda: { fontSize: 12, lineHeight: 1.35, color: '#7a5a3a', marginTop: 8 },
   filaSwitch: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', padding: '3px 0' },
   // Ducentésimo trigésimo noveno pase: "el texto secundario puede ser un
   // poco más visible" (Modo oscuro) — 700→800, 14→14.5px.

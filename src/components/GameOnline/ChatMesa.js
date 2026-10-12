@@ -8,6 +8,16 @@ const API_BASE = `${BASE_URL}/api`;
 // Nonagésimo octavo pase: token/usuarioActual nuevos — hacen falta para
 // abrir el popup de perfil al tocar el nombre de quien escribió un
 // mensaje (no el propio, para no abrir el popup sobre uno mismo).
+// Pase 430: mazo elegido en Configuración (misma clave que usa la mesa) para dibujar las cartitas
+// de "compartió sus cartas" en el chat de equipo.
+function carpetaBaraja() {
+  try {
+    return localStorage.getItem('truco_baraja') === 'nueva' ? 'cartas-nuevas' : 'cartas-clasicas';
+  } catch (e) {
+    return 'cartas-clasicas';
+  }
+}
+
 export default function ChatMesa({ codigoSala, esEquipos, personaje = 'gaucho', token, usuarioActual }) {
   const [mensajes, setMensajes] = useState([]);
   // Centésimo quinto pase: usuarios bloqueados, para ocultar sus mensajes
@@ -210,6 +220,25 @@ export default function ChatMesa({ codigoSala, esEquipos, personaje = 'gaucho', 
         {mensajesVisibles.map((m, i) => (
           m.sistema ? (
             <div key={i} style={estilos.mensajeSistema}>⚡ {m.texto}</div>
+          ) : m.cartasCompartidas ? (
+            <div key={i} style={estilos.mensajeCartas}>
+              <span
+                style={{ ...estilos.nombre, cursor: m.usuario !== usuarioActual ? 'pointer' : 'default' }}
+                onClick={() => abrirPerfilDe(m.usuario)}
+              >{m.usuario === usuarioActual ? 'Vos' : m.usuario}</span>
+              <span style={estilos.textoCartas}>compartió sus cartas</span>
+              <div style={estilos.filaCartas}>
+                {m.cartasCompartidas.map((c, k) => (
+                  <img
+                    key={k}
+                    src={`/assets/images/juego/${carpetaBaraja()}/${c.valor}_${c.palo}.png`}
+                    alt={`${c.valor} de ${c.palo}`}
+                    draggable={false}
+                    style={estilos.miniCarta}
+                  />
+                ))}
+              </div>
+            </div>
           ) : m.sticker ? (
             <div key={i} style={estilos.mensajeSticker}>
               <span
@@ -416,6 +445,14 @@ const estilos = {
     border: 'none', borderRadius: 0, cursor: 'pointer',
   },
   tabs: { display: 'flex', gap: 4, padding: '6px 10px 0' },
+  // Pase 430: línea "X compartió sus cartas" con las 3 cartitas en miniatura.
+  mensajeCartas: {
+    display: 'flex', flexDirection: 'column', gap: 4, padding: '6px 8px', margin: '4px 0',
+    background: '#FAF5E8', border: '1.5px solid #6b4a3466', borderRadius: 10,
+  },
+  textoCartas: { fontSize: 12, color: '#6b4a34', fontStyle: 'italic' },
+  filaCartas: { display: 'flex', gap: 4 },
+  miniCarta: { width: 34, height: 'auto', borderRadius: 3, boxShadow: '0 1px 3px rgba(0,0,0,0.35)' },
   tab: {
     flex: 1, background: 'rgba(74,44,42,0.08)', border: '2px solid transparent',
     borderRadius: '6px 6px 0 0', color: '#4A2C2A', fontSize: 12, padding: '6px 0',

@@ -68,7 +68,7 @@
   }
 
   .cg-banner-solicitudes {
-    display: block;
+    display: flex;
   }
 
   .cg-sidebar {
