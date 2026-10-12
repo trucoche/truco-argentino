@@ -956,6 +956,10 @@ _crearElementosDeTexto() {
     // error-sala, error-jugada, x2 variantes de equipos/1v1) y arriesgar
     // dejar alguno sin actualizar, se centraliza en un solo punto.
     this._actualizarMensajeEstado = (texto, color) => {
+      // Pase 438: mientras la tarjeta de espera está viva (se destruye en el primer render de la partida) el
+      // cartelito de mensajes de la mesa no se muestra — si asomaba por un borde del fondo se veía una línea marrón.
+      const esperando = !!(this.fondoEspera && this.fondoEspera.scene) && !this._salaEnJuego;
+      if (esperando) texto = '';
       this.mensajeText.setText(texto || '');
       if (color) this.mensajeText.setColor(color);
       if (this.mensajeFondo) this.mensajeFondo.setVisible(!!texto);
@@ -1085,8 +1089,10 @@ _crearElementosDeTexto() {
     this.fondoEspera = this.add.image(400, 300, 'fondoEspera').setDisplaySize(800, 600).setDepth(340);
     if (this._L) this._cubrirEstatico(this.fondoEspera);
     this._sprites.push(this.fondoEspera);
-    this.veloEspera = this.add.rectangle(400, 300, 800, this._L ? this._L.H8 + 4 : 600, 0x000000, 0.35).setDepth(350);
+    this.veloEspera = this.add.rectangle(400, 300, this._L ? Math.max(800, this._vistaEspera().w + 60) : 800, this._L ? Math.max(this._L.H8 + 4, this._vistaEspera().h + 60) : 600, 0x000000, 0.35).setDepth(350);
     this._sprites.push(this.veloEspera);
+    // Pase 438: el cartelito inicial "Conectando..." de la mesa no debe verse detrás de la sala de espera.
+    if (this._actualizarMensajeEstado) this._actualizarMensajeEstado('');
 
     // Pase 267, punto 5: "romper el vacío del paño verde... agregar en el
     // fondo (con opacidad muy suave) un par de naipes flotantes" — se
@@ -1374,7 +1380,10 @@ _crearElementosDeTexto() {
     const L = this._L;
     if (!L || !img) return img;
     const src = img.texture.getSourceImage();
-    const sc = Math.max(800 / src.width, (L.H8 + 4) / src.height);
+    // Pase 438: cubre la vista REAL de la cámara con 60 de margen (antes 800 x H8+4 justos: en celulares
+    // quedaban franjas de madera arriba/abajo con el cartelito de mensajes asomando — la "línea marrón").
+    const v = this._vistaEspera();
+    const sc = Math.max(800 / src.width, (L.H8 + 4) / src.height, (v.w + 60) / src.width, (v.h + 60) / src.height);
     img.setDisplaySize(src.width * sc, src.height * sc).setPosition(400, centroY);
     return img;
   }
@@ -1960,6 +1969,27 @@ _crearCentroEspera() {
   this._sprites.push(texto);
 }
 
+// Pase 438: rectángulo de mundo que la cámara muestra de verdad (la sala de espera siempre está centrada en
+// (400,300)). En escritorio es 800x600; en ventanas angostas/altas el alto crece y el ancho puede quedar
+// por debajo de 800 — el layout de la sala de espera se calcula contra ESTO, no contra 800x600 fijo.
+_vistaEspera() {
+  const cam = this.cameras.main;
+  const z = cam.zoom || 1;
+  const w = this.scale.width / z;
+  const h = this.scale.height / z;
+  return { w, h, yTop: 300 - h / 2 };
+}
+
+// Pase 438: reparto vertical "space-evenly". Los Y de la sala de espera están escritos para un lienzo de 600
+// de alto; cuando la vista es más alta (celulares), el sobrante se reparte en partes iguales entre los `G`
+// bloques (cartel, filas, estado, botón) en vez de dejar todo apilado abajo. `k` = índice del bloque (0 = cartel).
+// Devuelve cuánto hay que sumarle al Y de diseño. En escritorio (vista de 600) es 0 salvo el corrimiento de la vista.
+_esperaDy(k, G) {
+  const v = this._vistaEspera();
+  const extra = Math.max(0, v.h - 600);
+  return (v.yTop < 0 ? v.yTop : 0) + (extra * (k + 1)) / (G + 1);
+}
+
 _actualizarTextoBuscando() {
   const t = this._centroEspera && this._centroEspera.texto;
   if (!t || !t.scene) return;
@@ -1968,7 +1998,7 @@ _actualizarTextoBuscando() {
   const unidos = (this._jugadoresSala || []).length;
   t.setText(lleno ? 'Iniciando partida...' : (equipos ? `Buscando jugadores... (${unidos}/${this._capacidadSala})` : 'Buscando rival...'));
   // Pase 434: en 2v2/3v3 la grilla de dos filas ocupa más alto, el texto baja.
-  t.setY(equipos ? 520 : 470);
+  t.setY((equipos ? 526 : 470) + this._esperaDy(equipos ? 4 : 2, equipos ? 6 : 4));
 }
 
 // Destruye (no solo oculta) el título de la sala de espera — se llama en
@@ -2016,13 +2046,13 @@ _redibujarFilaEspera() {
 
   // Pase 346: el modo ("1v1") va en una mini píldora dorada dentro del cartel.
   // Pase 436: en 2v2/3v3 el cartel sube (y=100, antes 130) para aprovechar la franja vacía de arriba.
-  this._actualizarBannerEsperaTitulo('Esperando jugadores', this._modoSala, this._textoDetalleSala(), this._capacidadSala > 2 ? { y: 100 } : { y: 105 });
+  this._actualizarBannerEsperaTitulo('Esperando jugadores', this._modoSala, this._textoDetalleSala(), this._capacidadSala > 2 ? { y: 64 + this._esperaDy(0, 6) } : { y: 105 + this._esperaDy(0, 4) });
   this._actualizarTextoBuscando();
 
   const total = this._capacidadSala;
   const equipos = total > 2;
   // Pase 434: en 2v2/3v3 el botón "Volver al Lobby" baja para dejar lugar a las dos filas.
-  if (this.botonVolverEspera && this.botonVolverEspera.scene) this.botonVolverEspera.setY(equipos ? 562 : 540);
+  if (this.botonVolverEspera && this.botonVolverEspera.scene) this.botonVolverEspera.setY(equipos ? 568 + this._esperaDy(5, 6) : 540 + this._esperaDy(3, 4));
   // Pase 209: pedido del usuario ("en la pantalla nueva de carga,
   // agrandemos todo") — tiles, huecos y tipografía de toda la fila (ver
   // también _dibujarTileEspera más abajo) subieron de tamaño.
@@ -2033,7 +2063,7 @@ _redibujarFilaEspera() {
   const paso = tamano + gap;
   const anchoTotal = total * paso - gap;
   const inicioX = 400 - anchoTotal / 2 + tamano / 2;
-  const cy = 290;   // Pase 437: 270 → 290 (bloque más centrado, el cartel sube a y=105)
+  const cy = 290 + this._esperaDy(1, 4);   // Pase 437: 270 → 290; Pase 438: + reparto vertical según la vista
 
   const pendientes = [];
   if (equipos) {
@@ -2083,9 +2113,6 @@ _redibujarFilaEspera() {
 // Entre píldoras de tiles contiguos queda siempre un hueco de 16 px.
 _dibujarGrillaEquiposEspera(total, pendientes) {
   const n = total / 2;
-  // Pase 436: tiles +25 % (T 64 → 80; el aro mide 1.125 × T = 90 px) — antes quedaba mucho paño vacío.
-  const T = 80;
-  const radioAro = T * 0.5625;
   const jugadores = this._jugadoresSala || [];
   const miNombre = this.usuario && this.usuario.username;
   const yo = jugadores.find(j => j && j.username === miNombre);
@@ -2096,8 +2123,36 @@ _dibujarGrillaEquiposEspera(total, pendientes) {
     return Array.from({ length: n }, (_, i) => m[i] || null);
   };
 
+  // Pase 436: tiles +25 % (T 64 → 80; el aro mide 1.125 × T = 90 px). Pase 438: si la vista es más angosta que
+  // la fila (celulares), todo el bloque (aros, píldoras, hueco, fuentes) se achica con el mismo factor `e`.
+  // Pase 439: T 80 → 92 (aro de ~104 px). Para que entren aros más grandes el cartel sube (y=64) y las dos filas
+  // se reparten todo el alto: ver las Y de diseño más abajo.
+  const T0 = 92;
+  const GAP0 = 16;
+  const medir = (tam) => {
+    const est = { fontFamily: 'Fredoka, Arial', fontSize: `${tam}px`, fontStyle: '700' };
+    const a1 = this.add.text(0, 0, '✓ Conectado', est);
+    const a2 = this.add.text(0, 0, 'Conectando...', est);
+    const w = Math.ceil(Math.max(a1.width, a2.width));
+    a1.destroy(); a2.destroy();
+    return w;
+  };
+  const pill0 = Math.max(medir(15) + 32, 110);
+  const paso0 = Math.max(T0 * 1.125, pill0) + GAP0;
+  const fila0 = (n - 1) * paso0 + pill0;
+  const anchoVista = Math.min(760, this._vistaEspera().w) - 24;
+  const e = Math.max(0.55, Math.min(1, anchoVista / fila0));
+
+  const T = T0 * e;
+  const radioAro = T * 0.5625;
+  const fontPill = Math.max(10, Math.round(15 * e));
+  const anchoPill = Math.max(medir(fontPill) + 32 * e, 110 * e);
+  const GAP = GAP0 * e;
+  const paso = Math.max(radioAro * 2, anchoPill) + GAP;
+  const inicioX = 400 - ((n - 1) * paso) / 2;
+
   const ESTILO_ETIQUETA = {
-    fontFamily: 'Fredoka, Arial', fontSize: '16px', fontStyle: '700', color: '#F1D9A8',
+    fontFamily: 'Fredoka, Arial', fontSize: `${Math.max(12, Math.round(16 * e))}px`, fontStyle: '700', color: '#F1D9A8',
     stroke: '#2C160E', strokeThickness: 4,
   };
   const etiqueta = (texto, y) => {
@@ -2107,31 +2162,21 @@ _dibujarGrillaEquiposEspera(total, pendientes) {
     this._sprites.push(t);
   };
 
-  // Ancho de las píldoras (mismo cálculo que en _dibujarTileEspera, modo compacto: 15 px negrita)
-  // para que el paso entre tiles deje 16 px libres entre una píldora y la siguiente.
-  const ESTILO_MED = { fontFamily: 'Fredoka, Arial', fontSize: '15px', fontStyle: '700' };
-  const med = this.add.text(0, 0, '✓ Conectado', ESTILO_MED);
-  const med2 = this.add.text(0, 0, 'Conectando...', ESTILO_MED);
-  const anchoPill = Math.max(Math.ceil(Math.max(med.width, med2.width)) + 32, 110);
-  med.destroy(); med2.destroy();
-  const GAP = 16;
-  const paso = Math.max(radioAro * 2, anchoPill) + GAP;
-  const inicioX = 400 - ((n - 1) * paso) / 2;
-
-  // Distribución vertical (lienzo de 600 de alto): título arriba (y=100), etiqueta, fila 1, escudo VS,
-  // fila 2, etiqueta, texto de estado y botón abajo (y=562). La píldora (alto 30) cuelga a
-  // radioAro + 37 px del centro del tile.
-  const VS = 62;                                        // Pase 436: escudo +20 % (52 → 62)
-  const yEtiqueta1 = 154;
-  const cy1 = yEtiqueta1 + 12 + radioAro;
-  const yVs = cy1 + radioAro + 37 + 2 + VS / 2;
-  const cy2 = yVs + VS / 2 + 2 + radioAro;
-  const yEtiqueta2 = cy2 + radioAro + 37 + 10;
+  // Distribución vertical (lienzo de diseño de 600 de alto): título arriba (y=64), etiqueta (124), fila 1, escudo VS,
+  // fila 2, etiqueta, texto de estado (526) y botón abajo (568). La píldora (alto 30·e) cuelga a radioAro + 34·e + 3.
+  // Pase 438: cada bloque suma su parte del sobrante de alto de la vista (`_esperaDy`, 6 bloques).
+  const VS = 62 * e;                                    // Pase 436: escudo +20 % (52 → 62)
+  const pb = 34 * e + 3;                                // alto desde el borde del aro hasta el pie de la píldora
+  const yEtiqueta1 = 124 + this._esperaDy(1, 6);
+  const cy1 = yEtiqueta1 + 14 + radioAro;
+  const yVs = cy1 + radioAro + pb + 2 + VS / 2 + (this._esperaDy(2, 6) - this._esperaDy(1, 6));
+  const cy2 = yVs + VS / 2 + 2 + radioAro + (this._esperaDy(3, 6) - this._esperaDy(2, 6));
+  const yEtiqueta2 = cy2 + radioAro + pb + 10;
 
   etiqueta('TU EQUIPO', yEtiqueta1);
-  armar(miEquipo).forEach((j, i) => this._dibujarTileEspera(inicioX + i * paso, cy1, T / 2, j, pendientes, true));
+  armar(miEquipo).forEach((j, i) => this._dibujarTileEspera(inicioX + i * paso, cy1, T / 2, j, pendientes, true, e));
   this._dibujarBadgeVsEspera(400, yVs, VS);
-  armar(otroEquipo).forEach((j, i) => this._dibujarTileEspera(inicioX + i * paso, cy2, T / 2, j, pendientes, true));
+  armar(otroEquipo).forEach((j, i) => this._dibujarTileEspera(inicioX + i * paso, cy2, T / 2, j, pendientes, true, e));
   etiqueta('EQUIPO RIVAL', yEtiqueta2);
 }
 
@@ -2142,7 +2187,7 @@ _dibujarGrillaEquiposEspera(total, pendientes) {
 // `pendientes` acumula los avatares que todavía no están en la caché de
 // texturas de Phaser, para cargarlos todos juntos en un solo batch (ver
 // _redibujarFilaEspera) en vez de un load.start() por jugador.
-_dibujarTileEspera(cx, cy, radio, jugador, pendientes, compacto = false) {
+_dibujarTileEspera(cx, cy, radio, jugador, pendientes, compacto = false, escala = 1) {
   const conectado = !!jugador;
 
   // Pase 267, punto 2: `marcoAvatarEspera` (placa cuadrada con esquineros
@@ -2236,17 +2281,17 @@ _dibujarTileEspera(cx, cy, radio, jugador, pendientes, compacto = false) {
   // usan las filas de la pantalla final (pase 265) para que se lea
   // "3D"/ahuecada y no plana — más los 3 puntitos parpadeantes pedidos.
   // Pase 434 (ajustado en 436): `compacto` (grilla de equipos) — píldora de 30 px y fuente 15 negrita, más cerca del aro.
-  const pillY = compacto ? cy + radio * 1.125 + 19 : cy + radio + 30;
-  const pillAlto = 30;
+  const pillY = compacto ? cy + radio * 1.125 + 19 * escala : cy + radio + 30;
+  const pillAlto = compacto ? 30 * escala : 30;
 
   // Pase 349: las dos píldoras ("✓ Conectado" verde / "Conectando..." crema) se dibujan por
   // código, planas y con relieve duro — igual que en el nativo — en vez de los PNG nine-slice
   // de la pantalla final (que dejaban los bordes cortados). Las dos miden lo mismo (ancho
   // fijo, calculado con el texto más largo) y NO cambian al aparecer los puntitos.
-  const ESTILO_PILL = { fontFamily: 'Fredoka, Arial', fontSize: '15px', fontStyle: compacto ? '700' : '600' };
+  const ESTILO_PILL = { fontFamily: 'Fredoka, Arial', fontSize: `${compacto ? Math.max(10, Math.round(15 * escala)) : 15}px`, fontStyle: compacto ? '700' : '600' };
   const medA = this.add.text(0, 0, '✓ Conectado', ESTILO_PILL);
   const medB = this.add.text(0, 0, 'Conectando...', ESTILO_PILL);
-  const anchoPill = compacto ? Math.max(Math.ceil(Math.max(medA.width, medB.width)) + 32, 110) : Math.max(Math.ceil(Math.max(medA.width, medB.width)) + 36, 120);
+  const anchoPill = compacto ? Math.max(Math.ceil(Math.max(medA.width, medB.width)) + 32 * escala, 110 * escala) : Math.max(Math.ceil(Math.max(medA.width, medB.width)) + 36, 120);
   const anchoConectando = medB.width;
   medA.destroy();
   medB.destroy();
