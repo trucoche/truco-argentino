@@ -4265,7 +4265,7 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
         const altoAbanico = (lado === 'arriba' ? 80 : 88) * kS * fD;   // Pase 448/449: también en 3v3 (con la escala -20% de los mazos); el de enfrente un poco más bajo para no pisar su placa
         const abanico = this.add.image(cx, cyN, claveAbanico).setOrigin(0.5, 0.5).setDepth(10);
         abanico.setDisplaySize(altoAbanico * (abanico.width / abanico.height), altoAbanico);
-        abanico.setAngle(esTres ? (lado === 'izq' ? 7 : (lado === 'der' ? -7 : 0)) : (lado === 'izq' ? 21 : (lado === 'der' ? -18 : 0)));   // Pase 450: 3v3 = ±7°, 2v2 = +21°/-18°   // Pase 447: inclinación exacta para acompañar la elipse de la mesa
+        abanico.setAngle(esTres ? (lado === 'izq' ? 7 : (lado === 'der' ? -7 : 0)) : (lado === 'izq' ? -9 : (lado === 'der' ? 13 : 0)));   // Pase 450: 3v3 = ±7°; Pase 460: 2v2 = -9° (izq) / +13° (der), igual que el nativo (antes +21°/-18°)   // Pase 447: inclinación exacta para acompañar la elipse de la mesa
         this._sprites.push(abanico);
       } else for (let k = 0; k < cantidad; k++) {
         const anguloCarta = -anguloTotalAbanico / 2 + k * anguloPorCarta;
