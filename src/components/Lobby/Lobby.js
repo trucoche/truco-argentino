@@ -451,7 +451,7 @@ useEffect(() => {
             <img src="/assets/images/icono-desafios.png" alt="" style={estilos.tarjetaIcono} />
             <span style={estilos.tarjetaTextos}>
               <span style={{ ...estilos.tarjetaTitulo, color: '#3B1F0E' }}>Misiones semanales</span>
-              <span style={{ ...estilos.tarjetaSub, color: '#6B4A34' }}>Reclamá monedas</span>
+              <span style={{ ...estilos.tarjetaSub, color: '#6B4A34' }}>Reclamá mates</span>
               <span style={estilos.misionesBarraFila}>
                 <span style={estilos.misionesBarraPista}>
                   <span style={{ ...estilos.misionesBarraRelleno, width: `${resumenMisiones && resumenMisiones.total > 0 ? Math.round((resumenMisiones.completadas / resumenMisiones.total) * 100) : 0}%` }} />

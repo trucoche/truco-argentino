@@ -636,7 +636,7 @@ export default function Torneos({ token, onVerBracket }) {
       } else {
         mostrarToast(
           data.costoReembolsado > 0
-            ? `Torneo eliminado. Se te devolvieron ${Math.round(Number(data.costoReembolsado))} monedas.`
+            ? `Torneo eliminado. Se te devolvieron ${Math.round(Number(data.costoReembolsado))} mates.`
             : 'Torneo eliminado.',
           'exito'
         );
@@ -652,12 +652,6 @@ export default function Torneos({ token, onVerBracket }) {
 
 return (
     <>
-      {/* Pase 384: simulador de bracket (solo en desarrollo): abre BracketView con datos falsos, sin backend. */}
-      {process.env.NODE_ENV === 'development' && (
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10 }}>
-          <button type="button" onClick={() => onVerBracket('simulador')} style={estilos.btnSimular}>Simular bracket</button>
-        </div>
-      )}
       {(errorAccion || error) && (
         <div ref={errorAccionRef} style={estilos.errorBox} onClick={() => avisarError('')}>
           {errorAccion || error}
@@ -1268,11 +1262,6 @@ return (
 const CONTORNO_TEXTO = '-1.5px -1.5px 0 #000, 0 -1.5px 0 #000, 1.5px -1.5px 0 #000, -1.5px 0 0 #000, 1.5px 0 0 #000, -1.5px 1.5px 0 #000, 0 1.5px 0 #000, 1.5px 1.5px 0 #000';
 
 const estilos = {
-  btnSimular: {
-    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 12.5, color: '#2C160E',
-    background: '#FFF8ED', border: '2px solid #000', borderRadius: 999, padding: '4px 14px', cursor: 'pointer',
-    boxShadow: '0 2px 0 #D9C9A5, 0 3px 0 #000', marginBottom: 3,
-  },
   errorBox: {
     background: '#ffe0dd', border: `2px solid ${C.crimson}`, color: C.crimsonOscuro,
     borderRadius: 10, padding: '8px 12px', marginBottom: 12, fontWeight: 700, fontSize: 13

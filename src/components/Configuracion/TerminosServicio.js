@@ -38,21 +38,21 @@ const SECCIONES = [
     ]
   },
   {
-    "titulo": "4. Monedas virtuales",
+    "titulo": "4. Mates virtuales",
     "parrafos": [
-      "TrucoChe usa una moneda virtual propia (\"monedas\"). Las monedas se pueden obtener gratis (bonos diarios, misiones, logros, premios de torneos) o comprarlas dentro de la aplicación. Se usan para entrar a salas y torneos, y para personalizar tu experiencia de juego.",
-      "Las monedas no son dinero, no tienen valor monetario fuera de la aplicación y no se pueden canjear, retirar ni cambiar por dinero, premios en efectivo ni otros bienes. Tampoco son una inversión ni generan intereses.",
-      "Las monedas son personales: no se pueden vender, transferir ni intercambiar fuera de la aplicación. Cualquier intento de comprar o vender monedas o cuentas a terceros por fuera de TrucoChe está prohibido y puede llevar a la suspensión de la cuenta.",
-      "Podemos modificar los precios, los packs, los bonos y las reglas para obtener o usar monedas. Los cambios no afectan las compras ya acreditadas."
+      "TrucoChe usa una unidad virtual propia: los \"mates\". Los mates se pueden obtener gratis (bonos diarios, misiones, logros, premios de torneos) o comprarlos dentro de la aplicación. Se usan para entrar a salas y torneos, y para personalizar tu experiencia de juego.",
+      "Los mates no son dinero, no tienen valor monetario fuera de la aplicación y no se pueden canjear, retirar ni cambiar por dinero, premios en efectivo ni otros bienes. Tampoco son una inversión ni generan intereses.",
+      "Los mates son personales: no se pueden vender, transferir ni intercambiar fuera de la aplicación. Cualquier intento de comprar o vender mates o cuentas a terceros por fuera de TrucoChe está prohibido y puede llevar a la suspensión de la cuenta.",
+      "Podemos modificar los precios, los packs, los bonos y las reglas para obtener o usar mates. Los cambios no afectan las compras ya acreditadas."
     ]
   },
   {
     "titulo": "5. Compras y pagos",
     "lista": [
-      "Las compras de monedas se pagan a través de Mercado Pago. No almacenamos los datos de tu tarjeta ni de tu medio de pago.",
+      "Las compras de mates se pagan a través de Mercado Pago. No almacenamos los datos de tu tarjeta ni de tu medio de pago.",
       "Los precios se muestran en pesos argentinos e incluyen lo indicado en cada pack al momento de la compra.",
-      "Las monedas se acreditan cuando Mercado Pago confirma el pago, lo que puede demorar unos minutos. Si pasado un tiempo razonable no ves tus monedas, escribinos con el comprobante de pago.",
-      "Una vez acreditadas, las monedas se consideran entregadas y consumibles dentro del juego. Esto no limita los derechos que te reconozca la normativa de defensa del consumidor vigente en Argentina, ni los casos de cobros duplicados o errores comprobables, que vamos a resolver con el criterio de corregir el error."
+      "Los mates se acreditan cuando Mercado Pago confirma el pago, lo que puede demorar unos minutos. Si pasado un tiempo razonable no ves tus mates, escribinos con el comprobante de pago.",
+      "Una vez acreditados, los mates se consideran entregados y consumibles dentro del juego. Esto no limita los derechos que te reconozca la normativa de defensa del consumidor vigente en Argentina, ni los casos de cobros duplicados o errores comprobables, que vamos a resolver con el criterio de corregir el error."
     ]
   },
   {
@@ -77,22 +77,22 @@ const SECCIONES = [
       "Pasarse información sobre las cartas con un compañero por cualquier medio ajeno a las señas y recursos que el propio juego permite.",
       "Usar programas, bots, scripts o cualquier herramienta que automatice o altere el juego.",
       "Aprovechar errores del sistema en beneficio propio, o no reportarlos cuando los encontrás.",
-      "Arreglar resultados con otros jugadores (por ejemplo, perder a propósito para transferir monedas o puntos).",
+      "Arreglar resultados con otros jugadores (por ejemplo, perder a propósito para transferir mates o puntos).",
       "Abandonar partidas de forma reiterada. Los abandonos pueden registrarse y afectar tus estadísticas y tu ranking."
     ]
   },
   {
     "titulo": "8. Reportes y sanciones",
     "parrafos": [
-      "Podés reportar a otros jugadores y bloquearlos desde la aplicación. Revisamos los reportes y, según la gravedad y la reiteración, podemos advertir, limitar funciones, suspender temporalmente o cerrar definitivamente una cuenta, y quitar contenido o resultados obtenidos de forma indebida, incluidas las monedas y los puntos asociados.",
-      "Si tu cuenta es suspendida o cerrada por incumplir estos Términos, no corresponde la devolución de monedas, incluso las compradas, salvo que la ley disponga otra cosa.",
+      "Podés reportar a otros jugadores y bloquearlos desde la aplicación. Revisamos los reportes y, según la gravedad y la reiteración, podemos advertir, limitar funciones, suspender temporalmente o cerrar definitivamente una cuenta, y quitar contenido o resultados obtenidos de forma indebida, incluidos los mates y los puntos asociados.",
+      "Si tu cuenta es suspendida o cerrada por incumplir estos Términos, no corresponde la devolución de mates, incluso los comprados, salvo que la ley disponga otra cosa.",
       "Si creés que una sanción fue un error, escribinos y la revisamos."
     ]
   },
   {
     "titulo": "9. Actividades de dinero real fuera de la aplicación",
     "parrafos": [
-      "TrucoChe no aloja ni administra apuestas de dinero real ni juegos de azar con dinero real. Las partidas dentro de la aplicación se juegan con monedas virtuales.",
+      "TrucoChe no aloja ni administra apuestas de dinero real ni juegos de azar con dinero real. Las partidas dentro de la aplicación se juegan con mates virtuales.",
       "Cualquier actividad de dinero real entre usuarios que se organice por fuera de TrucoChe (por ejemplo, por grupos de mensajería) es completamente ajena a nosotros: no la operamos, supervisamos ni respaldamos, y no respondemos por ella. Usar la aplicación para promover u organizar ese tipo de actividades está prohibido."
     ]
   },
@@ -114,7 +114,7 @@ const SECCIONES = [
     "titulo": "12. Disponibilidad del servicio",
     "parrafos": [
       "Trabajamos para que TrucoChe esté disponible y funcione bien, pero se ofrece \"tal cual está\": puede haber mantenimientos, cortes, errores o fallas de conexión, propias o de terceros, que interrumpan partidas, salas o torneos.",
-      "Si una falla técnica nuestra afecta una partida o un torneo, vamos a buscar una solución razonable (por ejemplo, reanudar la partida o devolver las monedas de la entrada). No garantizamos una compensación en todos los casos, ni respondemos por interrupciones causadas por tu conexión o tu dispositivo."
+      "Si una falla técnica nuestra afecta una partida o un torneo, vamos a buscar una solución razonable (por ejemplo, reanudar la partida o devolver los mates de la entrada). No garantizamos una compensación en todos los casos, ni respondemos por interrupciones causadas por tu conexión o tu dispositivo."
     ]
   },
   {
@@ -126,7 +126,7 @@ const SECCIONES = [
   {
     "titulo": "14. Limitación de responsabilidad",
     "parrafos": [
-      "En la medida permitida por la ley, TrucoChe no responde por daños indirectos, pérdida de monedas virtuales por uso indebido de tu cuenta o de tus credenciales, interrupciones del servicio, ni por la conducta de otros usuarios.",
+      "En la medida permitida por la ley, TrucoChe no responde por daños indirectos, pérdida de mates virtuales por uso indebido de tu cuenta o de tus credenciales, interrupciones del servicio, ni por la conducta de otros usuarios.",
       "Nada de lo dispuesto en estos Términos limita los derechos que las leyes de defensa del consumidor te reconocen y que no pueden renunciarse."
     ]
   },
@@ -134,7 +134,7 @@ const SECCIONES = [
     "titulo": "15. Eliminación de tu cuenta y fin del servicio",
     "parrafos": [
       "Podés eliminar tu cuenta cuando quieras desde Ajustes → Mi cuenta → \"Eliminar mi cuenta\", o desde trucoche.com.ar/eliminar-cuenta. El proceso (confirmación por email, período de 30 días para arrepentirte y eliminación definitiva) se explica en el punto 10 de la Política de Privacidad.",
-      "Si no recuperás tu cuenta dentro de los 30 días del período de arrepentimiento, las monedas que tengas se pierden y no se devuelven ni se pueden transferir. Gastalas antes si querés aprovecharlas.",
+      "Si no recuperás tu cuenta dentro de los 30 días del período de arrepentimiento, los mates que tengas se pierden y no se devuelven ni se pueden transferir. Gastalos antes si querés aprovecharlos.",
       "También podemos cerrar una cuenta o dejar de ofrecer el servicio, total o parcialmente. Si cerramos el servicio completo, vamos a avisar con anticipación razonable."
     ]
   },

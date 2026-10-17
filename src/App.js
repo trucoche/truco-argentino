@@ -325,9 +325,9 @@ function AppInterna() {
               }
             }
           }
-          alert('¡Listo! Tu pago se acreditó y ya tenés las monedas nuevas en tu cuenta.');
+          alert('¡Listo! Tu pago se acreditó y ya tenés los mates nuevos en tu cuenta.');
         } else if (pago === 'pendiente') {
-          alert('Tu pago quedó pendiente de aprobación. Apenas se confirme, te vamos a acreditar las monedas.');
+          alert('Tu pago quedó pendiente de aprobación. Apenas se confirme, te vamos a acreditar los mates.');
         } else {
           alert('El pago no se completó — no se realizó ningún cobro.');
         }

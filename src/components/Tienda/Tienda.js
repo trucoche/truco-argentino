@@ -109,10 +109,10 @@ const CARTELES = {
 const PACKS = [
   { id: 'pack-inauguracion', monedas: 100, bono: 0, precio: 990, precioOriginal: 2800, tag: 'inauguracion', nombrePack: 'Inauguración', tipoCartel: 'rojo', notaEspecial: null, icono: '/assets/images/moneda-inauguracion.png' },
   { id: 'pack-800', monedas: 800, bono: 200, precio: 16800, precioOriginal: 30000, tag: 'mejorPrecio', nombrePack: 'Mejor Valor', tipoCartel: 'verde', icono: '/assets/images/moneda-100.png' },
-  { id: 'pack-400', monedas: 400, bono: 100, precio: 9500, precioOriginal: 15000, nombrePack: '500 Monedas', tipoCartel: 'base', icono: '/assets/images/moneda-400.png' },
-  { id: 'pack-200', monedas: 200, bono: 0, precio: 5000, precioOriginal: 6000, nombrePack: '200 Monedas', tipoCartel: 'base', icono: '/assets/images/moneda-200.png' },
-  { id: 'pack-100', monedas: 100, bono: 0, precio: 2800, precioOriginal: 3000, nombrePack: '100 Monedas', tipoCartel: 'base', icono: '/assets/images/moneda-800.png' },
-  { id: 'pack-50', monedas: 50, bono: 0, precio: 1500, precioOriginal: null, nombrePack: '50 Monedas', tipoCartel: 'base', icono: '/assets/images/moneda-50.png' },
+  { id: 'pack-400', monedas: 400, bono: 100, precio: 9500, precioOriginal: 15000, nombrePack: '500 Mates', tipoCartel: 'base', icono: '/assets/images/moneda-400.png' },
+  { id: 'pack-200', monedas: 200, bono: 0, precio: 5000, precioOriginal: 6000, nombrePack: '200 Mates', tipoCartel: 'base', icono: '/assets/images/moneda-200.png' },
+  { id: 'pack-100', monedas: 100, bono: 0, precio: 2800, precioOriginal: 3000, nombrePack: '100 Mates', tipoCartel: 'base', icono: '/assets/images/moneda-800.png' },
+  { id: 'pack-50', monedas: 50, bono: 0, precio: 1500, precioOriginal: null, nombrePack: '50 Mates', tipoCartel: 'base', icono: '/assets/images/moneda-50.png' },
 ];
 
 function formatearPrecio(n) {
@@ -217,7 +217,7 @@ export default function Tienda({ usuario, token }) {
             flotando por ENCIMA del cartelito (top negativo) para no tocar
             ninguna de las zonas ya medidas a pixel. */}
         {destacado && (
-          <div style={estilos.badgeHero}>⭐ MEJOR PRECIO POR MONEDA</div>
+          <div style={estilos.badgeHero}>⭐ MEJOR PRECIO POR MATE</div>
         )}
         {/* Ducentésimo trigésimo tercer pase: cinta diagonal de descuento,
             SOLO en la tarjeta de Inauguración — reemplaza al banner de texto
@@ -270,7 +270,7 @@ export default function Tienda({ usuario, token }) {
               leyendo pegados. */}
           <div style={estilos.cantidadGrupo}>
             <div style={estilos.cantidad}>{total.toLocaleString('es-AR')}</div>
-            <div style={estilos.cantidadLabel}>monedas</div>
+            <div style={estilos.cantidadLabel}>mates</div>
           </div>
 
           {pack.bono > 0 ? (
@@ -325,7 +325,7 @@ export default function Tienda({ usuario, token }) {
       <div style={estilos.sectionTitle}>
         {/* Pase 366: la bolsita de monedas del pack de 100 reemplaza al 🛒. */}
         <img src="/assets/images/moneda-800.png" alt="" style={estilos.sectionTitleIcono} />
-        Comprá monedas
+        Comprá mates
       </div>
       <div style={estilos.sectionSubtitle}>Se acreditan al instante en tu cuenta</div>
 
@@ -384,7 +384,7 @@ export default function Tienda({ usuario, token }) {
           vez de un solo párrafo largo, y se achica/atenúa un poco más
           (ver `estilos.notaPie`). */}
       <div style={estilos.notaPie}>
-        Las monedas son de uso exclusivo dentro de TrucoChe (mesas, torneos y futuros cosméticos)
+        Los mates son de uso exclusivo dentro de TrucoChe (mesas, torneos y futuros cosméticos)
         <br />
         No representan dinero real y no se pueden retirar ni transferir.
       </div>

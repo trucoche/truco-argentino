@@ -197,18 +197,18 @@ export default function CambiarFondoModal({ token, saldoActual, onCerrar, onFond
 
       {error && <div style={estilos.errorBox}>{error}</div>}
       {saldoInsuficiente && !error && (
-        <div style={estilos.errorBox}>No te alcanzan las monedas — te faltan {COSTO_FONDO - Math.round(Number(saldoActual) || 0)}.</div>
+        <div style={estilos.errorBox}>No te alcanzan los mates — te faltan {COSTO_FONDO - Math.round(Number(saldoActual) || 0)}.</div>
       )}
 
       <div style={estilos.terminos}>
-        <div style={estilos.terminosTitulo}>Debés aceptar estos términos antes de continuar:</div>
+        <div style={estilos.terminosTitulo}>Antes de guardar, confirmá estas dos cosas:</div>
         <label style={estilos.checkFila}>
           <input type="checkbox" checked={aceptaNormas} onChange={(e) => setAceptaNormas(e.target.checked)} />
-          <span>No infringe las normas: no se permite pornografía, fotos ofensivas, desagradables, ni discursos de odio. Entiendo que mi cuenta será suspendida en caso contrario.</span>
+          <span>La imagen es apta para todo público: sin desnudos, violencia explícita, contenido ofensivo ni mensajes de odio. Si no lo cumple, mi cuenta puede ser sancionada.</span>
         </label>
         <label style={estilos.checkFila}>
           <input type="checkbox" checked={aceptaCosto} onChange={(e) => setAceptaCosto(e.target.checked)} />
-          <span>Acepto que se me descontarán <strong>{COSTO_FONDO} monedas</strong> por cambiar mi fondo.</span>
+          <span>Estoy de acuerdo con que este cambio cuesta <strong>{COSTO_FONDO} mates</strong>, que se debitan de mi saldo.</span>
         </label>
       </div>
     </PopupMadera>

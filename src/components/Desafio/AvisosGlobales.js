@@ -83,7 +83,7 @@ export default function AvisosGlobales({ usuario, token, onAceptarDesafio, onCam
     // para la opción nueva de "Desafiar" desde el menú "⋮" de Chat
     // Global, que no tiene su propio botón con feedback como el popup de
     // perfil.
-    const alEnviarse = ({ username }) => mostrarToast(`Desafío enviado a ${username}.`, 'exito');
+    const alEnviarse = ({ username }) => mostrarToast(`Desafío enviado a ${username}.`, 'exito', 3200, undefined, 'desafio');
 
     const alAceptarse = ({ codigo }) => {
       setDesafioRecibido(null);
@@ -92,7 +92,7 @@ export default function AvisosGlobales({ usuario, token, onAceptarDesafio, onCam
 
     const alMensajePrivado = (msg) => {
       if (msg.de === usuario.username) return; // eco de mi propio mensaje
-      mostrarToast(`💬 ${msg.de}: ${msg.texto}`, 'info', 3200, () => setConversacionAbierta(msg.de));
+      mostrarToast(`${msg.de}: ${msg.texto}`, 'info', 3200, () => setConversacionAbierta(msg.de), 'chat');
     };
 
     // Pase 377: invitaciones de equipo de torneo (el listado en sí viene del backend, así que ante
@@ -218,7 +218,7 @@ export default function AvisosGlobales({ usuario, token, onAceptarDesafio, onCam
                 // "Solicitudes de amistad" (ver `onIrASolicitudesAmistad`
                 // en App.js y `abrirSolicitudesSenial` en ChatGlobal.js),
                 // en vez de dejar al usuario a encontrarlo por su cuenta.
-                mostrarToast(`🤝 ${username} te envió una solicitud de amistad.`, 'info', 3200, onIrASolicitudesAmistad);
+                mostrarToast(`${username} te envió una solicitud de amistad.`, 'info', 3600, onIrASolicitudesAmistad);
               }
             });
           }
@@ -304,8 +304,8 @@ export default function AvisosGlobales({ usuario, token, onAceptarDesafio, onCam
         tamIcono={92}
         onCerrar={() => responder(false)}
         botones={[
-          { texto: '✔ Aceptar', tipo: 'verde', onClick: () => responder(true) },
-          { texto: '✖ Rechazar', tipo: 'carmesi', onClick: () => responder(false) },
+          { texto: 'Aceptar', tipo: 'verde', onClick: () => responder(true) },
+          { texto: 'Rechazar', tipo: 'carmesi', onClick: () => responder(false) },
         ]}
       >
         <p style={{ margin: '0 0 14px', fontWeight: 800, fontSize: 15, color: '#2C160E', textAlign: 'center' }}>
@@ -321,8 +321,8 @@ export default function AvisosGlobales({ usuario, token, onAceptarDesafio, onCam
         tamIcono={64}
         onCerrar={() => responderInvitacionTorneo(false)}
         botones={[
-          { texto: esInvitacionCupo && cupoEs1v1 ? '✔ Anotarme' : '✔ Aceptar', tipo: 'verde', disabled: respondiendoInvitacion, onClick: () => responderInvitacionTorneo(true) },
-          { texto: '✖ Rechazar', tipo: 'carmesi', disabled: respondiendoInvitacion, onClick: () => responderInvitacionTorneo(false) },
+          { texto: esInvitacionCupo && cupoEs1v1 ? 'Anotarme' : 'Aceptar', tipo: 'verde', disabled: respondiendoInvitacion, onClick: () => responderInvitacionTorneo(true) },
+          { texto: 'Rechazar', tipo: 'carmesi', disabled: respondiendoInvitacion, onClick: () => responderInvitacionTorneo(false) },
         ]}
       >
         <p style={{ margin: '0 0 8px', fontWeight: 800, fontSize: 15, color: '#2C160E', textAlign: 'center' }}>
@@ -333,7 +333,7 @@ export default function AvisosGlobales({ usuario, token, onAceptarDesafio, onCam
           )}
         </p>
         <p style={{ margin: '0 0 14px', fontWeight: 700, fontSize: 13, color: '#7a6660', textAlign: 'center' }}>
-          {invitacionTorneo?.modo} · {invitacionTorneo?.puntos_para_ganar} pts · Entrada {Math.round(Number(invitacionTorneo?.apuesta || 0))} monedas{' '}
+          {invitacionTorneo?.modo} · {invitacionTorneo?.puntos_para_ganar} pts · Entrada {Math.round(Number(invitacionTorneo?.apuesta || 0))} mates{' '}
           {esInvitacionCupo && !cupoEs1v1
             ? '(al aceptar elegís a tu compañero y pagás recién al anotarte)'
             : '(se descuenta al aceptar)'}

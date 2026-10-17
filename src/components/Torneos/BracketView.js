@@ -1,15 +1,14 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import PantallaCarga from '../PantallaCarga/PantallaCarga';
 import PopupMadera from '../Popup/PopupMadera';
 import { useToast } from '../../contexts/ToastContext';
 import { API_URL as BASE_URL } from '../../config';
-import { generarSimulacion, etapasDisponibles, SIM_MODOS, SIM_CUPOS } from './bracketSimulado';
 
 const API_URL = `${BASE_URL}/api/torneos`;
 
 // Pase 384: rediseño de la sala del torneo y del bracket con el estilo del resto de la app (marcos de madera con
-// remaches, cinta de pergamino, fichas ahuecadas, botones planos, PNG en lugar de emojis) + simulador de bracket
-// (torneoId === 'simulador', solo en desarrollo) para ver los 3 modos y los 3 cupos sin crear torneos.
+// remaches, cinta de pergamino, fichas ahuecadas, botones planos, PNG en lugar de emojis).
+// Pase 395: se quitó el simulador de bracket (torneoId === 'simulador'), ya no hace falta.
 const C = {
   verde: '#2D9B4F', verdeOscuro: '#1f7a3c', verdeProfundo: '#163f24',
   dorado: '#FFB627', doradoClaro: '#FFD668', doradoOscuro: '#C9860E',
@@ -99,7 +98,6 @@ function nombreDeRonda(cruces, numRonda) {
 // ---------- Pantalla ----------
 
 export default function BracketView({ torneoId, usuario, token, onVolver, onEntrarAPartida, onAnotarme }) {
-  const esSimulador = torneoId === 'simulador';
   const [torneo, setTorneo] = useState(null);
   const [partidos, setPartidos] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -110,25 +108,10 @@ export default function BracketView({ torneoId, usuario, token, onVolver, onEntr
   const [amigos, setAmigos] = useState([]);
   const [cargandoAmigos, setCargandoAmigos] = useState(false);
   const [invitandoId, setInvitandoId] = useState(null);
-  // Pase 384: controles del simulador.
-  const [simModo, setSimModo] = useState('3v3');
-  const [simCupo, setSimCupo] = useState(8);
-  const [simEtapaElegida, setSimEtapaElegida] = useState('sala-media');
-  const etapasSim = useMemo(() => etapasDisponibles(simCupo), [simCupo]);
-  const simEtapa = etapasSim.some((e) => e.id === simEtapaElegida) ? simEtapaElegida : 'sala-media';
-  const simulacion = useMemo(
-    () => (esSimulador ? generarSimulacion({ modo: simModo, cupo: simCupo, etapa: simEtapa, yo: usuario.username }) : null),
-    [esSimulador, simModo, simCupo, simEtapa, usuario.username]
-  );
-
   const headers = { 'Authorization': `Bearer ${token}` };
 
   const abrirSelectorAmigos = async () => {
     setSelectorAbierto(true);
-    if (esSimulador) {
-      setAmigos([{ id: 9001, username: 'amigo_uno' }, { id: 9002, username: 'amigo_dos' }, { id: 9003, username: 'amigo_tres' }]);
-      return;
-    }
     setCargandoAmigos(true);
     try {
       const res = await fetch(`${BASE_URL}/api/usuarios/amigos`, { headers });
@@ -156,11 +139,6 @@ export default function BracketView({ torneoId, usuario, token, onVolver, onEntr
 
   const invitarAmigo = async (amigo) => {
     if (invitandoId) return;
-    if (esSimulador) {
-      mostrarToast(`Simulacro: no se envió ninguna invitación a ${amigo.username}`, 'exito', 3000);
-      setSelectorAbierto(false);
-      return;
-    }
     setInvitandoId(amigo.id);
     try {
       const res = await fetch(`${API_URL}/${torneoId}/invitar-cupo`, {
@@ -210,17 +188,10 @@ export default function BracketView({ torneoId, usuario, token, onVolver, onEntr
   }, [torneoId, token]);
 
   useEffect(() => {
-    if (esSimulador) {
-      setTorneo(simulacion.torneo);
-      setPartidos(simulacion.partidos);
-      setError('');
-      setCargando(false);
-      return undefined;
-    }
     cargar();
     const intervalo = setInterval(cargar, 4000);
     return () => clearInterval(intervalo);
-  }, [cargar, esSimulador, simulacion]);
+  }, [cargar]);
 
   // Pase 203: BracketView vive DENTRO del AppShell (header con menú e info del usuario, ver App.js).
   if (cargando) return <PantallaCarga />;
@@ -331,7 +302,7 @@ export default function BracketView({ torneoId, usuario, token, onVolver, onEntr
         botones={[{ texto: 'Cerrar', tipo: 'neutro', onClick: () => setSelectorAbierto(false) }]}
       >
         <p style={{ margin: '0 0 10px', fontWeight: 800, fontSize: 14, color: '#2C160E', textAlign: 'center' }}>
-          Tocá a un amigo para mandarle la invitación. Paga su entrada ({Math.round(Number(torneo.apuesta || 0))} monedas) recién cuando acepta.
+          Tocá a un amigo para mandarle la invitación. Paga su entrada ({Math.round(Number(torneo.apuesta || 0))} mates) recién cuando acepta.
         </p>
         {cargandoAmigos && amigos.length === 0 ? (
           <p style={{ margin: 0, fontWeight: 700, fontSize: 13, color: '#7a6660', textAlign: 'center' }}>Cargando tus amigos…</p>
@@ -355,36 +326,6 @@ export default function BracketView({ torneoId, usuario, token, onVolver, onEntr
           </div>
         )}
       </PopupMadera>
-
-      {/* ---- Simulador (solo desarrollo) ---- */}
-      {esSimulador && (
-        <Marco cinta="SIMULADOR · SOLO DESARROLLO" innerStyle={{ padding: '22px 14px 14px' }}>
-          <div style={estilos.simGrupo}>
-            <span style={estilos.simEtiqueta}>Modo</span>
-            <div style={estilos.simChips}>
-              {SIM_MODOS.map((m) => (
-                <button key={m} type="button" onClick={() => setSimModo(m)} style={{ ...estilos.simChip, ...(simModo === m ? estilos.simChipActivo : null) }}>{m}</button>
-              ))}
-            </div>
-          </div>
-          <div style={estilos.simGrupo}>
-            <span style={estilos.simEtiqueta}>Cupo</span>
-            <div style={estilos.simChips}>
-              {SIM_CUPOS.map((c) => (
-                <button key={c} type="button" onClick={() => setSimCupo(c)} style={{ ...estilos.simChip, ...(simCupo === c ? estilos.simChipActivo : null) }}>{c} equipos</button>
-              ))}
-            </div>
-          </div>
-          <div style={estilos.simGrupo}>
-            <span style={estilos.simEtiqueta}>Etapa</span>
-            <div style={estilos.simChips}>
-              {etapasSim.map((e) => (
-                <button key={e.id} type="button" onClick={() => setSimEtapaElegida(e.id)} style={{ ...estilos.simChip, ...(simEtapa === e.id ? estilos.simChipActivo : null) }}>{e.texto}</button>
-              ))}
-            </div>
-          </div>
-        </Marco>
-      )}
 
       {/* ---- Encabezado ---- */}
       <Marco style={{ marginBottom: 16 }} innerStyle={estilos.headerInterior}>
@@ -560,7 +501,7 @@ export default function BracketView({ torneoId, usuario, token, onVolver, onEntr
                             {renderLado({ nombre: nombreB, jugadores: p.jugadores_b, gana: gananB, esCampeon: esElCampeonB, mio: p.jugadores_b && p.jugadores_b.includes(usuario.username) })}
                             <div style={estilos.matchPie}>
                               {p.estado === 'jugando' && mio ? (
-                                <button onClick={() => (esSimulador ? mostrarToast('Simulacro: acá se abriría tu partida', 'exito', 2500) : onEntrarAPartida(p.codigo_sala))} style={estilos.btnEntrar}>
+                                <button onClick={() => onEntrarAPartida(p.codigo_sala)} style={estilos.btnEntrar}>
                                   Entrar a mi partida
                                 </button>
                               ) : p.estado === 'jugando' ? (
@@ -807,13 +748,4 @@ const estilos = {
     boxShadow: '0 2px 0 #2E86C1, 0 3px 0 #000', lineHeight: '16px', marginBottom: 2,
   },
 
-  // Simulador
-  simGrupo: { display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 10 },
-  simEtiqueta: { width: 46, flexShrink: 0, paddingTop: 5, fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 12, color: C.chocolate, textTransform: 'uppercase', letterSpacing: 0.4 },
-  simChips: { display: 'flex', flexWrap: 'wrap', gap: 7, flex: 1 },
-  simChip: {
-    ...BTN_PLANO, fontSize: 12, color: C.chocolate, background: C.pergamino, borderRadius: 999, padding: '3px 12px',
-    boxShadow: '0 2px 0 #D9C9A5, 0 3px 0 #000', marginBottom: 3, border: '2px solid #000',
-  },
-  simChipActivo: { background: '#F5B041', boxShadow: '0 2px 0 #B9770E, 0 3px 0 #000' },
 };

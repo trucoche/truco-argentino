@@ -193,7 +193,7 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
       const logroReclamado = logros.find(l => l.tipo === tipo);
       mostrarToast(
         logroReclamado
-          ? `¡${nombreLogroSinEmoji(logroReclamado.titulo)}! +${logroReclamado.recompensa} monedas`
+          ? `¡${nombreLogroSinEmoji(logroReclamado.titulo)}! +${logroReclamado.recompensa} mates`
           : 'Logro reclamado',
         'exito'
       );

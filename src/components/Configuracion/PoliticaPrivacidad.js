@@ -61,12 +61,12 @@ const SECCIONES = [
         lista: [
           'Estadísticas de partidas (victorias, derrotas, rachas, resultados de torneos)',
           'Historial de partidas jugadas',
-          'Saldo de moneda virtual dentro del juego',
+          'Saldo de mates virtuales dentro del juego',
           'Logros y misiones completadas',
           'Mensajes de texto del chat global y mensajes privados entre jugadores',
           'Lista de amigos, solicitudes de amistad y usuarios que bloqueaste',
           'Reportes que hagas sobre otros jugadores y los que reciba tu cuenta',
-          'Historial de compras y de movimientos de monedas (compras, premios, entradas a salas y torneos)',
+          'Historial de compras y de movimientos de mates (compras, premios, entradas a salas y torneos)',
           'Stickers y mensajes enviados en el chat de las salas de juego (solo se transmiten durante la partida, no se guardan)',
         ],
       },
@@ -102,9 +102,9 @@ const SECCIONES = [
       'Calcular y mostrar estadísticas, rankings y logros',
       'Enviar comunicaciones relacionadas con tu cuenta (por ejemplo, recuperación de contraseña)',
       'Mejorar el funcionamiento y la seguridad de la aplicación',
-      'Prevenir fraude, trampas o uso indebido del sistema de moneda virtual',
+      'Prevenir fraude, trampas o uso indebido del sistema de mates virtuales',
       'Mostrar tu perfil, tus estadísticas y los rankings (incluidos los de provincia y localidad) a otros jugadores',
-      'Registrar las compras y los movimientos de monedas, y conservarlos como registro de las transacciones',
+      'Registrar las compras y los movimientos de mates, y conservarlos como registro de las transacciones',
     ],
     parrafos: [
       'Si detectamos un uso fraudulento del juego o de la economía virtual (por ejemplo, coordinar partidas para transferirse créditos de forma artificial, explotar errores del sistema, o usar múltiples cuentas para manipular resultados), podemos suspender o eliminar la cuenta involucrada. Si la gravedad lo amerita, esta medida puede extenderse a otras cuentas que identifiquemos como vinculadas a la misma persona.',
@@ -119,7 +119,7 @@ const SECCIONES = [
       { proveedor: 'Google / Facebook', funcion: 'Inicio de sesión social', datos: 'Nombre, email, foto de perfil (si autorizás)' },
       { proveedor: 'Daily.co', funcion: 'Chat de voz en salas privadas', datos: 'Audio en tiempo real (no almacenado)' },
       { proveedor: 'Resend', funcion: 'Envío de emails transaccionales (ej. recuperación de contraseña)', datos: 'Dirección de email' },
-      { proveedor: 'Mercado Pago', funcion: 'Procesamiento de pagos para la compra de monedas', datos: 'Datos de pago (procesados directamente por Mercado Pago, no almacenamos datos de tarjetas)' },
+      { proveedor: 'Mercado Pago', funcion: 'Procesamiento de pagos para la compra de mates', datos: 'Datos de pago (procesados directamente por Mercado Pago, no almacenamos datos de tarjetas)' },
     ],
     parrafos: [
       'También usamos proveedores de infraestructura (alojamiento de los servidores, de la base de datos y del sitio web), que procesan datos únicamente para que el servicio funcione.',
@@ -127,9 +127,9 @@ const SECCIONES = [
     ],
   },
   {
-    titulo: '5. Moneda virtual — aclaración importante',
+    titulo: '5. Mates virtuales — aclaración importante',
     parrafos: [
-      'TrucoChe utiliza un sistema de moneda virtual propia, sin valor monetario fuera de la aplicación. Esta moneda se puede obtener de forma gratuita (bonos diarios, misiones, logros) y también mediante compra directa dentro de la app, a través de Mercado Pago.',
+      'TrucoChe utiliza un sistema de mates virtuales propio, sin valor monetario fuera de la aplicación. Estos mates se pueden obtener de forma gratuita (bonos diarios, misiones, logros) y también mediante compra directa dentro de la app, a través de Mercado Pago.',
       'TrucoChe no aloja ni administra apuestas de dinero real ni juegos de azar con dinero real. Cualquier actividad de dinero real entre usuarios que pudiera organizarse por fuera de la aplicación (por ejemplo, a través de grupos externos de mensajería) es completamente ajena a TrucoChe, no es operada, supervisada ni respaldada por nosotros, y no está cubierta por esta Política de Privacidad ni por los Términos de Servicio de la aplicación.',
     ],
   },
@@ -177,8 +177,8 @@ const SECCIONES = [
     parrafos: [
       'Podés solicitar la eliminación de tu cuenta desde Ajustes → Mi cuenta → "Eliminar mi cuenta" en la aplicación, o desde la página trucoche.com.ar/eliminar-cuenta. Te enviamos un email para confirmar el pedido, y el proceso funciona en dos etapas:',
       'Etapa 1 — Desactivación inmediata. Tu cuenta deja de estar visible para otros jugadores (no aparece en rankings, búsquedas ni salas) y ya no podés iniciar sesión con normalidad.',
-      'Etapa 2 — Período de arrepentimiento (30 días). Durante los 30 días posteriores a la desactivación, conservamos tus datos por si querés recuperar la cuenta. Si volvés a iniciar sesión dentro de ese plazo, tu cuenta y toda tu información (monedas, estadísticas, personaje, historial) se restauran automáticamente. Pasados los 30 días sin que vuelvas a ingresar, eliminamos de forma definitiva y sin posibilidad de recuperación tus datos personales: nombre de usuario, email, contraseña, vínculos con Google o Facebook, foto y fondo de perfil, biografía, género, lista de amigos, usuarios bloqueados y mensajes.',
-      'Las estadísticas, partidas, torneos y movimientos de monedas asociados a la cuenta se conservan de forma anonimizada (bajo un alias genérico y sin ningún dato que te identifique), para mantener la integridad de los resultados del juego y de los registros de transacciones. Una vez anonimizados, no se pueden volver a vincular con vos.',
+      'Etapa 2 — Período de arrepentimiento (30 días). Durante los 30 días posteriores a la desactivación, conservamos tus datos por si querés recuperar la cuenta. Si volvés a iniciar sesión dentro de ese plazo, tu cuenta y toda tu información (mates, estadísticas, personaje, historial) se restauran automáticamente. Pasados los 30 días sin que vuelvas a ingresar, eliminamos de forma definitiva y sin posibilidad de recuperación tus datos personales: nombre de usuario, email, contraseña, vínculos con Google o Facebook, foto y fondo de perfil, biografía, género, lista de amigos, usuarios bloqueados y mensajes.',
+      'Las estadísticas, partidas, torneos y movimientos de mates asociados a la cuenta se conservan de forma anonimizada (bajo un alias genérico y sin ningún dato que te identifique), para mantener la integridad de los resultados del juego y de los registros de transacciones. Una vez anonimizados, no se pueden volver a vincular con vos.',
       'Podés pedirnos también una eliminación inmediata y definitiva, sin pasar por el período de 30 días, escribiéndonos a trucoargentino.dev@gmail.com. En ese caso, podemos pedirte alguna verificación para confirmar que sos el titular de la cuenta.',
       'Al completarse la eliminación definitiva, tu email se reemplaza por una dirección anónima y deja de estar asociado a la cuenta.',
     ],

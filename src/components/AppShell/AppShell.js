@@ -150,7 +150,7 @@ export default function AppShell({
               <button
                 className="ts-tarjeta-perfil-zona-moneda"
                 onClick={() => onNavegar('tienda')}
-                title="Comprar monedas"
+                title="Comprar mates"
               />
             </div>
 
@@ -331,4 +331,4 @@ const estilosBanner = {
     background: 'none', border: 'none', cursor: 'pointer', fontSize: 13,
     fontWeight: 800, color: '#4A2C2A', flexShrink: 0, padding: 4, opacity: 0.6
   }
-};
+};
