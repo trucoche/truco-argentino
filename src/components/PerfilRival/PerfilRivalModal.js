@@ -271,6 +271,13 @@ export default function PerfilRivalModal({ username, token, onClose }) {
               <div style={estilos.encabezadoSinFondo}>{encabezado}</div>
             )}
 
+            {/* Pase 530: zona según el nivel de privacidad que eligió el jugador (el backend ya viene filtrado). */}
+            {u.zona && u.zona.provincia && (
+              <div style={estilos.zonaRival}>
+                {u.zona.localidad ? `${u.zona.localidad}, ${u.zona.provincia}` : u.zona.provincia}
+              </div>
+            )}
+
             {!datos.esUnoMismo && (
               <div style={estilos.enfrentamientos}>
                 {datos.enfrentamientos > 0
@@ -475,6 +482,7 @@ const estilos = {
     fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 16, color: '#FFF8ED', maxWidth: '100%',
     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', boxSizing: 'border-box',
   },
+  zonaRival: { fontSize: 12.5, color: '#4A2C2A', fontWeight: 800, textAlign: 'center', marginBottom: 4 },
   enfrentamientos: { fontSize: 12.5, color: '#7a5a3a', fontStyle: 'italic', marginBottom: 10 },
   rangoBox: {
     display: 'inline-flex', alignItems: 'center', gap: 6,

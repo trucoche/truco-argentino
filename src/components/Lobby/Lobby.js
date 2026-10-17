@@ -364,7 +364,46 @@ useEffect(() => {
           "Misiones" y "Mates Gratis" abren una hoja sobre la pantalla; las salas viven en un zócalo de alto fijo (130 px) con scroll interno.
           El banner "¡Hay un torneo abierto!" se quitó: el aviso pasa al subtítulo de la tarjeta Torneos. */}
       <div style={estilos.lobbyWeb}>
-          <div style={{ ...estilos.panelJugarYaExterior, margin: '0 auto 20px', maxWidth: 560 }}>
+        {/* Pase 531: LOBBY WEB EN 3 COLUMNAS (1fr 1.2fr 1fr, tope 1200 px). Izquierda: Liga Criolla + Torneos. Centro: Jugar ya + Misiones.
+            Derecha: Crear / Unirse + Anotador. Debajo, a todo el ancho, Mates Gratis y el zócalo de salas. Con menos de 900 px las columnas se apilan
+            y la del centro (Jugar ya) pasa primera. */}
+        <style>{CSS_LOBBY_COLUMNAS}</style>
+        <div className="lobby3-grid">
+          <div className="lobby3-col">
+          {onIrARanked && (() => {
+            const r = usuario?.rango;
+            const ui = rangoUi(r);
+            const titulo = r ? (r.esTop500 ? r.nombre : `${r.nombre} ${r.division}`) : null;
+            return (
+              <button type="button" onClick={onIrARanked} aria-label="Liga Criolla" style={{ ...estilos.tarjetaModulo, ...estilos.fondoLiga, ...estilos.tarjetaFlex }}>
+                <span style={estilos.tarjetaBisel} aria-hidden="true" />
+                <img src={ui.logo} alt="" style={estilos.tarjetaIcono} />
+                <span style={estilos.tarjetaTextos}>
+                  <span style={{ ...estilos.tarjetaTitulo, color: '#FFD700' }}>Liga Criolla</span>
+                  {titulo
+                    ? <span style={estilos.ligaPastilla}><span style={{ color: '#FFD700', fontWeight: 800 }}>{titulo}</span>{` · ${r.puntos} pts`}</span>
+                    : <span style={estilos.tarjetaSub}>Competí y subí de rango</span>}
+                </span>
+              </button>
+            );
+          })()}
+          <button type="button" onClick={onBannerClick} aria-label="Torneos" style={{ ...estilos.tarjetaModulo, ...estilos.fondoTorneos, ...estilos.tarjetaFlex }}>
+            <span style={estilos.tarjetaBisel} aria-hidden="true" />
+            {['top-left', 'top-right', 'bottom-left', 'bottom-right'].map((pos) => (
+              <span key={pos} aria-hidden="true" style={{ ...estilos.tachuelaMini, [pos.startsWith('top') ? 'top' : 'bottom']: 5, [pos.endsWith('left') ? 'left' : 'right']: 5 }} />
+            ))}
+            <span style={estilos.trofeoCaja}>
+              <span style={estilos.trofeoResplandor} aria-hidden="true" />
+              <img src="/assets/images/trofeo.png" alt="" style={estilos.trofeoImg} />
+            </span>
+            <span style={estilos.tarjetaTextos}>
+              <span style={estilos.tarjetaTitulo}>Torneos</span>
+              <span style={{ ...estilos.tarjetaSub, color: '#E2C280' }}>{bannerTexto ? '¡Hay un torneo abierto! Anotate' : 'Campeonatos y premios'}</span>
+            </span>
+          </button>
+          </div>
+          <div className="lobby3-col lobby3-col-centro">
+          <div style={{ ...estilos.panelJugarYaExterior, flex: '0 0 auto', marginBottom: 8 }}>
             <span style={{ ...estilos.remache, top: 10, left: 10 }} />
             <span style={{ ...estilos.remache, top: 10, right: 10 }} />
             <span style={{ ...estilos.remache, bottom: 10, left: 10 }} />
@@ -413,39 +452,6 @@ useEffect(() => {
             </button>
             </div>
           </div>
-
-        <div style={estilos.gridModulos}>
-          {onIrARanked && (() => {
-            const r = usuario?.rango;
-            const ui = rangoUi(r);
-            const titulo = r ? (r.esTop500 ? r.nombre : `${r.nombre} ${r.division}`) : null;
-            return (
-              <button type="button" onClick={onIrARanked} aria-label="Liga Criolla" style={{ ...estilos.tarjetaModulo, ...estilos.fondoLiga }}>
-                <span style={estilos.tarjetaBisel} aria-hidden="true" />
-                <img src={ui.logo} alt="" style={estilos.tarjetaIcono} />
-                <span style={estilos.tarjetaTextos}>
-                  <span style={{ ...estilos.tarjetaTitulo, color: '#FFD700' }}>Liga Criolla</span>
-                  {titulo
-                    ? <span style={estilos.ligaPastilla}><span style={{ color: '#FFD700', fontWeight: 800 }}>{titulo}</span>{` · ${r.puntos} pts`}</span>
-                    : <span style={estilos.tarjetaSub}>Competí y subí de rango</span>}
-                </span>
-              </button>
-            );
-          })()}
-          <button type="button" onClick={onBannerClick} aria-label="Torneos" style={{ ...estilos.tarjetaModulo, ...estilos.fondoTorneos }}>
-            <span style={estilos.tarjetaBisel} aria-hidden="true" />
-            {['top-left', 'top-right', 'bottom-left', 'bottom-right'].map((pos) => (
-              <span key={pos} aria-hidden="true" style={{ ...estilos.tachuelaMini, [pos.startsWith('top') ? 'top' : 'bottom']: 5, [pos.endsWith('left') ? 'left' : 'right']: 5 }} />
-            ))}
-            <span style={estilos.trofeoCaja}>
-              <span style={estilos.trofeoResplandor} aria-hidden="true" />
-              <img src="/assets/images/trofeo.png" alt="" style={estilos.trofeoImg} />
-            </span>
-            <span style={estilos.tarjetaTextos}>
-              <span style={estilos.tarjetaTitulo}>Torneos</span>
-              <span style={{ ...estilos.tarjetaSub, color: '#E2C280' }}>{bannerTexto ? '¡Hay un torneo abierto! Anotate' : 'Campeonatos y premios'}</span>
-            </span>
-          </button>
           <button type="button" onClick={() => setHoja('misiones')} aria-label="Misiones semanales" style={{ ...estilos.tarjetaModulo, ...estilos.fondoMisiones }}>
             <span style={estilos.tarjetaBisel} aria-hidden="true" />
             <img src="/assets/images/icono-desafios.png" alt="" style={estilos.tarjetaIcono} />
@@ -460,8 +466,19 @@ useEffect(() => {
               </span>
             </span>
           </button>
+          </div>
+          <div className="lobby3-col">
+          <button type="button" onClick={() => setHoja('sala')} aria-label="Crear o unirse a una sala" style={{ ...estilos.tarjetaModulo, ...estilos.fondoCrear, ...estilos.tarjetaFlex }}>
+            <span style={estilos.tarjetaBisel} aria-hidden="true" />
+            <img src="/assets/images/icono-crear-sala.png" alt="" style={{ ...estilos.tarjetaIconoGrande, transform: 'rotate(5deg)' }} />
+            <span style={estilos.tarjetaTextos}>
+              <span style={estilos.tarjetaTitulo}>Crear / Unirse</span>
+              <span style={estilos.tarjetaSub}>A una sala</span>
+            </span>
+            <span style={{ ...estilos.etiquetaTarjeta, background: 'rgba(240,217,160,0.18)' }}>Mesas con Clave</span>
+          </button>
           {onIrAnotador && (
-            <button type="button" onClick={onIrAnotador} aria-label="Abrir el Anotador Criollo" style={{ ...estilos.tarjetaModulo, ...estilos.fondoAnotador }}>
+            <button type="button" onClick={onIrAnotador} aria-label="Abrir el Anotador Criollo" style={{ ...estilos.tarjetaModulo, ...estilos.fondoAnotador, ...estilos.tarjetaFlex }}>
               <span style={estilos.tarjetaBisel} aria-hidden="true" />
               <img src="/assets/images/icono-anotador.png" alt="" style={estilos.tarjetaIconoGrande} />
               <span style={estilos.tarjetaTextos}>
@@ -471,16 +488,10 @@ useEffect(() => {
               <span style={{ ...estilos.etiquetaTarjeta, background: 'rgba(200,225,190,0.2)' }}>Modo Off-line / Mesa Real</span>
             </button>
           )}
-          <button type="button" onClick={() => setHoja('sala')} aria-label="Crear o unirse a una sala" style={{ ...estilos.tarjetaModulo, ...estilos.fondoCrear }}>
-            <span style={estilos.tarjetaBisel} aria-hidden="true" />
-            <img src="/assets/images/icono-crear-sala.png" alt="" style={{ ...estilos.tarjetaIconoGrande, transform: 'rotate(5deg)' }} />
-            <span style={estilos.tarjetaTextos}>
-              <span style={estilos.tarjetaTitulo}>Crear / Unirse</span>
-              <span style={estilos.tarjetaSub}>A una sala</span>
-            </span>
-            <span style={{ ...estilos.etiquetaTarjeta, background: 'rgba(240,217,160,0.18)' }}>Mesas con Clave</span>
-          </button>
-          <button type="button" onClick={() => { setAvisoRedes(''); setHoja('redes'); }} aria-label={`Mates gratis. Seguinos en redes y ganá hasta ${RECOMPENSA_SOCIAL_TOTAL} mates`} style={{ ...estilos.tarjetaModulo, ...estilos.fondoSocial, gridColumn: '1 / -1' }}>
+          </div>
+        </div>
+
+          <button type="button" onClick={() => { setAvisoRedes(''); setHoja('redes'); }} aria-label={`Mates gratis. Seguinos en redes y ganá hasta ${RECOMPENSA_SOCIAL_TOTAL} mates`} style={{ ...estilos.tarjetaModulo, ...estilos.fondoSocial, marginBottom: 16 }}>
             <span style={estilos.tarjetaBisel} aria-hidden="true" />
             <img src="/assets/images/regalo.png" alt="" style={estilos.tarjetaIcono} />
             <span style={estilos.tarjetaTextos}>
@@ -494,7 +505,6 @@ useEffect(() => {
             </span>
             <span style={estilos.socialBadge}><MontoMonedas monto={RECOMPENSA_SOCIAL_TOTAL} tam={16} /></span>
           </button>
-        </div>
 
       {process.env.NODE_ENV === 'development' && (
         <div style={{ ...estilos.panelSecundario, ...estilos.panelCompacto, ...estilos.panelPreviewDev, marginBottom: 0 }}>
@@ -815,18 +825,30 @@ useEffect(() => {
   );
 }
 
+// Pase 531: grilla de 3 columnas del lobby (no hay media queries con estilos en línea, por eso va como CSS).
+const CSS_LOBBY_COLUMNAS = `
+.lobby3-grid { display: grid; grid-template-columns: 1fr 1.2fr 1fr; gap: 16px; align-items: stretch; margin-bottom: 16px; }
+.lobby3-col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+@media (max-width: 899px) {
+  .lobby3-grid { grid-template-columns: 1fr; }
+  .lobby3-col-centro { order: -1; }
+}
+`;
+
 // Pase 333: contorno negro fino alrededor del texto blanco de los botones verdes.
 const CONTORNO_TEXTO = '-1.5px -1.5px 0 #000, 0 -1.5px 0 #000, 1.5px -1.5px 0 #000, -1.5px 0 0 #000, 1.5px 0 0 #000, -1.5px 1.5px 0 #000, 0 1.5px 0 #000, 1.5px 1.5px 0 #000';
 
 const estilos = {
   // ===== Pase 515: lobby compacto =====
-  lobbyWeb: { maxWidth: 1040, margin: '0 auto', display: 'flex', flexDirection: 'column' },
+  lobbyWeb: { maxWidth: 1200, margin: '0 auto', display: 'flex', flexDirection: 'column' },
   gridModulos: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))', gap: 14, marginBottom: 16 },
   tarjetaModulo: {
     position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left',
     height: 104, boxSizing: 'border-box', padding: '10px 14px 10px', borderRadius: 16, cursor: 'pointer',
     boxShadow: '0 4px 5px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.12)', fontFamily: "'Fredoka', sans-serif",
   },
+  // Pase 531: en las columnas laterales las tarjetas se estiran para igualar el alto de la columna central.
+  tarjetaFlex: { height: 'auto', minHeight: 104, flex: 1 },
   tarjetaBisel: { position: 'absolute', inset: 2, borderRadius: 13, border: '1.2px solid rgba(212,175,55,0.5)', pointerEvents: 'none' },
   tarjetaIcono: { width: 56, height: 56, objectFit: 'contain', flex: '0 0 auto' },
   tarjetaIconoGrande: { width: 60, height: 60, objectFit: 'contain', flex: '0 0 auto', marginBottom: 14 },
