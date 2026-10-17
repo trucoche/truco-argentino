@@ -1,4 +1,4 @@
-import { confirmarPopup, PlacaMadera } from '../Popup/PopupMadera';
+import PopupMadera, { confirmarPopup, PlacaMadera } from '../Popup/PopupMadera';
 import React, { useState, useEffect, useCallback } from 'react';
 import PersonajeSelector from '../Lobby/PersonajeSelector';
 import { API_URL as BASE_URL } from '../../config';
@@ -29,8 +29,22 @@ function avatarSrcDe(u) {
     : `/assets/${u?.personaje || 'gaucho'}-avatar.png`;
 }
 
+// Pase 495: enlace del Cafecito. En la app envuelta con Capacitor se usa el plugin Browser (navegador del sistema, sin bloqueo de pop-ups);
+// en la web, pestaña nueva con noopener/noreferrer.
+const URL_CAFECITO = 'https://cafecito.app/trucoche';
+function abrirCafecito() {
+  const navegadorCapacitor = typeof window !== 'undefined' && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Browser;
+  if (navegadorCapacitor && typeof navegadorCapacitor.open === 'function') {
+    navegadorCapacitor.open({ url: URL_CAFECITO });
+  } else {
+    window.open(URL_CAFECITO, '_blank', 'noopener,noreferrer');
+  }
+}
+
 export default function Configuracion({ token, usuario, onPersonajeCambiado, musicaVolumen, onCambiarMusicaVolumen, onNavegar }) {
   const [modoOscuro, setModoOscuro] = useState(false);
+  // Pase 519: modal intermedio antes de salir a Cafecito.
+  const [cafecitoAbierto, setCafecitoAbierto] = useState(false);
   const [guardandoAvatar, setGuardandoAvatar] = useState(false);
   const [enviandoEliminacion, setEnviandoEliminacion] = useState(false);
   const [guardandoGenero, setGuardandoGenero] = useState(false);
@@ -579,6 +593,37 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
         </PlacaMadera>
       )}
 
+      {/* Pase 495: "Sobre el proyecto" — apoyar a TrucoChe con un cafecito; va justo arriba de "Mi cuenta". */}
+      <PlacaMadera>
+        <div style={estilos.panelTitulo}>
+          <span aria-hidden="true">☕</span>
+          Sobre el proyecto
+        </div>
+        <div style={estilos.cafecitoCuerpo}>
+          <img src="/assets/images/cafecito-avatar.png" alt="Dev TrucoChe" style={estilos.cafecitoAvatar} />
+          <p style={estilos.cafecitoTexto}>
+            TrucoChe es desarrollado a pulmón. Si disfrutás las partidas y querés dar una mano para seguir sumando mejoras y nuevos juegos, ¡un cafecito ayuda un montón!
+          </p>
+        </div>
+        <button style={estilos.btnCafecito} onClick={() => setCafecitoAbierto(true)}>
+          ☕ Invitar un Cafecito
+        </button>
+      </PlacaMadera>
+
+      {/* Pase 519: modal de agradecimiento; "Continuar" cierra y abre Cafecito (Capacitor Browser o pestaña nueva), "Volver" solo cierra. */}
+      <PopupMadera
+        visible={cafecitoAbierto}
+        titulo="☕ Apoyar a TrucoChe"
+        icono="/assets/images/cafecito-avatar.png"
+        tamIcono={80}
+        mensaje={<span style={{ whiteSpace: 'pre-line' }}>{'Vas a ser redirigido a Cafecito.app para realizar tu aporte de forma segura.\n\n¡Muchas gracias por valorar el juego y bancar el desarrollo independiente!'}</span>}
+        onCerrar={() => setCafecitoAbierto(false)}
+        botones={[
+          { texto: 'Continuar a Cafecito ☕', tipo: 'celeste', onClick: () => { setCafecitoAbierto(false); abrirCafecito(); } },
+          { texto: 'Volver', tipo: 'neutro', onClick: () => setCafecitoAbierto(false) },
+        ]}
+      />
+
       {/* Pase 311/312: "Mi cuenta" — acceso a eliminar la cuenta. Manda un mail
           de confirmación al email registrado; 30 días de arrepentimiento. */}
       <PlacaMadera>
@@ -740,6 +785,15 @@ const estilos = {
     background: `linear-gradient(180deg, ${C.doradoClaro}, ${C.dorado})`,
     border: `2px solid ${C.doradoOscuro}`, borderRadius: 10, padding: '8px 14px', cursor: 'pointer',
     boxShadow: `0 2px 0 ${C.doradoOscuro}`, whiteSpace: 'nowrap', flexShrink: 0,
+  },
+  // Pase 495: tarjeta de Cafecito — avatar circular de 72 px a la izquierda, texto en cursiva a la derecha y botón celeste de ancho completo.
+  cafecitoCuerpo: { display: 'flex', alignItems: 'center', gap: 12, margin: '10px 0' },
+  cafecitoAvatar: { width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: `2px solid ${C.chocolate}59`, background: '#6AA790' },
+  cafecitoTexto: { flex: 1, margin: 0, fontSize: 14, fontStyle: 'italic', fontWeight: 700, lineHeight: 1.4, color: C.chocolate },
+  btnCafecito: {
+    width: '100%', fontSize: 15, fontWeight: 800, color: '#FFFFFF', textShadow: '0 1px 1px rgba(30,41,59,0.6)',
+    background: '#32CDC8', border: '2px solid #1E293B', borderRadius: 12, padding: '11px 16px', cursor: 'pointer',
+    boxShadow: '0 2px 0 #1E293B', fontFamily: "'Fredoka', sans-serif",
   },
   btnEliminarCuenta: {
     marginTop: 12, fontSize: 13, fontWeight: 800, color: '#fff', background: '#E8483A',

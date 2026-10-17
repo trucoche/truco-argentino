@@ -192,6 +192,8 @@
 .pm-boton:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
 .pm-boton.verde   { --pm-fondo: #10B981; --pm-relieve: #065F46; }
 .pm-boton.carmesi { --pm-fondo: #E74C3C; --pm-relieve: #78281F; }
+/* Pase 519: celeste/turquesa de Cafecito. */
+.pm-boton.celeste { --pm-fondo: #32CDC8; --pm-relieve: #1B8A86; }
 /* Secundario / Cancelar: pergamino con texto café oscuro. */
 .pm-boton.neutro  { --pm-fondo: #FFFBEB; --pm-relieve: #A8977A; --pm-texto: #4A2C11; -webkit-text-stroke: 0; }
 /* Inactivo: gris rústico opaco, mismo contorno y relieve planos, sin brillo. */

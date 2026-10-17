@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import MisionesCard from './MisionesCard';
+import MonedaGirando from '../MonedaGirando';
 import PerfilRivalModal from '../PerfilRival/PerfilRivalModal';
 import PantallaCarga from '../PantallaCarga/PantallaCarga';
-import PopupMadera, { PlacaMadera } from '../Popup/PopupMadera';
+import PopupMadera from '../Popup/PopupMadera';
 import { rangoUi } from '../Perfil/rangosUi';
 import { useToast } from '../../contexts/ToastContext';
 import { API_URL as BASE_URL } from '../../config';
@@ -67,6 +68,58 @@ const C = {
   negroPulido: '#1a1410',
 };
 
+// Pase 515: "Mates Gratis". Los chips son siglas de color (no se dibujan logos de marca). Con `url` vacía el botón queda en "Próximamente".
+// El reclamo necesita el endpoint POST /api/recompensas-sociales/reclamar, que todavía no existe: se mantiene apagado.
+// Pase 517: +25 mates por red y +75 por las tres (solo lo que se muestra; el monto real lo decide el backend).
+const RECOMPENSA_SOCIAL = 25;
+const RECOMPENSA_SOCIAL_TOTAL = 75;
+const REDES_SOCIALES = [
+  { id: 'discord', nombre: 'Discord', sigla: 'DC', color: '#5865F2', url: '', icono: '/assets/images/icon_discord_wood.png' },
+  { id: 'instagram', nombre: 'Instagram', sigla: 'IG', color: '#E1306C', url: '', icono: '/assets/images/icon_instagram_wood.png' },
+  { id: 'facebook', nombre: 'Facebook', sigla: 'FB', color: '#1877F2', url: '', icono: '/assets/images/icon_facebook_wood.png' },
+];
+const RECLAMO_SOCIAL_ACTIVO = false;
+// Pase 518: pegá en `REDES_SOCIALES[].url` los links oficiales; con `url` el botón dice "Seguir" y abre con window.open(_blank), sin `url` queda en "Próximamente".
+
+// Pase 517: "+25" junto a la moneda dorada del juego (reemplaza al emoji 🧉).
+function MontoMonedas({ monto, tam = 20, style }) {
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, ...style }}>
+      {`+${monto}`}
+      <MonedaGirando tam={tam} />
+    </span>
+  );
+}
+
+// Pase 515: hoja (capa) sobre el lobby; se cierra con la X, con Escape o tocando el fondo.
+// Pase 516: con `variante="redes"` la hoja usa la placa de madera oscura con ribete bronce, remaches y X roja flotante.
+function Hoja({ titulo, onCerrar, children, variante }) {
+  const esRedes = variante === 'redes';
+  useEffect(() => {
+    const alTeclear = (e) => { if (e.key === 'Escape') onCerrar(); };
+    window.addEventListener('keydown', alTeclear);
+    return () => window.removeEventListener('keydown', alTeclear);
+  }, [onCerrar]);
+  return (
+    <div style={{ ...estilos.hojaCapa, ...(esRedes ? estilos.redesCapa : {}) }} onClick={onCerrar} role="dialog" aria-modal="true" aria-label={titulo}>
+      <div style={{ ...estilos.hojaCaja, ...(esRedes ? estilos.redesPlaca : {}) }} onClick={(e) => e.stopPropagation()}>
+        {esRedes && (
+          <>
+            <span aria-hidden="true" style={{ ...estilos.redesRemache, top: 8, left: 8 }} />
+            <span aria-hidden="true" style={{ ...estilos.redesRemache, bottom: 8, left: 8 }} />
+            <span aria-hidden="true" style={{ ...estilos.redesRemache, bottom: 8, right: 8 }} />
+          </>
+        )}
+        <div style={{ ...estilos.hojaCabecera, ...(esRedes ? estilos.redesCabecera : {}) }}>
+          <span style={{ ...estilos.hojaTitulo, ...(esRedes ? estilos.redesTitulo : {}) }}>{titulo}</span>
+          <button type="button" onClick={onCerrar} aria-label="Cerrar" style={esRedes ? estilos.redesCerrar : estilos.hojaCerrar}>✕</button>
+        </div>
+        <div style={{ ...estilos.hojaCuerpo, ...(esRedes ? { padding: 20, position: 'relative' } : {}) }}>{children}</div>
+      </div>
+    </div>
+  );
+}
+
 function Filigrana() {
   const path = (
     <>
@@ -89,7 +142,7 @@ function Filigrana() {
 
 // Ya NO recibe onLogout/onVerRanking/onVerTorneos — esa navegación ahora
 // vive en el AppShell (header + nav), no dentro del contenido del Lobby.
-export default function Lobby({ token, usuario, onPersonajeCambiado, onEntrarAPartida, onBuscarPartidaActiva, onMisionReclamada, onIrARanked, codigoInicial, bannerTexto, onBannerClick }) {
+export default function Lobby({ token, usuario, onPersonajeCambiado, onEntrarAPartida, onBuscarPartidaActiva, onMisionReclamada, onIrARanked, onIrAnotador, codigoInicial, bannerTexto, onBannerClick }) {
   const { mostrarToast } = useToast();
   const [salas, setSalas]           = useState([]);
   const [cargando, setCargando]     = useState(true);
@@ -114,9 +167,15 @@ export default function Lobby({ token, usuario, onPersonajeCambiado, onEntrarAPa
   // de arriba (setCreandoSala) pero ese panel puede quedar fuera de
   // pantalla, así que además se lo hace scrollear a la vista.
   const panelCrearSalaRef = useRef(null);
+  // Pase 515: hoja abierta sobre el lobby ('sala' = Crear / Unirse, 'misiones', 'redes'), resumen de misiones y estado de "Mates Gratis".
+  const [hoja, setHoja] = useState(null);
+  const [resumenMisiones, setResumenMisiones] = useState(null);
+  const [redesAbiertas, setRedesAbiertas] = useState({});
+  const [reclamandoRed, setReclamandoRed] = useState(null);
+  const [avisoRedes, setAvisoRedes] = useState('');
   const irACrearSala = () => {
     setCreandoSala(true);
-    panelCrearSalaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setHoja('sala');
   };
 
 useEffect(() => {
@@ -159,6 +218,46 @@ useEffect(() => {
   // movió a App.js, ya que ahora el saldo/usuario lo muestra el AppShell
   // en TODAS las pantallas, no solo en Lobby.
 
+  // Pase 515: resumen de misiones (completadas / total) para la barra de progreso de la tarjeta; se recarga al abrir el lobby y al cerrar cualquier hoja.
+  useEffect(() => {
+    if (hoja || !token) return undefined;
+    let activo = true;
+    (async () => {
+      try {
+        const res = await fetch(`${BASE_URL}/api/misiones`, { headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` } });
+        const data = await res.json();
+        if (activo && res.ok && Array.isArray(data?.misiones)) {
+          setResumenMisiones({ completadas: data.misiones.filter((m) => m.completada).length, total: data.misiones.length });
+        }
+      } catch (err) {
+        console.error('Error cargando el resumen de misiones:', err);
+      }
+    })();
+    return () => { activo = false; };
+  }, [hoja, token]);
+
+  const seguirRed = (red) => {
+    if (!red.url) return;
+    window.open(red.url, '_blank', 'noopener,noreferrer');
+    setRedesAbiertas((prev) => ({ ...prev, [red.id]: true }));
+  };
+
+  const reclamarRed = async (red) => {
+    if (!RECLAMO_SOCIAL_ACTIVO) return;
+    setReclamandoRed(red.id);
+    setAvisoRedes('');
+    try {
+      const res = await fetch(`${BASE_URL}/api/recompensas-sociales/reclamar`, { method: 'POST', headers, body: JSON.stringify({ red: red.id }) });
+      const data = await res.json();
+      setAvisoRedes(res.ok ? `¡Listo! +${RECOMPENSA_SOCIAL}` : (data?.error || 'No se pudo reclamar el premio'));
+      if (res.ok) onMisionReclamada?.();
+    } catch (err) {
+      setAvisoRedes('No se pudo conectar con el servidor');
+    } finally {
+      setReclamandoRed(null);
+    }
+  };
+
   const handleCrearSala = async (e) => {
     e.preventDefault();
     setError('');
@@ -189,6 +288,7 @@ useEffect(() => {
       // creador elija: "Entrar a jugar" (se une recién ahí) o cerrar el
       // modal y compartir el código sin ocupar un lugar.
       setCodigoPrivadoCreado(data.codigo);
+      setHoja(null);   // Pase 515: el pop-up del código sale encima del lobby
 
       // Pase siguiente: el backend SÍ descuenta la moneda al crear una sala
       // privada (ver COSTO_SALA_PRIVADA en salas.js) — el bug reportado
@@ -260,143 +360,11 @@ useEffect(() => {
       <div style={estilos.overlayLobby}>
       {error && <div style={estilos.errorBox}>{error}</div>}
 
-          {/* Pase siguiente: el banner de torneo (que antes vivía SOLO en
-              AppShell.js, arriba de cada pantalla) se mueve a compartir
-              fila con "Jugar ya" acá en el Lobby, a pedido del usuario
-              (quería la página más corta) — AppShell ya no lo dibuja
-              cuando `pantallaActiva === 'lobby'` (ver AppShell.js). En el
-              resto de las pantallas (Torneos, Ranking, etc.) sigue
-              apareciendo como antes, arriba de todo. `flexWrap: 'wrap'`
-              para que en celulares angostos, donde no entran los dos uno
-              al lado del otro, se apilen en vez de aplastarse. */}
-          {/* Bug real (reportado por el usuario): esta fila tenía
-              `alignItems: 'stretch'` (el default), que fuerza al banner a
-              ESTIRARSE hasta la altura del panel "Jugar ya" (mucho más
-              alto) — como el banner además tiene `aspect-ratio: 3/1`
-              (app-shell.css, `.ts-banner`), esa altura forzada entraba en
-              conflicto con la proporción real de la imagen, y el
-              resultado era la plaqueta aplastada/estirada que se veía en
-              las capturas. `flex-start` (pase 182) ya evitaba el
-              estiramiento, pero dejaba el banner pegado ARRIBA de la fila
-              — el usuario después pidió que quede centrado en el espacio
-              libre que deja el panel "Jugar ya" (más alto). `center` logra
-              las dos cosas: cada uno mide su propia altura (sin heredar la
-              del hermano) Y el más chico queda centrado verticalmente en
-              el alto de la fila. */}
-          {/* Pase siguiente — bug real encontrado: en pantallas angostas el
-              banner queda SOLO en su propia línea (el panel "Jugar ya" se
-              apila abajo, por el `flexWrap`), y como el banner tiene un
-              `max-width` (320px vía inline style más abajo) que en varios
-              anchos de celular es más chico que el ancho real disponible
-              en esa línea, sobra espacio libre en esa línea — sin
-              `justify-content` (default `flex-start`), ese sobrante queda
-              siempre a la DERECHA del banner, empujándolo visualmente hacia
-              la izquierda (justo lo que reportó el usuario). `center`
-              soluciona ese caso sin afectar el caso de pantalla ancha: ahí
-              el panel "Jugar ya" (sin `max-width`, absorbe todo el resto)
-              ya ocupa el sobrante de la línea, así que `justify-content`
-              nunca llega a entrar en juego. */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
-          <div style={{ flex: '1 1 300px', maxWidth: 340, display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
-          {bannerTexto && (
-            <button
-              className="ts-banner"
-              onClick={onBannerClick}
-              style={{ margin: 0 }}
-            >
-              {/* Bug real encontrado (pase siguiente): el texto vivía
-                  directo como contenido del botón, posicionado con
-                  `padding: 0 6% 0 39%` (app-shell.css, `.ts-banner`) — un
-                  padding en PORCENTAJE. Por spec de CSS, el porcentaje de
-                  padding-left/right de un elemento se calcula contra el
-                  ancho del bloque contenedor (su PADRE), no contra el
-                  ancho propio del elemento. Mientras el banner vivía solo
-                  (ancho de sí mismo = ancho de su padre), eso daba la
-                  cuenta correcta por pura coincidencia — pero desde que
-                  (pase 181) el banner comparte fila con el panel "Jugar
-                  ya", su padre real es esa FILA completa (banner + panel),
-                  mucho más ancha que el banner en sí — el mismo 39%
-                  calculado contra ese ancho más grande da muchos más
-                  píxeles de la cuenta, empujando el texto casi al borde
-                  derecho y dejando la mitad de la madera vacía en el
-                  medio (justo lo que se ve en las capturas). Fix: en vez
-                  de padding-porcentaje en el botón, un `<span>` interno
-                  posicionado en `absolute` (`.ts-banner-texto`, ver
-                  app-shell.css) — un elemento absoluto SÍ resuelve sus
-                  porcentajes de left/right contra el contenedor
-                  posicionado más cercano (`.ts-banner` ahora con
-                  `position: relative`), que es el propio banner, no la
-                  fila entera. */}
-              {/* Bug real encontrado (pase siguiente): la imagen de fondo
-                  vivía directo en `.ts-banner` (el <button>), junto con un
-                  `box-shadow` para la sombra/glow. `box-shadow` sigue la
-                  forma de la CAJA del elemento (un simple rectángulo
-                  redondeado) — pero `banner-torneo.png` es una plaqueta
-                  con esquinas CONCAVAS/recortadas (no un rectángulo
-                  redondeado normal), con bastante margen transparente en
-                  cada esquina. Contra el verde del lobby, esa sombra
-                  rectangular asomaba por los recortes de la plaqueta como
-                  un rectángulo que no coincide con el dibujo real (lo que
-                  se reportó como "el rectángulo con sombra verde"). Fix:
-                  la imagen de fondo pasa a un `<div className="ts-banner-
-                  bg">` aparte (ver app-shell.css) que usa `filter: drop-
-                  shadow(...)` en vez de `box-shadow` — a diferencia de
-                  box-shadow, drop-shadow sigue el canal alfa real del
-                  contenido (el contorno recortado de la plaqueta, no la
-                  caja rectangular), así que la sombra/glow ahora abraza la
-                  forma real de la imagen. Al vivir en un div APARTE del
-                  texto (en vez de todo junto en el botón), el filtro no
-                  duplica su propio efecto sobre las letras. */}
-              <div
-                className="ts-banner-bg"
-                style={{
-                  backgroundImage: "url('/assets/images/banner-torneo.png')",
-                  backgroundSize: '100% 100%',
-                  backgroundRepeat: 'no-repeat',
-                }}
-              />
-              <span className="ts-banner-texto">{bannerTexto}</span>
-            </button>
-          )}
-          {onIrARanked && (() => {
-            const r = usuario?.rango;
-            const ui = rangoUi(r);
-            const titulo = r ? (r.esTop500 ? r.nombre : `${r.nombre} ${r.division}`) : 'Sin rango';
-            return (
-              <PlacaMadera colorInterior="#4A3226" interiorStyle={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '12px 14px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <img src={ui.logo} alt="" style={{ width: 56, height: 56, objectFit: 'contain', flex: '0 0 auto' }} />
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontFamily: "'Fredoka', sans-serif", fontWeight: 800, fontSize: 18, color: '#F5B041', letterSpacing: 0.5 }}>LIGA CRIOLLA</div>
-                    <div style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 12.5, color: '#FFF3D6' }}>
-                      {r ? `${titulo} · ${r.puntos} pts` : titulo}
-                    </div>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={onIrARanked}
-                  style={{
-                    fontFamily: "'Fredoka', sans-serif", fontWeight: 800, fontSize: 16, color: '#4A2C2A',
-                    background: '#F5B041', border: '2px solid #000', borderRadius: 999, padding: '10px 20px',
-                    boxShadow: '0 3px 0 #B9770E, 0 5px 0 #000', cursor: 'pointer', width: '100%',
-                  }}
-                >
-                  JUGAR LIGA
-                </button>
-              </PlacaMadera>
-            );
-          })()}
-          </div>
-          {/* Pase de rediseño estructural: "Jugar ya" — el CTA principal de
-              la pantalla central del juego — pasa a vivir dentro de una
-              gran placa de madera de caoba con marco biselado oscuro y
-              remaches de bronce en las esquinas (mismo criterio que
-              `destacadoPanelExterior` de Torneos.js), envolviendo el fondo
-              de paño/cuero que ya tenía. Antes era una sola caja con borde
-              chocolate fino — ahora tiene la misma "unidad estructural" de
-              placa de taberna que el resto de la app. */}
-          <div style={{ ...estilos.panelJugarYaExterior, margin: 0, flex: '1 1 320px', maxWidth: 500 }}>
+      {/* Pase 515: LOBBY COMPACTO (mismo esquema que el nativo). Arriba "Jugar ya"; abajo una grilla de tarjetas texturizadas; "Crear / Unirse",
+          "Misiones" y "Mates Gratis" abren una hoja sobre la pantalla; las salas viven en un zócalo de alto fijo (130 px) con scroll interno.
+          El banner "¡Hay un torneo abierto!" se quitó: el aviso pasa al subtítulo de la tarjeta Torneos. */}
+      <div style={estilos.lobbyWeb}>
+          <div style={{ ...estilos.panelJugarYaExterior, margin: '0 auto 20px', maxWidth: 560 }}>
             <span style={{ ...estilos.remache, top: 10, left: 10 }} />
             <span style={{ ...estilos.remache, top: 10, right: 10 }} />
             <span style={{ ...estilos.remache, bottom: 10, left: 10 }} />
@@ -445,15 +413,150 @@ useEffect(() => {
             </button>
             </div>
           </div>
-          </div>
 
-      {/* Pase de rediseño estructural: "Crear sala"/"Unirse con
-          código"/"Torneo en curso" pasan a ser 3 placas de madera+
-          pergamino de idéntica proporción (mismo marco, mismo padding,
-          remaches en las 4 esquinas) en vez de 3 cajas blancas/crema
-          desalineadas de distinto tamaño — antes "Torneo en curso" era
-          notablemente más chica (variante "compacta") que las otras 2. */}
-      <div style={estilos.filaAccesosRapidos}>
+        <div style={estilos.gridModulos}>
+          {onIrARanked && (() => {
+            const r = usuario?.rango;
+            const ui = rangoUi(r);
+            const titulo = r ? (r.esTop500 ? r.nombre : `${r.nombre} ${r.division}`) : null;
+            return (
+              <button type="button" onClick={onIrARanked} aria-label="Liga Criolla" style={{ ...estilos.tarjetaModulo, ...estilos.fondoLiga }}>
+                <span style={estilos.tarjetaBisel} aria-hidden="true" />
+                <img src={ui.logo} alt="" style={estilos.tarjetaIcono} />
+                <span style={estilos.tarjetaTextos}>
+                  <span style={{ ...estilos.tarjetaTitulo, color: '#FFD700' }}>Liga Criolla</span>
+                  {titulo
+                    ? <span style={estilos.ligaPastilla}><span style={{ color: '#FFD700', fontWeight: 800 }}>{titulo}</span>{` · ${r.puntos} pts`}</span>
+                    : <span style={estilos.tarjetaSub}>Competí y subí de rango</span>}
+                </span>
+              </button>
+            );
+          })()}
+          <button type="button" onClick={onBannerClick} aria-label="Torneos" style={{ ...estilos.tarjetaModulo, ...estilos.fondoTorneos }}>
+            <span style={estilos.tarjetaBisel} aria-hidden="true" />
+            {['top-left', 'top-right', 'bottom-left', 'bottom-right'].map((pos) => (
+              <span key={pos} aria-hidden="true" style={{ ...estilos.tachuelaMini, [pos.startsWith('top') ? 'top' : 'bottom']: 5, [pos.endsWith('left') ? 'left' : 'right']: 5 }} />
+            ))}
+            <span style={estilos.trofeoCaja}>
+              <span style={estilos.trofeoResplandor} aria-hidden="true" />
+              <img src="/assets/images/trofeo.png" alt="" style={estilos.trofeoImg} />
+            </span>
+            <span style={estilos.tarjetaTextos}>
+              <span style={estilos.tarjetaTitulo}>Torneos</span>
+              <span style={{ ...estilos.tarjetaSub, color: '#E2C280' }}>{bannerTexto ? '¡Hay un torneo abierto! Anotate' : 'Campeonatos y premios'}</span>
+            </span>
+          </button>
+          <button type="button" onClick={() => setHoja('misiones')} aria-label="Misiones semanales" style={{ ...estilos.tarjetaModulo, ...estilos.fondoMisiones }}>
+            <span style={estilos.tarjetaBisel} aria-hidden="true" />
+            <img src="/assets/images/icono-desafios.png" alt="" style={estilos.tarjetaIcono} />
+            <span style={estilos.tarjetaTextos}>
+              <span style={{ ...estilos.tarjetaTitulo, color: '#3B1F0E' }}>Misiones semanales</span>
+              <span style={{ ...estilos.tarjetaSub, color: '#6B4A34' }}>Reclamá monedas</span>
+              <span style={estilos.misionesBarraFila}>
+                <span style={estilos.misionesBarraPista}>
+                  <span style={{ ...estilos.misionesBarraRelleno, width: `${resumenMisiones && resumenMisiones.total > 0 ? Math.round((resumenMisiones.completadas / resumenMisiones.total) * 100) : 0}%` }} />
+                </span>
+                <span style={estilos.misionesBarraTexto}>{resumenMisiones ? `${resumenMisiones.completadas}/${resumenMisiones.total}` : '–/–'}</span>
+              </span>
+            </span>
+          </button>
+          {onIrAnotador && (
+            <button type="button" onClick={onIrAnotador} aria-label="Abrir el Anotador Criollo" style={{ ...estilos.tarjetaModulo, ...estilos.fondoAnotador }}>
+              <span style={estilos.tarjetaBisel} aria-hidden="true" />
+              <img src="/assets/images/icono-anotador.png" alt="" style={estilos.tarjetaIconoGrande} />
+              <span style={estilos.tarjetaTextos}>
+                <span style={estilos.tarjetaTitulo}>Anotador Criollo</span>
+                <span style={estilos.tarjetaSub}>Sin conexión</span>
+              </span>
+              <span style={{ ...estilos.etiquetaTarjeta, background: 'rgba(200,225,190,0.2)' }}>Modo Off-line / Mesa Real</span>
+            </button>
+          )}
+          <button type="button" onClick={() => setHoja('sala')} aria-label="Crear o unirse a una sala" style={{ ...estilos.tarjetaModulo, ...estilos.fondoCrear }}>
+            <span style={estilos.tarjetaBisel} aria-hidden="true" />
+            <img src="/assets/images/icono-crear-sala.png" alt="" style={{ ...estilos.tarjetaIconoGrande, transform: 'rotate(5deg)' }} />
+            <span style={estilos.tarjetaTextos}>
+              <span style={estilos.tarjetaTitulo}>Crear / Unirse</span>
+              <span style={estilos.tarjetaSub}>A una sala</span>
+            </span>
+            <span style={{ ...estilos.etiquetaTarjeta, background: 'rgba(240,217,160,0.18)' }}>Mesas con Clave</span>
+          </button>
+          <button type="button" onClick={() => { setAvisoRedes(''); setHoja('redes'); }} aria-label={`Mates gratis. Seguinos en redes y ganá hasta ${RECOMPENSA_SOCIAL_TOTAL} mates`} style={{ ...estilos.tarjetaModulo, ...estilos.fondoSocial, gridColumn: '1 / -1' }}>
+            <span style={estilos.tarjetaBisel} aria-hidden="true" />
+            <img src="/assets/images/regalo.png" alt="" style={estilos.tarjetaIcono} />
+            <span style={estilos.tarjetaTextos}>
+              <span style={estilos.tarjetaTitulo}>Mates Gratis</span>
+              <span style={estilos.tarjetaSub}>Seguinos en redes</span>
+            </span>
+            <span style={estilos.socialChips} aria-hidden="true">
+              {REDES_SOCIALES.map((red) => (
+                <img key={red.id} src={red.icono} alt="" width={28} height={28} style={estilos.socialChipImg} />
+              ))}
+            </span>
+            <span style={estilos.socialBadge}><MontoMonedas monto={RECOMPENSA_SOCIAL_TOTAL} tam={16} /></span>
+          </button>
+        </div>
+
+      {process.env.NODE_ENV === 'development' && (
+        <div style={{ ...estilos.panelSecundario, ...estilos.panelCompacto, ...estilos.panelPreviewDev, marginBottom: 0 }}>
+          <div style={estilos.panelTitlePreviewDev}>🛠️ Preview de mesa (dev)</div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button onClick={() => { window.history.replaceState(null, '', '?preview=1v1'); onEntrarAPartida('PREVIEW_1V1'); }} style={estilos.btnCardChico}>1v1</button>
+            <button onClick={() => { window.history.replaceState(null, '', '?preview=2v2'); onEntrarAPartida('PREVIEW_2V2'); }} style={estilos.btnCardChico}>2v2</button>
+            <button onClick={() => { window.history.replaceState(null, '', '?preview=3v3'); onEntrarAPartida('PREVIEW_3V3'); }} style={estilos.btnCardChico}>3v3</button>
+          </div>
+        </div>
+      )}
+
+        {/* Zócalo de salas: alto fijo de 130 px (la lista scrollea por dentro), así que crear o borrar salas no mueve nada de lo de arriba. */}
+        <div style={estilos.zocaloExterior}>
+          <div style={estilos.zocaloCabecera}>
+            <span style={estilos.zocaloTitulo}>🎲 Salas disponibles</span>
+            <span style={{ display: 'flex', gap: 8 }}>
+              <button type="button" onClick={onBuscarPartidaActiva} style={estilos.zocaloBoton}>Mi partida</button>
+              <button type="button" onClick={irACrearSala} style={estilos.zocaloBotonOro}>+ Crear sala</button>
+            </span>
+          </div>
+          <div style={estilos.zocaloLista}>
+            {cargando ? (
+              <PantallaCarga completa={false} conLogo={false} />
+            ) : salas.length === 0 ? (
+              <div style={estilos.zocaloVacio}>
+                <img src="/assets/images/mision-gaucho.png" alt="" style={estilos.zocaloVacioImg} />
+                <span>Todavía no hay salas abiertas. ¡Armá la primera mesa!</span>
+              </div>
+            ) : (
+              salas.map((sala) => {
+                const completa = sala.jugadores_count >= sala.jugadores_totales;
+                const iconoModoSrc = ICONOS_MODO[sala.modo];
+                return (
+                  <div key={sala.id} style={estilos.salaFila}>
+                    {iconoModoSrc ? <img src={iconoModoSrc} alt="" style={estilos.salaFilaIcono} /> : <span style={{ fontSize: 20 }}>🃏</span>}
+                    <span style={estilos.salaFilaCodigo}>{sala.codigo}</span>
+                    <span style={estilos.salaFilaChips}>
+                      <span style={estilos.chip}>👥 {sala.jugadores_count}/{sala.jugadores_totales}</span>
+                      <span style={estilos.chip}>🎯 {sala.puntos_para_ganar} pts</span>
+                      {sala.tiempo_por_turno && <span style={estilos.chip}>⏱ {sala.tiempo_por_turno}s</span>}
+                    </span>
+                    <span
+                      style={{ ...estilos.salaFilaCreador, cursor: sala.creador_nombre ? 'pointer' : 'default' }}
+                      onClick={() => sala.creador_nombre && setPerfilAbierto(sala.creador_nombre)}
+                    >
+                      {sala.creador_nombre ? `de ${sala.creador_nombre}` : ''}
+                    </span>
+                    <button onClick={() => handleUnirse(sala.codigo)} disabled={completa} style={completa ? estilos.btnCardDisabled : { ...estilos.btnCard, width: 'auto', padding: '6px 16px' }}>
+                      {completa ? 'Completa' : 'Unirse'}
+                    </button>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      </div>
+
+      {hoja === 'sala' && (
+        <Hoja titulo="Crear / Unirse a sala" onCerrar={() => setHoja(null)}>
+          <div style={estilos.hojaGrid}>
       <div ref={panelCrearSalaRef} style={estilos.accesoCardExterior}>
         <span style={{ ...estilos.remache, top: 8, left: 8 }} />
         <span style={{ ...estilos.remache, top: 8, right: 8 }} />
@@ -538,7 +641,7 @@ useEffect(() => {
                 Sala privada <span style={{ fontWeight: 400, fontSize: 14, color: '#7a6660' }}>
                   {/* Pase siguiente #3: se restaura la mención del costo — ver
                       COSTO_SALA_PRIVADA en salas.js. */}
-                  (no aparece en el listado, cuesta 1 🪙)
+                  (no aparece en el listado, cuesta 1 <MonedaGirando tam={16} style={{ verticalAlign: 'middle' }} />)
                 </span>
               </label>
             </div>
@@ -558,7 +661,12 @@ useEffect(() => {
 
             <div style={{ display: 'flex', gap: 10, marginTop: 6 }}>
               <button type="submit" style={{ ...estilos.btnPrimary, flex: 1 }}>
-                {privada ? 'Crear por 1 🪙' : '✓ Crear sala'}
+                {privada ? (
+                  // Pase 435: el emoji 🪙 del costo pasa a ser la moneda real girando.
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    Crear por 1 <MonedaGirando tam={20} />
+                  </span>
+                ) : '✓ Crear sala'}
               </button>
               <button type="button" onClick={() => setCreandoSala(false)} style={{ ...estilos.btnSecondary, width: 'auto', padding: '12px 20px' }}>✕</button>
             </div>
@@ -567,10 +675,6 @@ useEffect(() => {
         </div>
       </div>
 
-      {/* Cuadragésimo octavo pase — punto 2: "Unirse con código" se movió
-          para quedar justo al lado de "Crear sala" (antes estaba después
-          de Torneo/Preview) — agrupa las dos formas de entrar a una
-          partida en la misma zona lógica de la grilla. */}
       <div style={estilos.accesoCardExterior}>
         <span style={{ ...estilos.remache, top: 8, left: 8 }} />
         <span style={{ ...estilos.remache, top: 8, right: 8 }} />
@@ -606,137 +710,51 @@ useEffect(() => {
         </div>
       </div>
 
-      {/* Cuadragésimo octavo pase — punto 2 (superado por el pase de
-          rediseño estructural siguiente): "Torneo en curso" pasa a usar la
-          misma placa de idéntica proporción que "Crear sala"/"Unirse con
-          código" — antes era la variante "compacta", notablemente más
-          chica. Se agrega un indicador "Partida esperando" (reloj de
-          arena) para que se entienda de un vistazo qué hace este botón
-          antes de leer el texto de ayuda. */}
-      <div style={estilos.accesoCardExterior}>
-        <span style={{ ...estilos.remache, top: 8, left: 8 }} />
-        <span style={{ ...estilos.remache, top: 8, right: 8 }} />
-        <span style={{ ...estilos.remache, bottom: 8, left: 8 }} />
-        <span style={{ ...estilos.remache, bottom: 8, right: 8 }} />
-        <div style={estilos.accesoCard}>
-      <div style={estilos.panelTitle}>
-        <img src="/assets/images/vs-escudo.png" alt="" style={estilos.iconoPanelTitle} /> Partida en curso
-      </div>
-        <div style={estilos.indicadorEsperando}>
-          Partida esperando
-        </div>
-        <div style={estilos.hint}>¿Tenés una partida esperando o en juego? Buscala acá.</div>
-        {/* Pase siguiente: el emoji 🔍 se reemplaza por la lupa ilustrada
-            que pasó el usuario — mismo criterio que iconoRayoBoton (alto
-            fijo, ancho auto, contain).
-            Pase siguiente (#2): lupa agrandada (20→30) porque el botón es
-            grande y quedaba chica, y el texto ahora lleva un delineado
-            (textShadow multidireccional, no WebkitTextStroke, para que
-            funcione en cualquier browser) color chocolate para que resalte
-            más sobre el fondo crimson. */}
-        <button onClick={onBuscarPartidaActiva} style={estilos.btnCrimson}>
-          <img src="/assets/images/icono-lupa.png" alt="" style={estilos.iconoLupaBoton} />
-          <span style={estilos.textoBtnCrimson}>Buscar mi partida activa</span>
-        </button>
-        </div>
-      </div>
-      </div>
-
-      <div style={estilos.filaSecundaria}>
-      {/* Nonagésimo noveno pase: achicada más todavía que el resto de los
-          paneles "compactos" — esto es solo dev, nunca lo ve un usuario
-          real, así que se deja con su propio estilo neutro de siempre en
-          vez del rediseño de arriba. */}
-      {process.env.NODE_ENV === 'development' && (
-        <div style={{ ...estilos.panelSecundario, ...estilos.panelCompacto, ...estilos.panelPreviewDev, marginBottom: 0 }}>
-          <div style={estilos.panelTitlePreviewDev}>🛠️ Preview de mesa (dev)</div>
-          <div style={{ display: 'flex', gap: 6 }}>
-            <button onClick={() => { window.history.replaceState(null, '', '?preview=1v1'); onEntrarAPartida('PREVIEW_1V1'); }} style={estilos.btnCardChico}>1v1</button>
-            <button onClick={() => { window.history.replaceState(null, '', '?preview=2v2'); onEntrarAPartida('PREVIEW_2V2'); }} style={estilos.btnCardChico}>2v2</button>
-            <button onClick={() => { window.history.replaceState(null, '', '?preview=3v3'); onEntrarAPartida('PREVIEW_3V3'); }} style={estilos.btnCardChico}>3v3</button>
           </div>
-        </div>
+        </Hoja>
       )}
 
+      {hoja === 'misiones' && (
+        <Hoja titulo="Misiones semanales" onCerrar={() => setHoja(null)}>
           <MisionesCard token={token} personaje={usuario?.personaje} onMisionReclamada={onMisionReclamada} />
-</div>
-
-      {/* Pase de rediseño estructural: "Salas disponibles" pasa a vivir
-          dentro de una placa de madera alargada tipo "tablero de anuncios
-          de pulpería" (mismo criterio que `panelExterior` de Torneos.js)
-          en vez de vivir suelta sobre el fondo verde — mismo marco que ya
-          envuelve el resto de los módulos de esta pantalla. */}
-      <div style={estilos.tableroExterior}>
-        <span style={{ ...estilos.remache, top: 10, left: 10 }} />
-        <span style={{ ...estilos.remache, top: 10, right: 10 }} />
-        <span style={{ ...estilos.remache, bottom: 10, left: 10 }} />
-        <span style={{ ...estilos.remache, bottom: 10, right: 10 }} />
-      <div style={estilos.tableroInterior}>
-      <div style={estilos.sectionTitle}>🎲 Salas disponibles</div>
-      {cargando ? (
-  // Centésimo cuadragésimo sexto pase: ver PantallaCarga.
-  <PantallaCarga completa={false} conLogo={false} />
-) : salas.length === 0 ? (
-  // Pase de rediseño estructural: se saca el marco punteado plano y se
-  // pone al personaje chibi (mismo estilo ilustrado que ya usa la tarjeta
-  // de Misiones — no hay todavía un dibujo de personaje saludando/en pose
-  // amigable dedicado, así que se reusa el más parecido que existe) en
-  // vez del ícono del libro, que ya se usa como ícono de "Crear sala" más
-  // arriba.
-  <div style={estilos.emptyState}>
-    <img src="/assets/images/mision-gaucho.png" alt="" style={estilos.emptyStatePersonaje} />
-    <div style={estilos.emptyStateTitulo}>Todavía no hay salas abiertas</div>
-    <div style={estilos.emptyStateTexto}>Sé el primero en armar una mesa — elegí el modo y esperá rivales.</div>
-    <button onClick={irACrearSala} style={estilos.btnPrimary}>+ Crear sala</button>
-  </div>
-) : (
-  <div style={estilos.salasGrid}>
-    {salas.map((sala) => {
-          const completa = sala.jugadores_count >= sala.jugadores_totales;
-          const iconoModoSrc = ICONOS_MODO[sala.modo];
-          return (
-            <div key={sala.id} style={estilos.salaCardExterior}>
-              <div style={estilos.salaCard}>
-              <div style={estilos.salaHeader}>
-                <div style={estilos.salaTitulo}>
-                  {iconoModoSrc
-                    ? <img src={iconoModoSrc} alt="" style={estilos.iconoModoSala} />
-                    : <span style={{ fontSize: 20.5 }}>🃏</span>}
-                  <span style={estilos.salaNombre}>{sala.codigo}</span>
-                </div>
-                <div style={{ ...estilos.badge, ...(completa ? estilos.badgeCompleta : estilos.badgeAbierta) }}>
-                  {completa ? 'Completa' : 'Disponible'}
-                </div>
-              </div>
-
-              <div style={estilos.chipsFila}>
-                <span style={estilos.chip}>👥 {sala.jugadores_count}/{sala.jugadores_totales}</span>
-                <span style={estilos.chip}>🎯 {sala.puntos_para_ganar} pts</span>
-                {sala.tiempo_por_turno && <span style={estilos.chip}>⏱ {sala.tiempo_por_turno}s</span>}
-              </div>
-
-              <div
-                style={{ ...estilos.salaCreador, cursor: sala.creador_nombre ? 'pointer' : 'default' }}
-                onClick={() => sala.creador_nombre && setPerfilAbierto(sala.creador_nombre)}
-              >
-                Creada por {sala.creador_nombre}
-              </div>
-
-              <button
-                onClick={() => handleUnirse(sala.codigo)}
-                disabled={completa}
-                style={completa ? estilos.btnCardDisabled : estilos.btnCard}
-              >
-                {completa ? 'Completa' : 'Unirse'}
-              </button>
-              </div>
-            </div>
-          );
-              })}
-        </div>
+        </Hoja>
       )}
-      </div>
-      </div>
+
+      {hoja === 'redes' && (
+        <Hoja titulo="Mates Gratis" variante="redes" onCerrar={() => setHoja(null)}>
+          <div style={estilos.redesCaja}>
+            {!!error && <p role="alert" style={estilos.redesAviso}>{error}</p>}
+            <p style={estilos.redesTexto}>Seguí las 3 redes y ganá <MontoMonedas monto={RECOMPENSA_SOCIAL_TOTAL} tam={22} style={{ verticalAlign: 'middle', color: '#FFD668' }} /></p>
+            {REDES_SOCIALES.map((red) => {
+              const abierta = !!redesAbiertas[red.id];
+              return (
+                <div key={red.id} style={estilos.redesFila}>
+                  <img src={red.icono} alt={red.nombre} width={48} height={48} style={estilos.redesChipImg} />
+                  <span style={{ ...estilos.redesNombre, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    {red.nombre}
+                    <MontoMonedas monto={RECOMPENSA_SOCIAL} tam={16} style={estilos.redesMonto} />
+                  </span>
+                  {!red.url ? (
+                    <span style={{ ...estilos.redesBoton, ...estilos.redesBotonOff }}>Próximamente</span>
+                  ) : abierta && RECLAMO_SOCIAL_ACTIVO ? (
+                    <button type="button" onClick={() => reclamarRed(red)} style={{ ...estilos.redesBoton, ...estilos.redesBotonOro }}>
+                      {reclamandoRed === red.id ? 'Reclamando…' : (<span style={estilos.redesBotonFila}>Reclamar <MontoMonedas monto={RECOMPENSA_SOCIAL} tam={16} /></span>)}
+                    </button>
+                  ) : (
+                    <button type="button" onClick={() => seguirRed(red)} style={{ ...estilos.redesBoton, ...estilos.redesBotonOro }}><span style={estilos.redesBotonFila}>Seguir <MontoMonedas monto={RECOMPENSA_SOCIAL} tam={16} /></span></button>
+                  )}
+                </div>
+              );
+            })}
+            {!RECLAMO_SOCIAL_ACTIVO && <p style={estilos.redesNota}>{`Los +${RECOMPENSA_SOCIAL} mates se sumarán solos en la próxima actualización.`}</p>}
+            {!!avisoRedes && (
+              <p role="status" style={{ ...estilos.redesAviso, ...(avisoRedes.startsWith('¡Listo') ? estilos.redesAvisoOk : {}) }}>
+                {avisoRedes} {avisoRedes.startsWith('¡Listo') && <MonedaGirando tam={18} style={{ verticalAlign: 'middle' }} />}
+              </p>
+            )}
+          </div>
+        </Hoja>
+      )}
 
       {/* Pase 325: pop-up de madera (cinta verde, icono de sala con resplandor, botones píldora 3D). */}
       <PopupMadera
@@ -783,16 +801,6 @@ useEffect(() => {
             : 'Ya aparece en el listado de salas disponibles. También podés compartir el código directamente:'}
         </p>
         <div style={estilos.codigoBox}>{codigoPrivadoCreado}</div>
-        <div style={estilos.featuresRow}>
-          <div style={estilos.featureCard}>
-            <span style={estilos.featureIcon}>🔗</span>
-            <span style={estilos.featureLabel}>Enlace para compartir</span>
-          </div>
-          <div style={estilos.featureCard}>
-            <span style={estilos.featureIcon}>🎧</span>
-            <span style={estilos.featureLabel}>Audio en la mesa</span>
-          </div>
-        </div>
       </PopupMadera>
 
       {perfilAbierto && (
@@ -811,6 +819,107 @@ useEffect(() => {
 const CONTORNO_TEXTO = '-1.5px -1.5px 0 #000, 0 -1.5px 0 #000, 1.5px -1.5px 0 #000, -1.5px 0 0 #000, 1.5px 0 0 #000, -1.5px 1.5px 0 #000, 0 1.5px 0 #000, 1.5px 1.5px 0 #000';
 
 const estilos = {
+  // ===== Pase 515: lobby compacto =====
+  lobbyWeb: { maxWidth: 1040, margin: '0 auto', display: 'flex', flexDirection: 'column' },
+  gridModulos: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))', gap: 14, marginBottom: 16 },
+  tarjetaModulo: {
+    position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left',
+    height: 104, boxSizing: 'border-box', padding: '10px 14px 10px', borderRadius: 16, cursor: 'pointer',
+    boxShadow: '0 4px 5px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.12)', fontFamily: "'Fredoka', sans-serif",
+  },
+  tarjetaBisel: { position: 'absolute', inset: 2, borderRadius: 13, border: '1.2px solid rgba(212,175,55,0.5)', pointerEvents: 'none' },
+  tarjetaIcono: { width: 56, height: 56, objectFit: 'contain', flex: '0 0 auto' },
+  tarjetaIconoGrande: { width: 60, height: 60, objectFit: 'contain', flex: '0 0 auto', marginBottom: 14 },
+  tarjetaTextos: { display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0, flex: 1 },
+  tarjetaTitulo: { fontWeight: 700, fontSize: 18, color: '#FFF8E7', textShadow: '1px 1.5px 2px rgba(0,0,0,0.5)', lineHeight: 1.15 },
+  tarjetaSub: { fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 13.5, color: '#E0D0B0', lineHeight: 1.2 },
+  etiquetaTarjeta: { position: 'absolute', left: 10, right: 10, bottom: 7, height: 17, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 11, color: '#E8EFD8' },
+  // Fondos texturizados (cuero borgoña, terciopelo carmesí, pergamino/corcho, paño verde, roble, azul noche)
+  fondoLiga: {
+    border: '2px solid #8C6239',
+    background: 'repeating-linear-gradient(45deg, rgba(255,255,255,0.035) 0 2px, transparent 2px 7px), linear-gradient(160deg, #3B1A12, #250E08)',
+  },
+  fondoTorneos: {
+    border: '2px solid #6E4B28',
+    background: 'repeating-linear-gradient(45deg, rgba(255,255,255,0.05) 0 1px, transparent 1px 6px), repeating-linear-gradient(-45deg, rgba(0,0,0,0.12) 0 1px, transparent 1px 6px), linear-gradient(160deg, #4A0E17, #2B070D)',
+  },
+  fondoMisiones: {
+    border: '4px solid #6E4B28',
+    background: 'radial-gradient(rgba(138,90,43,0.2) 1px, transparent 1.6px) 0 0 / 11px 11px, radial-gradient(ellipse at 18% 20%, rgba(255,246,223,0.7), transparent 55%), linear-gradient(135deg, #F6ECCF, #EFE3C3 55%, #DCC79B)',
+  },
+  fondoAnotador: {
+    border: '2px solid #5C3D21',
+    background: 'repeating-linear-gradient(45deg, rgba(255,255,255,0.05) 0 1px, transparent 1px 6px), repeating-linear-gradient(-45deg, rgba(0,0,0,0.1) 0 1px, transparent 1px 6px), linear-gradient(160deg, #38593D, #2D4A32 55%, #213823)',
+  },
+  fondoCrear: {
+    border: '2px solid #C08A3E',
+    background: 'repeating-linear-gradient(0deg, rgba(0,0,0,0.14) 0 1px, transparent 1px 9px), linear-gradient(160deg, #5D4037, #4E342E 55%, #3A2520)',
+  },
+  fondoSocial: {
+    border: '2px solid #FFD700', height: 76,
+    background: 'repeating-linear-gradient(45deg, rgba(255,255,255,0.04) 0 1px, transparent 1px 6px), linear-gradient(160deg, #2A1B40, #231635 55%, #1B1028)',
+  },
+  ligaPastilla: { alignSelf: 'flex-start', maxWidth: '100%', background: 'rgba(255,235,205,0.15)', borderRadius: 8, padding: '2px 8px', fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 13, color: '#E0D0B0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
+  tachuelaMini: { position: 'absolute', width: 6, height: 6, borderRadius: '50%', background: '#B9853F', border: '0.5px solid #6E4B28' },
+  trofeoCaja: { position: 'relative', width: 44, height: 44, flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  trofeoResplandor: { position: 'absolute', inset: 0, borderRadius: '50%', background: 'rgba(255,215,0,0.16)', boxShadow: '0 0 6px 2px rgba(255,215,0,0.55)' },
+  trofeoImg: { position: 'relative', width: 44, height: 44, objectFit: 'contain' },
+  misionesBarraFila: { display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 },
+  misionesBarraPista: { flex: 1, height: 9, borderRadius: 5, background: 'rgba(110,75,40,0.22)', border: '1px solid #6E4B28', overflow: 'hidden', display: 'block' },
+  misionesBarraRelleno: { display: 'block', height: '100%', background: '#5E8C3A' },
+  misionesBarraTexto: { fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 12.5, color: '#3B1F0E' },
+  socialChips: { display: 'flex', gap: 6, flex: '0 0 auto', marginRight: 84 },
+  socialChip: { width: 28, height: 28, borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', border: '1.5px solid rgba(255,255,255,0.7)', fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 11, color: '#fff' },
+  socialChipImg: { width: 28, height: 28, display: 'block' },
+  redesChipImg: { width: 48, height: 48, flexShrink: 0, display: 'block' },
+  redesMonto: { fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 13, color: '#FFD668' },
+  redesBotonFila: { display: 'inline-flex', alignItems: 'center', gap: 5 },
+  socialBadge: { position: 'absolute', top: 5, right: 12, background: '#FFD700', border: '1px solid #FFF3A0', borderRadius: 9, padding: '0 9px', fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 14, color: '#3B1F0E', display: 'inline-flex', alignItems: 'center' },
+  // Zócalo de salas (alto fijo 130 px en la lista)
+  zocaloExterior: {
+    background: `linear-gradient(160deg, ${C.maderaClara} 0%, ${C.maderaMedia} 55%, ${C.maderaOscura} 100%)`,
+    border: `3px solid ${C.negroPulido}`, borderRadius: 18, padding: 8,
+    boxShadow: 'inset 0 2px 0 rgba(255,255,255,0.10), inset 0 -4px 10px rgba(0,0,0,0.5), 0 6px 0 #1a1410, 0 12px 20px rgba(0,0,0,0.35)',
+  },
+  zocaloCabecera: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', padding: '2px 6px 8px' },
+  zocaloTitulo: { fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 18, color: '#FFD668' },
+  zocaloBoton: { fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 13.5, color: '#FFF8E7', background: 'rgba(0,0,0,0.3)', border: '1.5px solid #8C6239', borderRadius: 999, padding: '5px 14px', cursor: 'pointer' },
+  zocaloBotonOro: { fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 13.5, color: '#3B1F0E', background: '#FFB300', border: '2px solid #A66F00', borderRadius: 999, padding: '4px 14px', cursor: 'pointer' },
+  zocaloLista: { height: 130, overflowY: 'auto', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: 6, padding: 8, borderRadius: 12, background: `linear-gradient(180deg, ${C.verdeProfundo}, ${C.verdeOscuro})`, boxShadow: 'inset 0 3px 10px rgba(0,0,0,0.55)' },
+  zocaloVacio: { flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, color: '#FFF8ED', fontWeight: 700, fontSize: 14.5, textAlign: 'center' },
+  zocaloVacioImg: { height: 84, width: 'auto', objectFit: 'contain' },
+  salaFila: { flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', background: C.cremaSutil, border: `2px solid ${C.negroPulido}`, borderRadius: 12, padding: '5px 10px', minHeight: 40, boxSizing: 'border-box' },
+  salaFilaIcono: { width: 28, height: 28, objectFit: 'contain' },
+  salaFilaCodigo: { fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 16, color: C.chocolate, letterSpacing: 1 },
+  salaFilaChips: { display: 'flex', gap: 6, flexWrap: 'wrap', flex: 1 },
+  salaFilaCreador: { fontSize: 12.5, fontWeight: 700, color: '#7a6660' },
+  // Hoja (capa)
+  hojaCapa: { position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '4vh 12px', overflowY: 'auto', boxSizing: 'border-box' },
+  hojaCaja: { margin: 'auto', width: '100%', maxWidth: 900, borderRadius: 18, border: `3px solid ${C.negroPulido}`, background: C.maderaMedia, overflow: 'hidden', boxShadow: '0 16px 40px rgba(0,0,0,0.6)' },
+  hojaCabecera: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 14px', background: C.maderaOscura },
+  hojaTitulo: { fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 19, color: C.doradoClaro },
+  hojaCerrar: { width: 34, height: 34, borderRadius: '50%', border: '2px solid #000', background: '#E74C3C', color: '#fff', fontWeight: 800, fontSize: 15, cursor: 'pointer' },
+  hojaCuerpo: { padding: 12 },
+  hojaGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, alignItems: 'stretch' },
+  redesCaja: { display: 'flex', flexDirection: 'column', gap: 0, maxWidth: 520, margin: '0 auto' },
+  redesTexto: { margin: 0, fontWeight: 700, fontSize: 15, color: C.crema, textAlign: 'center' },
+  redesFila: { display: 'flex', alignItems: 'center', gap: 12, background: '#1E100A', border: '1.5px solid #5C3D21', borderRadius: 12, padding: '8px 12px', margin: '6px 0' },
+  redesChip: { width: 44, height: 44, borderRadius: '50%', fontSize: 15, boxShadow: 'inset 0 3px 6px rgba(0,0,0,0.45), inset 0 -2px 4px rgba(255,255,255,0.2), 0 2px 4px rgba(0,0,0,0.5)', flexShrink: 0 },
+  redesNombre: { flex: 1, fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 17, color: C.crema },
+  redesBoton: { minWidth: 112, textAlign: 'center', borderRadius: 10, padding: '7px 10px', border: 'none', borderBottom: '3px solid transparent', fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 14, cursor: 'default', boxSizing: 'border-box' },
+  redesBotonOro: { background: '#D4A030', borderBottomColor: '#8A6414', color: '#3B1F0E', cursor: 'pointer' },
+  redesBotonOff: { background: '#A0522D', borderBottomColor: '#5C2D16', color: '#FFF8E7' },
+  redesNota: { margin: 0, fontWeight: 700, fontSize: 13, color: '#E0D0B0', textAlign: 'center' },
+  // Pase 516: modal de redes (madera oscura, ribete bronce, remaches, X roja flotante, banner pergamino).
+  redesCapa: { background: 'rgba(0,0,0,0.75)' },
+  redesPlaca: { position: 'relative', overflow: 'visible', maxWidth: 560, borderRadius: 20, border: '3px solid #8C6239', background: 'repeating-linear-gradient(0deg, rgba(255,255,255,0.025) 0 1px, transparent 1px 3px), linear-gradient(160deg, #2A1B40 0%, #231635 55%, #1B1028 100%)', boxShadow: '0 16px 40px rgba(0,0,0,0.7), inset 0 0 0 2px rgba(201,162,74,0.35)' },
+  redesCabecera: { background: 'transparent', justifyContent: 'center', padding: '20px 56px 0' },
+  redesTitulo: { fontSize: 22, textAlign: 'center' },
+  redesRemache: { position: 'absolute', width: 10, height: 10, borderRadius: '50%', background: 'radial-gradient(circle at 35% 30%, #F1D58A, #A9791F 60%, #5C3D0E)', boxShadow: '0 1px 2px rgba(0,0,0,0.6)', pointerEvents: 'none' },
+  redesCerrar: { position: 'absolute', top: -12, right: -12, width: 36, height: 36, borderRadius: '50%', border: '2.5px solid #C9A24A', background: 'linear-gradient(180deg, #E5483F, #B02820)', color: '#fff', fontWeight: 800, fontSize: 16, cursor: 'pointer', boxShadow: '0 2px 5px rgba(0,0,0,0.55)', zIndex: 5, padding: 0, lineHeight: '30px' },
+  redesAviso: { margin: '8px 0', background: '#F4E8D1', border: '1.5px solid #A8523A', borderRadius: 10, padding: '8px 12px', fontWeight: 700, fontSize: 13, color: '#8B1A1A', textAlign: 'center' },
+  redesAvisoOk: { borderColor: '#5E7F3A', color: '#2F4A1A' },
+  // ===== fin Pase 515 =====
   // Quincuagésimo pase — la imagen de fondo (antes acá, con el truco de
   // margin negativo para que "sangrara" hasta el borde de .ts-content) se
   // subió a .ts-shell (app-shell.css), que sí cubre toda la pantalla
@@ -1145,6 +1254,20 @@ btnJugarYa: {
   // Historial.js), para que las tarjetas de sala se lean como avisos
   // clavados en el tablero en vez de flotar sueltas sobre el fondo verde
   // general de toda la pantalla.
+  // Pase 404: botón del Anotador Offline (placa de madera con tachas, color dorado de acento).
+  anotadorBoton: {
+    width: '100%', display: 'flex', alignItems: 'center', gap: 12, boxSizing: 'border-box',
+    margin: '0 0 14px', padding: '10px 16px 10px 12px', cursor: 'pointer',
+    border: '3px solid #1a1410', borderRadius: 16,
+    background: 'linear-gradient(160deg, #6b4a34 0%, #4a3226 55%, #2a1c14 100%)',
+    boxShadow: 'inset 0 2px 0 rgba(255,255,255,0.12), inset 0 -4px 10px rgba(0,0,0,0.5), 0 5px 0 #1a1410, 0 10px 18px rgba(0,0,0,0.35)',
+    textAlign: 'left',
+  },
+  anotadorIcono: { width: 76, height: 38, objectFit: 'contain', flex: '0 0 auto', filter: 'drop-shadow(0 2px 0 rgba(0,0,0,0.45))' },
+  anotadorTextos: { display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0, flex: 1 },
+  anotadorTitulo: { fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 19, color: '#F5B041', letterSpacing: 0.4, textShadow: '0 2px 0 #1a1410' },
+  anotadorSub: { fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 12.5, color: '#FFF3D6' },
+  anotadorFlecha: { fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 30, lineHeight: 1, color: '#F5B041' },
   tableroExterior: {
     position: 'relative',
     background: `linear-gradient(160deg, ${C.maderaClara} 0%, ${C.maderaMedia} 55%, ${C.maderaOscura} 100%)`,
