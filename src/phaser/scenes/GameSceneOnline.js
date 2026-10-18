@@ -19,7 +19,10 @@ import { RANGOS_UI } from '../../components/Perfil/rangosUi';
 // URL de cada imagen, con un valor que cambia en cada carga de página — así
 // el navegador nunca puede reusar una respuesta vieja para una URL "nueva",
 // sin necesidad de que el usuario sepa limpiar cachés a mano nunca más.
-const ASSET_VERSION = Date.now();
+// Pase 547: en producción (Vercel) la versión es el commit del deploy (estable entre visitas: el navegador
+// reutiliza las imágenes y sonidos ya descargados en vez de bajar ~25 MB en cada carga de página — era
+// lo que hacía lentísimo crear la sala en el celular). En desarrollo / build local sigue siendo Date.now().
+const ASSET_VERSION = process.env.REACT_APP_VERCEL_GIT_COMMIT_SHA || Date.now();
 const conVersion = (ruta) => `${ruta}?v=${ASSET_VERSION}`;
 
 // Pase 457: margen interno mínimo (px) entre el borde de la placa de fósforos y los cuadritos, para no chocar con los remaches dorados.
@@ -196,7 +199,9 @@ preload() {
     // se quedó pidiendo `.jpg` para 'clasica' — el archivo que pedía no
     // existe más (404 silencioso de Phaser), así que esas cartas nunca se
     // veían en el tablero, aunque los PNG estuvieran bien puestos.
-    const extensionCartas = 'png';
+    // Pase 547: el mazo clásico se sirve en WebP (40 cartas: 22 MB de PNG -> ~1.7 MB, sin diferencia visible);
+    // el mazo nuevo sigue en PNG hasta que se convierta.
+    const extensionCartas = barajaElegida === 'nueva' ? 'png' : 'webp';
 
     const palos   = ['oro', 'copa', 'espada', 'basto'];
     const valores = [1, 2, 3, 4, 5, 6, 7, 10, 11, 12];
@@ -210,7 +215,7 @@ preload() {
     // un dorso nuevo puesto en cartas-nuevas/ nunca se veía. El archivo
     // siempre es .png en las tres carpetas de mazo (ver el fix de más
     // arriba en `extensionCartas` — ya no hay ninguna carpeta en .jpg).
-    this.load.image('cardBack', conVersion(`assets/images/juego/${carpetaCartas}/back.png`));
+    this.load.image('cardBack', conVersion(`assets/images/juego/${carpetaCartas}/back.${extensionCartas}`));
     const modoOscuro = localStorage.getItem('truco_modo_oscuro') === 'true';
     // Nonagésimo cuarto pase: se guarda en la instancia para poder leerlo
     // después en `_crearElementosDeTexto` (ahí se decide si se dibuja o no
@@ -239,10 +244,10 @@ preload() {
     // mano en `_ajustarMesaSegunAsientos`). Esta nueva mesa es solo para
     // 1v1/2v2 (la rama "normal" de esa función) — el usuario no mandó
     // reemplazo para la mesa de 3v3, que sigue con su asset de siempre.
-    this.load.image('mesaRedonda', conVersion('assets/images/juego/mesa-truco-nueva.png'));
-    this.load.image('mesaRedonda3v3', conVersion('assets/images/juego/mesa-truco-3v3.png'));
+    this.load.image('mesaRedonda', conVersion('assets/images/juego/mesa-truco-nueva.webp'));
+    this.load.image('mesaRedonda3v3', conVersion('assets/images/juego/mesa-truco-3v3.webp'));
     // Pase 394: la misma mesa SIN la marca "TC" (que va como imagen aparte) — la usa el layout angosto, que estira el paño.
-    this.load.image('mesaRedondaLimpia', conVersion('assets/images/juego/mesa-truco-nueva-sin-marca.png'));
+    this.load.image('mesaRedondaLimpia', conVersion('assets/images/juego/mesa-truco-nueva-sin-marca.webp'));
     this.load.image('marcaTcMesa', conVersion('assets/images/juego/marca-tc-mesa.png'));
     // Pase 446: mazos laterales en abanico (2v2). Una imagen por lado y por cantidad de cartas en mano (3, 2 y 1).
     // Pase 449: abanico de frente (rival de 1v1, compañero de 2v2 y rival de enfrente de 3v3), también con 3, 2 y 1 cartas.
@@ -1335,23 +1340,26 @@ _crearElementosDeTexto() {
     const altoBotNat = (CORTE_C - CORTE_B) * u + (895 - CORTE_C) * u * PIES_Y;
     const hNat = altoTopNat + (CORTE_B - CORTE_A) * u + altoBotNat;
     // Pase 546: en celulares altos (alto/ancho > ~1.8) todo quedaba apoyado abajo y arriba sobraba un tercio de
-    // pantalla vacío. Ahora la franja del medio de la mesa se estira (E) lo justo para que el marcador suba hasta
-    // HUD_ABS_OBJETIVO (debajo de los botones de ajustes/chat); tope EMAX para que no se vuelva un óvalo gigante.
-    // Con ventanas bajas el sobrante es 0 y todo queda igual que antes (E = 0).
+    // pantalla vacío. La mesa NO se estira (E = 0, sin deformar — el estirado de la franja media se probó y se
+    // descartó): el sobrante se usa devolviendo a las patas su largo natural (PIES_Y sube de 0.55 hacia 1.0, son
+    // madera lisa y no se nota), hasta que el marcador llegue a HUD_ABS_OBJETIVO (debajo de ajustes/chat).
+    // Con ventanas bajas el sobrante es 0 y todo queda igual que antes.
+    const E = 0;                                       // sin estirado vertical
     const slackSobra = Math.max(0, htabDisp - hNat);
     const tableTop0 = tableBottom - hNat;
     const HUD_ABS_OBJETIVO = 205;
-    const EMAX = 150;
-    const E = Math.max(0, Math.min(EMAX, Math.round(tableTop0 - 220 + yOff - HUD_ABS_OBJETIVO)));
-    const tableTop = tableTop0 - E;
+    const filasPies = 895 - CORTE_C;
+    const piesExtra = Math.max(0, Math.min(filasPies * u * (1 - PIES_Y), Math.round(tableTop0 - 220 + yOff - HUD_ABS_OBJETIVO)));
+    const PIES_FINAL = PIES_Y + piesExtra / (filasPies * u);
+    const tableTop = tableTop0 - piesExtra;
     const rivalY = tableTop - 40;                      // Pase 401: el mazo apoya en el borde superior del paño, sin entrar a la zona de jugadas
     const nombreY = rivalY - rivalH / 2 - bultoR - nombreH / 2 - 2;
     const feltCY = tableTop + 149 * sT + E / 2;
     const feltRY = 170 * sT + E / 2;
     const feltH = 203 * sT + E;                        // alto visible del paño verde (Pase 546: incluye el estirado E)
-    const dueloEscala = Math.min(0.66 * 1.9 * f, 0.82 * feltH / 234);
+    const dueloEscala = Math.min(0.66 * 1.9 * f, 0.95 * feltH / 234);   // Pase 546: 0.82 -> 0.95 (cartas jugadas ~16% más grandes, siguen entrando en el paño)
     // Pase 401: el marcador queda anclado ~220 sobre el borde alto de la mesa (justo arriba del nombre/mazo del rival) (no se despega en ventanas altas)
-    const hudYFinal = E > 0 ? tableTop - 220 : Math.max(hudYBase, tableTop - 220);   // Pase 546: con E > 0 el marcador sube hasta HUD_ABS_OBJETIVO (sin el piso de 100)
+    const hudYFinal = piesExtra > 0 ? tableTop - 220 : Math.max(hudYBase, tableTop - 220);   // Pase 546: con patas alargadas el marcador sube hasta HUD_ABS_OBJETIVO (sin el piso de 100)
     const hudBottom = hudYFinal + placaH / 2;
 
     // eq3 se calcula en el espacio del grupo (0..Hg) y luego se desplaza
@@ -1366,7 +1374,7 @@ _crearElementosDeTexto() {
       zoom, H, zoom8, H8, WN, yOff,
       kp, placaW, placaH, hudY: hudYFinal + yOff, placaVosX, placaRivalX,
       panelW, panelH, panelTop: panelTop + yOff, panelCY: panelCY + yOff, kMano, manoY: manoY + yOff,
-      tableW, u, CORTE_A, CORTE_B, CORTE_C, PIES_Y, altoTopNat, altoBotNat, E, tableTop: tableTop + yOff, tableBottom: tableBottom + yOff,
+      tableW, u, CORTE_A, CORTE_B, CORTE_C, PIES_Y: PIES_FINAL, altoTopNat, altoBotNat: altoBotNat + piesExtra, E, tableTop: tableTop + yOff, tableBottom: tableBottom + yOff,
       rivalY: rivalY + yOff, kRival, nombreY: nombreY + yOff, sT,
       feltCY: feltCY + yOff, feltRY, dueloY: feltCY + yOff, dueloEscala, kBoton: 1.15 + 0.15 * f,
       kSeat: 1.35, perspCY: feltCY + yOff, perspRY: feltRY,
