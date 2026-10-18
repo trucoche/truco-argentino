@@ -74,12 +74,12 @@ const C = {
 const RECOMPENSA_SOCIAL = 25;
 const RECOMPENSA_SOCIAL_TOTAL = 75;
 const REDES_SOCIALES = [
-  { id: 'discord', nombre: 'Discord', sigla: 'DC', color: '#5865F2', url: '', icono: '/assets/images/icon_discord_wood.png' },
-  { id: 'instagram', nombre: 'Instagram', sigla: 'IG', color: '#E1306C', url: '', icono: '/assets/images/icon_instagram_wood.png' },
-  { id: 'facebook', nombre: 'Facebook', sigla: 'FB', color: '#1877F2', url: '', icono: '/assets/images/icon_facebook_wood.png' },
+  { id: 'discord', nombre: 'Discord', sigla: 'DC', color: '#5865F2', url: 'https://discord.gg/dBmh882kG', icono: '/assets/images/icon_discord_wood.png' },
+  { id: 'instagram', nombre: 'Instagram', sigla: 'IG', color: '#E1306C', url: 'https://www.instagram.com/trucocheok/', icono: '/assets/images/icon_instagram_wood.png' },
+  { id: 'facebook', nombre: 'Facebook', sigla: 'FB', color: '#1877F2', url: 'https://www.facebook.com/profile.php?id=61592335787988', icono: '/assets/images/icon_facebook_wood.png' },
 ];
 const RECLAMO_SOCIAL_ACTIVO = false;
-// Pase 518: pegá en `REDES_SOCIALES[].url` los links oficiales; con `url` el botón dice "Seguir" y abre con window.open(_blank), sin `url` queda en "Próximamente".
+// Pase 518: links oficiales cargados en el Pase 564 (`REDES_SOCIALES[].url`); con `url` el botón dice "Seguir" y abre con window.open(_blank), sin `url` queda en "Próximamente".
 
 // Pase 517: "+25" junto a la moneda dorada del juego (reemplaza al emoji 🧉).
 function MontoMonedas({ monto, tam = 20, style }) {
@@ -498,9 +498,21 @@ useEffect(() => {
               <span style={estilos.tarjetaTitulo}>Mates Gratis</span>
               <span style={estilos.tarjetaSub}>Seguinos en redes</span>
             </span>
-            <span style={estilos.socialChips} aria-hidden="true">
+            {/* Pase 564: cada ícono abre la red directo (no es <button> anidado: el botón de la tarjeta abre "Mates Gratis"). */}
+            <span style={estilos.socialChips}>
               {REDES_SOCIALES.map((red) => (
-                <img key={red.id} src={red.icono} alt="" width={28} height={28} style={estilos.socialChipImg} />
+                <span
+                  key={red.id}
+                  role="link"
+                  tabIndex={0}
+                  aria-label={`Abrir ${red.nombre}`}
+                  title={red.nombre}
+                  style={{ cursor: 'pointer', display: 'inline-flex', padding: 2 }}
+                  onClick={(e) => { e.stopPropagation(); seguirRed(red); }}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); seguirRed(red); } }}
+                >
+                  <img src={red.icono} alt="" width={28} height={28} style={estilos.socialChipImg} />
+                </span>
               ))}
             </span>
             <span style={estilos.socialBadge}><MontoMonedas monto={RECOMPENSA_SOCIAL_TOTAL} tam={16} /></span>
