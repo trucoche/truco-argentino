@@ -1692,7 +1692,8 @@ _aplicarUnsharpMask(ctx, ancho, alto, cantidad = 0.35, radioBlur = 1.0, umbral =
   const blurCanvas = document.createElement('canvas');
   blurCanvas.width = ancho;
   blurCanvas.height = alto;
-  const blurCtx = blurCanvas.getContext('2d');
+  // Pase 545: willReadFrequently — este canvas se lee con getImageData; sin el flag Chrome (sobre todo en Android) lo deja en GPU y cada lectura frena el hilo.
+  const blurCtx = blurCanvas.getContext('2d', { willReadFrequently: true });
   blurCtx.filter = `blur(${radioBlur}px)`;
   blurCtx.drawImage(ctx.canvas, 0, 0);
   const desenfocada = blurCtx.getImageData(0, 0, ancho, alto);
@@ -1822,7 +1823,7 @@ _crearTexturaEscalada(claveOriginal, claveNueva, anchoFinal, altoFinal) {
     const siguienteCanvas = document.createElement('canvas');
     siguienteCanvas.width = siguienteAncho;
     siguienteCanvas.height = siguienteAlto;
-    const siguienteCtx = siguienteCanvas.getContext('2d');
+    const siguienteCtx = siguienteCanvas.getContext('2d', { willReadFrequently: true });   // Pase 545: se lee en _aplicarUnsharpMask
     siguienteCtx.imageSmoothingEnabled = true;
     siguienteCtx.imageSmoothingQuality = 'high';
     siguienteCtx.drawImage(canvasActual, 0, 0, ancho, alto, 0, 0, siguienteAncho, siguienteAlto);
@@ -1835,7 +1836,7 @@ _crearTexturaEscalada(claveOriginal, claveNueva, anchoFinal, altoFinal) {
   const finalCanvas = document.createElement('canvas');
   finalCanvas.width = anchoFinal;
   finalCanvas.height = altoFinal;
-  const finalCtx = finalCanvas.getContext('2d');
+  const finalCtx = finalCanvas.getContext('2d', { willReadFrequently: true });   // Pase 545: se lee en _aplicarUnsharpMask
   finalCtx.imageSmoothingEnabled = true;
   finalCtx.imageSmoothingQuality = 'high';
   finalCtx.drawImage(canvasActual, 0, 0, ancho, alto, 0, 0, anchoFinal, altoFinal);
