@@ -195,6 +195,11 @@ export default function AvisosGlobales({ usuario, token, onAceptarDesafio, onCam
   // de antes. A diferencia del de mensajes, no se apaga al entrar a la
   // pantalla de Chat — solo baja cuando el conteo real bajó (el usuario
   // respondió las solicitudes).
+  const onCambioSolicitudesPendientesRef = useRef(onCambioSolicitudesPendientes);
+  onCambioSolicitudesPendientesRef.current = onCambioSolicitudesPendientes;
+  const onIrASolicitudesAmistadRef = useRef(onIrASolicitudesAmistad);
+  onIrASolicitudesAmistadRef.current = onIrASolicitudesAmistad;
+
   useEffect(() => {
     if (!token || !usuario?.id) return;
     let activo = true;
@@ -218,12 +223,12 @@ export default function AvisosGlobales({ usuario, token, onAceptarDesafio, onCam
                 // "Solicitudes de amistad" (ver `onIrASolicitudesAmistad`
                 // en App.js y `abrirSolicitudesSenial` en ChatGlobal.js),
                 // en vez de dejar al usuario a encontrarlo por su cuenta.
-                mostrarToast(`${username} te envió una solicitud de amistad.`, 'info', 3600, onIrASolicitudesAmistad);
+                mostrarToast(`${username} te envió una solicitud de amistad.`, 'info', 3600, () => onIrASolicitudesAmistadRef.current?.());
               }
             });
           }
           solicitudesConocidasRef.current = usernamesActuales;
-          onCambioSolicitudesPendientes?.(data.solicitudes.length);
+          onCambioSolicitudesPendientesRef.current?.(data.solicitudes.length);
         }
       } catch (err) {
         console.error('Error cargando solicitudes de amistad:', err);
@@ -233,7 +238,10 @@ export default function AvisosGlobales({ usuario, token, onAceptarDesafio, onCam
     cargarSolicitudesAmistad();
     const intervalo = setInterval(cargarSolicitudesAmistad, 20000);
     return () => { activo = false; clearInterval(intervalo); };
-  }, [token, usuario?.id, mostrarToast, onCambioSolicitudesPendientes, onIrASolicitudesAmistad]);
+    // Pase 548: los callbacks van por ref. Antes estaban en las dependencias y `onIrASolicitudesAmistad` es una función
+    // inline de App.js (nueva en cada render) → el efecto se reiniciaba en cada render de App y pedía
+    // /solicitudes-amistad de nuevo cada vez (cientos de requests por partida). Ahora solo reinicia al cambiar la sesión.
+  }, [token, usuario?.id, mostrarToast]);
 
   // Pase 377: polling de invitaciones de torneo (cubre al amigo que estaba desconectado cuando
   // llegó el aviso en vivo, y refresca si una invitación venció).

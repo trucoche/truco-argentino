@@ -200,8 +200,8 @@ preload() {
     // existe más (404 silencioso de Phaser), así que esas cartas nunca se
     // veían en el tablero, aunque los PNG estuvieran bien puestos.
     // Pase 547: el mazo clásico se sirve en WebP (40 cartas: 22 MB de PNG -> ~1.7 MB, sin diferencia visible);
-    // el mazo nuevo sigue en PNG hasta que se convierta.
-    const extensionCartas = barajaElegida === 'nueva' ? 'png' : 'webp';
+    // Pase 548: el mazo nuevo también se sirve en WebP (13 MB de PNG -> ~1.4 MB).
+    const extensionCartas = 'webp';
 
     const palos   = ['oro', 'copa', 'espada', 'basto'];
     const valores = [1, 2, 3, 4, 5, 6, 7, 10, 11, 12];
