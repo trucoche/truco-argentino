@@ -258,6 +258,104 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
     }
   };
 
+  // ---------- Pase 563: sponsors de Cafecito (solo rol 'admin') ----------
+  // Cuando llega una donación, el donante escribió en el mensaje su ID o su usuario: se busca acá, se ve a
+  // quién encontró y recién entonces se otorga (anillo + banner + dorso 'Sponsor Criollo').
+  const PLANES_SPONSOR = [
+    { value: 'criollo', label: 'Sponsor Criollo ($500)' },
+    { value: 'codigo', label: 'Día de Código ($2000)' },
+  ];
+  const [sponsors, setSponsors] = useState([]);
+  const [sponsorBusqueda, setSponsorBusqueda] = useState('');
+  const [sponsorResultado, setSponsorResultado] = useState(null); // { usuario, sugerencias } | null
+  const [sponsorPlan, setSponsorPlan] = useState('criollo');
+  const [sponsorOcupado, setSponsorOcupado] = useState(false);
+  const [sponsorAviso, setSponsorAviso] = useState('');
+
+  const cargarSponsors = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/admin/sponsors`, { headers: { 'Authorization': `Bearer ${token}` } });
+      const data = await res.json();
+      if (res.ok) setSponsors(data.sponsors || []);
+    } catch (err) {
+      console.error('Error cargando sponsors:', err);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    if (esAdmin) cargarSponsors();
+  }, [esAdmin, cargarSponsors]);
+
+  const buscarSponsor = async (texto) => {
+    const q = (texto ?? sponsorBusqueda).trim();
+    if (!q || sponsorOcupado) return;
+    setSponsorOcupado(true);
+    setSponsorAviso('');
+    try {
+      const res = await fetch(`${API_BASE}/admin/sponsors/buscar?q=${encodeURIComponent(q)}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (res.ok) setSponsorResultado({ usuario: data.usuario || null, sugerencias: data.sugerencias || [] });
+      else setSponsorAviso(data.error || 'No se pudo buscar');
+    } catch (err) {
+      setSponsorAviso('No se pudo buscar. Revisá la conexión.');
+    } finally {
+      setSponsorOcupado(false);
+    }
+  };
+
+  const otorgarSponsor = async (u) => {
+    if (!u || sponsorOcupado) return;
+    setSponsorOcupado(true);
+    setSponsorAviso('');
+    try {
+      const res = await fetch(`${API_BASE}/admin/sponsors`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ usuario_id: u.id, plan: sponsorPlan })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSponsorAviso(`Listo: ${u.username} ya es sponsor.`);
+        setSponsorResultado(null);
+        setSponsorBusqueda('');
+        cargarSponsors();
+      } else {
+        setSponsorAviso(data.error || 'No se pudo otorgar');
+      }
+    } catch (err) {
+      setSponsorAviso('No se pudo otorgar. Revisá la conexión.');
+    } finally {
+      setSponsorOcupado(false);
+    }
+  };
+
+  const quitarSponsor = async (u) => {
+    const confirmado = await confirmarPopup({
+      titulo: 'Quitar sponsor',
+      cinta: 'roja',
+      mensaje: `¿Quitarle el sponsor a ${u.username}? Si tenía puesto el anillo, el banner o el dorso de Cafecito, vuelven a los de siempre.`,
+      textoSi: 'Quitar',
+      tipoSi: 'carmesi',
+    });
+    if (!confirmado) return;
+    try {
+      const res = await fetch(`${API_BASE}/admin/sponsors/${u.id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        setSponsorAviso(`Se le quitó el sponsor a ${u.username}.`);
+        cargarSponsors();
+      } else {
+        setSponsorAviso('No se pudo quitar el sponsor.');
+      }
+    } catch (err) {
+      setSponsorAviso('No se pudo quitar. Revisá la conexión.');
+    }
+  };
+
   const alternarModoOscuro = (e) => {
     const valor = e.target.checked;
     setModoOscuro(valor);
@@ -634,6 +732,86 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
         </PlacaMadera>
       )}
 
+      {/* Pase 563: sponsors de Cafecito — solo rol 'admin'. Buscar al donante, ver a quién encontró y otorgar. */}
+      {esAdmin && (
+        <PlacaMadera>
+          <div style={estilos.panelTitulo}>☕ Sponsors de Cafecito (administración)</div>
+          <p style={estilos.hintBaraja}>Buscá por ID o por nombre de usuario, como lo escribió el donante en el mensaje de Cafecito.</p>
+          <div style={estilos.filaBusquedaSponsor}>
+            <input
+              id="sponsor-busqueda"
+              style={estilos.inputSponsor}
+              type="text"
+              placeholder="ID o nombre de usuario"
+              value={sponsorBusqueda}
+              maxLength={50}
+              onChange={(e) => { setSponsorBusqueda(e.target.value); setSponsorResultado(null); }}
+              onKeyDown={(e) => { if (e.key === 'Enter') buscarSponsor(); }}
+            />
+            <button style={estilos.btnRevisar} disabled={sponsorOcupado || !sponsorBusqueda.trim()} onClick={() => buscarSponsor()}>
+              Buscar
+            </button>
+          </div>
+          <select
+            id="sponsor-plan"
+            style={estilos.inputSponsor}
+            value={sponsorPlan}
+            onChange={(e) => setSponsorPlan(e.target.value)}
+          >
+            {PLANES_SPONSOR.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+          </select>
+
+          {sponsorResultado && sponsorResultado.usuario && (
+            <div style={estilos.filaDenuncia}>
+              <div style={estilos.denunciaTexto}>
+                Encontrado: <strong>{sponsorResultado.usuario.username}</strong> (ID {sponsorResultado.usuario.id})
+                {sponsorResultado.usuario.sponsor_plan && (
+                  <div style={estilos.denunciaFecha}>Ya es sponsor ({sponsorResultado.usuario.sponsor_plan}); otorgar cambia su plan.</div>
+                )}
+              </div>
+              <button style={estilos.btnRevisar} disabled={sponsorOcupado} onClick={() => otorgarSponsor(sponsorResultado.usuario)}>
+                {sponsorOcupado ? 'Otorgando...' : 'Otorgar'}
+              </button>
+            </div>
+          )}
+          {sponsorResultado && !sponsorResultado.usuario && (
+            <div>
+              <p style={estilos.hintBaraja}>No hay ningún usuario con ese ID o nombre exacto.</p>
+              {sponsorResultado.sugerencias.length > 0 && (
+                <div style={estilos.listaDenuncias}>
+                  {sponsorResultado.sugerencias.map(u => (
+                    <div key={u.id} style={estilos.filaDenuncia}>
+                      <div style={estilos.denunciaTexto}>¿Será <strong>{u.username}</strong>? (ID {u.id})</div>
+                      <button style={estilos.btnRevisar} onClick={() => { setSponsorBusqueda(u.username); buscarSponsor(u.username); }}>
+                        Elegir
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          {sponsorAviso && <p style={estilos.hintBaraja}>{sponsorAviso}</p>}
+
+          <div style={{ ...estilos.panelTitulo, marginTop: 14 }}>Sponsors actuales ({sponsors.length})</div>
+          {sponsors.length === 0 ? (
+            <p style={estilos.hintBaraja}>Todavía no hay sponsors.</p>
+          ) : (
+            <div style={estilos.listaDenuncias}>
+              {sponsors.map(u => (
+                <div key={u.id} style={estilos.filaDenuncia}>
+                  <div style={estilos.denunciaTexto}>
+                    <strong>{u.username}</strong> (ID {u.id}) · {u.sponsor_plan === 'codigo' ? 'Día de Código' : 'Sponsor Criollo'}
+                    {u.sponsor_desde && <div style={estilos.denunciaFecha}>Desde {new Date(u.sponsor_desde).toLocaleDateString()}</div>}
+                  </div>
+                  <button style={estilos.btnRevisar} onClick={() => quitarSponsor(u)}>Quitar</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </PlacaMadera>
+      )}
+
       {/* Pase 495: "Sobre el proyecto" — apoyar a TrucoChe con un cafecito; va justo arriba de "Mi cuenta". */}
       <PlacaMadera>
         <div style={estilos.panelTitulo}>
@@ -880,6 +1058,11 @@ const estilos = {
     fontSize: 11.5, fontWeight: 700, color: C.chocolate, background: C.dorado,
     border: `2px solid ${C.chocolate}`, borderRadius: 8, padding: '6px 10px', cursor: 'pointer',
     whiteSpace: 'nowrap', flexShrink: 0
+  },
+  filaBusquedaSponsor: { display: 'flex', gap: 8, alignItems: 'center', margin: '10px 0 8px' },
+  inputSponsor: {
+    flex: 1, width: '100%', boxSizing: 'border-box', fontSize: 14, fontWeight: 600, color: C.chocolate,
+    background: '#fff', border: `2px solid ${C.chocolate}55`, borderRadius: 10, padding: '8px 10px', marginBottom: 8
   },
   badgeRevisada: {
     fontSize: 11.5, fontWeight: 700, color: '#1f7a3c', background: '#d8f0da',
