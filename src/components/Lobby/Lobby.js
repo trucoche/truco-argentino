@@ -78,7 +78,7 @@ const REDES_SOCIALES = [
   { id: 'instagram', nombre: 'Instagram', sigla: 'IG', color: '#E1306C', url: 'https://www.instagram.com/trucocheok/', icono: '/assets/images/icon_instagram_wood.png' },
   { id: 'facebook', nombre: 'Facebook', sigla: 'FB', color: '#1877F2', url: 'https://www.facebook.com/profile.php?id=61592335787988', icono: '/assets/images/icon_facebook_wood.png' },
 ];
-const RECLAMO_SOCIAL_ACTIVO = false;
+const RECLAMO_SOCIAL_ACTIVO = true;   // Pase 565: el backend ya tiene /api/recompensas-sociales (una vez por cuenta y por red)
 // Pase 518: links oficiales cargados en el Pase 564 (`REDES_SOCIALES[].url`); con `url` el botón dice "Seguir" y abre con window.open(_blank), sin `url` queda en "Próximamente".
 
 // Pase 517: "+25" junto a la moneda dorada del juego (reemplaza al emoji 🧉).
@@ -172,6 +172,7 @@ export default function Lobby({ token, usuario, onPersonajeCambiado, onEntrarAPa
   const [resumenMisiones, setResumenMisiones] = useState(null);
   const [redesAbiertas, setRedesAbiertas] = useState({});
   const [reclamandoRed, setReclamandoRed] = useState(null);
+  const [redesReclamadas, setRedesReclamadas] = useState([]);   // Pase 565: redes cuyo premio ya se cobró
   const [avisoRedes, setAvisoRedes] = useState('');
   const irACrearSala = () => {
     setCreandoSala(true);
@@ -236,6 +237,22 @@ useEffect(() => {
     return () => { activo = false; };
   }, [hoja, token]);
 
+  // Pase 565: al abrir "Mates Gratis" se pide qué redes ya cobró esta cuenta (para mostrar "✓ Reclamado").
+  useEffect(() => {
+    if (hoja !== 'redes' || !RECLAMO_SOCIAL_ACTIVO || !token) return undefined;
+    let activo = true;
+    (async () => {
+      try {
+        const res = await fetch(`${BASE_URL}/api/recompensas-sociales`, { headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` } });
+        const data = await res.json();
+        if (activo && res.ok && Array.isArray(data?.reclamadas)) setRedesReclamadas(data.reclamadas);
+      } catch (err) {
+        // sin conexión: el servidor igual impide cobrar dos veces
+      }
+    })();
+    return () => { activo = false; };
+  }, [hoja, token]);
+
   const seguirRed = (red) => {
     if (!red.url) return;
     window.open(red.url, '_blank', 'noopener,noreferrer');
@@ -250,6 +267,7 @@ useEffect(() => {
       const res = await fetch(`${BASE_URL}/api/recompensas-sociales/reclamar`, { method: 'POST', headers, body: JSON.stringify({ red: red.id }) });
       const data = await res.json();
       setAvisoRedes(res.ok ? `¡Listo! +${RECOMPENSA_SOCIAL}` : (data?.error || 'No se pudo reclamar el premio'));
+      if (Array.isArray(data?.reclamadas)) setRedesReclamadas(data.reclamadas);   // también vuelve en el 409 "ya reclamaste"
       if (res.ok) onMisionReclamada?.();
     } catch (err) {
       setAvisoRedes('No se pudo conectar con el servidor');
@@ -758,6 +776,8 @@ useEffect(() => {
                   </span>
                   {!red.url ? (
                     <span style={{ ...estilos.redesBoton, ...estilos.redesBotonOff }}>Próximamente</span>
+                  ) : redesReclamadas.includes(red.id) ? (
+                    <span style={{ ...estilos.redesBoton, ...estilos.redesBotonHecho }}>✓ Reclamado</span>
                   ) : abierta && RECLAMO_SOCIAL_ACTIVO ? (
                     <button type="button" onClick={() => reclamarRed(red)} style={{ ...estilos.redesBoton, ...estilos.redesBotonOro }}>
                       {reclamandoRed === red.id ? 'Reclamando…' : (<span style={estilos.redesBotonFila}>Reclamar <MontoMonedas monto={RECOMPENSA_SOCIAL} tam={16} /></span>)}
@@ -943,6 +963,7 @@ const estilos = {
   redesBoton: { minWidth: 112, textAlign: 'center', borderRadius: 10, padding: '7px 10px', border: 'none', borderBottom: '3px solid transparent', fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 14, cursor: 'default', boxSizing: 'border-box' },
   redesBotonOro: { background: '#D4A030', borderBottomColor: '#8A6414', color: '#3B1F0E', cursor: 'pointer' },
   redesBotonOff: { background: '#A0522D', borderBottomColor: '#5C2D16', color: '#FFF8E7' },
+  redesBotonHecho: { background: '#3F8F4E', borderBottomColor: '#25602F', color: '#FFF8E7' },
   redesNota: { margin: 0, fontWeight: 700, fontSize: 13, color: '#E0D0B0', textAlign: 'center' },
   // Pase 516: modal de redes (madera oscura, ribete bronce, remaches, X roja flotante, banner pergamino).
   redesCapa: { background: 'rgba(0,0,0,0.75)' },
