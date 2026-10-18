@@ -705,8 +705,8 @@ return (
               </div>
               <div style={estilos.destacadoStatBadge}>
                 <img src="/assets/images/fosforos_5_tantos.png" alt="" style={estilos.fosforosPuntos} />
-                <span style={estilos.destacadoStatValor}>{torneoDestacado.puntos_para_ganar}</span>
-                <span style={estilos.destacadoStatLabel}>Puntos</span>
+                <span style={estilos.destacadoStatValor}>A {torneoDestacado.puntos_para_ganar}</span>
+                <span style={estilos.destacadoStatLabel}>Partido</span>
               </div>
               {/* Pase siguiente: se restauró el costo de inscripción (10 🪙) y
                   el premio fijo al campeón (35 🪙, ver PREMIO_CAMPEON_POR_JUGADOR
@@ -726,7 +726,7 @@ return (
               <div style={estilos.destacadoStatBadge}>
                 <img src="/assets/images/historial-trofeo.png" alt="" style={estilos.destacadoStatIcono} />
                 <span style={{ ...estilos.destacadoStatValor, color: '#B9770E' }}>35</span>
-                <span style={estilos.destacadoStatLabel}>Premio</span>
+                <span style={estilos.destacadoStatLabel}>Premio c/u</span>
               </div>
             </div>
 

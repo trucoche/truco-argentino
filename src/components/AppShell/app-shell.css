@@ -192,8 +192,8 @@
   text-shadow:
     -1.5px 0 0 #2A1408, 1.5px 0 0 #2A1408, 0 -1.5px 0 #2A1408, 0 1.5px 0 #2A1408,
     -1.5px -1.5px 0 #2A1408, 1.5px -1.5px 0 #2A1408, -1.5px 1.5px 0 #2A1408, 1.5px 1.5px 0 #2A1408;
-  /* Pase 356: 4px más abajo, centrado en la ranura. */
-  transform: translateY(4px);
+  /* Pase 356: 4px más abajo, centrado en la ranura. Pase 569: sube 3px (quedaba un poco por debajo del medio). */
+  transform: translateY(1px);
   pointer-events: none;
 }
 /* Nonagésimo primer pase: el hotspot único de "+" (que hacía lo mismo que

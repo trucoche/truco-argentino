@@ -354,10 +354,10 @@ export default function BracketView({ torneoId, usuario, token, onVolver, onEntr
           <Ficha icono="/assets/images/icono-personaje.png" mascara valor={`${enSala ? equiposListos : cupoTotal}/${cupoTotal}`} label="Equipos" />
           <Ficha icono="/assets/images/icono-cartas-nueva.png" valor={torneo.modo} label="Modo" />
           {torneo.puntos_para_ganar != null && (
-            <Ficha icono="/assets/images/fosforos_5_tantos.png" valor={torneo.puntos_para_ganar} label="Puntos" />
+            <Ficha icono="/assets/images/fosforos_5_tantos.png" valor={`A ${torneo.puntos_para_ganar}`} label="Partido" />
           )}
           <Ficha icono="/assets/images/moneda.png" valor={Math.round(Number(torneo.apuesta || 0))} label="Entrada" />
-          <Ficha icono="/assets/images/historial-trofeo.png" valor={PREMIO_CAMPEON} label="Premio" dorado />
+          <Ficha icono="/assets/images/historial-trofeo.png" valor={PREMIO_CAMPEON} label="Premio c/u" dorado />
         </div>
 
         {totalPartidos > 0 && (
