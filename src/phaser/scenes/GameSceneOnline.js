@@ -1287,7 +1287,8 @@ _crearElementosDeTexto() {
     const panelH = Math.round(panelW * 193 / 700);
     const panelTop = Hg - panelH;
     const panelCY = Hg - panelH / 2;
-    const kMano = Math.min(1.7 * f, panelH / 118);   // Pase 402: la carta de la mano nunca es mas alta que la botonera de madera
+    // Pase 402: la carta de la mano nunca es mas alta que la botonera de madera. Pase 546: +15% (tope 1.95 / 1.2x la botonera) — pedido: las cartas se veían chicas en el celular.
+    const kMano = Math.min(1.95 * f, 1.2 * panelH / 118);
     const manoY = panelTop - 6;
 
     // Mesa: la imagen se parte en TRES franjas y solo la del medio se
@@ -1333,17 +1334,24 @@ _crearElementosDeTexto() {
     const altoTopNat = CORTE_A * u;
     const altoBotNat = (CORTE_C - CORTE_B) * u + (895 - CORTE_C) * u * PIES_Y;
     const hNat = altoTopNat + (CORTE_B - CORTE_A) * u + altoBotNat;
-    const E = 0;                                       // sin estirado vertical
+    // Pase 546: en celulares altos (alto/ancho > ~1.8) todo quedaba apoyado abajo y arriba sobraba un tercio de
+    // pantalla vacío. Ahora la franja del medio de la mesa se estira (E) lo justo para que el marcador suba hasta
+    // HUD_ABS_OBJETIVO (debajo de los botones de ajustes/chat); tope EMAX para que no se vuelva un óvalo gigante.
+    // Con ventanas bajas el sobrante es 0 y todo queda igual que antes (E = 0).
     const slackSobra = Math.max(0, htabDisp - hNat);
-    const tableTop = tableBottom - hNat;
+    const tableTop0 = tableBottom - hNat;
+    const HUD_ABS_OBJETIVO = 205;
+    const EMAX = 150;
+    const E = Math.max(0, Math.min(EMAX, Math.round(tableTop0 - 220 + yOff - HUD_ABS_OBJETIVO)));
+    const tableTop = tableTop0 - E;
     const rivalY = tableTop - 40;                      // Pase 401: el mazo apoya en el borde superior del paño, sin entrar a la zona de jugadas
     const nombreY = rivalY - rivalH / 2 - bultoR - nombreH / 2 - 2;
-    const feltCY = tableTop + 149 * sT;
-    const feltRY = 170 * sT;
-    const feltH = 203 * sT;                            // alto visible del paño verde
+    const feltCY = tableTop + 149 * sT + E / 2;
+    const feltRY = 170 * sT + E / 2;
+    const feltH = 203 * sT + E;                        // alto visible del paño verde (Pase 546: incluye el estirado E)
     const dueloEscala = Math.min(0.66 * 1.9 * f, 0.82 * feltH / 234);
     // Pase 401: el marcador queda anclado ~220 sobre el borde alto de la mesa (justo arriba del nombre/mazo del rival) (no se despega en ventanas altas)
-    const hudYFinal = Math.max(hudYBase, tableTop - 220);
+    const hudYFinal = E > 0 ? tableTop - 220 : Math.max(hudYBase, tableTop - 220);   // Pase 546: con E > 0 el marcador sube hasta HUD_ABS_OBJETIVO (sin el piso de 100)
     const hudBottom = hudYFinal + placaH / 2;
 
     // eq3 se calcula en el espacio del grupo (0..Hg) y luego se desplaza
@@ -1362,7 +1370,7 @@ _crearElementosDeTexto() {
       rivalY: rivalY + yOff, kRival, nombreY: nombreY + yOff, sT,
       feltCY: feltCY + yOff, feltRY, dueloY: feltCY + yOff, dueloEscala, kBoton: 1.15 + 0.15 * f,
       kSeat: 1.35, perspCY: feltCY + yOff, perspRY: feltRY,
-      eq2: { cyOld: 250, cy: feltCY + yOff, gy: 137 * sT / 130 },
+      eq2: { cyOld: 250, cy: feltCY + yOff, gy: (137 * sT + E / 2) / 130 },
       eq3,
       indicadoresX: 62, manoIndY: panelTop - 26 + yOff, turnoX: 650, turnoY: panelTop - 26 + yOff,
     };
@@ -2826,7 +2834,26 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
       this.fondoInfoRival, this.scoreTextRival, this.labelRival, this.manoIconoRival,
       ...(this._fosObjs ? this._fosObjs.todos : []),
     ];
-    if (this._L) this._modoCamaraAngosto('estatica');
+    if (this._L) {
+      this._modoCamaraAngosto('estatica');
+      // Pase 546: la pantalla final se dibujaba para 760 de ancho de mundo y en 1v1 (fila de ~380) quedaba chica
+      // en el medio de la ventana. Se acerca la cámara según el ancho real de la fila de avatares (mismas medidas
+      // que más abajo: tamano/gapIntra/gapEscudo); 2v2 y 3v3 quedan en 760 o cerca. Piso de alto: 640 de mundo.
+      const jf = jugadoresFinal && jugadoresFinal.length ? jugadoresFinal : [];
+      const nG = jf.filter(j => j.gano).length;
+      const nP = jf.length - nG;
+      const tamF = jf.length <= 2 ? 140 : jf.length <= 4 ? 115 : 92;
+      const gapF = jf.length <= 2 ? 0 : jf.length <= 4 ? 30 : 20;
+      const grupoF = (n) => (n > 0 ? n * (tamF + gapF) - gapF : 0);
+      const anchoF = grupoF(nG) + (nG && nP ? 96 : 0) + grupoF(nP);
+      const cwF = this.scale.width;
+      const chF = this.scale.height;
+      const visibleW = Math.max(540, Math.min(760, anchoF * 1.15 + 120), 640 * cwF / chF);
+      const camF = this.cameras.main;
+      camF.setZoom(cwF / Math.min(760, visibleW));
+      camF.centerOn(400, 300);
+      this._modoCamara = 'final';   // para que el próximo 'estatica' (sala de espera) vuelva a aplicar zoom8
+    }
     this.children.list
       .filter(c => c !== undefined)
       .forEach(c => { if (!elementosMarcador.includes(c)) c.setVisible(false); });
@@ -3238,7 +3265,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
         estrella(gx + tamano * 0.1, cyAv - tamano * 0.62, 7, 1200);
       }
       const colores = [0xFFB627, 0xFFD668, 0x4FB3E8, 0xFFFFFF, 0xE74C3C, 0x10B981];
-      const extraTopConfeti = this._L ? Math.max(0, (this._L.H8 - 600) / 2) : 0;   // layout angosto: caen desde el borde de arriba de la ventana
+      const extraTopConfeti = this._L ? Math.max(0, (this._vistaEspera().h - 600) / 2) : 0;   // layout angosto: caen desde el borde de arriba de la ventana
       for (let i = 0; i < 50; i++) {
         const cx0 = 20 + Math.random() * 760;
         const cy0 = -6 - extraTopConfeti;
