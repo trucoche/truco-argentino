@@ -872,7 +872,7 @@ const estilos = {
     cursor: 'pointer', boxSizing: 'border-box', lineHeight: 1.2, pointerEvents: 'auto',
   },
   precioBotonDorado: {
-    background: '#F5B041', color: '#2C160E', boxShadow: '0 4px 0 #B9770E, 0 6px 0 #000',
+    background: '#F5B041', color: '#2C160E', textShadow: '0 1px 0 rgba(255,240,205,0.85)', boxShadow: '0 4px 0 #B9770E, 0 6px 0 #000',
   },
   precioBotonVerde: {
     background: '#10B981', color: '#fff', textShadow: CONTORNO_TEXTO, boxShadow: '0 4px 0 #065F46, 0 6px 0 #000',
