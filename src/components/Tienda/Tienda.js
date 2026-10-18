@@ -53,6 +53,9 @@ const C = {
 // falta tocar este mapa).
 const CONTORNO_TEXTO = '-1.5px -1.5px 0 #000, 0 -1.5px 0 #000, 1.5px -1.5px 0 #000, -1.5px 0 0 #000, 1.5px 0 0 #000, -1.5px 1.5px 0 #000, 0 1.5px 0 #000, 1.5px 1.5px 0 #000';
 
+const CONTORNO_VERDE = '-1px -1px 0 #0B3B20, 0 -1px 0 #0B3B20, 1px -1px 0 #0B3B20, -1px 0 0 #0B3B20, 1px 0 0 #0B3B20, -1px 1px 0 #0B3B20, 0 1px 0 #0B3B20, 1px 1px 0 #0B3B20, 0 2px 0 #0B3B20';
+const CONTORNO_ROJO = '-1px -1px 0 #5A130D, 0 -1px 0 #5A130D, 1px -1px 0 #5A130D, -1px 0 0 #5A130D, 1px 0 0 #5A130D, -1px 1px 0 #5A130D, 0 1px 0 #5A130D, 1px 1px 0 #5A130D, 0 2px 0 #5A130D';
+
 const CARTELES = {
   base: '/assets/images/cartelito-madera.png',
   verde: '/assets/images/cartelito-madera-verde.png',
@@ -237,7 +240,9 @@ export default function Tienda({ usuario, token }) {
             colores). */}
         <div style={{
           ...estilos.zonaNombre,
-          color: pack.tipoCartel === 'base' ? C.chocolate : '#fff',
+          color: pack.tipoCartel === 'base' ? '#2A130A' : '#fff',
+          // Pase 550: contorno oscuro del color del letrero para que el blanco tenga fuerza.
+          textShadow: pack.tipoCartel === 'verde' ? CONTORNO_VERDE : pack.tipoCartel === 'rojo' ? CONTORNO_ROJO : 'none',
           ...(inauguracion ? estilos.zonaNombreTextoGrande : null),
         }}>
           {pack.nombrePack}
@@ -279,22 +284,13 @@ export default function Tienda({ usuario, token }) {
             <div style={estilos.notaEspecialTag}>{pack.notaEspecial}</div>
           ) : null}
 
-          <div style={estilos.zonaPrecio}>
-            {pack.precioOriginal != null ? (
-              <div style={estilos.precioOriginal}>{formatearPrecio(pack.precioOriginal)}</div>
-            ) : (
-              // Centésimo trigésimo cuarto pase: "50 Monedas" es el
-              // ÚNICO pack sin `precioOriginal` — con todo centrado
-              // en un solo bloque (pase 133), eso lo hace más corto
-              // que los demás y su botón terminaba un poco más
-              // arriba que el resto ("como referencia... la
-              // tarjeta de Mejor Valor" quedó bien). Un placeholder
-              // invisible (mismo tamaño que el texto real, pero sin
-              // mostrarse) ocupa el mismo lugar sin agregar texto
-              // fantasma, así el botón cae a la misma altura que
-              // en las demás tarjetas.
-              <div style={{ ...estilos.precioOriginal, visibility: 'hidden' }}>$0</div>
-            )}
+          {pack.precioOriginal != null && (
+            <div style={estilos.precioOriginal}>{formatearPrecio(pack.precioOriginal)}</div>
+          )}
+        </div>
+
+        {/* Pase 550: botón de precio aparte, anclado abajo (ver `zonaPrecio`). */}
+        <div style={estilos.zonaPrecio}>
             <button
               className="tc-precio-boton"
               style={{
@@ -314,7 +310,6 @@ export default function Tienda({ usuario, token }) {
             >
               {comprandoPackId === pack.id ? 'Redirigiendo…' : formatearPrecio(pack.precio)}
             </button>
-          </div>
         </div>
       </div>
     );
@@ -471,9 +466,12 @@ const estilos = {
   // siendo lo que hace que, sea cual sea el ancho que le toque a cada
   // tarjeta (normal o héroe), el cartelito de fondo se vea completo y sin
   // deformarse.
+  // Pase 550: `containerType:'inline-size'` → los textos de la tarjeta se miden en `cqw` (% del ancho de la propia tarjeta),
+  // así escalan junto con el cartelito en cualquier ancho (celular apilado o 3 columnas en PC) y nunca se pisan.
   card: {
     position: 'relative',
     aspectRatio: '1 / 1',
+    containerType: 'inline-size',
   },
   // Ducentésimo trigésimo primer pase: badge flotante del pack héroe
   // ("Mejor Valor"), pedido explícito del usuario en su brief además del
@@ -571,12 +569,14 @@ const estilos = {
   // `paddingLeft` nuevo (4px) para correr el texto centrado un poco a la
   // derecha (con `justifyContent:'center'`, un padding asimétrico corre
   // el contenido hacia el lado con menos padding).
+  // Pase 550: letrero un poco más ancho (el cartel real mide ~29%–71%) y texto más grande; el contorno oscuro se agrega en el JSX
+  // según el color del letrero (verde/rojo) para que el blanco no se pierda.
   zonaNombre: {
-    position: 'absolute', top: '18%', height: '10%', left: '30%', width: '38%',
+    position: 'absolute', top: '18%', height: '10%', left: '29%', width: '42%',
     zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
     textAlign: 'center', fontFamily: "'Fredoka', sans-serif", fontWeight: 700,
-    fontSize: 16, lineHeight: 1.05, letterSpacing: 0.1, overflow: 'hidden',
-    paddingTop: 9, paddingLeft: 4,
+    fontSize: 'clamp(13px, 5.4cqw, 24px)', lineHeight: 1.05, letterSpacing: 0.1, overflow: 'hidden',
+    paddingTop: '2.6cqw', paddingLeft: 4, whiteSpace: 'nowrap',
   },
   // Centésimo trigésimo pase: SOLO la tarjeta de Inauguración — el usuario
   // confirmó que esa se ve bien centrada y que sobra lugar en su letrero
@@ -588,7 +588,7 @@ const estilos = {
   // abajo de lo ideal al agrandar el texto) — `paddingTop` 5→3 (sube 2px
   // respecto del pase anterior); el corrimiento a la derecha ya lo hereda
   // de `zonaNombre` (`paddingLeft:4`, no se pisa acá).
-  zonaNombreTextoGrande: { fontSize: 19, paddingTop: 3 },
+  zonaNombreTextoGrande: { fontSize: 'clamp(14px, 5.8cqw, 26px)', paddingTop: '1cqw' },
   // Zona grande de madera clara (el panel principal) — ilustración,
   // cantidad y precio, todo apilado y centrado. Mismo criterio que arriba:
   // porcentajes calculados sobre el PNG, dejando el marco de madera oscura
@@ -661,10 +661,13 @@ const estilos = {
   // de cada pack se centra según lo que realmente tiene, sin hueco fijo
   // de más en los packs livianos, y sin desbordar en el pack más cargado
   // (Mejor Valor, único con badge Y precio tachado a la vez).
+  // Pase 550: el pergamino del cartelito llega hasta ~86% de alto, pero esta zona llegaba al 98% (sobre el marco de madera):
+  // por eso el tachado y el botón se pisaban. Ahora esta caja se queda DENTRO del pergamino (30,5%–85%) con el cofre
+  // flexible (ocupa lo que sobra) y los textos abajo; el botón va aparte (`zonaPrecio`), a caballo del marco inferior.
   zonaContenido: {
-    position: 'absolute', top: '34%', height: '64%', left: '28%', width: '44%',
+    position: 'absolute', top: '30.5%', height: '54.5%', left: '27%', width: '46%',
     zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
-    justifyContent: 'center', gap: 5,
+    justifyContent: 'flex-end', gap: '1.2cqw',
   },
   // Centésimo pase: 48→68px. Centésimo primer pase: seguimos agrandando,
   // 68→90px, a pedido del usuario ("vamos a seguir agrandando las
@@ -719,32 +722,40 @@ const estilos = {
   // Ducentésimo trigésimo segundo pase: segunda revisión — "siguen
   // viéndose un poco pequeñas... se pueden agrandar un 15-20% más" —
   // 84%→92% / 40%→46%.
-  icono: { width: '92%', height: '46%', objectFit: 'contain' },
+  icono: { width: '100%', flex: '1 1 0', minHeight: 0, objectFit: 'contain' },
   // Ducentésimo trigésimo octavo pase: el usuario notó que los packs 200 y
   // 100 (los dos únicos con ilustración de "bolsa", vs. los cofres del
   // resto de las tarjetas con tag/destacadas) se sienten "más pobres"
   // visualmente al lado de esos cofres — se les da a esos dos, puntualmente,
   // un poco más de tamaño de ícono para compensar sin tocar el resto.
-  iconoGrande: { width: '100%', height: '52%', objectFit: 'contain' },
-  cantidadGrupo: { display: 'flex', flexDirection: 'column', alignItems: 'center' },
+  iconoGrande: { width: '100%', flex: '1 1 0', minHeight: 0, objectFit: 'contain' },
+  cantidadGrupo: { display: 'flex', flexDirection: 'column', alignItems: 'center', flex: '0 0 auto' },
   // Centésimo vigésimo quinto pase: el usuario pidió agrandar "los textos
   // de los valores" ya que sobraba lugar — cantidad 22→24, etiqueta 12→13
   // (ver también `precioOriginal`/`precioBoton` más abajo).
-  cantidad: { fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 24, color: C.chocolate, lineHeight: 1.1 },
-  cantidadLabel: { fontSize: 13, fontWeight: 700, color: '#8c8078', textTransform: 'uppercase', letterSpacing: 0.3 },
+  cantidad: {
+    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 'clamp(20px, 9cqw, 38px)', color: '#2A130A', lineHeight: 1,
+    textShadow: '0 1px 0 rgba(255,246,223,0.9)',
+  },
+  cantidadLabel: {
+    fontSize: 'clamp(10px, 4cqw, 16px)', fontWeight: 800, color: '#5B4636', textTransform: 'uppercase',
+    letterSpacing: '0.14em', lineHeight: 1.1,
+  },
   // Centésimo vigésimo octavo pase: `marginTop` sacado — ahora el espacio
   // entre este badge y lo de arriba/abajo lo pone el `gap` de
   // `zonaContenido` (el padre), no un margen propio (hubiera duplicado el
   // espacio).
   bonoTag: {
-    fontSize: 12, fontWeight: 800, color: C.verdeOscuro, background: '#d8f0da',
-    borderRadius: 8, padding: '3px 9px'
+    fontSize: 'clamp(10px, 3.9cqw, 15px)', fontWeight: 800, color: '#0F4F2A', background: '#C6EBC9',
+    border: '1.5px solid #3E9A56', borderRadius: 999, padding: '0.5cqw 2.8cqw', lineHeight: 1.25, whiteSpace: 'nowrap',
+    flex: '0 0 auto',
   },
   // Centésimo vigésimo octavo pase: `marginTop` sacado, mismo motivo que
   // `bonoTag` de arriba — el espacio ya lo pone el `gap` del padre.
   notaEspecialTag: {
-    fontSize: 12, fontWeight: 800, color: C.crimsonOscuro, background: '#ffe1de',
-    borderRadius: 8, padding: '3px 9px'
+    fontSize: 'clamp(10px, 3.9cqw, 15px)', fontWeight: 800, color: '#7A1F17', background: '#FFD9D4',
+    border: '1.5px solid #D9695C', borderRadius: 999, padding: '0.5cqw 2.8cqw', lineHeight: 1.25, whiteSpace: 'nowrap',
+    flex: '0 0 auto',
   },
   // Centésimo décimo noveno pase: ya no hay un botón "Comprar" separado —
   // este bloque (precio tachado + precio final) va agrupado con el resto
@@ -795,8 +806,10 @@ const estilos = {
   // centrado del padre, solo agrupa precio tachado + botón para que el
   // `gap` del padre los trate como UN grupo (no separe el botón de su
   // propio precio tachado).
+  // Pase 550: el botón de precio es una pieza aparte, anclada abajo y a caballo del marco de madera (el pergamino termina ~86%).
   zonaPrecio: {
-    display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%',
+    position: 'absolute', left: 0, right: 0, bottom: '2.2%', zIndex: 2,
+    display: 'flex', justifyContent: 'center', pointerEvents: 'none',
   },
   // Centésimo décimo cuarto pase: precio de lista tachado, punto 3 de la
   // lista del usuario — solo se renderiza cuando el pack tiene
@@ -807,9 +820,11 @@ const estilos = {
   // lo empeora.
   // Ducentésimo trigésimo octavo pase: "el precio tachado ($2.800) se lee
   // un poco chico" — 15→16.5px.
+  // Pase 550: el tachado se leía casi invisible (gris claro sobre pergamino). Ahora es rojo oscuro, más grueso y más grande.
   precioOriginal: {
-    fontSize: 16.5, fontWeight: 700, color: '#a89a90',
-    textDecoration: 'line-through', marginBottom: 3
+    fontSize: 'clamp(11px, 4.6cqw, 17px)', fontWeight: 800, color: '#8A2E22', lineHeight: 1.15,
+    textDecoration: 'line-through', textDecorationThickness: '2px', textDecorationColor: '#B3261E',
+    flex: '0 0 auto',
   },
   // Centésimo décimo noveno pase: el precio final ES el botón de compra
   // (antes eran dos elementos separados) — pedido explícito del usuario en
@@ -852,9 +867,9 @@ const estilos = {
   // Pase 364: botón plano cel-shaded (igual al del Lobby/Torneos): relleno liso, contorno negro 2px y sombra
   // inferior dura; reemplaza las imágenes boton-amarillo/verde/rojo.png. El color sigue el de cada tarjeta.
   precioBoton: {
-    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 21,
-    border: '2px solid #000', borderRadius: 999, padding: '9px 30px', marginBottom: 6,
-    cursor: 'pointer', boxSizing: 'border-box', lineHeight: 1.2,
+    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 'clamp(15px, 6cqw, 24px)',
+    border: '2px solid #000', borderRadius: 999, padding: '1.9cqw 8.5cqw', marginBottom: 0,
+    cursor: 'pointer', boxSizing: 'border-box', lineHeight: 1.2, pointerEvents: 'auto',
   },
   precioBotonDorado: {
     background: '#F5B041', color: '#2C160E', boxShadow: '0 4px 0 #B9770E, 0 6px 0 #000',
