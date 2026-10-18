@@ -102,18 +102,17 @@ boton: {
     position: 'fixed',
     width: 50,
     height: 50,
-    borderRadius: '50%',
-    background: 'rgba(255,248,237,0.65)',
-    border: '2.5px solid rgba(74,44,42,0.6)',
-    boxShadow: '0 3px 8px rgba(0,0,0,0.25)',
+    // Pase 435: sin círculo de fondo, sin aro gris ni sombra — solo la moneda TC girando.
+    background: 'none',
+    border: 'none',
+    padding: 0,
+    outline: 'none',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     cursor: 'pointer',
     zIndex: 500,
-    opacity: 0.8,
-    animation: 'moneda-flotar 1.4s ease-in-out infinite',
-    transition: 'opacity 0.2s ease'
+    animation: 'moneda-flotar 1.4s ease-in-out infinite'
   },
   botonGanado: {
     position: 'fixed',

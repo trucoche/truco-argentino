@@ -41,6 +41,14 @@ function abrirCafecito() {
   }
 }
 
+// Pase 539: pestañas de Ajustes.
+const PESTANAS_AJUSTES = [
+  { id: 'perfil', texto: 'Perfil' },
+  { id: 'juego', texto: 'Juego' },
+  { id: 'sonido', texto: 'Sonido' },
+  { id: 'cuenta', texto: 'Cuenta' },
+];
+
 export default function Configuracion({ token, usuario, onPersonajeCambiado, musicaVolumen, onCambiarMusicaVolumen, onNavegar }) {
   const [modoOscuro, setModoOscuro] = useState(false);
   // Pase 519: modal intermedio antes de salir a Cafecito.
@@ -48,6 +56,7 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
   const [guardandoAvatar, setGuardandoAvatar] = useState(false);
   const [enviandoEliminacion, setEnviandoEliminacion] = useState(false);
   const [guardandoGenero, setGuardandoGenero] = useState(false);
+  const [pestana, setPestana] = useState('perfil');   // Pase 539: Ajustes por pestañas
 
   // Pase 324: el selector de Género se mudó del Perfil a Ajustes (misma lógica).
   const cambiarGenero = async (nuevoGenero) => {
@@ -286,6 +295,21 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
     <>
       <div style={estilos.sectionTitle}>Configuración</div>
 
+      {/* Pase 539: pestañas — cada una agrupa un tipo de opciones. */}
+      <div style={estilos.pestanas} role="tablist">
+        {PESTANAS_AJUSTES.map((t) => (
+          <button
+            key={t.id}
+            role="tab"
+            aria-selected={pestana === t.id}
+            onClick={() => setPestana(t.id)}
+            style={{ ...estilos.pestana, ...(pestana === t.id ? estilos.pestanaActiva : {}) }}
+          >
+            {t.texto}
+          </button>
+        ))}
+      </div>
+
       {/* Ducentésimo trigésimo noveno pase: rediseño estético pedido por el
           usuario — todas las secciones pasan a vivir dentro de un
           contenedor con `gap` en vez de que cada panel maneje su propio
@@ -295,6 +319,8 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
           perder aire entre secciones. */}
       <div style={estilos.contenedor}>
 
+      {pestana === 'perfil' && (
+        <>
       {usuario?.foto_perfil_url && (
         <PlacaMadera>
           <div style={estilos.panelTitulo}>
@@ -354,6 +380,11 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
         </div>
       </PlacaMadera>
 
+        </>
+      )}
+
+      {pestana === 'juego' && (
+        <>
       <PlacaMadera>
         {/* Ducentésimo cuadragésimo pase: el usuario pasó iconos ilustrados
             propios (luna/espadas/nota, estilo madera+dorado) para reemplazar
@@ -379,57 +410,50 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
         </label>
       </PlacaMadera>
 
-      {/* Pase 427: Privacidad — mostrar (o no) el estado en línea. */}
       <PlacaMadera>
         <div style={estilos.panelTitulo}>
-          <img src="/assets/images/icono-bloqueados.png" alt="" style={estilos.panelTituloIcono} />
-          Privacidad
+          {/* Ducentésimo cuadragésimo tercer pase: el ícono de las 3 cartas
+              reemplaza el 🃏 acá también, no solo en el preview del botón
+              "Diseño nuevo" de más abajo. */}
+          <img src="/assets/images/icono-cartas-nueva.png" alt="" style={estilos.panelTituloIcono} />
+          Diseño de cartas
         </div>
-        <label style={estilos.filaSwitch}>
-          <span style={estilos.switchTexto}>Mostrar estado en línea</span>
-          <img
-            src={mostrarEstadoEnLinea ? '/assets/images/switch-on.png' : '/assets/images/switch-off.png'}
-            alt=""
-            onClick={alternarMostrarEstadoEnLinea}
-            style={estilos.switchImagen}
-          />
-        </label>
-        <div style={estilos.switchAyuda}>
-          Si lo apagás, no aparecés en "Jugadores en línea" y los demás te ven desconectado (no podrán desafiarte). Seguís pudiendo chatear y recibir mensajes.
+        <div style={estilos.opcionesAvatar}>
+          <button
+            onClick={() => elegirBaraja('clasica')}
+            style={{
+              ...estilos.opcionAvatar,
+              ...(baraja === 'clasica' ? estilos.opcionAvatarActiva : {})
+            }}
+          >
+            {/* Pase 366: preview ilustrado del mazo clásico (cartas españolas). */}
+            <img src="/assets/images/icono-cartas-clasica.png" alt="" style={estilos.previewCartas} />
+            <span style={estilos.opcionAvatarLabel}>Clásica</span>
+          </button>
+          <button
+            onClick={() => elegirBaraja('nueva')}
+            style={{
+              ...estilos.opcionAvatar,
+              ...(baraja === 'nueva' ? estilos.opcionAvatarActiva : {})
+            }}
+          >
+            {/* Ducentésimo cuadragésimo segundo pase: preview ilustrado del
+                mazo "Diseño nuevo" (asset del usuario) — todavía falta el
+                equivalente para "Clásica", que se suma cuando llegue. */}
+            <img src="/assets/images/icono-cartas-nueva.png" alt="" style={estilos.previewCartas} />
+            <span style={estilos.opcionAvatarLabel}>Diseño nuevo</span>
+          </button>
         </div>
+        <p style={estilos.hintBaraja}>
+          El cambio se aplica la próxima vez que entres a una partida.
+        </p>
       </PlacaMadera>
 
-      {/* Pase siguiente: preferencia de "Desafiar" — dos switches
-          independientes, uno para amigos y otro para desconocidos. */}
-      <PlacaMadera>
-        <div style={estilos.panelTitulo}>
-          <img src="/assets/images/icono-desafios.png" alt="" style={estilos.panelTituloIcono} />
-          Desafíos
-        </div>
-        <label style={estilos.filaSwitch}>
-          <span style={estilos.switchTexto}>Recibir desafíos de amigos</span>
-          <img
-            src={aceptaDesafiosAmigos ? '/assets/images/switch-on.png' : '/assets/images/switch-off.png'}
-            alt=""
-            onClick={alternarAceptaDesafiosAmigos}
-            style={estilos.switchImagen}
-          />
-        </label>
-        {/* Ducentésimo trigésimo noveno pase: "mejorar el espaciado interno
-            para que no se vea apretado" — más separación con la fila de
-            arriba (10→16) y un separador fino propio, en vez de solo un
-            margen, para que las 2 filas se lean como opciones distintas. */}
-        <label style={{ ...estilos.filaSwitch, marginTop: 16, paddingTop: 14, borderTop: `1.5px solid ${C.chocolate}18` }}>
-          <span style={estilos.switchTexto}>Recibir desafíos de desconocidos</span>
-          <img
-            src={aceptaDesafiosDesconocidos ? '/assets/images/switch-on.png' : '/assets/images/switch-off.png'}
-            alt=""
-            onClick={alternarAceptaDesafiosDesconocidos}
-            style={estilos.switchImagen}
-          />
-        </label>
-      </PlacaMadera>
+        </>
+      )}
 
+      {pestana === 'sonido' && (
+        <>
       {/* Octogésimo tercer pase: el botón de mutear música que vivía arriba
           de AppShell (en todas las pantallas con nav) se saca de ahí y se
           reemplaza por este slider — mismo `.tc-slider` y el mismo
@@ -484,43 +508,60 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
         </div>
       </PlacaMadera>
 
+        </>
+      )}
+
+      {pestana === 'cuenta' && (
+        <>
+      {/* Pase 427: Privacidad — mostrar (o no) el estado en línea. */}
       <PlacaMadera>
         <div style={estilos.panelTitulo}>
-          {/* Ducentésimo cuadragésimo tercer pase: el ícono de las 3 cartas
-              reemplaza el 🃏 acá también, no solo en el preview del botón
-              "Diseño nuevo" de más abajo. */}
-          <img src="/assets/images/icono-cartas-nueva.png" alt="" style={estilos.panelTituloIcono} />
-          Diseño de cartas
+          <img src="/assets/images/icono-bloqueados.png" alt="" style={estilos.panelTituloIcono} />
+          Privacidad
         </div>
-        <div style={estilos.opcionesAvatar}>
-          <button
-            onClick={() => elegirBaraja('clasica')}
-            style={{
-              ...estilos.opcionAvatar,
-              ...(baraja === 'clasica' ? estilos.opcionAvatarActiva : {})
-            }}
-          >
-            {/* Pase 366: preview ilustrado del mazo clásico (cartas españolas). */}
-            <img src="/assets/images/icono-cartas-clasica.png" alt="" style={estilos.previewCartas} />
-            <span style={estilos.opcionAvatarLabel}>Clásica</span>
-          </button>
-          <button
-            onClick={() => elegirBaraja('nueva')}
-            style={{
-              ...estilos.opcionAvatar,
-              ...(baraja === 'nueva' ? estilos.opcionAvatarActiva : {})
-            }}
-          >
-            {/* Ducentésimo cuadragésimo segundo pase: preview ilustrado del
-                mazo "Diseño nuevo" (asset del usuario) — todavía falta el
-                equivalente para "Clásica", que se suma cuando llegue. */}
-            <img src="/assets/images/icono-cartas-nueva.png" alt="" style={estilos.previewCartas} />
-            <span style={estilos.opcionAvatarLabel}>Diseño nuevo</span>
-          </button>
+        <label style={estilos.filaSwitch}>
+          <span style={estilos.switchTexto}>Mostrar estado en línea</span>
+          <img
+            src={mostrarEstadoEnLinea ? '/assets/images/switch-on.png' : '/assets/images/switch-off.png'}
+            alt=""
+            onClick={alternarMostrarEstadoEnLinea}
+            style={estilos.switchImagen}
+          />
+        </label>
+        <div style={estilos.switchAyuda}>
+          Si lo apagás, no aparecés en "Jugadores en línea" y los demás te ven desconectado (no podrán desafiarte). Seguís pudiendo chatear y recibir mensajes.
         </div>
-        <p style={estilos.hintBaraja}>
-          El cambio se aplica la próxima vez que entres a una partida.
-        </p>
+      </PlacaMadera>
+
+      {/* Pase siguiente: preferencia de "Desafiar" — dos switches
+          independientes, uno para amigos y otro para desconocidos. */}
+      <PlacaMadera>
+        <div style={estilos.panelTitulo}>
+          <img src="/assets/images/icono-desafios.png" alt="" style={estilos.panelTituloIcono} />
+          Desafíos
+        </div>
+        <label style={estilos.filaSwitch}>
+          <span style={estilos.switchTexto}>Recibir desafíos de amigos</span>
+          <img
+            src={aceptaDesafiosAmigos ? '/assets/images/switch-on.png' : '/assets/images/switch-off.png'}
+            alt=""
+            onClick={alternarAceptaDesafiosAmigos}
+            style={estilos.switchImagen}
+          />
+        </label>
+        {/* Ducentésimo trigésimo noveno pase: "mejorar el espaciado interno
+            para que no se vea apretado" — más separación con la fila de
+            arriba (10→16) y un separador fino propio, en vez de solo un
+            margen, para que las 2 filas se lean como opciones distintas. */}
+        <label style={{ ...estilos.filaSwitch, marginTop: 16, paddingTop: 14, borderTop: `1.5px solid ${C.chocolate}18` }}>
+          <span style={estilos.switchTexto}>Recibir desafíos de desconocidos</span>
+          <img
+            src={aceptaDesafiosDesconocidos ? '/assets/images/switch-on.png' : '/assets/images/switch-off.png'}
+            alt=""
+            onClick={alternarAceptaDesafiosDesconocidos}
+            style={estilos.switchImagen}
+          />
+        </label>
       </PlacaMadera>
 
       {/* Centésimo quinto pase: lista de usuarios bloqueados + desbloquear.
@@ -610,20 +651,6 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
         </button>
       </PlacaMadera>
 
-      {/* Pase 519: modal de agradecimiento; "Continuar" cierra y abre Cafecito (Capacitor Browser o pestaña nueva), "Volver" solo cierra. */}
-      <PopupMadera
-        visible={cafecitoAbierto}
-        titulo="☕ Apoyar a TrucoChe"
-        icono="/assets/images/cafecito-avatar.png"
-        tamIcono={80}
-        mensaje={<span style={{ whiteSpace: 'pre-line' }}>{'Vas a ser redirigido a Cafecito.app para realizar tu aporte de forma segura.\n\n¡Muchas gracias por valorar el juego y bancar el desarrollo independiente!'}</span>}
-        onCerrar={() => setCafecitoAbierto(false)}
-        botones={[
-          { texto: 'Continuar a Cafecito ☕', tipo: 'celeste', onClick: () => { setCafecitoAbierto(false); abrirCafecito(); } },
-          { texto: 'Volver', tipo: 'neutro', onClick: () => setCafecitoAbierto(false) },
-        ]}
-      />
-
       {/* Pase 311/312: "Mi cuenta" — acceso a eliminar la cuenta. Manda un mail
           de confirmación al email registrado; 30 días de arrepentimiento. */}
       <PlacaMadera>
@@ -643,6 +670,24 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
         </button>
       </PlacaMadera>
 
+        </>
+      )}
+
+      {/* Pase 519: modal de agradecimiento; "Continuar" cierra y abre Cafecito (Capacitor Browser o pestaña nueva), "Volver" solo cierra. */}
+      <PopupMadera
+        visible={cafecitoAbierto}
+        titulo="☕ Apoyar a TrucoChe"
+        icono="/assets/images/cafecito-avatar.png"
+        tamIcono={80}
+        mensaje={<span style={{ whiteSpace: 'pre-line' }}>{'Vas a ser redirigido a Cafecito.app para realizar tu aporte de forma segura.\n\n¡Muchas gracias por valorar el juego y bancar el desarrollo independiente!'}</span>}
+        onCerrar={() => setCafecitoAbierto(false)}
+        botones={[
+          { texto: 'Continuar a Cafecito ☕', tipo: 'celeste', onClick: () => { setCafecitoAbierto(false); abrirCafecito(); } },
+          { texto: 'Volver', tipo: 'neutro', onClick: () => setCafecitoAbierto(false) },
+        ]}
+      />
+
+
       {/* Links legales abajo de todo (Política de Privacidad y, desde el pase
           312, Términos de Servicio — se enlazan entre sí). */}
       <div style={estilos.footerLegal}>
@@ -660,6 +705,12 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
 }
 
 const estilos = {
+  pestanas: { display: 'flex', gap: 8, margin: '0 0 16px' },
+  pestana: {
+    flex: 1, height: 40, padding: '0 8px', borderRadius: 999, border: '2.5px solid #5C3D21', borderBottom: '4px solid #1a100a',
+    background: '#3E2723', color: 'rgba(255,248,237,0.8)', fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 15, cursor: 'pointer',
+  },
+  pestanaActiva: { background: '#F5B041', border: '2.5px solid #1a1410', borderBottom: '4px solid #B9770E', color: '#3B1F0E' },
   sectionTitle: { fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 16, color: C.crema, margin: '4px 0 10px 4px' },
   // Ducentésimo trigésimo noveno pase: `contenedor` reemplaza los
   // márgenes sueltos de cada panel — ver el comentario junto al JSX. Gap

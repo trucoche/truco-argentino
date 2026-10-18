@@ -693,7 +693,7 @@ _crearElementosDeTexto() {
     this.scoreTextRival = this.add.text(this.PLACA_RIVAL_CX, this.PLACA_RIVAL_CY + 10 * kpH, '0', {
       fontFamily: 'Rye, Georgia, serif', fontSize: `${Math.round(24 * kpH)}px`,
       color: '#C98A48', stroke: '#2B1608', strokeThickness: 3,   // Pase 456: bronce para rivales, contorno oscuro y sombra paralela
-      shadow: { offsetX: 2, offsetY: 2, color: 'rgba(0,0,0,0.8)', blur: 4, fill: true, stroke: true },
+      shadow: { offsetX: 2, offsetY: 2, color: '#000000', blur: 0, fill: true, stroke: true },   // Pase 469: sombra sólida 2px 2px 0 (sin blur)
       resolution: this._factorEscalaTextura()
     }).setOrigin(0.5).setDepth(1002);
     this._dibujarPlacaMarcador(this.fondoInfoRival, this.PLACA_RIVAL_CX, this.PLACA_RIVAL_CY, placaAncho, placaAlto, true);
@@ -887,7 +887,7 @@ _crearElementosDeTexto() {
       color: '#E0A72A',   // Pase 456: oro para aliados
       stroke: '#2B1608',
       strokeThickness: 3,
-      shadow: { offsetX: 2, offsetY: 2, color: 'rgba(0,0,0,0.8)', blur: 4, fill: true, stroke: true },
+      shadow: { offsetX: 2, offsetY: 2, color: '#000000', blur: 0, fill: true, stroke: true },   // Pase 469: sombra sólida 2px 2px 0 (sin blur)
       resolution: this._factorEscalaTextura()
     }).setOrigin(0.5).setDepth(1002);
 
@@ -2610,8 +2610,32 @@ _conectarSocket() {
     }
 
     this.socket = getSocket();
-    this.socket.connect();
-    this.socket.emit('unirse-sala', { codigoSala: this.codigoSala, usuario: this.usuario });
+
+    // Pase 526: reconexión suave. Antes 'unirse-sala' se emitía UNA sola vez: si la conexión se caía (minimizar la
+    // pestaña en el celular, cambio de red) Socket.IO reconectaba con un socket nuevo que el servidor no conocía, y la
+    // mesa quedaba congelada. Ahora cada 'connect' (el primero y los de reconexión) vuelve a pedir el asiento; el
+    // servidor lo reconoce por el usuario, cancela el reloj de abandono y reenvía estado y reloj de turno.
+    const unirseSala = () => this.socket.emit('unirse-sala', { codigoSala: this.codigoSala, usuario: this.usuario });
+    if (this._onConnectSala) this.socket.off('connect', this._onConnectSala);
+    if (this._onDisconnectSala) this.socket.off('disconnect', this._onDisconnectSala);
+    this._onConnectSala = () => { unirseSala(); };
+    this._onDisconnectSala = (motivo) => {
+      this._actualizarMensajeEstado('Reconectando...', '#ffcc55');
+      // Si fue el servidor quien cortó, Socket.IO no reintenta solo.
+      if (motivo === 'io server disconnect') this.socket.connect();
+    };
+    this.socket.on('connect', this._onConnectSala);
+    this.socket.on('disconnect', this._onDisconnectSala);
+    // Al volver a la pestaña/app: reconectar ya si está caído; si figura conectado, reconfirmar el asiento (idempotente).
+    if (this._onVisibilidadSala) document.removeEventListener('visibilitychange', this._onVisibilidadSala);
+    this._onVisibilidadSala = () => {
+      if (document.visibilityState !== 'visible' || !this.socket) return;
+      if (!this.socket.connected) this.socket.connect();
+      else unirseSala();
+    };
+    document.addEventListener('visibilitychange', this._onVisibilidadSala);
+    if (this.socket.connected) unirseSala();   // ya conectado (socket compartido): no hay 'connect' que esperar
+    else this.socket.connect();                // el handler de 'connect' emite 'unirse-sala'
 
     this.socket.off('estado-juego').on('estado-juego', (estado) => {
       const esRepartoNuevo = this._esRepartoNuevo(estado);
@@ -2675,6 +2699,10 @@ _conectarSocket() {
     });
     this.socket.off('jugador-desconectado').on('jugador-desconectado', (data) => {
       this._actualizarMensajeEstado(data.mensaje);
+    });
+    this.socket.off('jugador-reconectado').on('jugador-reconectado', (data) => {
+      this._actualizarMensajeEstado(data.mensaje);
+      this.time.delayedCall(2500, () => { if (this.mensajeText && this.mensajeText.text === data.mensaje) this._actualizarMensajeEstado(''); });
     });
     this.socket.off('error-sala').on('error-sala', (data) => {
       this._actualizarMensajeEstado(data.mensaje, '#ff5555');
@@ -3950,8 +3978,8 @@ _aplicarMarcadorEstilo(animar = false) {
       // Un solo dibujo por cuadro: el cuadrito fantasma solo se ve cuando el cuadro esta vacio
       // (si no, asoma por los bordes del fosforo de arriba).
       f.setPosition(x, y).setVisible(visiblePlacas && mostrarCaja && n === 0);
-      // El PNG de 1 fosforo trae el palito pegado arriba del cuadro: se baja al centro de la celda.
-      c.setPosition(x, y + (n === 1 ? F.B * 0.36 : 0));
+      // Pase 539: el PNG de 1 fósforo ya trae el palito arriba del cuadro (ocupa el primer lado vacío del fantasma): va en la celda, sin bajarlo al centro.
+      c.setPosition(x, y);
       if (n > 0 && mostrarCaja) {
         c.setTexture(F.claves[n - 1]).setDisplaySize(F.B, F.B).setVisible(visiblePlacas);
         if (animar && n > L.n[i]) {
@@ -6321,9 +6349,66 @@ _crearTexturasSenas() {
   });
 }
 
+// Pase 539: botón de seña con el diseño del nativo (BotonCartasMesa de juego.tsx): sombra, aro de bronce con bisel, cara de madera
+// barnizada, luces curvas, 4 remaches y carita (guiño = escondo mis cartas; dos ojos = las muestro). Mismo viewBox 44x47 del SVG.
+_crearTexturasBotonSena() {
+  if (this.textures.exists('senaBtnOff') && this.textures.exists('senaBtnOn')) return;
+  const ESC = 4;
+  const hacer = (clave, activo) => {
+    const cv = document.createElement('canvas');
+    cv.width = 44 * ESC; cv.height = 47 * ESC;
+    const ctx = cv.getContext('2d');
+    ctx.scale(ESC, ESC);
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    const grad = (cx, cy, r, x1, y1, x2, y2, paradas) => {
+      const g = ctx.createLinearGradient(cx - r + x1 * 2 * r, cy - r + y1 * 2 * r, cx - r + x2 * 2 * r, cy - r + y2 * 2 * r);
+      paradas.forEach(([o, c]) => g.addColorStop(o, c));
+      return g;
+    };
+    const disco = (cx, cy, r, relleno, borde, ancho) => {
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fillStyle = relleno; ctx.fill();
+      if (borde) { ctx.lineWidth = ancho; ctx.strokeStyle = borde; ctx.stroke(); }
+    };
+    // sombra inferior
+    disco(22, 25, 21, 'rgba(0,0,0,0.38)');
+    // aro de bronce con bisel
+    disco(22, 22, 21, grad(22, 22, 21, 0.15, 0, 0.85, 1, activo
+      ? [[0, '#FFEDB0'], [0.5, '#F0B93E'], [1, '#8C5A0C']]
+      : [[0, '#F3D58A'], [0.5, '#C58B34'], [1, '#6E4210']]), '#3A1F08', 1.3);
+    // cara de madera barnizada
+    disco(22, 22, 16.6, grad(22, 22, 16.6, 0.2, 0, 0.8, 1, activo
+      ? [[0, '#F5C45A'], [0.55, '#D9951F'], [1, '#9A5F0E']]
+      : [[0, '#C98F58'], [0.55, '#A06A38'], [1, '#6F4521']]), '#3A1F08', 1);
+    // luz curva arriba-izquierda y sombra curva abajo-derecha
+    ctx.lineWidth = 1.4; ctx.strokeStyle = 'rgba(255,236,190,0.55)'; ctx.stroke(new Path2D('M7.7 16.8 A15.2 15.2 0 0 1 25.9 7.3'));
+    ctx.lineWidth = 1.6; ctx.strokeStyle = 'rgba(40,20,5,0.35)'; ctx.stroke(new Path2D('M36.3 27.2 A15.2 15.2 0 0 1 18.1 36.7'));
+    // 4 remaches
+    [[8.7, 8.7], [35.3, 8.7], [8.7, 35.3], [35.3, 35.3]].forEach(([x, y]) => {
+      disco(x, y, 1.8, '#E8C16A', '#4A2A0C', 0.7);
+      disco(x - 0.5, y - 0.55, 0.6, '#FFF3CC');
+    });
+    // carita (28x28 trasladada a 8,8)
+    ctx.save(); ctx.translate(8, 8);
+    const tinta = '#4A2A0C';
+    disco(14.7, 15.4, 11.2, 'rgba(40,18,4,0.55)');
+    disco(14, 14, 11.2, grad(14, 14, 11.2, 0.3, 0, 0.7, 1, [[0, '#FFF4D0'], [0.55, '#F1CF86'], [1, '#D9A64A']]), '#6B3F12', 1.1);
+    ctx.beginPath(); ctx.ellipse(10.6, 7.4, 5, 2.2, 0, 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,255,255,0.38)'; ctx.fill();
+    ctx.fillStyle = tinta;
+    ctx.beginPath(); ctx.ellipse(9.6, 12, 1.6, 2.05, 0, 0, Math.PI * 2); ctx.fill();
+    if (activo) { ctx.beginPath(); ctx.ellipse(18.4, 12, 1.6, 2.05, 0, 0, Math.PI * 2); ctx.fill(); }
+    else { ctx.lineWidth = 1.9; ctx.strokeStyle = tinta; ctx.stroke(new Path2D('M15.4 12.7 Q17.9 9.8 20.4 12.7')); }
+    ctx.lineWidth = 2; ctx.strokeStyle = tinta; ctx.stroke(new Path2D('M8.6 16.5 Q14 21.9 19.7 16.3'));
+    ctx.restore();
+    this.textures.addCanvas(clave, cv);
+  };
+  hacer('senaBtnOff', false);
+  hacer('senaBtnOn', true);
+}
+
 _dibujarBotonCartasEquipo(e) {
   if (!this._anchoPanelBotonera) return;
-  this._crearTexturasSenas();
+  this._crearTexturasBotonSena();
   const kB0 = this._L ? this._L.kBoton : 1;
   const d = Math.round(44 * kB0);
   const x = 400 + this._anchoPanelBotonera / 2 - 46 * kB0;
@@ -6331,16 +6416,9 @@ _dibujarBotonCartasEquipo(e) {
   const activo = !!e.compartiendoMiMano;
   const r = d / 2;
 
-  const g = this.add.graphics().setDepth(200);
-  g.fillStyle(activo ? 0x9A5F0A : 0x2A1507, 1);
-  g.fillCircle(x, y + 3, r);
-  g.fillStyle(activo ? 0xE9A31B : 0x7A4A22, 1);
-  g.fillCircle(x, y, r);
-  g.fillStyle(activo ? 0xFFD36B : 0xA9713A, 1);
-  g.fillCircle(x, y - r * 0.12, r * 0.86);
-  g.lineStyle(3, activo ? 0x5A3200 : 0x2A1507, 1);
-  g.strokeCircle(x, y, r);
-  const ico = this.add.image(x, y, activo ? 'senaMostrar' : 'senaOcultar').setDisplaySize(d * 0.64, d * 0.64).setDepth(201);
+  // Pase 539: una sola imagen con el diseño del nativo (el círculo del SVG de 44x47 está centrado en (22,22): la imagen baja 1.5 u).
+  const esc = d / 44;
+  const g = this.add.image(x, y + 1.5 * esc, activo ? 'senaBtnOn' : 'senaBtnOff').setDisplaySize(44 * esc, 47 * esc).setDepth(200);
   const velo = this.add.graphics().setDepth(202);
   velo.fillStyle(0x000000, 1);
   velo.fillCircle(x, y, r);
@@ -6348,7 +6426,7 @@ _dibujarBotonCartasEquipo(e) {
   this._veloCartas = velo;
   const zona = this.add.zone(x, y, d, d).setDepth(203).setInteractive({ useHandCursor: true });
   zona.on('pointerdown', () => this._alternarCompartirMano());
-  this._sprites.push(g, ico, velo, zona);
+  this._sprites.push(g, velo, zona);
 
   const restante = (this._cartasCooldownHasta || 0) - Date.now();
   if (restante > 0) this._animarVeloCartas(restante);
@@ -6482,10 +6560,13 @@ _irseAlMazo() {
 
   _limpiarSocketListeners() {
     if (!this.socket) return;
+    if (this._onConnectSala) { this.socket.off('connect', this._onConnectSala); this._onConnectSala = null; }
+    if (this._onDisconnectSala) { this.socket.off('disconnect', this._onDisconnectSala); this._onDisconnectSala = null; }
+    if (this._onVisibilidadSala) { document.removeEventListener('visibilitychange', this._onVisibilidadSala); this._onVisibilidadSala = null; }
     [
       'estado-juego', 'jugador-unido', 'partida-iniciada', 'jugador-desconectado',
       'error-sala', 'error-jugada', 'sala-cancelada', 'juego-terminado',
-      'revancha-estado', 'revancha-lista', 'revancha-cancelada', 'turno-timer', 'info-sala'
+      'revancha-estado', 'revancha-lista', 'revancha-cancelada', 'turno-timer', 'info-sala', 'jugador-reconectado'
     ].forEach(evento => this.socket.off(evento));
   }
 }

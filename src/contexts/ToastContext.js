@@ -25,12 +25,13 @@ export function ToastProvider({ children }) {
   }, []);
 
   // tipo: 'exito' | 'error' | 'info' (default 'info')
+  // Pase 429: `icono` opcional ('chat' | 'desafio') para el medallón.
   // Pase siguiente: `alPresionar` opcional — para toasts que además de
   // avisar tienen una acción propia (ej. "te llegó un mensaje" → tocarlo
   // abre esa conversación). Antes tocar CUALQUIER toast solo lo cerraba.
-  const mostrarToast = useCallback((mensaje, tipo = 'info', duracionMs = 3200, alPresionar) => {
+  const mostrarToast = useCallback((mensaje, tipo = 'info', duracionMs = 3200, alPresionar, icono) => {
     const id = idSiguiente++;
-    setToasts((actuales) => [...actuales, { id, mensaje, tipo, alPresionar }]);
+    setToasts((actuales) => [...actuales, { id, mensaje, tipo, alPresionar, icono }]);
     timersRef.current[id] = setTimeout(() => cerrarToast(id), duracionMs);
   }, [cerrarToast]);
 
@@ -43,6 +44,7 @@ export function ToastProvider({ children }) {
             key={t.id}
             mensaje={t.mensaje}
             tipo={t.tipo}
+            icono={t.icono}
             onCerrar={() => cerrarToast(t.id)}
             onPresionar={t.alPresionar ? () => { t.alPresionar(); cerrarToast(t.id); } : undefined}
           />

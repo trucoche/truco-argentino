@@ -40,7 +40,7 @@ function Filigrana() {
   );
 }
 
-export default function AuthScreen({ onLoginExitoso, onOlvidoPassword, musicaMuteada, onToggleMusica }) {
+export default function AuthScreen({ onLoginExitoso, onOlvidoPassword, onIrAnotador, musicaMuteada, onToggleMusica }) {
   const [modo, setModo] = useState('login');
   const [form, setForm] = useState({ username: '', email: '', password: '' });
   const [error, setError] = useState('');
@@ -365,6 +365,13 @@ useEffect(() => {
             {' '}y la{' '}
             <a href="/privacidad" target="_blank" rel="noopener noreferrer" style={estilos.aceptaLink}>Política de Privacidad</a>.
           </div>
+          {/* Pase 404: el Anotador Offline se puede usar sin iniciar sesión. */}
+          {onIrAnotador && (
+            <button type="button" onClick={onIrAnotador} style={estilos.anotadorBoton}>
+              <img src="/assets/images/icono-anotador.png" alt="" style={estilos.anotadorIcono} />
+              Anotador Offline
+            </button>
+          )}
           </div>
           {/* ← este es el cierre del div panel, que antes quedaba antes del botón FB */}
         </div>
@@ -577,6 +584,15 @@ linkOlvide: {
   },
   aceptaCheckbox: { width: 18, height: 18, marginTop: 1, flexShrink: 0, accentColor: '#2D9B4F', cursor: 'pointer' },
   aceptaLink: { color: '#8a4b0f', fontWeight: 800, textDecoration: 'underline' },
+  anotadorBoton: {
+    width: '100%', marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+    padding: '10px 14px', cursor: 'pointer', boxSizing: 'border-box',
+    border: '2.5px solid #1a1410', borderRadius: 12,
+    background: 'linear-gradient(160deg, #6b4a34, #3a271c)',
+    boxShadow: 'inset 0 2px 0 rgba(255,255,255,0.14), 0 3px 0 #1a1410',
+    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 15, color: '#FFD668',
+  },
+  anotadorIcono: { width: 46, height: 23, objectFit: 'contain' },
   avisoSocial: {
     marginTop: 12, textAlign: 'center', fontSize: 11.5, lineHeight: 1.4,
     fontWeight: 700, color: '#6b4a34',

@@ -7,23 +7,24 @@
 
 const BASE = (process.env.PUBLIC_URL || '') + '/assets/personalizacion-opt';
 const LIBRE = { precio: 0, rangoMin: null, soloSponsor: false };
+const KIT = { ...LIBRE, soloKit: true };   // Pase 523: exclusivo del Kit de Fundador/Beta Tester
 
 export const ANILLOS = [
   { id: 'rango', nombre: 'Anillo de rango', imagen: null, hueco: null, ...LIBRE },
   { id: 'cafecito', nombre: 'Sponsor Criollo', imagen: BASE + '/anillos/anillo_cafecito.png', hueco: 0.677, ...LIBRE },
-  { id: 'tester', nombre: 'Beta Tester', imagen: BASE + '/anillos/anillo_tester.png', hueco: 0.635, ...LIBRE },
+  { id: 'tester', nombre: 'Beta Tester', imagen: BASE + '/anillos/anillo_tester.png', hueco: 0.635, ...KIT },
 ];
 
 export const BANNERS = [
   { id: 'base', nombre: 'Madera clásica', imagen: BASE + '/banners/banner_base.png', proporcion: 480 / 230, margenInterior: { x: 0.075, y: 0.13 }, ...LIBRE },
   { id: 'cafecito', nombre: 'Sponsor Criollo', imagen: BASE + '/banners/banner_cafecito.png', proporcion: 480 / 230, margenInterior: { x: 0.075, y: 0.13 }, ...LIBRE },
-  { id: 'tester', nombre: 'Beta Tester', imagen: BASE + '/banners/banner_tester.png', proporcion: 480 / 230, margenInterior: { x: 0.075, y: 0.13 }, ...LIBRE },
+  { id: 'tester', nombre: 'Beta Tester', imagen: BASE + '/banners/banner_tester.png', proporcion: 480 / 230, margenInterior: { x: 0.075, y: 0.13 }, ...KIT },
 ];
 
 export const MAZOS = [
   { id: 'base', nombre: 'Mazo TrucoChe', dorso: BASE + '/cartas/base/back.png', proporcionDorso: 400 / 552, ...LIBRE },
   { id: 'cafecito', nombre: 'Sponsor Criollo', dorso: BASE + '/cartas/cafecito/back.png', proporcionDorso: 400 / 552, ...LIBRE },
-  { id: 'tester', nombre: 'Beta Tester', dorso: BASE + '/cartas/tester/back.png', proporcionDorso: 400 / 552, ...LIBRE },
+  { id: 'tester', nombre: 'Beta Tester', dorso: BASE + '/cartas/tester/back.png', proporcionDorso: 400 / 552, ...KIT },
 ];
 
 export const PERSONALIZACION_POR_DEFECTO = { anillo_id: 'rango', banner_id: 'base', mazo_id: 'base' };
@@ -33,4 +34,10 @@ export const bannerPorId = (id) => BANNERS.find(b => b.id === id) || BANNERS[0];
 export const mazoPorId = (id) => MAZOS.find(m => m.id === id) || MAZOS[0];
 
 // Hoy todo está disponible; la Tienda futura completará la lógica (precio / rango / sponsor) acá.
-export const estaDisponible = () => true;
+export const estaDisponible = (item, ctx) => !(item.soloKit && !(ctx && ctx.kitFundador));
+
+// Anillo a dibujar alrededor de un avatar: el elegido o el de su rango (`rangoAssets` = { anillo, hueco }).
+export const resolverAnillo = (anilloId, rangoAssets) => {
+  const a = anilloPorId(anilloId);
+  return a.imagen && a.hueco ? { imagen: a.imagen, hueco: a.hueco } : { imagen: rangoAssets.anillo, hueco: rangoAssets.hueco };
+};

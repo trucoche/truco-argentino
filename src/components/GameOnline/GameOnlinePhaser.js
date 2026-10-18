@@ -3,7 +3,6 @@ import Phaser from 'phaser';
 import { ANCHO_MAX_CSS, esLayoutAngosto, crearConfigOnline } from '../../phaser/config/gameConfigOnline';
 import GameSceneOnline from '../../phaser/scenes/GameSceneOnline';
 import ChatMesa from './ChatMesa';
-import CompartirManoBoton from './CompartirManoBoton';
 import AudioMesaBoton from './AudioMesaBoton';
 import ConfiguracionMesaBoton from './ConfiguracionMesaBoton';
 import ConfiguracionMesaModal from './ConfiguracionMesaModal';
@@ -171,7 +170,7 @@ useEffect(() => {
       <div style={angosto ? estilosPagina.contenedorJuegoAngosto : estilosPagina.contenedorJuego}>
         <div id="game-container" style={{ width: '100%', height: '100%' }} />
         <ChatMesa codigoSala={codigoSala} esEquipos={esEquipos} personaje={usuario?.personaje || 'gaucho'} token={token} usuarioActual={usuario?.username} />
-        <CompartirManoBoton codigoSala={codigoSala} esEquipos={esEquipos} />
+        {/* Pase 443: el botón de mostrar/esconder cartas ahora se dibuja dentro de la botonera (GameSceneOnline.js, _dibujarBotonCartasEquipo). */}
         {audioInfo.privada && (
           <AudioMesaBoton audioRoomUrl={audioInfo.audioRoomUrl} nombreUsuario={usuario?.username} />
         )}

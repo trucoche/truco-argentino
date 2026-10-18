@@ -26,11 +26,10 @@ function CajaFosforos({ n, retraso = 0 }) {
 
   return (
     <div className="ac-caja" aria-label={`${n} fósforos`}>
-      <img className="ac-fantasma" src={BASE + FRAMES[4]} alt="" draggable={false} />
-      {sube && info.desde > 0 && (
-        <img className="ac-fosforos" src={BASE + FRAMES[info.desde]} alt="" draggable={false} />
-      )}
-      {n > 0 && (
+      {/* Un solo dibujo por cuadro (nunca capas apiladas): vacio = cuadrito fantasma; con fosforos = el PNG de su cantidad. */}
+      {n === 0 ? (
+        <img className="ac-fantasma" src={BASE + FRAMES[4]} alt="" draggable={false} />
+      ) : (
         <img
           key={`${n}-${info.version}`}
           className={`ac-fosforos${sube ? ' ac-aparece' : ''}`}

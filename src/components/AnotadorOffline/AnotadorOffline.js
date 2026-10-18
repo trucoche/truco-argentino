@@ -116,7 +116,14 @@ function crearPool(url, volumen) {
     return [];
   }
 }
-function useSonidos() {
+// Pase 417: el silencio se recuerda entre sesiones.
+const CLAVE_SILENCIO = 'tc_anotador_silencio';
+function leerSilencio() {
+  try { return localStorage.getItem(CLAVE_SILENCIO) === '1'; } catch (e) { return false; }
+}
+function useSonidos(silenciado) {
+  const mudo = useRef(!!silenciado);
+  mudo.current = !!silenciado;
   const pools = useRef({ add: [], remove: [] });
   const idx = useRef({ add: 0, remove: 0 });
   useEffect(() => {
@@ -126,6 +133,7 @@ function useSonidos() {
     };
   }, []);
   const sonar = useCallback((clave) => {
+    if (mudo.current) return;
     const pool = pools.current[clave] || [];
     if (!pool.length) return;
     const a = pool[idx.current[clave]++ % pool.length];
@@ -226,7 +234,11 @@ export default function AnotadorOffline({ onVolver }) {
   const [editando, setEditando] = useState(null);
   const [deshacer, setDeshacer] = useState(null); // { mensaje, previo }
   const temporizador = useRef(null);
-  const { sonarSuma, sonarResta } = useSonidos();
+  const [silenciado, setSilenciado] = useState(leerSilencio);
+  const { sonarSuma, sonarResta } = useSonidos(silenciado);
+  useEffect(() => {
+    try { localStorage.setItem(CLAVE_SILENCIO, silenciado ? '1' : '0'); } catch (e) { /* sin storage */ }
+  }, [silenciado]);
 
   useEffect(() => {
     try { localStorage.setItem(CLAVE, JSON.stringify(estado)); } catch (e) { /* sin storage */ }
@@ -287,6 +299,23 @@ export default function AnotadorOffline({ onVolver }) {
               <img src="/assets/images/icono-anotador.png" alt="" className="ao-titulo-icono" />
               Anotador de Asado
             </h1>
+            <button
+              type="button"
+              className={`ao-sfx ${silenciado ? 'ao-sfx-mudo' : ''}`}
+              onClick={() => setSilenciado((v) => !v)}
+              aria-pressed={silenciado}
+              aria-label={silenciado ? 'Activar los sonidos' : 'Silenciar los sonidos'}
+              title={silenciado ? 'Activar los sonidos' : 'Silenciar los sonidos'}
+            >
+              <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3.5 9.5v5h3.8L12.5 19V5L7.3 9.5H3.5z" fill="currentColor" />
+                {silenciado ? (
+                  <path d="M16.5 9.5l5 5M21.5 9.5l-5 5" />
+                ) : (
+                  <path d="M16 9a4.2 4.2 0 0 1 0 6M18.8 6.5a8 8 0 0 1 0 11" />
+                )}
+              </svg>
+            </button>
             <button type="button" className="ao-limpiar" onClick={limpiar}>Limpiar</button>
           </div>
           <div className="ao-fila-controles">

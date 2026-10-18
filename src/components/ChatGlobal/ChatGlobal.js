@@ -1196,7 +1196,8 @@ const estilos = {
     padding: '5px 2px',
     borderStyle: 'solid', borderColor: 'transparent', borderWidth: 12,
     borderImageSource: 'url(/assets/images/tarjeta-jugador.png)',
-    borderImageSlice: '22 fill', borderImageRepeat: 'stretch',
+    borderImageSlice: '22', borderImageRepeat: 'stretch',
+    backgroundColor: '#FAF5E8', backgroundClip: 'padding-box',
   },
   tarjetaAmigoBoton: {
     display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 10, textAlign: 'left',
@@ -1212,7 +1213,7 @@ const estilos = {
     border: '2px solid #FFFBEB', boxShadow: '0 1px 3px rgba(0,0,0,0.55)', display: 'block',
   },
   tarjetaAmigoNombre: {
-    fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 17, color: '#3B2312',
+    fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 17, color: '#2D1A0E',
     whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%',
   },
   chipMensajeNuevo: {
@@ -1470,8 +1471,9 @@ const estilos = {
     cursor: 'pointer', position: 'relative',
     borderStyle: 'solid', borderColor: 'transparent', borderWidth: 12,
     borderImageSource: 'url(/assets/images/tarjeta-jugador.png)',
-    borderImageSlice: '22 fill',
+    borderImageSlice: '22',
     borderImageRepeat: 'stretch',
+    backgroundColor: '#FAF5E8', backgroundClip: 'padding-box',
   },
   // Ducentésimo quincuagésimo pase: overlay de tinte para la tarjeta de
   // "vos" (ver el comentario grande en el JSX). `inset` coincide con el
@@ -1479,7 +1481,7 @@ const estilos = {
   // interior, no el marco de madera. `pointerEvents:none` para no tapar
   // el click de la fila.
   overlayTarjetaPropia: {
-    position: 'absolute', inset: 12,
+    position: 'absolute', inset: 0,
     background: 'linear-gradient(160deg, rgba(255,214,104,0.38), rgba(255,182,39,0.22))',
     pointerEvents: 'none', zIndex: 0,
   },
@@ -1517,7 +1519,7 @@ const estilos = {
     boxShadow: '0 1px 2px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.55), inset 0 -1px 1px rgba(0,0,0,0.35)',
   },
   usuarioInfo: { flex: 1, minWidth: 0, position: 'relative', zIndex: 1 },
-  usuarioNombre: { fontSize: 13, fontWeight: 800, color: C.chocolate, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
+  usuarioNombre: { fontSize: 13, fontWeight: 800, color: '#2D1A0E', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
   // Ducentésimo quincuagésimo pase: contraste muy bajo antes (#8a7267,
   // beige/naranja claro sobre el pergamino claro de la tarjeta) — pasa a
   // un marrón madera medio bien legible, con una mini-cinta de fondo
@@ -1525,7 +1527,7 @@ const estilos = {
   // vez de texto suelto.
   usuarioRango: {
     fontSize: 10, fontWeight: 700, color: '#5c3a26',
-    background: 'rgba(74,44,42,0.12)', borderRadius: 5,
+    background: 'rgba(0,0,0,0.06)', borderRadius: 5,
     padding: '1px 6px', display: 'inline-block', marginTop: 2,
   },
   // Ducentésimo quincuagésimo pase: "botón cuadrado/circular de madera

@@ -40,9 +40,11 @@ export default function ConfiguracionMesaBoton({ onAbrir }) {
 
 const estilos = {
   boton: {
-    position: 'absolute', bottom: 12, right: 12,
+    // Pase 441: el engranaje pasa a la barra de arriba, a la izquierda del botón de chat (que mide 52 px
+    // y está a 12 px del borde). zIndex 999: si el chat se abre, su panel queda por encima.
+    position: 'absolute', top: 14, right: 72,
     width: 48, height: 48, padding: 0, border: 'none', background: 'none',
-    cursor: 'pointer', zIndex: 1000,
+    cursor: 'pointer', zIndex: 999,
     display: 'flex', alignItems: 'center', justifyContent: 'center',
   },
   icono: { width: '100%', height: '100%', objectFit: 'contain' },

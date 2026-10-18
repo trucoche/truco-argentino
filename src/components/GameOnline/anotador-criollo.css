@@ -61,12 +61,11 @@
 .ac-fosforos { opacity: 1; }
 
 @keyframes ac-aparece {
-  from { opacity: 0; transform: scale(1.2); }
+  from { opacity: 0.35; transform: scale(1.2); }
   to { opacity: 1; transform: scale(1); }
 }
 .ac-caja img.ac-aparece {
-  opacity: 0;
-  animation: ac-aparece 260ms ease-out forwards;
+  animation: ac-aparece 260ms ease-out both;
 }
 @media (prefers-reduced-motion: reduce) {
   .ac-caja img.ac-aparece { animation-duration: 1ms; }

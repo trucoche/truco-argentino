@@ -107,6 +107,10 @@ const BASE_FRACCIONES = {
   plata: { xCentro: 0.851, mitadAncho: 0.14, yArriba: 0.81, yAbajo: 0.98 },
 };
 
+// Pase 371: el ranking muestra hasta el puesto 16 (podio + lista 4°-16°) para que la tarjeta no se alargue
+// de más; tu propio puesto, si queda afuera, se ve igual en "Tu posición".
+const PUESTO_MAXIMO_VISIBLE = 16;
+
 // Pase 370: pestañas de alcance del ranking. El orden NO cambia (victorias),
 // solo cambia a quién se compara: todos, mi provincia o mi localidad.
 const ALCANCES = [
@@ -219,7 +223,7 @@ export default function Ranking({ token, usuarioActual }) {
   }
 
   const podio = ranking.slice(0, 3);
-  const resto = ranking.slice(3);
+  const resto = ranking.slice(3, PUESTO_MAXIMO_VISIBLE);
 
   // El podio se arma visualmente en orden 2°-1°-3° (el primero más alto,
   // al medio), pero seguimos usando el puesto real de cada uno para
