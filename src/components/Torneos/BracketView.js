@@ -302,7 +302,9 @@ export default function BracketView({ torneoId, usuario, token, onVolver, onEntr
         botones={[{ texto: 'Cerrar', tipo: 'neutro', onClick: () => setSelectorAbierto(false) }]}
       >
         <p style={{ margin: '0 0 10px', fontWeight: 800, fontSize: 14, color: '#2C160E', textAlign: 'center' }}>
-          Tocá a un amigo para mandarle la invitación. Paga su entrada ({Math.round(Number(torneo.apuesta || 0))} mates) recién cuando acepta.
+          {Number(torneo.apuesta || 0) > 0
+            ? `Tocá a un amigo para mandarle la invitación. Paga su entrada (${Math.round(Number(torneo.apuesta || 0))} mates) recién cuando acepta.`
+            : 'Tocá a un amigo para mandarle la invitación al equipo.'}
         </p>
         {cargandoAmigos && amigos.length === 0 ? (
           <p style={{ margin: 0, fontWeight: 700, fontSize: 13, color: '#7a6660', textAlign: 'center' }}>Cargando tus amigos…</p>
@@ -356,8 +358,10 @@ export default function BracketView({ torneoId, usuario, token, onVolver, onEntr
           {torneo.puntos_para_ganar != null && (
             <Ficha icono="/assets/images/fosforos_5_tantos.png" valor={`A ${torneo.puntos_para_ganar}`} label="Partido" />
           )}
-          <Ficha icono="/assets/images/moneda.png" valor={Math.round(Number(torneo.apuesta || 0))} label="Entrada" />
-          <Ficha icono="/assets/images/historial-trofeo.png" valor={PREMIO_CAMPEON} label="Premio c/u" dorado />
+          {/* Pase 570: sin entrada ni premio en mates; la ficha Entrada solo aparece en torneos viejos con entrada > 0. */}
+          {Number(torneo.apuesta || 0) > 0 && (
+            <Ficha icono="/assets/images/moneda.png" valor={Math.round(Number(torneo.apuesta || 0))} label="Entrada" />
+          )}
         </div>
 
         {totalPartidos > 0 && (

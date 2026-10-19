@@ -182,7 +182,9 @@ function SelectorAmigos({ cantidad, amigos, cargando, elegidos, onToggle, apuest
         </div>
       )}
       <div style={{ ...estilos.selectorAmigosAyuda, ...(oscuro ? { color: C.crema } : null) }}>
-        Vos pagás {apuesta} ahora; cada amigo paga {apuesta} cuando acepta. Si alguien no responde en 15 min, se cancela y te devolvemos todo.
+        {Number(apuesta) > 0
+          ? `Vos pagás ${apuesta} ahora; cada amigo paga ${apuesta} cuando acepta. Si alguien no responde en 15 min, se cancela y te devolvemos todo.`
+          : 'Cada amigo recibe una invitación para sumarse al equipo. Si alguien no responde en 15 min, se cancela.'}
       </div>
     </div>
   );
@@ -241,7 +243,10 @@ export default function Torneos({ token, onVerBracket }) {
   const [azarElegido, setAzarElegido] = useState(false);
 
   // Pestañas Activos / Finalizados (historial de torneos jugados).
-  const [vista, setVista] = useState('activos'); // 'activos' | 'finalizados'
+  const [vista, setVista] = useState('activos'); // 'activos' | 'finalizados' | 'ranking'
+  // Pase 571: ranking de puntos de torneo (+5 por jugar, +10 por partido ganado, +30 al campeón).
+  const [rankingPuntos, setRankingPuntos] = useState(null);
+  const [cargandoRanking, setCargandoRanking] = useState(false);
   const [torneosFinalizados, setTorneosFinalizados] = useState([]);
   const [cargandoFinalizados, setCargandoFinalizados] = useState(false);
 
@@ -374,6 +379,24 @@ export default function Torneos({ token, onVerBracket }) {
   useEffect(() => {
     if (vista === 'finalizados') cargarFinalizados();
   }, [vista, cargarFinalizados]);
+
+  const cargarRanking = useCallback(async () => {
+    setCargandoRanking(true);
+    try {
+      const res = await fetch(`${API_URL}/puntos/ranking`, { headers });
+      const data = await res.json();
+      if (res.ok) setRankingPuntos(data);
+    } catch (err) {
+      console.error('Error cargando el ranking de torneos:', err);
+    } finally {
+      setCargandoRanking(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
+
+  useEffect(() => {
+    if (vista === 'ranking') cargarRanking();
+  }, [vista, cargarRanking]);
 
   const cargarAmigos = useCallback(async () => {
     setCargandoAmigos(true);
@@ -714,20 +737,15 @@ return (
                   constante que ya paga el sistema) — se muestran acá para que
                   se sepa antes de anotarse, mismo criterio que "(cuesta 1 🪙)"
                   en salas privadas. */}
-              <div style={estilos.destacadoStatBadge}>
-                {/* Pase siguiente: Math.round() para que nunca se vean
-                    decimales acá (el campo apuesta es numeric en Postgres y
-                    puede volver como string tipo "10.00") — a pedido del
-                    usuario, "para que sea menos confuso". */}
-                <img src="/assets/images/moneda.png" alt="" style={estilos.destacadoStatIcono} />
-                <span style={estilos.destacadoStatValor}>{Math.round(Number(torneoDestacado.apuesta))}</span>
-                <span style={estilos.destacadoStatLabel}>Entrada</span>
-              </div>
-              <div style={estilos.destacadoStatBadge}>
-                <img src="/assets/images/historial-trofeo.png" alt="" style={estilos.destacadoStatIcono} />
-                <span style={{ ...estilos.destacadoStatValor, color: '#B9770E' }}>35</span>
-                <span style={estilos.destacadoStatLabel}>Premio c/u</span>
-              </div>
+              {/* Pase 570: sin entrada ni premio en mates (solo se paga crear el torneo). La ficha Entrada solo
+                  aparece en torneos viejos con entrada > 0; Premio se sacó. */}
+              {Number(torneoDestacado.apuesta) > 0 && (
+                <div style={estilos.destacadoStatBadge}>
+                  <img src="/assets/images/moneda.png" alt="" style={estilos.destacadoStatIcono} />
+                  <span style={estilos.destacadoStatValor}>{Math.round(Number(torneoDestacado.apuesta))}</span>
+                  <span style={estilos.destacadoStatLabel}>Entrada</span>
+                </div>
+              )}
             </div>
 
             {torneoDestacado.ya_inscripto ? (
@@ -1070,8 +1088,13 @@ return (
                 )}
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button onClick={() => handleInscribirse(torneoPorCodigo)} style={estilos.btnCard}>
-                    {JUGADORES_POR_EQUIPO[torneoPorCodigo.modo] > 1 ? etiquetaAnotarme : 'Inscribirme'} ({Math.round(Number(torneoPorCodigo.apuesta))}
-                    <img src="/assets/images/icono-moneda.png" alt="" style={{ ...estilos.iconoMonedaInline, marginLeft: 3, marginRight: 0, verticalAlign: 'text-bottom' }} />)
+                    {JUGADORES_POR_EQUIPO[torneoPorCodigo.modo] > 1 ? etiquetaAnotarme : 'Inscribirme'}
+                    {Number(torneoPorCodigo.apuesta) > 0 && (
+                      <>
+                        {' '}({Math.round(Number(torneoPorCodigo.apuesta))}
+                        <img src="/assets/images/icono-moneda.png" alt="" style={{ ...estilos.iconoMonedaInline, marginLeft: 3, marginRight: 0, verticalAlign: 'text-bottom' }} />)
+                      </>
+                    )}
                   </button>
                   <button onClick={() => { setTorneoPorCodigo(null); setAmigosElegidos([]); }} style={estilos.btnCardSecondary}>
                     Cancelar
@@ -1121,7 +1144,51 @@ return (
         >
           Finalizados
         </button>
+        <button
+          onClick={() => setVista('ranking')}
+          style={vista === 'ranking' ? estilos.tabActiva : estilos.tabInactiva}
+        >
+          Ranking
+        </button>
       </div>
+
+{vista === 'ranking' && (
+  <>
+    <div style={estilos.sectionTitle}>Ranking de torneos</div>
+    {cargandoRanking && !rankingPuntos ? (
+      <PantallaCarga completa={false} conLogo={false} />
+    ) : (
+      <div>
+        {/* Pase 571: los puntos NO son mates; se suman por jugar, por partido ganado y por salir campeón. */}
+        <div style={estilos.rankResumen}>
+          <div style={estilos.rankResumenTitulo}>Tus puntos</div>
+          <div style={estilos.rankResumenValor}>{rankingPuntos?.yo?.puntos ?? 0}</div>
+          <div style={estilos.rankResumenSub}>
+            {rankingPuntos?.yo?.posicion ? `Puesto #${rankingPuntos.yo.posicion}` : 'Jugá un torneo para entrar al ranking'}
+            {rankingPuntos?.yo?.campeonatos ? ` · 👑 ${rankingPuntos.yo.campeonatos}` : ''}
+          </div>
+        </div>
+        <div style={estilos.rankReglas}>
+          +{rankingPuntos?.reglas?.participacion ?? 5} por jugar · +{rankingPuntos?.reglas?.partido ?? 10} por partido ganado · +{rankingPuntos?.reglas?.campeon ?? 30} al campeón
+        </div>
+        {(rankingPuntos?.ranking || []).length === 0 ? (
+          <p style={{ color: C.crema, textAlign: 'center' }}>Todavía nadie sumó puntos. ¡Sé el primero!</p>
+        ) : (
+          <div style={estilos.rankLista}>
+            {rankingPuntos.ranking.map((f) => (
+              <div key={f.usuario_id} style={{ ...estilos.rankFila, ...(f.soy_yo ? estilos.rankFilaYo : null) }}>
+                <span style={estilos.rankPos}>{f.posicion <= 3 ? ['🥇', '🥈', '🥉'][f.posicion - 1] : `#${f.posicion}`}</span>
+                <span style={estilos.rankNombre}>{f.username}</span>
+                {f.campeonatos > 0 ? <span style={estilos.rankCampeon}>👑 {f.campeonatos}</span> : null}
+                <span style={estilos.rankPuntos}>{f.puntos} pts</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    )}
+  </>
+)}
 
 {vista === 'activos' && (
   <>
@@ -1569,6 +1636,19 @@ const estilos = {
     background: '#10B981', boxShadow: '0 3px 0 #065F46, 0 5px 0 #000',
   },
   sectionTitle: { fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 16, color: C.crema, margin: '4px 0 10px 4px' },
+  // Pase 571: ranking de puntos de torneo
+  rankResumen: { textAlign: 'center', background: 'rgba(0,0,0,0.3)', borderRadius: 14, border: '2px solid #FFB627', padding: '10px 0', marginBottom: 8 },
+  rankResumenTitulo: { fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 12, color: '#FFF8ED' },
+  rankResumenValor: { fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 32, lineHeight: '38px', color: '#FFD668' },
+  rankResumenSub: { fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 12, color: '#FFF8ED' },
+  rankReglas: { fontFamily: "'Fredoka', sans-serif", fontWeight: 500, fontSize: 12, color: '#FFF8ED', textAlign: 'center', margin: '0 0 10px', opacity: 0.9 },
+  rankLista: { maxHeight: 430, overflowY: 'auto', paddingRight: 4 },
+  rankFila: { display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(0,0,0,0.25)', borderRadius: 10, padding: '8px 10px', marginBottom: 6 },
+  rankFilaYo: { border: '2px solid #FFB627', background: 'rgba(255,182,39,0.18)' },
+  rankPos: { fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 14, color: '#FFD668', minWidth: 34, textAlign: 'center' },
+  rankNombre: { flex: 1, fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 14, color: '#FFF8ED', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+  rankCampeon: { fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 12, color: '#FFD668' },
+  rankPuntos: { fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 14, color: '#FFD668' },
   tabs: { display: 'flex', gap: 8, marginBottom: 14 },
   // Activa: madera clara/pergamino con borde dorado y contorno negro.
   tabActiva: {
