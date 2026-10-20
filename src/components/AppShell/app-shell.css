@@ -70,7 +70,11 @@
    Nonagésimo pase: se agotó casi todo ese margen (6→4px) — a partir de
    acá, agrandar más la tarjeta ya implica agrandar el header también. */
 .ts-header {
-  background: var(--ts-crema);
+  /* Pase 580 (paridad con la app, Pase 570): fondo de papiro — degradé crema #FFFCF6 → #F4E3C0 con un brillo cálido a la izquierda.
+     Para volver al crema liso: background: var(--ts-crema). */
+  background:
+    radial-gradient(ellipse 60% 120% at 20% 30%, rgba(210, 182, 130, 0.4) 0%, rgba(210, 182, 130, 0) 100%),
+    linear-gradient(180deg, #FFFCF6 0%, #F4E3C0 100%);
   border-bottom: 4px solid var(--ts-chocolate);
   padding: 4px 14px;
   position: sticky;

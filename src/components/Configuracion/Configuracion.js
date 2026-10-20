@@ -51,7 +51,7 @@ const PESTANAS_AJUSTES = [
   { id: 'cuenta', texto: 'Cuenta' },
 ];
 
-export default function Configuracion({ token, usuario, onPersonajeCambiado, musicaVolumen, onCambiarMusicaVolumen, onNavegar }) {
+export default function Configuracion({ token, usuario, onPersonajeCambiado, musicaVolumen, onCambiarMusicaVolumen, efectosVolumen = 1, onCambiarEfectosVolumen, onNavegar }) {
   const [modoOscuro, setModoOscuro] = useState(false);
   // Pase 519: modal intermedio antes de salir a Cafecito.
   const [cafecitoAbierto, setCafecitoAbierto] = useState(false);
@@ -661,6 +661,30 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
           </div>
         </div>
       </PlacaMadera>
+
+      {/* Pase 580 (paridad con la app, Pase 529): volumen de los efectos de la mesa (repartir, carta jugada, ganar). */}
+      {onCambiarEfectosVolumen && (
+        <PlacaMadera>
+          <div style={estilos.panelTitulo}>
+            <span aria-hidden="true">🔊</span>
+            Efectos de sonido
+          </div>
+          <div style={estilos.filaSlider}>
+            <div style={estilos.sliderPistaContenedor}>
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.05}
+                value={efectosVolumen}
+                onChange={(e) => onCambiarEfectosVolumen(Number(e.target.value))}
+                className="tc-slider tc-slider-grande"
+                aria-label="Volumen de efectos de sonido"
+              />
+            </div>
+          </div>
+        </PlacaMadera>
+      )}
 
         </>
       )}

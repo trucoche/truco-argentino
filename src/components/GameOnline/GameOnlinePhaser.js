@@ -19,6 +19,7 @@ export default function GameOnlinePhaser({
   token, usuario, codigoSala, onVolverLobby, onRevancha, onVerBracket,
   musicaVolumen, onCambiarMusicaVolumen,
   vocesVolumen, onCambiarVocesVolumen,
+  efectosVolumen = 1, onCambiarEfectosVolumen,   // Pase 580
   // Pase siguiente: popup de logro desbloqueado — ver comentario en
   // GameSceneOnline.js (this.onVolverLobby ahora manda los logros de esta
   // partida como parámetro). Este componente no sabe nada del popup en sí
@@ -73,7 +74,7 @@ useEffect(() => {
       const angostoAhora = esLayoutAngosto();
       relacionInicialRef.current = window.innerHeight / window.innerWidth;
       gameRef.current = new Phaser.Game(crearConfigOnline(angostoAhora));
-      gameRef.current.scene.add('GameSceneOnline', GameSceneOnline, true, { usuario, codigoSala, vocesVolumen, angosto: angostoAhora, marcadorEstilo: marcadorEstiloRef.current });
+      gameRef.current.scene.add('GameSceneOnline', GameSceneOnline, true, { usuario, codigoSala, vocesVolumen, efectosVolumen, angosto: angostoAhora, marcadorEstilo: marcadorEstiloRef.current });
 
       gameRef.current.events.once('ready', () => {
         const escena = gameRef.current.scene.getScene('GameSceneOnline');
@@ -140,7 +141,7 @@ useEffect(() => {
     if (gameRef.current) {
       const escena = gameRef.current.scene.getScene('GameSceneOnline');
       if (escena) {
-        escena.scene.restart({ usuario, codigoSala, vocesVolumen, angosto: esLayoutAngosto(), marcadorEstilo: marcadorEstiloRef.current });
+        escena.scene.restart({ usuario, codigoSala, vocesVolumen, efectosVolumen, angosto: esLayoutAngosto(), marcadorEstilo: marcadorEstiloRef.current });
         escena.events.once('create', () => {
           escena.onVolverLobby = manejarVolverLobby;
           escena.onRevancha = onRevancha;
@@ -165,6 +166,12 @@ useEffect(() => {
     if (escena) escena.vocesVolumen = vocesVolumen;
   }, [vocesVolumen]);
 
+  // Pase 580: igual para el volumen de efectos (la escena lo lee en cada sonido).
+  useEffect(() => {
+    const escena = gameRef.current?.scene.getScene('GameSceneOnline');
+    if (escena) escena.efectosVolumen = efectosVolumen;
+  }, [efectosVolumen]);
+
   return (
     <div style={estilosPagina.fondoPagina}>
       <div style={angosto ? estilosPagina.contenedorJuegoAngosto : estilosPagina.contenedorJuego}>
@@ -182,6 +189,8 @@ useEffect(() => {
           onCambiarMusicaVolumen={onCambiarMusicaVolumen}
           vocesVolumen={vocesVolumen}
           onCambiarVocesVolumen={onCambiarVocesVolumen}
+          efectosVolumen={efectosVolumen}
+          onCambiarEfectosVolumen={onCambiarEfectosVolumen}
           marcadorEstilo={marcadorEstilo}
           onCambiarMarcadorEstilo={cambiarMarcadorEstilo}
         />

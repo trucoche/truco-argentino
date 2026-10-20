@@ -182,6 +182,8 @@ export default class GameSceneOnline extends Phaser.Scene {
     // reiniciarla — ver GameOnlinePhaser.js). 0.85 es el valor que ya
     // usaba el juego antes de que esto fuera configurable.
     this.vocesVolumen = data.vocesVolumen ?? 0.85;
+    // Pase 580: volumen de efectos (multiplica el volumen de repartir / carta jugada / ganar). 1 = como antes.
+    this.efectosVolumen = data.efectosVolumen ?? 1;
 }
 
 preload() {
@@ -296,6 +298,8 @@ preload() {
       });
     });
     this.load.image('circulo_mano', conVersion('assets/images/juego/ui-botones/circulo_mano.png'));
+    // Pase 580 (paridad con la app, Pase 574): medalla de "Mano" (moneda del mate con una manito).
+    this.load.image('medalla_mano', conVersion('assets/images/juego/ui-botones/medalla-mano.png'));
     // Trigésimo segundo pase: ícono de persona junto al label "Rival" (1v1) —
     // reemplaza al circulito de "es mano" que iba ahí, que ahora se usa nomás
     // para el indicador propio (manoIconoPropio) y para equipos.
@@ -713,6 +717,9 @@ _crearElementosDeTexto() {
     // (mismo lugar relativo que antes — el ícono siempre quedaba DESPUÉS
     // del nombre, nunca superpuesto) en vez de recalcularse en cada estado.
     this.manoIconoRival = this.add.image(this.PLACA_RIVAL_CX + placaAncho / 2 + (this._L ? 14 : 11), this.PLACA_RIVAL_CY - 17 * kpH, 'icono_rival').setDisplaySize(17 * kpH, 19 * kpH).setDepth(1002).setVisible(false);
+    // Pase 580: medalla de "Mano" del rival en 1v1 (aparece cuando el rival es mano), pegada a su ícono de turno.
+    this.medallaManoRival = this.add.image(0, 0, 'medalla_mano').setDisplaySize(18 * kpH, 18 * kpH).setDepth(1002).setVisible(false);
+    this._posicionarMedallaRival();
 
     // Barra de fondo para los botones de acción — línea divisoria subida de
     // 521 a 500 (y panel agrandado a juego) para ganarle ~21px al área de la
@@ -935,7 +942,7 @@ _crearElementosDeTexto() {
     // inmediatamente abajo, con ~8px de aire entre ambas filas (ver Y del
     // `turnoText`, más abajo). Subida un poco (472→462) para dejarle
     // lugar abajo sin invadir más la mesa hacia arriba.
-    this.manoIconoPropio = this.add.image(this._L ? this._L.indicadoresX : 650, this._L ? this._L.manoIndY : 462, 'circulo_mano').setDisplaySize(24, 24).setDepth(200).setVisible(false);
+    this.manoIconoPropio = this.add.image(this._L ? this._L.indicadoresX : 650, this._L ? this._L.manoIndY : 462, 'medalla_mano').setDisplaySize(24, 24).setDepth(200).setVisible(false);
     this.miManoTexto = this.add.text(this._L ? this._L.indicadoresX + 16 : 666, this._L ? this._L.manoIndY : 462, '', {
       font: 'bold 15px Arial', fill: '#FFD700', stroke: '#000000', strokeThickness: 3
     }).setOrigin(0, 0.5).setDepth(200);
@@ -1934,7 +1941,7 @@ _mostrarMarcadores(visible) {
   (this.zonasAnotador || []).forEach(z => { if (z && z.scene) { z.setVisible(visible); if (z.input) z.input.enabled = visible; } });
   this._aplicarMarcadorEstilo();
   if (!visible) {
-    [this.labelRival, this.manoIconoRival, this.nombreRivalAngosto].forEach(o => { if (o && o.scene) o.setVisible(false); });
+    [this.labelRival, this.manoIconoRival, this.medallaManoRival, this.nombreRivalAngosto].forEach(o => { if (o && o.scene) o.setVisible(false); });
   }
 }
 
@@ -2664,7 +2671,7 @@ _conectarSocket() {
       if (this.onEsEquipos) this.onEsEquipos(Array.isArray(estado.companeros));
 
       if (esRepartoNuevo) {
-        try { this.sound.play('repartir', { volume: 0.5 }); } catch (e) {}
+        try { this.sound.play('repartir', { volume: 0.5 * (this.efectosVolumen ?? 1) }); } catch (e) {}
       }
       this._renderizarEstado(esRepartoNuevo);
     });
@@ -2737,7 +2744,7 @@ _conectarSocket() {
     });
       this.socket.off('juego-terminado').on('juego-terminado', (data) => {
         const gano = data.ganador === 'yo';
-        if (gano) { try { this.sound.play('ganar', { volume: 0.8 }); } catch (e) {} }
+        if (gano) { try { this.sound.play('ganar', { volume: 0.8 * (this.efectosVolumen ?? 1) }); } catch (e) {} }
 
         // Pase siguiente: popup de "logro desbloqueado" al volver al lobby
         // (ver LogroDesbloqueadoPopup.js) — se guarda acá lo que mandó el
@@ -2805,7 +2812,7 @@ _conectarSocket() {
       if (this.onEsEquipos) this.onEsEquipos(Array.isArray(estado.companeros));
 
       if (esRepartoNuevo) {
-        try { this.sound.play('repartir', { volume: 0.5 }); } catch (e) {}
+        try { this.sound.play('repartir', { volume: 0.5 * (this.efectosVolumen ?? 1) }); } catch (e) {}
       }
 
       this._reproducirCantosSiCorresponde(estado, this.estadoAnterior);
@@ -2840,7 +2847,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
     const generacion = this._finalGeneracion;
     const elementosMarcador = this._L ? [] : [
       this.scoreBg, this.scoreText, this.labelPropio,
-      this.fondoInfoRival, this.scoreTextRival, this.labelRival, this.manoIconoRival,
+      this.fondoInfoRival, this.scoreTextRival, this.labelRival, this.manoIconoRival, this.medallaManoRival,
       ...(this._fosObjs ? this._fosObjs.todos : []),
     ];
     if (this._L) {
@@ -3481,6 +3488,8 @@ _renderizarEstado(animarReparto) {
     this.labelRival.setVisible(!esModoEquipos);
     if (this.nombreRivalAngosto && esModoEquipos) this.nombreRivalAngosto.setVisible(false);
     if (this.manoIconoRival) this.manoIconoRival.setVisible(!esModoEquipos);
+    // Pase 580: en 1v1, medalla de "Mano" junto al ícono del rival cuando el rival es mano (yo no).
+    if (this.medallaManoRival) { this._posicionarMedallaRival(); this.medallaManoRival.setVisible(!esModoEquipos && !e.esMano); }
 
     // Trigésimo segundo pase: "Rival" + su ícono se prenden (dorado, con
     // pulso continuo, igual que el 🎯 de nativo) cuando es el turno del
@@ -3971,6 +3980,7 @@ _aplicarMarcadorEstilo(animar = false) {
     });
     if (this.manoIconoRival && this.manoIconoRival.scene && this._placaFosforosActiva) {
       this.manoIconoRival.setPosition(g.rival.cx + g.rival.w / 2 + (this._L ? 14 : 11), g.rival.cy - 17 * g.kp);
+      this._posicionarMedallaRival();
     }
     if (this._fosObjs) this._fosObjs.todos.forEach(o => o.setVisible(false));
     this._placaFosforosActiva = false;
@@ -4043,6 +4053,7 @@ _aplicarMarcadorEstilo(animar = false) {
     const topR = this._L ? (g.rival.cy + g.rival.h / 2 - h2) : (g.rival.cy - g.rival.h / 2);
     // Fuera del marco (y del anillo del timer, que sobresale ~3 px de la placa).
     this.manoIconoRival.setPosition(this._cxPlacaFosforos('rival') + wF / 2 + (this._L ? 22 : 20), topR + hLabel / 2 + 2);
+    this._posicionarMedallaRival();
   }
 }
 
@@ -4699,7 +4710,7 @@ _dibujarManoJugador(cartas, yBase, jugable, animar = false) {
         img.on('pointerdown', () => {
           if (this._jugadaEnviada) return;   // Pase 414: un solo toque por turno (evita el aviso "no es tu turno")
           this._jugadaEnviada = true;
-          try { this.sound.play('jugar-carta', { volume: 0.6 }); } catch (err) {}
+          try { this.sound.play('jugar-carta', { volume: 0.6 * (this.efectosVolumen ?? 1) }); } catch (err) {}
           this.socket.emit('jugar-carta', { codigoSala: this.codigoSala, cartaId: carta.id });
         });
       }
@@ -4931,6 +4942,15 @@ _reproducirCanto(personaje, clave) {
 // 'base' usa los abanicos de siempre (mazos-abanico/, cargados en preload); 'cafecito' y 'tester' se cargan recién cuando
 // aparece un jugador que los usa (9 PNG por mazo, public/assets/personalizacion-opt/cartas/<id>/abanico-<frente|izq|der>-<n>.png)
 // y, al terminar de cargar, se vuelve a dibujar la mesa. Mientras tanto (o si el archivo falla) se dibuja el abanico base.
+// Pase 580: deja la medalla de mano del rival pegada a su ícono de turno (se llama cada vez que el ícono se reubica).
+_posicionarMedallaRival() {
+  const ic = this.manoIconoRival;
+  const m = this.medallaManoRival;
+  if (!ic || !ic.scene || !m || !m.scene) return;
+  const kpH = ic.displayWidth / 17 || 1;
+  m.setDisplaySize(18 * kpH, 18 * kpH).setPosition(ic.x + 21 * kpH, ic.y);
+}
+
 _mazoIdDe(nombre) {
   const info = (this._jugadoresSala || []).find((s) => s.username === nombre);
   const id = info && info.mazo_id;
@@ -5354,7 +5374,7 @@ _dibujarFilaCartas(cartas, y, jugable, esMiMano = false, escala = 1, animar = fa
         img.on('pointerover', () => img.setY(destinoY - 15));
         img.on('pointerout',  () => img.setY(destinoY));
         img.on('pointerdown', () => {
-          try { this.sound.play('jugar-carta', { volume: 0.6 }); } catch (err) {}
+          try { this.sound.play('jugar-carta', { volume: 0.6 * (this.efectosVolumen ?? 1) }); } catch (err) {}
           this.socket.emit('jugar-carta', { codigoSala: this.codigoSala, cartaId: carta.id });
         });
       }
@@ -5371,7 +5391,7 @@ _dibujarPlacaNombre(cx, yNombre, nombre, kS, { turno = false, acento = 0x7F8F38,
   const fsN = Math.round(12 * kS);
   let nombreCorto = String(nombre || '');
   if (nombreCorto.length > 14) nombreCorto = nombreCorto.slice(0, 13) + '…';
-  const iconoMano = mano && this.textures.exists('icono_rival');
+  const iconoMano = mano && this.textures.exists('medalla_mano');   // Pase 580: medalla de mano en vez de la silueta
   const nombreTxt = this.add.text(0, yNombre, nombreCorto + (turno ? ' ●' : ''), {
     fontFamily: 'Nunito, Arial', fontSize: `${fsN}px`, fontStyle: '800',
     // Pase 447: nombre en verde oliva (mi equipo) o bronce rojizo (rivales); en turno se oscurece un poco para leerse sobre el dorado.
@@ -5422,7 +5442,7 @@ _dibujarPlacaNombre(cx, yNombre, nombre, kS, { turno = false, acento = 0x7F8F38,
     this._sprites.push(esc);
   });
   if (iconoMano) {
-    const ic = this.add.image(px0 + pw - padXp - 3 * kS, yNombre, 'icono_rival').setDisplaySize(12 * kS, 14 * kS).setDepth(51);
+    const ic = this.add.image(px0 + pw - padXp - 3 * kS, yNombre, 'medalla_mano').setDisplaySize(14 * kS, 14 * kS).setDepth(51);
     this._sprites.push(ic);
   }
   this._sprites.push(nombreTxt);

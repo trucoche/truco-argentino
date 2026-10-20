@@ -32,7 +32,7 @@ const C = {
 // .tc-slider (ver app-shell.css) para reemplazar el thumb/track azul por
 // default por uno dorado, mismo criterio de color que la ficha "mano".
 export default function ConfiguracionMesaModal({
-  visible, onCerrar, musicaVolumen, onCambiarMusicaVolumen, vocesVolumen, onCambiarVocesVolumen,
+  visible, onCerrar, musicaVolumen, onCambiarMusicaVolumen, vocesVolumen, onCambiarVocesVolumen, efectosVolumen = 1, onCambiarEfectosVolumen,
   marcadorEstilo = 'numeros', onCambiarMarcadorEstilo,
 }) {
   if (!visible) return null;
@@ -87,6 +87,26 @@ export default function ConfiguracionMesaModal({
           />
         </div>
       </div>
+
+      {/* Pase 580: volumen de los efectos (repartir, carta jugada, ganar). */}
+      {onCambiarEfectosVolumen && (
+        <div style={estilos.fila}>
+          <label style={estilos.label}>
+            Efectos de sonido
+          </label>
+          <div style={estilos.sliderPistaContenedor}>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={efectosVolumen}
+              onChange={(e) => onCambiarEfectosVolumen(Number(e.target.value))}
+              className="tc-slider tc-slider-grande"
+            />
+          </div>
+        </div>
+      )}
 
       {/* Pase 404: estilo del marcador de arriba (placas VOS / RIVAL). */}
       <div style={estilos.fila}>

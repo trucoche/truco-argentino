@@ -116,16 +116,31 @@ useEffect(() => {
 
   if (!audioRoomUrl) return null;
 
+  // Pase 580 (paridad con la app, Pase 574): botón redondo con imagen (micrófono encendido / apagado). La cantidad de
+  // personas en la llamada va en una chapita arriba a la derecha del botón. En la web el chat vive arriba a la derecha,
+  // así que el botón se queda abajo a la izquierda y no se tapan.
   return (
     <div style={estilos.contenedor}>
       {error ? (
         <div style={estilos.errorBox}>🎙️ {error}</div>
       ) : (
-        <button onClick={alternarMute} disabled={conectando} style={{ ...estilos.boton, ...(muteado ? estilos.muteado : {}) }}>
-          <span style={{ fontSize: 16 }}>{conectando ? '⏳' : muteado ? '🔇' : '🎙️'}</span>
-          <span style={estilos.label}>
-            {conectando ? 'Conectando...' : muteado ? 'Silenciado' : `Audio (${cantidadEnLlamada})`}
-          </span>
+        <button
+          onClick={alternarMute}
+          disabled={conectando}
+          style={estilos.boton}
+          aria-label={muteado ? 'Activar micrófono' : 'Silenciar micrófono'}
+          title={muteado ? 'Activar micrófono' : 'Silenciar micrófono'}
+        >
+          <img
+            src={muteado ? '/assets/images/boton-mic-off.png' : '/assets/images/boton-mic-on.png'}
+            alt=""
+            draggable={false}
+            style={{ ...estilos.imagen, ...(conectando ? { opacity: 0.45 } : null) }}
+          />
+          {conectando && <span style={estilos.spinner} aria-hidden="true" />}
+          {!conectando && (
+            <span style={{ ...estilos.chapita, ...(muteado ? estilos.chapitaMuteado : null) }}>{cantidadEnLlamada}</span>
+          )}
         </button>
       )}
     </div>
@@ -136,24 +151,32 @@ const estilos = {
   contenedor: {
     position: 'absolute', bottom: 12, left: 12, zIndex: 1000,
   },
-  // Misma familia visual que los demás botones flotantes: anillo dorado
-  // exterior + borde chocolate, pero conservando la forma píldora y los
-  // tonos semánticos verde/rojo (ahora más "vino/bosque" que pastel puro,
-  // a juego con la paleta del rediseño) para que siga leyéndose de un
-  // vistazo el estado activo/silenciado.
   boton: {
-    display: 'flex', alignItems: 'center', gap: 6,
-    background: 'linear-gradient(160deg, #4FAE6E, #3E8E5A)',
-    border: '2.5px solid #4A2C2A', borderRadius: 20,
-    padding: '8px 14px', cursor: 'pointer',
-    fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 12,
-    color: '#FFF8ED', boxShadow: '0 0 0 2px #FFB627, 0 3px 6px rgba(0,0,0,0.35)'
+    position: 'relative', width: 54, height: 54, padding: 0, border: 'none', background: 'none', cursor: 'pointer',
+    display: 'flex', alignItems: 'center', justifyContent: 'center', WebkitTapHighlightColor: 'transparent',
   },
-  muteado: { background: 'linear-gradient(160deg, #C96A62, #B0454B)', color: '#FFF8ED' },
-  label: { whiteSpace: 'nowrap' },
+  imagen: { width: 54, height: 54, objectFit: 'contain', display: 'block', userSelect: 'none' },
+  spinner: {
+    position: 'absolute', top: '50%', left: '50%', width: 20, height: 20, marginTop: -10, marginLeft: -10, boxSizing: 'border-box',
+    borderRadius: '50%', border: '3px solid rgba(74,44,42,0.25)', borderTopColor: '#4A2C2A', animation: 'audio-mesa-giro 0.8s linear infinite',
+  },
+  chapita: {
+    position: 'absolute', top: -2, right: -2, minWidth: 18, height: 18, boxSizing: 'border-box', padding: '0 4px', borderRadius: 9,
+    background: '#7dd88a', border: '1.5px solid #4A2C2A', color: '#4A2C2A', fontWeight: 800, fontSize: 10,
+    display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Nunito', sans-serif",
+  },
+  chapitaMuteado: { background: '#f0d8d8' },
   errorBox: {
     background: '#ffe0dd', border: '2px solid #E8483A', color: '#c2352a',
     borderRadius: 12, padding: '6px 10px', fontSize: 11, fontWeight: 700,
     fontFamily: "'Nunito', sans-serif"
   },
 };
+
+// Pase 580: giro del spinner mientras conecta (estilo inyectado una sola vez).
+if (typeof document !== 'undefined' && !document.getElementById('audio-mesa-giro-estilo')) {
+  const style = document.createElement('style');
+  style.id = 'audio-mesa-giro-estilo';
+  style.textContent = '@keyframes audio-mesa-giro { to { transform: rotate(360deg); } }';
+  document.head.appendChild(style);
+}

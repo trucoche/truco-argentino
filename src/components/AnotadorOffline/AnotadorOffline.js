@@ -128,8 +128,9 @@ function useSonidos(silenciado) {
   const idx = useRef({ add: 0, remove: 0 });
   useEffect(() => {
     pools.current = {
-      add: crearPool('/assets/sounds/sfx_fosforo_add.mp3', 0.7),
-      remove: crearPool('/assets/sounds/sfx_fosforo_remove.mp3', 0.6),
+      // Pase 580 (paridad con la app, Pase 568): tac agudo de madera al sumar y toc grave y suave al restar (antes sonaban a videojuego).
+      add: crearPool('/assets/sounds/sfx_anotador_suma.mp3', 0.7),
+      remove: crearPool('/assets/sounds/sfx_anotador_resta.mp3', 0.6),
     };
   }, []);
   const sonar = useCallback((clave) => {

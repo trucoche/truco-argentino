@@ -67,6 +67,7 @@ function AppInterna() {
   const CLAVE_MUSICA_MUTEADA = 'truco_musica_muteada';
   const CLAVE_MUSICA_VOLUMEN = 'truco_musica_volumen';
   const CLAVE_VOCES_VOLUMEN = 'truco_voces_volumen';
+  const CLAVE_EFECTOS_VOLUMEN = 'truco_efectos_volumen';   // Pase 580: volumen de efectos (repartir, carta jugada, ganar)
   const [pantalla, setPantalla] = useState('auth');
   const [usuario, setUsuario] = useState(null);
   const [token, setToken] = useState(null);
@@ -128,6 +129,11 @@ function AppInterna() {
     const guardado = localStorage.getItem(CLAVE_VOCES_VOLUMEN);
     return guardado !== null ? Number(guardado) : 0.85;
   });
+  // Pase 580 (paridad con la app, Pase 529): volumen de los efectos de la mesa (repartir, carta jugada, ganar), de 0 a 1 (por defecto 1 = como antes).
+  const [efectosVolumen, setEfectosVolumen] = useState(() => {
+    const guardado = localStorage.getItem(CLAVE_EFECTOS_VOLUMEN);
+    return guardado !== null && !Number.isNaN(Number(guardado)) ? Number(guardado) : 1;
+  });
   const audioRef = React.useRef(null);
 
   const buscarTorneoDestacado = useCallback(async () => {
@@ -185,6 +191,10 @@ function AppInterna() {
   useEffect(() => {
     localStorage.setItem(CLAVE_VOCES_VOLUMEN, String(vocesVolumen));
   }, [vocesVolumen]);
+
+  useEffect(() => {
+    localStorage.setItem(CLAVE_EFECTOS_VOLUMEN, String(efectosVolumen));
+  }, [efectosVolumen]);
 
   const handleToggleMusica = () => {
     setMusicaMuteada(prev => !prev);
@@ -719,6 +729,8 @@ function AppInterna() {
               onPersonajeCambiado={actualizarPerfil}
               musicaVolumen={musicaVolumen}
               onCambiarMusicaVolumen={setMusicaVolumen}
+              efectosVolumen={efectosVolumen}
+              onCambiarEfectosVolumen={setEfectosVolumen}
               onNavegar={setPantalla}
             />
           )}
@@ -772,6 +784,8 @@ function AppInterna() {
         onCambiarMusicaVolumen={setMusicaVolumen}
         vocesVolumen={vocesVolumen}
         onCambiarVocesVolumen={setVocesVolumen}
+        efectosVolumen={efectosVolumen}
+        onCambiarEfectosVolumen={setEfectosVolumen}
         onLogrosDesbloqueados={setLogrosParaPopup}
       />
     );
