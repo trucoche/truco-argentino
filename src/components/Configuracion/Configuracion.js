@@ -1,4 +1,4 @@
-import PopupMadera, { confirmarPopup, PlacaMadera } from '../Popup/PopupMadera';
+import PopupMadera, { confirmarPopup, mostrarAviso, PlacaMadera } from '../Popup/PopupMadera';
 import React, { useState, useEffect, useCallback } from 'react';
 import PersonajeSelector from '../Lobby/PersonajeSelector';
 import ReportarModal from '../Reportar/ReportarModal';
@@ -265,12 +265,16 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
   const [reportesApp, setReportesApp] = useState([]);
   const [cargandoReportes, setCargandoReportes] = useState(true);
   const [revisandoReporte, setRevisandoReporte] = useState(null);
+  const [maxPremios, setMaxPremios] = useState(5);   // Pase 584: tope de reportes premiados por jugador (lo manda el backend)
 
   const cargarReportesApp = useCallback(async () => {
     try {
       const res = await fetch(`${API_BASE}/admin/reportes-app`, { headers: { 'Authorization': `Bearer ${token}` } });
       const data = await res.json();
-      if (res.ok) setReportesApp(data.reportes || []);
+      if (res.ok) {
+        setReportesApp(data.reportes || []);
+        if (data.max_premios) setMaxPremios(data.max_premios);
+      }
     } catch (err) {
       console.error('Error cargando reportes de la app:', err);
     } finally {
@@ -292,9 +296,18 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ recompensa: mates })
       });
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        const data = await res.json().catch(() => ({}));
-        setReportesApp(prev => prev.map(r => r.id === id ? { ...r, revisado: true, revisado_en: r.revisado_en || new Date().toISOString(), recompensa: data.recompensa != null ? data.recompensa : r.recompensa } : r));
+        setReportesApp(prev => {
+          const usuarioId = (prev.find(r => r.id === id) || {}).usuario_id;
+          return prev.map(r => {
+            if (r.id === id) return { ...r, revisado: true, revisado_en: r.revisado_en || new Date().toISOString(), recompensa: data.recompensa != null ? data.recompensa : r.recompensa, premios_usuario: data.premiado ? (r.premios_usuario || 0) + 1 : r.premios_usuario };
+            if (data.premiado && usuarioId != null && r.usuario_id === usuarioId) return { ...r, premios_usuario: (r.premios_usuario || 0) + 1 };
+            return r;
+          });
+        });
+      } else if (data && data.error) {
+        mostrarAviso({ titulo: 'No se pudo premiar', cinta: 'roja', mensaje: data.error, botones: [{ texto: 'Aceptar', tipo: 'dorado' }] });
       }
     } catch (err) {
       console.error('Error marcando reporte como revisado:', err);
@@ -849,8 +862,11 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
                         {revisandoReporte === r.id ? 'Marcando...' : 'Marcar revisado'}
                       </button>
                     )}
-                    {/* Pase 582: premio por reportar. Solo si la cuenta existe y todavía no se la premió. */}
-                    {r.username && !(r.recompensa > 0) && (
+                    {r.username && (r.premios_usuario || 0) > 0 && (
+                      <span style={estilos.premiosLabel}>Premios a {r.username}: {r.premios_usuario}/{maxPremios}{(r.premios_usuario || 0) >= maxPremios ? ' (máximo)' : ''}</span>
+                    )}
+                    {/* Pase 582: premio por reportar. Solo si la cuenta existe, todavía no se la premió y no llegó al tope. */}
+                    {r.username && !(r.recompensa > 0) && (r.premios_usuario || 0) < maxPremios && (
                       <div style={estilos.premiosReporte}>
                         <span style={estilos.premiosLabel}>{r.revisado ? 'Premiar:' : 'Revisar y premiar:'}</span>
                         {[10, 25, 50].map((m) => (
