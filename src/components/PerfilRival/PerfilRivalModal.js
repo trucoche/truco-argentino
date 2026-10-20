@@ -6,6 +6,9 @@ import MensajePrivadoModal from '../MensajePrivado/MensajePrivadoModal';
 import { API_URL as BASE_URL } from '../../config';
 import PopupMadera from '../Popup/PopupMadera';
 import { rangoUi } from '../Perfil/rangosUi';
+import BannerPerfil from '../Personalizacion/BannerPerfil';
+import AvatarAnillo from '../Personalizacion/AvatarAnillo';
+import { resolverAnillo } from '../../constants/personalizacion';
 import './perfil-rival.css';
 
 const API_BASE = `${BASE_URL}/api`;
@@ -218,17 +221,22 @@ export default function PerfilRivalModal({ username, token, onClose }) {
   const u = datos ? datos.usuario : null;
   // Pase 422: el aro que rodea al personaje es el de SU rango y el logo del rango va en la píldora.
   const rUi = rangoUi(u && u.rango);
-  const TAM_ARO = 120;
-  const TAM_FOTO = Math.round(TAM_ARO * rUi.hueco) + 2;
+  // Pase 578 (paridad con la app, Pases 524–526): banner y anillo elegidos por el jugador; el nombre va debajo, sobre el pergamino.
+  const anilloSel = resolverAnillo(u && u.anillo_id, rUi);
   const encabezado = datos && (
     <>
-      <div style={estilos.avatarAro}>
-        <div style={{ ...estilos.avatarHueco, width: TAM_FOTO, height: TAM_FOTO }}>
-          <img src={avatarSrcDe(u)} alt="" style={estilos.avatarImg} />
-        </div>
-        <img src={rUi.anillo} alt="" style={estilos.aroImg} />
-      </div>
-      <div style={estilos.placaNombre}>{u.username}</div>
+      <BannerPerfil bannerId={u.banner_id} fondoUrl={u.fondo_perfil_url} style={{ marginBottom: 8 }}>
+        {({ altoUtil }) => (
+          <AvatarAnillo
+            tam={Math.max(60, Math.round(altoUtil * 0.92))}
+            hueco={anilloSel.hueco}
+            anilloImagen={anilloSel.imagen}
+            fuente={avatarSrcDe(u)}
+            fallback="/assets/gaucho-avatar-cara.png"
+          />
+        )}
+      </BannerPerfil>
+      <div style={{ ...estilos.placaNombre, alignSelf: 'flex-start' }}>{u.username}</div>
     </>
   );
 
@@ -254,22 +262,8 @@ export default function PerfilRivalModal({ username, token, onClose }) {
           <p style={{ color: C.crimsonOscuro, textAlign: 'center', padding: '30px 0', fontWeight: 700 }}>{error}</p>
         ) : datos && (
           <>
-            {/* Centésimo octavo pase: el fondo comprado va como imagen de fondo de la zona que rodea al avatar y
-                al nombre (no detrás del personaje). */}
-            {u.fondo_perfil_url ? (
-              <div
-                style={{
-                  ...estilos.encabezadoConFondo,
-                  backgroundImage: `linear-gradient(rgba(20,20,15,0.05), rgba(20,20,15,0.32)), url(${u.fondo_perfil_url})`,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                }}
-              >
-                {encabezado}
-              </div>
-            ) : (
-              <div style={estilos.encabezadoSinFondo}>{encabezado}</div>
-            )}
+            {/* Pase 578: el banner (con la foto comprada adentro, si tiene) lo dibuja BannerPerfil dentro de `encabezado`. */}
+            <div style={estilos.encabezadoSinFondo}>{encabezado}</div>
 
             {/* Pase 530: zona según el nivel de privacidad que eligió el jugador (el backend ya viene filtrado). */}
             {u.zona && u.zona.provincia && (

@@ -4,6 +4,9 @@ import PantallaCarga from '../PantallaCarga/PantallaCarga';
 import { useToast } from '../../contexts/ToastContext';
 import { API_URL as BASE_URL } from '../../config';
 import { rangoUi } from './rangosUi';
+import BannerPerfil from '../Personalizacion/BannerPerfil';
+import AvatarAnillo from '../Personalizacion/AvatarAnillo';
+import { resolverAnillo } from '../../constants/personalizacion';
 import { PlacaMadera } from '../Popup/PopupMadera';
 import ZonaEditor from './ZonaEditor';
 import { textoZona } from './provincias';
@@ -119,8 +122,8 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
   // mide siempre TAM_ANILLO (el layout no cambia entre rangos) y la foto se
   // ajusta al agujero de cada aro (`hueco`, ver rangosUi.js).
   const rangoAssets = rangoUi(usuario?.rango);
-  const TAM_ANILLO = 140;
-  const diamAvatar = Math.round(TAM_ANILLO * rangoAssets.hueco) + 2;
+  // Pase 578: anillo elegido en Ajustes (o el de su rango si no eligió otro) y banner elegido (BannerPerfil).
+  const anilloSel = resolverAnillo(usuario?.anillo_id, rangoAssets);
 
   // Centésimo pase: fondo de perfil personalizable (foto propia, cuesta
   // monedas). El modal hace todo el trabajo (recorte + POST) y solo avisa
@@ -238,69 +241,40 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
             {/* Pase 330: banner limpio — solo la imagen propia (object-fit: cover) o un plano liso,
                 el anillo del avatar a la izquierda y la ficha circular de cambiar fondo arriba a la
                 derecha. El nombre vive debajo, sobre el pergamino de la tarjeta. */}
-            <div style={estilos.marcoBanner}>
-            <div
-              style={{
-                ...estilos.encabezadoFilaContenedor,
-                ...(usuario?.fondo_perfil_url ? {} : { background: '#FFF3D6' }),
-              }}
-            >
-              {usuario?.fondo_perfil_url && (
-                <img
-                  src={usuario.fondo_perfil_url}
-                  alt=""
-                  style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block', pointerEvents: 'none' }}
-                />
-              )}
-              {/* Pase 324: botón circular 3D (ícono de imagen) en la esquina superior derecha. */}
-              <button
-                style={estilos.btnFondoCircular}
-                onClick={() => setFondoModalAbierto(true)}
-                title="Cambiar o eliminar fondo de perfil"
-                aria-label="Cambiar o eliminar fondo de perfil"
-              >
-                <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
-                  <rect x="3" y="4" width="18" height="16" rx="2.5" fill="#FFFBEB" stroke="#000" strokeWidth="1.8" />
-                  <circle cx="9" cy="9.5" r="2" fill="#F5B041" stroke="#000" strokeWidth="1.2" />
-                  <path d="M3.8 18 L9.5 12.5 L13 16 L15.5 13.5 L20.2 18 Z" fill="#10B981" stroke="#000" strokeWidth="1.4" strokeLinejoin="round" />
-                </svg>
-              </button>
-
-              <div style={estilos.encabezadoFila}>
-                <div style={{ ...estilos.avatarWrap, width: TAM_ANILLO, height: TAM_ANILLO }}>
-                  {/* Centésimo cuarto pase: si el usuario tiene un fondo de
-                      perfil comprado, se ve también detrás del avatar (los
-                      personajes ilustrados tienen fondo transparente en el
-                      PNG, así que hasta ahora ahí se veía blanco liso). */}
-                  <div
-                    style={{
-                      ...estilos.avatarCirculo,
-                      position: 'absolute',
-                      left: (TAM_ANILLO - diamAvatar) / 2, top: (TAM_ANILLO - diamAvatar) / 2,
-                      width: diamAvatar, height: diamAvatar, border: 'none',
-                      // Pase 333: burbuja semitransparente (deja traslucir el banner), sin heredar su imagen.
-                      background: 'rgba(255,255,255,0.25)',
-                    }}
-                  >
-                    <img src={avatarSrcDe(usuario)} alt="Avatar" style={estilos.avatarImg} />
-                  </div>
-                  <img
-                    src={rangoAssets.anillo}
-                    alt=""
-                    style={{ position: 'absolute', left: 0, top: 0, width: TAM_ANILLO, height: TAM_ANILLO, pointerEvents: 'none' }}
-                  />
-                  {/* Centésimo cuadragésimo séptimo pase: el emoji 📷 se
-                      reemplaza por el ícono de cámara ilustrado. */}
+            {/* Pase 578: el marco/fondo del banner es la placa elegida (BannerPerfil); la foto comprada va dentro del marco. */}
+            <BannerPerfil bannerId={usuario?.banner_id} fondoUrl={usuario?.fondo_perfil_url} anchoMax={520}>
+              {({ altoUtil }) => (
+                <>
+                  {/* Pase 324: botón circular 3D (ícono de imagen) en la esquina superior derecha. */}
                   <button
-                    style={estilos.avatarBadge}
-                    onClick={() => onNavegar && onNavegar('config')}
-                    title="Cambiar foto o personaje"
-                  ><img src="/assets/images/icono-cambiar-foto.png" alt="" style={estilos.avatarBadgeIcono} /></button>
-                </div>
-              </div>
-
-            </div>
-            </div>
+                    style={estilos.btnFondoCircular}
+                    onClick={() => setFondoModalAbierto(true)}
+                    title="Cambiar o eliminar fondo de perfil"
+                    aria-label="Cambiar o eliminar fondo de perfil"
+                  >
+                    <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+                      <rect x="3" y="4" width="18" height="16" rx="2.5" fill="#FFFBEB" stroke="#000" strokeWidth="1.8" />
+                      <circle cx="9" cy="9.5" r="2" fill="#F5B041" stroke="#000" strokeWidth="1.2" />
+                      <path d="M3.8 18 L9.5 12.5 L13 16 L15.5 13.5 L20.2 18 Z" fill="#10B981" stroke="#000" strokeWidth="1.4" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+                  <AvatarAnillo
+                    tam={Math.max(60, Math.round(altoUtil * 0.92))}
+                    hueco={anilloSel.hueco}
+                    anilloImagen={anilloSel.imagen}
+                    fuente={avatarSrcDe(usuario)}
+                    fallback={`/assets/${usuario?.personaje || 'gaucho'}-avatar-cara.png`}
+                  >
+                    {/* Centésimo cuadragésimo séptimo pase: el emoji 📷 se reemplaza por el ícono de cámara ilustrado. */}
+                    <button
+                      style={estilos.avatarBadge}
+                      onClick={() => onNavegar && onNavegar('config')}
+                      title="Cambiar foto o personaje"
+                    ><img src="/assets/images/icono-cambiar-foto.png" alt="" style={estilos.avatarBadgeIcono} /></button>
+                  </AvatarAnillo>
+                </>
+              )}
+            </BannerPerfil>
 
             {/* Pase 330: nombre de usuario fuera del banner, en el pergamino limpio. */}
             <div style={estilos.cartelNombreFila}>

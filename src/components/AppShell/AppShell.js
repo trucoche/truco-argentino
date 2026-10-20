@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { API_URL as BASE_URL } from '../../config';
 import { rangoUi } from '../Perfil/rangosUi';
+import { resolverAnillo } from '../../constants/personalizacion';
 
 const API_URL = `${BASE_URL}/api/auth`;
 
@@ -40,6 +41,38 @@ const NAV_ITEMS = [
 // barra inferior (el CSS no depende de dónde esté en el DOM para eso);
 // en desktop se queda en flujo normal, como fila horizontal dentro del
 // header mismo, en vez de sidebar lateral.
+// Pase 578 (paridad con la app, Pase 525): anillo elegido por el jugador en el header. El panel del rango trae SU aro
+// dibujado; si eligió otro, se dibuja el elegido encima, centrado en el mismo disco y del mismo tamaño exterior
+// (D / hueco ≈ alto del panel, 234), y la foto se agranda lo justo para llenar el hueco del aro nuevo (nunca menos que
+// el hueco del aro del panel). Coordenadas sobre el panel de 492×234 (ver Perfil/rangosUi.js).
+function anilloEnHeader(usuario) {
+  const rUi = rangoUi(usuario && usuario.rango);
+  const sel = resolverAnillo(usuario && usuario.anillo_id, rUi);
+  if (sel.imagen === rUi.anillo) return { estiloDisco: rUi.discoEstilo, anillo: null };
+  const [cx, cy, D] = rUi.disco;
+  const O = Math.min(D / rUi.hueco, 234);
+  const d = Math.max(O * sel.hueco + 2.25, D - 5 + 2.25);
+  return {
+    estiloDisco: {
+      left: `${(((cx - d / 2) / 492) * 100).toFixed(2)}%`,
+      top: `${(((cy - d / 2) / 234) * 100).toFixed(2)}%`,
+      width: `${((d / 492) * 100).toFixed(2)}%`,
+      height: `${((d / 234) * 100).toFixed(2)}%`,
+    },
+    anillo: {
+      imagen: sel.imagen,
+      estilo: {
+        position: 'absolute',
+        left: `${(((cx - O / 2) / 492) * 100).toFixed(2)}%`,
+        top: `${(((cy - O / 2) / 234) * 100).toFixed(2)}%`,
+        width: `${((O / 492) * 100).toFixed(2)}%`,
+        height: `${((O / 234) * 100).toFixed(2)}%`,
+        pointerEvents: 'none',
+      },
+    },
+  };
+}
+
 export default function AppShell({
   usuario,
   token,
@@ -63,6 +96,9 @@ export default function AppShell({
   const [estadoReenvio, setEstadoReenvio] = useState('idle'); // 'idle' | 'enviando' | 'enviado' | 'error'
 
   const mostrarBannerVerificacion = usuario && usuario.email_verificado === false && !descartado;
+
+  // Pase 578: anillo elegido por el jugador (o el de su rango).
+  const anilloHeader = anilloEnHeader(usuario);
 
   const reenviarVerificacion = async () => {
     if (estadoReenvio === 'enviando') return;
@@ -114,7 +150,7 @@ export default function AppShell({
               }}
             >
               <img src={rangoUi(usuario?.rango).panel} alt="" className="ts-tarjeta-perfil-fondo" />
-              <div className="ts-tarjeta-perfil-avatar" style={rangoUi(usuario?.rango).discoEstilo}>
+              <div className="ts-tarjeta-perfil-avatar" style={anilloHeader.estiloDisco}>
                 <img
                   src={
                     usuario?.avatar_tipo === 'foto' && usuario?.foto_perfil_url
@@ -125,6 +161,7 @@ export default function AppShell({
                   className={usuario?.avatar_tipo === 'foto' && usuario?.foto_perfil_url ? 'ts-avatar-foto' : 'ts-avatar-personaje'}
                 />
               </div>
+              {anilloHeader.anillo && <img src={anilloHeader.anillo.imagen} alt="" style={anilloHeader.anillo.estilo} />}
               <div className="ts-tarjeta-perfil-nombre">{usuario?.username}</div>
               {/* Octogésimo octavo pase: el saldo se muestra siempre redondeado
                   a entero (pedido explícito del usuario) — defensivo del lado

@@ -28,6 +28,9 @@ export const MAZOS = [
   { id: 'tester', nombre: 'Beta Tester', dorso: BASE + '/cartas/tester/back.png', proporcionDorso: 400 / 552, ...KIT },
 ];
 
+// Pase 578: marco de madera SIN el tablón del medio (Pase 533 de la app). Con una foto de fondo propia, la foto va atrás de este marco.
+export const BANNER_MARCO_SIN_TABLON = BASE + '/banners/banner_marco.png';
+
 export const PERSONALIZACION_POR_DEFECTO = { anillo_id: 'rango', banner_id: 'base', mazo_id: 'base' };
 
 export const anilloPorId = (id) => ANILLOS.find(a => a.id === id) || ANILLOS[0];

@@ -2,6 +2,7 @@ import PopupMadera, { confirmarPopup, PlacaMadera } from '../Popup/PopupMadera';
 import React, { useState, useEffect, useCallback } from 'react';
 import PersonajeSelector from '../Lobby/PersonajeSelector';
 import ReportarModal from '../Reportar/ReportarModal';
+import SelectorPersonalizacion from '../Personalizacion/SelectorPersonalizacion';
 import { API_URL as BASE_URL } from '../../config';
 
 const API_URL = `${BASE_URL}/api/auth`;
@@ -519,6 +520,20 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
         </div>
       </PlacaMadera>
 
+      {/* Pase 578: anillo, banner y dorso de cartas (paridad con la app, Pase 524). */}
+      <PlacaMadera>
+        <div style={estilos.panelTitulo}>
+          <span aria-hidden="true">🎨</span>
+          Personalización
+        </div>
+        <SelectorPersonalizacion
+          usuario={usuario}
+          token={token}
+          recargarPerfil={onPersonajeCambiado}
+          onApoyar={() => setCafecitoAbierto(true)}
+        />
+      </PlacaMadera>
+
         </>
       )}
 
@@ -916,10 +931,10 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
           Ayudanos a mejorar
         </div>
         <p style={{ ...estilos.hintBaraja, marginTop: 0 }}>
-          ¿Algo no anda bien o tenés una idea? Contanos qué pasó y en qué pantalla: cuanto más detalle, más rápido lo arreglamos.
+          ¿Encontraste un error o se te ocurrió una idea? Contanoslo: cada reporte nos ayuda a pulir TrucoChe.
         </p>
         <button style={estilos.btnReportar} onClick={() => setReportarAbierto(true)}>
-          🐞 Reportar bug / sugerencia
+          Reportar bug / sugerencia
         </button>
       </PlacaMadera>
 
@@ -1120,10 +1135,11 @@ const estilos = {
     background: '#32CDC8', border: '2px solid #1E293B', borderRadius: 12, padding: '11px 16px', cursor: 'pointer',
     boxShadow: '0 2px 0 #1E293B', fontFamily: "'Fredoka', sans-serif",
   },
+  // Pase 577: botón verde del panel "Ayudanos a mejorar", igual que en la app (Pase 523).
   btnReportar: {
-    width: '100%', marginTop: 12, fontSize: 15, fontWeight: 800, color: C.chocolate,
-    background: `linear-gradient(180deg, ${C.doradoClaro}, ${C.dorado})`, border: `2px solid ${C.doradoOscuro}`, borderRadius: 12,
-    padding: '11px 16px', cursor: 'pointer', boxShadow: `0 2px 0 ${C.doradoOscuro}`, fontFamily: "'Fredoka', sans-serif",
+    width: '100%', marginTop: 12, fontSize: 15, fontWeight: 800, color: '#FFFFFF', textShadow: '0 1px 1px rgba(0,0,0,0.5)',
+    background: '#3FA34D', border: '2px solid #1E293B', borderRadius: 12, padding: '11px 16px', cursor: 'pointer',
+    boxShadow: '0 2px 0 #1E293B', fontFamily: "'Fredoka', sans-serif",
   },
   btnEliminarCuenta: {
     marginTop: 12, fontSize: 13, fontWeight: 800, color: '#fff', background: '#E8483A',

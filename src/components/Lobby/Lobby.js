@@ -538,10 +538,6 @@ useEffect(() => {
             <span style={estilos.socialBadge}><MontoMonedas monto={RECOMPENSA_SOCIAL_TOTAL} tam={16} /></span>
           </button>
 
-          {/* Pase 577: acceso rápido a "Reportar bug / sugerencia" (mismo formulario que Ajustes → Cuenta). */}
-          <button type="button" onClick={() => setReportarAbierto(true)} style={estilos.btnReportarLobby}>
-            🐞 Reportar bug / sugerencia
-          </button>
           <ReportarModal visible={reportarAbierto} onCerrar={() => setReportarAbierto(false)} token={token} pantalla="lobby" />
 
       {process.env.NODE_ENV === 'development' && (
@@ -559,7 +555,11 @@ useEffect(() => {
         <div style={estilos.zocaloExterior}>
           <div style={estilos.zocaloCabecera}>
             <span style={estilos.zocaloTitulo}>🎲 Salas disponibles</span>
-            <span style={{ display: 'flex', gap: 8 }}>
+            <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              {/* Pase 577: "Ayudanos a mejorar" (reportar bug / sugerencia) a mano desde el lobby, igual que en la app (Pase 564). */}
+              <button type="button" onClick={() => setReportarAbierto(true)} style={estilos.reporteChip} aria-label="Ayudanos a mejorar: reportar un error o dejar una sugerencia" title="Reportar bug / sugerencia">
+                <img src="/assets/images/icono-tester.png" alt="" style={estilos.reporteChipImg} />
+              </button>
               <button type="button" onClick={onBuscarPartidaActiva} style={estilos.zocaloBoton}>Mi partida</button>
               <button type="button" onClick={irACrearSala} style={estilos.zocaloBotonOro}>+ Crear sala</button>
             </span>
@@ -879,10 +879,8 @@ const CSS_LOBBY_COLUMNAS = `
 const CONTORNO_TEXTO = '-1.5px -1.5px 0 #000, 0 -1.5px 0 #000, 1.5px -1.5px 0 #000, -1.5px 0 0 #000, 1.5px 0 0 #000, -1.5px 1.5px 0 #000, 0 1.5px 0 #000, 1.5px 1.5px 0 #000';
 
 const estilos = {
-  btnReportarLobby: {
-    display: 'block', margin: '-6px auto 16px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 700,
-    color: '#FFF8ED', opacity: 0.8, textDecoration: 'underline', fontFamily: 'inherit', padding: '6px 10px',
-  },
+  reporteChip: { width: 38, height: 38, padding: 0, background: 'none', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  reporteChipImg: { width: 38, height: 38, objectFit: 'contain' },
   // ===== Pase 515: lobby compacto =====
   lobbyWeb: { maxWidth: 1200, margin: '0 auto', display: 'flex', flexDirection: 'column' },
   gridModulos: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))', gap: 14, marginBottom: 16 },
