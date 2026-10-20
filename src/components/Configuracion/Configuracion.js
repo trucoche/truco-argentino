@@ -1,6 +1,7 @@
 import PopupMadera, { confirmarPopup, PlacaMadera } from '../Popup/PopupMadera';
 import React, { useState, useEffect, useCallback } from 'react';
 import PersonajeSelector from '../Lobby/PersonajeSelector';
+import ReportarModal from '../Reportar/ReportarModal';
 import { API_URL as BASE_URL } from '../../config';
 
 const API_URL = `${BASE_URL}/api/auth`;
@@ -57,6 +58,7 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
   const [enviandoEliminacion, setEnviandoEliminacion] = useState(false);
   const [guardandoGenero, setGuardandoGenero] = useState(false);
   const [pestana, setPestana] = useState('perfil');   // Pase 539: Ajustes por pestañas
+  const [reportarAbierto, setReportarAbierto] = useState(false);   // Pase 577: Reportar bug / sugerencia
 
   // Pase 324: el selector de Género se mudó del Perfil a Ajustes (misma lógica).
   const cambiarGenero = async (nuevoGenero) => {
@@ -255,6 +257,45 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
       console.error('Error marcando denuncia como revisada:', err);
     } finally {
       setRevisando(null);
+    }
+  };
+
+  // ---------- Pase 577: reportes de bug / sugerencia (solo rol 'admin') ----------
+  const [reportesApp, setReportesApp] = useState([]);
+  const [cargandoReportes, setCargandoReportes] = useState(true);
+  const [revisandoReporte, setRevisandoReporte] = useState(null);
+
+  const cargarReportesApp = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/admin/reportes-app`, { headers: { 'Authorization': `Bearer ${token}` } });
+      const data = await res.json();
+      if (res.ok) setReportesApp(data.reportes || []);
+    } catch (err) {
+      console.error('Error cargando reportes de la app:', err);
+    } finally {
+      setCargandoReportes(false);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    if (esAdmin) cargarReportesApp();
+    else setCargandoReportes(false);
+  }, [esAdmin, cargarReportesApp]);
+
+  const marcarReporteRevisado = async (id) => {
+    setRevisandoReporte(id);
+    try {
+      const res = await fetch(`${API_BASE}/admin/reportes-app/${id}/revisar`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        setReportesApp(prev => prev.map(r => r.id === id ? { ...r, revisado: true, revisado_en: new Date().toISOString() } : r));
+      }
+    } catch (err) {
+      console.error('Error marcando reporte como revisado:', err);
+    } finally {
+      setRevisandoReporte(null);
     }
   };
 
@@ -732,6 +773,45 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
         </PlacaMadera>
       )}
 
+      {/* Pase 577: reportes de bug / sugerencia enviados desde la app y la web — solo rol 'admin'. */}
+      {esAdmin && (
+        <PlacaMadera>
+          <div style={estilos.panelTitulo}>🐞 Reportes de la app (administración)</div>
+          {cargandoReportes ? (
+            <p style={estilos.hintBaraja}>Cargando...</p>
+          ) : reportesApp.length === 0 ? (
+            <p style={estilos.hintBaraja}>No hay reportes.</p>
+          ) : (
+            <div style={estilos.listaDenuncias}>
+              {reportesApp.map((r) => (
+                <div key={r.id} style={{ ...estilos.filaDenuncia, ...(r.revisado ? estilos.filaDenunciaRevisada : {}) }}>
+                  <div style={estilos.denunciaTexto}>
+                    <strong>{r.username || 'cuenta eliminada'}</strong> · {r.tipo === 'sugerencia' ? '💡 Sugerencia' : '🐞 Error'}
+                    <div style={estilos.denunciaMotivo}>"{r.mensaje}"</div>
+                    <div style={estilos.denunciaFecha}>
+                      {new Date(r.creado_en).toLocaleString()}
+                      {[r.plataforma, r.version, r.pantalla].filter(Boolean).length > 0 && ` · ${[r.plataforma, r.version, r.pantalla].filter(Boolean).join(' · ')}`}
+                    </div>
+                    {r.dispositivo && <div style={estilos.denunciaFecha}>{r.dispositivo}</div>}
+                  </div>
+                  {r.revisado ? (
+                    <span style={estilos.badgeRevisada}>✓ Revisado</span>
+                  ) : (
+                    <button
+                      style={estilos.btnRevisar}
+                      disabled={revisandoReporte === r.id}
+                      onClick={() => marcarReporteRevisado(r.id)}
+                    >
+                      {revisandoReporte === r.id ? 'Marcando...' : 'Marcar revisado'}
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </PlacaMadera>
+      )}
+
       {/* Pase 563: sponsors de Cafecito — solo rol 'admin'. Buscar al donante, ver a quién encontró y otorgar. */}
       {esAdmin && (
         <PlacaMadera>
@@ -829,6 +909,20 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
         </button>
       </PlacaMadera>
 
+      {/* Pase 577: "Ayudanos a mejorar" — mismo panel que la app (Pase 523), entre "Sobre el proyecto" y "Mi cuenta". */}
+      <PlacaMadera>
+        <div style={estilos.panelTitulo}>
+          <span aria-hidden="true">🐞</span>
+          Ayudanos a mejorar
+        </div>
+        <p style={{ ...estilos.hintBaraja, marginTop: 0 }}>
+          ¿Algo no anda bien o tenés una idea? Contanos qué pasó y en qué pantalla: cuanto más detalle, más rápido lo arreglamos.
+        </p>
+        <button style={estilos.btnReportar} onClick={() => setReportarAbierto(true)}>
+          🐞 Reportar bug / sugerencia
+        </button>
+      </PlacaMadera>
+
       {/* Pase 311/312: "Mi cuenta" — acceso a eliminar la cuenta. Manda un mail
           de confirmación al email registrado; 30 días de arrepentimiento. */}
       <PlacaMadera>
@@ -850,6 +944,8 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
 
         </>
       )}
+
+      <ReportarModal visible={reportarAbierto} onCerrar={() => setReportarAbierto(false)} token={token} pantalla="ajustes" />
 
       {/* Pase 519: modal de agradecimiento; "Continuar" cierra y abre Cafecito (Capacitor Browser o pestaña nueva), "Volver" solo cierra. */}
       <PopupMadera
@@ -1023,6 +1119,11 @@ const estilos = {
     width: '100%', fontSize: 15, fontWeight: 800, color: '#FFFFFF', textShadow: '0 1px 1px rgba(30,41,59,0.6)',
     background: '#32CDC8', border: '2px solid #1E293B', borderRadius: 12, padding: '11px 16px', cursor: 'pointer',
     boxShadow: '0 2px 0 #1E293B', fontFamily: "'Fredoka', sans-serif",
+  },
+  btnReportar: {
+    width: '100%', marginTop: 12, fontSize: 15, fontWeight: 800, color: C.chocolate,
+    background: `linear-gradient(180deg, ${C.doradoClaro}, ${C.dorado})`, border: `2px solid ${C.doradoOscuro}`, borderRadius: 12,
+    padding: '11px 16px', cursor: 'pointer', boxShadow: `0 2px 0 ${C.doradoOscuro}`, fontFamily: "'Fredoka', sans-serif",
   },
   btnEliminarCuenta: {
     marginTop: 12, fontSize: 13, fontWeight: 800, color: '#fff', background: '#E8483A',

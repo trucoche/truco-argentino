@@ -4,6 +4,7 @@ import MonedaGirando from '../MonedaGirando';
 import PerfilRivalModal from '../PerfilRival/PerfilRivalModal';
 import PantallaCarga from '../PantallaCarga/PantallaCarga';
 import PopupMadera from '../Popup/PopupMadera';
+import ReportarModal from '../Reportar/ReportarModal';
 import { rangoUi } from '../Perfil/rangosUi';
 import { useToast } from '../../contexts/ToastContext';
 import { API_URL as BASE_URL } from '../../config';
@@ -169,6 +170,7 @@ export default function Lobby({ token, usuario, onPersonajeCambiado, onEntrarAPa
   const panelCrearSalaRef = useRef(null);
   // Pase 515: hoja abierta sobre el lobby ('sala' = Crear / Unirse, 'misiones', 'redes'), resumen de misiones y estado de "Mates Gratis".
   const [hoja, setHoja] = useState(null);
+  const [reportarAbierto, setReportarAbierto] = useState(false);   // Pase 577: Reportar bug / sugerencia desde el lobby
   const [resumenMisiones, setResumenMisiones] = useState(null);
   const [redesAbiertas, setRedesAbiertas] = useState({});
   const [reclamandoRed, setReclamandoRed] = useState(null);
@@ -536,6 +538,12 @@ useEffect(() => {
             <span style={estilos.socialBadge}><MontoMonedas monto={RECOMPENSA_SOCIAL_TOTAL} tam={16} /></span>
           </button>
 
+          {/* Pase 577: acceso rápido a "Reportar bug / sugerencia" (mismo formulario que Ajustes → Cuenta). */}
+          <button type="button" onClick={() => setReportarAbierto(true)} style={estilos.btnReportarLobby}>
+            🐞 Reportar bug / sugerencia
+          </button>
+          <ReportarModal visible={reportarAbierto} onCerrar={() => setReportarAbierto(false)} token={token} pantalla="lobby" />
+
       {process.env.NODE_ENV === 'development' && (
         <div style={{ ...estilos.panelSecundario, ...estilos.panelCompacto, ...estilos.panelPreviewDev, marginBottom: 0 }}>
           <div style={estilos.panelTitlePreviewDev}>🛠️ Preview de mesa (dev)</div>
@@ -871,6 +879,10 @@ const CSS_LOBBY_COLUMNAS = `
 const CONTORNO_TEXTO = '-1.5px -1.5px 0 #000, 0 -1.5px 0 #000, 1.5px -1.5px 0 #000, -1.5px 0 0 #000, 1.5px 0 0 #000, -1.5px 1.5px 0 #000, 0 1.5px 0 #000, 1.5px 1.5px 0 #000';
 
 const estilos = {
+  btnReportarLobby: {
+    display: 'block', margin: '-6px auto 16px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 700,
+    color: '#FFF8ED', opacity: 0.8, textDecoration: 'underline', fontFamily: 'inherit', padding: '6px 10px',
+  },
   // ===== Pase 515: lobby compacto =====
   lobbyWeb: { maxWidth: 1200, margin: '0 auto', display: 'flex', flexDirection: 'column' },
   gridModulos: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))', gap: 14, marginBottom: 16 },
