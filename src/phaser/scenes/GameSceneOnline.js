@@ -3,6 +3,7 @@ import { getSocket } from '../../services/socket';
 import { ANCHO_MAX_CSS } from '../config/gameConfigOnline';
 import { CARD_RANKS } from '../utils/constants';
 import { RANGOS_UI } from '../../components/Perfil/rangosUi';
+import { MAZOS } from '../../constants/personalizacion';
 
 // Decimotercer pase: bug de fondo detrás de "el dorso del rival sigue
 // borroso aunque Ctrl+Shift+R en Edge" — el navegador cachea las imágenes
@@ -4324,7 +4325,7 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
       // cartas según lo que les queda); la imagen derecha trae el logo TC derecho (sin espejar).
       const nAbanico = Math.min(cantidad, 3);
       const claveAbanico = ((esDos || esTres) && cantidad > 0)
-        ? (lado === 'arriba' ? `mazoAbanicoFrente_${nAbanico}` : `mazoAbanico_${(esDos || esTres) ? (lado === 'izq' ? 'der' : 'izq') : lado}_${nAbanico}`) : null;   // Pase 456/457: en 2v2 y 3v3 los sprites laterales van intercambiados (izquierda usa el PNG "der", derecha el "izq"); los ángulos no cambian (3v3: +7°/-7°)
+        ? (lado === 'arriba' ? this._claveAbanicoMazo(this._mazoIdDe(j.nombre), 'frente', nAbanico) : this._claveAbanicoMazo(this._mazoIdDe(j.nombre), (esDos || esTres) ? (lado === 'izq' ? 'der' : 'izq') : lado, nAbanico)) : null;   // Pase 579: cada jugador usa el abanico de SU mazo (mazo_id)   // Pase 456/457: en 2v2 y 3v3 los sprites laterales van intercambiados (izquierda usa el PNG "der", derecha el "izq"); los ángulos no cambian (3v3: +7°/-7°)
       if (claveAbanico && this.textures.exists(claveAbanico)) {
         const altoAbanico = (lado === 'arriba' ? 80 : 88) * kS * fD;   // Pase 448/449: también en 3v3 (con la escala -20% de los mazos); el de enfrente un poco más bajo para no pisar su placa
         const abanico = this.add.image(cx, cyN, claveAbanico).setOrigin(0.5, 0.5).setDepth(10);
@@ -4926,6 +4927,45 @@ _reproducirCanto(personaje, clave) {
   try { this.sound.play(key, { volume: this.vocesVolumen ?? 0.85 }); } catch (e) {}
 }
 
+// Pase 579 (paridad con la app, Pase 526): cada jugador muestra el abanico de SU mazo (mazo_id que llega en 'jugador-unido').
+// 'base' usa los abanicos de siempre (mazos-abanico/, cargados en preload); 'cafecito' y 'tester' se cargan recién cuando
+// aparece un jugador que los usa (9 PNG por mazo, public/assets/personalizacion-opt/cartas/<id>/abanico-<frente|izq|der>-<n>.png)
+// y, al terminar de cargar, se vuelve a dibujar la mesa. Mientras tanto (o si el archivo falla) se dibuja el abanico base.
+_mazoIdDe(nombre) {
+  const info = (this._jugadoresSala || []).find((s) => s.username === nombre);
+  const id = info && info.mazo_id;
+  return (id && id !== 'base' && MAZOS.some((m) => m.id === id)) ? id : 'base';
+}
+
+_claveAbanicoMazo(mazoId, tipo, n) {
+  const claveBase = tipo === 'frente' ? `mazoAbanicoFrente_${n}` : `mazoAbanico_${tipo}_${n}`;
+  if (!mazoId || mazoId === 'base') return claveBase;
+  const clave = `mazoAbanico_${mazoId}_${tipo}_${n}`;
+  if (this.textures.exists(clave)) return clave;
+  this._cargarAbanicosMazo(mazoId);
+  return claveBase;
+}
+
+_cargarAbanicosMazo(mazoId) {
+  if (!this._mazosAbanicoPedidos) this._mazosAbanicoPedidos = {};
+  if (this._mazosAbanicoPedidos[mazoId]) return;   // una sola vez por mazo (si falla, queda el base)
+  this._mazosAbanicoPedidos[mazoId] = true;
+  let hayAlgo = false;
+  ['frente', 'izq', 'der'].forEach((tipo) => [1, 2, 3].forEach((n) => {
+    const clave = `mazoAbanico_${mazoId}_${tipo}_${n}`;
+    if (this.textures.exists(clave)) return;
+    this.load.image(clave, conVersion(`assets/personalizacion-opt/cartas/${mazoId}/abanico-${tipo}-${n}.png`));
+    hayAlgo = true;
+  }));
+  if (!hayAlgo) return;
+  this.load.once('complete', () => {
+    try {
+      if (this.estado && this.sys && this.sys.isActive()) this._renderizarEstado(false);
+    } catch (e) { /* si la escena ya se cerró, no hay nada que redibujar */ }
+  });
+  if (!this.load.isLoading()) this.load.start();
+}
+
 _dibujarFilaDorso(cantidad, y) {
     // Decimoctavo pase: las cartas del rival se sentían "muy juntas y muy
     // centradas, rígidas" (feedback del usuario) — se aumentó el ángulo de
@@ -4941,7 +4981,7 @@ _dibujarFilaDorso(cantidad, y) {
     // que apoyen limpiamente contra ese borde en vez de quedar en el aire.
     const kR = this._L ? this._L.kRival : 1;   // Pase 394: cartas mas grandes en layout angosto
     // Pase 449: el mazo del rival de enfrente es una sola imagen en abanico (3, 2 o 1 cartas).
-    const claveFrente = `mazoAbanicoFrente_${Math.min(cantidad, 3)}`;
+    const claveFrente = this._claveAbanicoMazo(this._mazoIdDe(this._nombreRivalActual), 'frente', Math.min(cantidad, 3));   // Pase 579: abanico del mazo del rival (mazo_id)
     if (cantidad > 0 && this.textures.exists(claveFrente)) {
       const altoF = 116 * kR;
       const frente = this.add.image(400, y, claveFrente).setOrigin(0.5, 0.5).setDepth(10);
