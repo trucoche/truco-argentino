@@ -283,15 +283,18 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
     else setCargandoReportes(false);
   }, [esAdmin, cargarReportesApp]);
 
-  const marcarReporteRevisado = async (id) => {
+  // Pase 582: `mates` > 0 = además de marcarlo como revisado, se le regalan esos mates a quien reportó (una sola vez por reporte).
+  const marcarReporteRevisado = async (id, mates = 0) => {
     setRevisandoReporte(id);
     try {
       const res = await fetch(`${API_BASE}/admin/reportes-app/${id}/revisar`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recompensa: mates })
       });
       if (res.ok) {
-        setReportesApp(prev => prev.map(r => r.id === id ? { ...r, revisado: true, revisado_en: new Date().toISOString() } : r));
+        const data = await res.json().catch(() => ({}));
+        setReportesApp(prev => prev.map(r => r.id === id ? { ...r, revisado: true, revisado_en: r.revisado_en || new Date().toISOString(), recompensa: data.recompensa != null ? data.recompensa : r.recompensa } : r));
       }
     } catch (err) {
       console.error('Error marcando reporte como revisado:', err);
@@ -833,17 +836,45 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
                     </div>
                     {r.dispositivo && <div style={estilos.denunciaFecha}>{r.dispositivo}</div>}
                   </div>
-                  {r.revisado ? (
-                    <span style={estilos.badgeRevisada}>✓ Revisado</span>
-                  ) : (
-                    <button
-                      style={estilos.btnRevisar}
-                      disabled={revisandoReporte === r.id}
-                      onClick={() => marcarReporteRevisado(r.id)}
-                    >
-                      {revisandoReporte === r.id ? 'Marcando...' : 'Marcar revisado'}
-                    </button>
-                  )}
+                  <div style={estilos.accionesReporte}>
+                    {r.revisado && (
+                      <span style={estilos.badgeRevisada}>✓ Revisado{r.recompensa > 0 ? ` · +${r.recompensa} mates` : ''}</span>
+                    )}
+                    {!r.revisado && (
+                      <button
+                        style={estilos.btnRevisar}
+                        disabled={revisandoReporte === r.id}
+                        onClick={() => marcarReporteRevisado(r.id)}
+                      >
+                        {revisandoReporte === r.id ? 'Marcando...' : 'Marcar revisado'}
+                      </button>
+                    )}
+                    {/* Pase 582: premio por reportar. Solo si la cuenta existe y todavía no se la premió. */}
+                    {r.username && !(r.recompensa > 0) && (
+                      <div style={estilos.premiosReporte}>
+                        <span style={estilos.premiosLabel}>{r.revisado ? 'Premiar:' : 'Revisar y premiar:'}</span>
+                        {[10, 25, 50].map((m) => (
+                          <button
+                            key={m}
+                            style={estilos.btnPremio}
+                            disabled={revisandoReporte === r.id}
+                            onClick={async () => {
+                              const ok = await confirmarPopup({
+                                titulo: 'Premiar reporte',
+                                mensaje: `¿Regalarle ${m} mates a ${r.username} por este reporte? Se le va a avisar en el lobby.`,
+                                textoSi: `Regalar ${m} mates`,
+                                textoNo: 'Cancelar',
+                                tipoSi: 'dorado',
+                              });
+                              if (ok) marcarReporteRevisado(r.id, m);
+                            }}
+                          >
+                            +{m}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -1205,6 +1236,10 @@ const estilos = {
     flex: 1, width: '100%', boxSizing: 'border-box', fontSize: 14, fontWeight: 600, color: C.chocolate,
     background: '#fff', border: `2px solid ${C.chocolate}55`, borderRadius: 10, padding: '8px 10px', marginBottom: 8
   },
+  accionesReporte: { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 },
+  premiosReporte: { display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap', justifyContent: 'flex-end' },
+  premiosLabel: { fontWeight: 800, fontSize: 11, color: '#6B4A2E' },
+  btnPremio: { fontFamily: 'inherit', fontWeight: 800, fontSize: 12, color: '#4A2C2A', background: '#FFE9B0', border: '2px solid #C9860E', borderRadius: 999, padding: '3px 10px', cursor: 'pointer' },
   badgeRevisada: {
     fontSize: 11.5, fontWeight: 700, color: '#1f7a3c', background: '#d8f0da',
     borderRadius: 8, padding: '5px 8px', whiteSpace: 'nowrap', flexShrink: 0

@@ -242,22 +242,19 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
                 el anillo del avatar a la izquierda y la ficha circular de cambiar fondo arriba a la
                 derecha. El nombre vive debajo, sobre el pergamino de la tarjeta. */}
             {/* Pase 578: el marco/fondo del banner es la placa elegida (BannerPerfil); la foto comprada va dentro del marco. */}
+            {/* Pase 583: tocar el banner abre "Cambiar fondo" (antes había un botón circular en la esquina). */}
+            <div
+              role="button"
+              tabIndex={0}
+              style={estilos.bannerTocable}
+              onClick={() => setFondoModalAbierto(true)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setFondoModalAbierto(true); } }}
+              title="Cambiar o eliminar fondo de perfil"
+              aria-label="Cambiar o eliminar fondo de perfil"
+            >
             <BannerPerfil bannerId={usuario?.banner_id} fondoUrl={usuario?.fondo_perfil_url} anchoMax={520}>
               {({ altoUtil }) => (
                 <>
-                  {/* Pase 324: botón circular 3D (ícono de imagen) en la esquina superior derecha. */}
-                  <button
-                    style={estilos.btnFondoCircular}
-                    onClick={() => setFondoModalAbierto(true)}
-                    title="Cambiar o eliminar fondo de perfil"
-                    aria-label="Cambiar o eliminar fondo de perfil"
-                  >
-                    <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
-                      <rect x="3" y="4" width="18" height="16" rx="2.5" fill="#FFFBEB" stroke="#000" strokeWidth="1.8" />
-                      <circle cx="9" cy="9.5" r="2" fill="#F5B041" stroke="#000" strokeWidth="1.2" />
-                      <path d="M3.8 18 L9.5 12.5 L13 16 L15.5 13.5 L20.2 18 Z" fill="#10B981" stroke="#000" strokeWidth="1.4" strokeLinejoin="round" />
-                    </svg>
-                  </button>
                   <AvatarAnillo
                     tam={Math.max(60, Math.round(altoUtil * 0.92))}
                     hueco={anilloSel.hueco}
@@ -268,13 +265,15 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
                     {/* Centésimo cuadragésimo séptimo pase: el emoji 📷 se reemplaza por el ícono de cámara ilustrado. */}
                     <button
                       style={estilos.avatarBadge}
-                      onClick={() => onNavegar && onNavegar('config')}
+                      onClick={(e) => { e.stopPropagation(); if (onNavegar) onNavegar('config'); }}
                       title="Cambiar foto o personaje"
                     ><img src="/assets/images/icono-cambiar-foto.png" alt="" style={estilos.avatarBadgeIcono} /></button>
                   </AvatarAnillo>
                 </>
               )}
             </BannerPerfil>
+            </div>
+            <div style={estilos.pistaFondo}>Tocá el banner para cambiar tu fondo</div>
 
             {/* Pase 330: nombre de usuario fuera del banner, en el pergamino limpio. */}
             <div style={estilos.cartelNombreFila}>
@@ -508,12 +507,8 @@ const estilos = {
     background: '#E9D9B0', border: '1.5px solid #000', borderRadius: 999, padding: '3px 12px',
     fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 13, color: '#4A2C2A', whiteSpace: 'nowrap',
   },
-  // Pase 324: botón circular 3D del fondo + chip de monedas fijo + línea de nivel.
-  btnFondoCircular: {
-    position: 'absolute', top: 8, right: 8, zIndex: 2, width: 40, height: 40, borderRadius: '50%',
-    background: '#8B5A2B', border: '3px solid #000', boxShadow: '0 3px 0 #000',
-    display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0
-  },
+  bannerTocable: { alignSelf: 'stretch', cursor: 'pointer', width: '100%' },
+  pistaFondo: { fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 11, color: '#7a5a3a', textAlign: 'center', marginTop: 4 },
   // Pase 328: sin placa translúcida; el texto sobre el banner lleva sombra oscura.
   textoSobreFondo: { color: '#FFFBEB', textShadow: '-1.5px -1.5px 0 #2C160E, 1.5px -1.5px 0 #2C160E, -1.5px 1.5px 0 #2C160E, 1.5px 1.5px 0 #2C160E, 0px -1.5px 0 #2C160E, 0px 1.5px 0 #2C160E, -1.5px 0px 0 #2C160E, 1.5px 0px 0 #2C160E' },
   cartelNombre: {
