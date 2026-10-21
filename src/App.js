@@ -491,10 +491,23 @@ function AppInterna() {
     };
     socket.on('privado:mensaje-nuevo', alMensajePrivado);
 
+    // Pase 589: un admin suspendió esta cuenta mientras estaba conectada — se cierra la sesión y se vuelve al login
+    // (ahí, al intentar entrar, ve el motivo y hasta cuándo).
+    const alSuspenderse = (data) => {
+      localStorage.removeItem('truco_token');
+      localStorage.removeItem('truco_usuario');
+      setUsuario(null);
+      setToken(null);
+      setPantalla('auth');
+      window.alert(data?.error || 'Tu cuenta fue suspendida.');
+    };
+    socket.on('cuenta-suspendida', alSuspenderse);
+
     return () => {
       socket.off('connect', entrarAlChatGlobal);
       socket.off('chat-global:mensaje-nuevo', alRecibirMensaje);
       socket.off('privado:mensaje-nuevo', alMensajePrivado);
+      socket.off('cuenta-suspendida', alSuspenderse);
     };
   }, [token, usuario]);
 

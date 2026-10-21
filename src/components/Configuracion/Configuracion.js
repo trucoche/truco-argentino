@@ -316,6 +316,153 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
     }
   };
 
+  // ---------- Pase 589: suspensión de cuentas (solo rol 'admin') ----------
+  // Temporal (1/7/30 días) o permanente, con motivo. El jugador no puede entrar (ve el motivo) y si estaba conectado se
+  // lo saca al instante. Conserva sus mates. Las temporales se levantan solas.
+  const DURACIONES_SUSP = [
+    { value: '1', label: '1 día' }, { value: '7', label: '7 días' }, { value: '30', label: '30 días' }, { value: 'perm', label: 'Permanente' },
+  ];
+  const [suspendidos, setSuspendidos] = useState([]);
+  const [formSusp, setFormSusp] = useState(null); // { id, username } | null
+  const [suspDuracion, setSuspDuracion] = useState('7');
+  const [suspMotivo, setSuspMotivo] = useState('');
+  const [suspOcupado, setSuspOcupado] = useState(false);
+  const [suspAviso, setSuspAviso] = useState('');
+  const [suspBusqueda, setSuspBusqueda] = useState('');
+  const [suspResultado, setSuspResultado] = useState(null); // { usuario, sugerencias } | null
+
+  const cargarSuspendidos = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/admin/suspendidos`, { headers: { 'Authorization': `Bearer ${token}` } });
+      const data = await res.json();
+      if (res.ok) setSuspendidos(data.suspendidos || []);
+    } catch (err) {
+      console.error('Error cargando suspendidos:', err);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    if (esAdmin) cargarSuspendidos();
+  }, [esAdmin, cargarSuspendidos]);
+
+  const abrirFormSusp = (u) => {
+    setFormSusp({ id: u.id, username: u.username });
+    setSuspDuracion('7');
+    setSuspMotivo('');
+    setSuspAviso('');
+  };
+
+  const suspenderUsuario = async () => {
+    if (!formSusp || suspOcupado) return;
+    const motivo = suspMotivo.trim();
+    if (motivo.length < 3) { setSuspAviso('Escribí el motivo de la suspensión.'); return; }
+    const permanente = suspDuracion === 'perm';
+    const confirmado = await confirmarPopup({
+      titulo: 'Suspender cuenta',
+      cinta: 'roja',
+      mensaje: `¿Suspender a ${formSusp.username} ${permanente ? 'de forma PERMANENTE' : `por ${suspDuracion} día${suspDuracion === '1' ? '' : 's'}`}? No va a poder entrar y si está jugando se lo saca de la partida. Conserva sus mates.`,
+      textoSi: 'Suspender',
+      tipoSi: 'carmesi',
+    });
+    if (!confirmado) return;
+    setSuspOcupado(true);
+    setSuspAviso('');
+    try {
+      const res = await fetch(`${API_BASE}/admin/usuarios/${formSusp.id}/suspender`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(permanente ? { permanente: true, motivo } : { dias: parseInt(suspDuracion, 10), motivo })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setSuspAviso(`Listo: ${formSusp.username} quedó suspendido.`);
+        setFormSusp(null);
+        setSuspResultado(null);
+        setSuspBusqueda('');
+        cargarSuspendidos();
+      } else {
+        setSuspAviso(data.error || 'No se pudo suspender');
+      }
+    } catch (err) {
+      setSuspAviso('No se pudo suspender. Revisá la conexión.');
+    } finally {
+      setSuspOcupado(false);
+    }
+  };
+
+  const levantarSuspension = async (u) => {
+    const confirmado = await confirmarPopup({
+      titulo: 'Levantar suspensión',
+      mensaje: `¿Dejar entrar de nuevo a ${u.username}?`,
+      textoSi: 'Levantar',
+    });
+    if (!confirmado) return;
+    try {
+      const res = await fetch(`${API_BASE}/admin/usuarios/${u.id}/reactivar`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        setSuspAviso(`Se levantó la suspensión de ${u.username}.`);
+        cargarSuspendidos();
+      } else {
+        setSuspAviso('No se pudo levantar la suspensión.');
+      }
+    } catch (err) {
+      setSuspAviso('No se pudo levantar. Revisá la conexión.');
+    }
+  };
+
+  const buscarParaSuspender = async (texto) => {
+    const q = (texto ?? suspBusqueda).trim();
+    if (!q || suspOcupado) return;
+    setSuspOcupado(true);
+    setSuspAviso('');
+    try {
+      const res = await fetch(`${API_BASE}/admin/sponsors/buscar?q=${encodeURIComponent(q)}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (res.ok) setSuspResultado({ usuario: data.usuario || null, sugerencias: data.sugerencias || [] });
+      else setSuspAviso(data.error || 'No se pudo buscar');
+    } catch (err) {
+      setSuspAviso('No se pudo buscar. Revisá la conexión.');
+    } finally {
+      setSuspOcupado(false);
+    }
+  };
+
+  const estaSuspendido = (id) => suspendidos.some(x => x.id === id);
+
+  // Formulario compartido (duración + motivo) — se muestra debajo de la denuncia o del resultado de búsqueda.
+  const formularioSuspension = formSusp && (
+    <div style={estilos.formSuspension}>
+      <div style={estilos.denunciaTexto}>Suspender a <strong>{formSusp.username}</strong></div>
+      <select
+        id="susp-duracion"
+        style={estilos.inputSponsor}
+        value={suspDuracion}
+        onChange={(e) => setSuspDuracion(e.target.value)}
+      >
+        {DURACIONES_SUSP.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
+      </select>
+      <textarea
+        id="susp-motivo"
+        style={{ ...estilos.inputSponsor, minHeight: 60, resize: 'vertical', fontFamily: 'inherit' }}
+        placeholder="Motivo (lo va a ver el jugador)"
+        value={suspMotivo}
+        maxLength={300}
+        onChange={(e) => setSuspMotivo(e.target.value)}
+      />
+      <div style={estilos.filaBusquedaSponsor}>
+        <button style={estilos.btnRevisar} disabled={suspOcupado} onClick={() => setFormSusp(null)}>Cancelar</button>
+        <button style={estilos.btnRevisar} disabled={suspOcupado || suspMotivo.trim().length < 3} onClick={suspenderUsuario}>
+          {suspOcupado ? 'Suspendiendo...' : 'Suspender'}
+        </button>
+      </div>
+    </div>
+  );
+
   // ---------- Pase 563: sponsors de Cafecito (solo rol 'admin') ----------
   // Cuando llega una donación, el donante escribió en el mensaje su ID o su usuario: se busca acá, se ve a
   // quién encontró y recién entonces se otorga (anillo + banner + dorso 'Sponsor Criollo').
@@ -804,7 +951,8 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
           ) : (
             <div style={estilos.listaDenuncias}>
               {denuncias.map((d) => (
-                <div key={d.id} style={{ ...estilos.filaDenuncia, ...(d.revisado ? estilos.filaDenunciaRevisada : {}) }}>
+                <React.Fragment key={d.id}>
+                <div style={{ ...estilos.filaDenuncia, ...(d.revisado ? estilos.filaDenunciaRevisada : {}) }}>
                   <div style={estilos.denunciaTexto}>
                     <strong>{d.denunciante}</strong> denunció a <strong>{d.denunciado}</strong>
                     <div style={estilos.denunciaMotivo}>"{d.motivo}"</div>
@@ -821,7 +969,15 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
                       {revisando === d.id ? 'Marcando...' : 'Marcar revisada'}
                     </button>
                   )}
+                  {d.denunciado_id != null && !estaSuspendido(d.denunciado_id) && (!formSusp || formSusp.id !== d.denunciado_id) && (
+                    <button style={estilos.btnRevisar} onClick={() => abrirFormSusp({ id: d.denunciado_id, username: d.denunciado })}>
+                      Suspender
+                    </button>
+                  )}
+                  {d.denunciado_id != null && estaSuspendido(d.denunciado_id) && <span style={estilos.badgeRevisada}>⛔ Suspendido</span>}
                 </div>
+                {formSusp && d.denunciado_id === formSusp.id && formularioSuspension}
+                </React.Fragment>
               ))}
             </div>
           )}
@@ -891,6 +1047,79 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
                       </div>
                     )}
                   </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </PlacaMadera>
+      )}
+
+      {/* Pase 589: suspensión de cuentas — solo rol 'admin'. Suspender por nombre/ID y ver/levantar las vigentes. */}
+      {esAdmin && (
+        <PlacaMadera>
+          <div style={estilos.panelTitulo}>⛔ Suspensiones (administración)</div>
+          <p style={estilos.hintBaraja}>Para suspender a alguien que no está en las denuncias, buscalo por ID o nombre de usuario exacto.</p>
+          <div style={estilos.filaBusquedaSponsor}>
+            <input
+              id="susp-busqueda"
+              style={estilos.inputSponsor}
+              type="text"
+              placeholder="ID o nombre de usuario"
+              value={suspBusqueda}
+              maxLength={50}
+              onChange={(e) => { setSuspBusqueda(e.target.value); setSuspResultado(null); setFormSusp(null); }}
+              onKeyDown={(e) => { if (e.key === 'Enter') buscarParaSuspender(); }}
+            />
+            <button style={estilos.btnRevisar} disabled={suspOcupado || !suspBusqueda.trim()} onClick={() => buscarParaSuspender()}>
+              Buscar
+            </button>
+          </div>
+
+          {suspResultado && suspResultado.usuario && (
+            <>
+              <div style={estilos.filaDenuncia}>
+                <div style={estilos.denunciaTexto}>
+                  Encontrado: <strong>{suspResultado.usuario.username}</strong> (ID {suspResultado.usuario.id})
+                  {estaSuspendido(suspResultado.usuario.id) && <div style={estilos.denunciaFecha}>⛔ Ya está suspendido.</div>}
+                </div>
+                {!estaSuspendido(suspResultado.usuario.id) && (!formSusp || formSusp.id !== suspResultado.usuario.id) && (
+                  <button style={estilos.btnRevisar} onClick={() => abrirFormSusp(suspResultado.usuario)}>Suspender</button>
+                )}
+              </div>
+              {formSusp && formSusp.id === suspResultado.usuario.id && formularioSuspension}
+            </>
+          )}
+          {suspResultado && !suspResultado.usuario && (
+            <div>
+              <p style={estilos.hintBaraja}>No hay ningún usuario con ese ID o nombre exacto.</p>
+              {suspResultado.sugerencias.length > 0 && (
+                <div style={estilos.listaDenuncias}>
+                  {suspResultado.sugerencias.map(u => (
+                    <div key={u.id} style={estilos.filaDenuncia}>
+                      <div style={estilos.denunciaTexto}>¿Será <strong>{u.username}</strong>? (ID {u.id})</div>
+                      <button style={estilos.btnRevisar} onClick={() => { setSuspBusqueda(u.username); buscarParaSuspender(u.username); }}>
+                        Elegir
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          {suspAviso && <p style={estilos.hintBaraja}>{suspAviso}</p>}
+
+          <div style={{ ...estilos.panelTitulo, marginTop: 14 }}>Cuentas suspendidas ({suspendidos.length})</div>
+          {suspendidos.length === 0 ? (
+            <p style={estilos.hintBaraja}>No hay cuentas suspendidas.</p>
+          ) : (
+            <div style={estilos.listaDenuncias}>
+              {suspendidos.map(u => (
+                <div key={u.id} style={estilos.filaDenuncia}>
+                  <div style={estilos.denunciaTexto}>
+                    <strong>{u.username}</strong> (ID {u.id}) · {u.suspension_permanente ? '⛔ Permanente' : `⏳ Hasta ${u.suspendido_hasta ? new Date(u.suspendido_hasta).toLocaleString() : '—'}`}
+                    {u.suspension_motivo && <div style={estilos.denunciaMotivo}>"{u.suspension_motivo}"</div>}
+                  </div>
+                  <button style={estilos.btnRevisar} onClick={() => levantarSuspension(u)}>Levantar</button>
                 </div>
               ))}
             </div>
@@ -1247,6 +1476,7 @@ const estilos = {
     border: `2px solid ${C.chocolate}`, borderRadius: 8, padding: '6px 10px', cursor: 'pointer',
     whiteSpace: 'nowrap', flexShrink: 0
   },
+  formSuspension: { display: 'flex', flexDirection: 'column', gap: 8, margin: '6px 0 4px', padding: 10, borderRadius: 10, border: '2px solid #B9770E', background: 'rgba(255,255,255,0.35)' },
   filaBusquedaSponsor: { display: 'flex', gap: 8, alignItems: 'center', margin: '10px 0 8px' },
   inputSponsor: {
     flex: 1, width: '100%', boxSizing: 'border-box', fontSize: 14, fontWeight: 600, color: C.chocolate,
