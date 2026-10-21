@@ -327,11 +327,12 @@
   position: absolute;
   inset: -12px;
   border-radius: 50%;
+  /* Pase 586: resplandor dorado cálido (antes rojo; desentonaba con la caja amarilla). Mismo criterio que la app. */
   background: radial-gradient(circle at center,
-    rgba(232, 72, 58, 0.6) 0%,
-    rgba(232, 72, 58, 0.5) 48%,
-    rgba(232, 72, 58, 0.24) 66%,
-    rgba(232, 72, 58, 0) 100%);
+    rgba(255, 229, 138, 0.7) 0%,
+    rgba(255, 182, 46, 0.5) 48%,
+    rgba(255, 182, 46, 0.24) 66%,
+    rgba(255, 182, 46, 0) 100%);
   pointer-events: none;
   z-index: 0;
 }
