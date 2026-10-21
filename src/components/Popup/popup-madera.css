@@ -195,7 +195,8 @@
 /* Pase 519: celeste/turquesa de Cafecito. */
 .pm-boton.celeste { --pm-fondo: #32CDC8; --pm-relieve: #1B8A86; }
 /* Secundario / Cancelar: pergamino con texto café oscuro. */
-.pm-boton.neutro  { --pm-fondo: #FFFBEB; --pm-relieve: #A8977A; --pm-texto: #4A2C11; -webkit-text-stroke: 0; }
+/* Pase 587: antes #FFFBEB (igual al interior del panel: el botón parecía transparente) → pergamino tostado sólido, igual que en la app. */
+.pm-boton.neutro  { --pm-fondo: #E6CB93; --pm-relieve: #A8854A; --pm-texto: #3B1F0E; -webkit-text-stroke: 0; }
 /* Inactivo: gris rústico opaco, mismo contorno y relieve planos, sin brillo. */
 .pm-boton:disabled {
   --pm-fondo: #C9C2B8; --pm-relieve: #9A9288; --pm-borde: #6E665E; --pm-texto: #6E665E;
