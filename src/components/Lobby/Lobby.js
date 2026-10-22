@@ -472,10 +472,10 @@ useEffect(() => {
             </button>
             </div>
           </div>
-          <button type="button" onClick={() => setHoja('misiones')} aria-label="Misiones semanales" style={{ ...estilos.tarjetaModulo, ...estilos.fondoMisiones }}>
+          <button type="button" onClick={() => setHoja('misiones')} aria-label="Misiones semanales" style={{ ...estilos.tarjetaModulo, ...estilos.fondoMisiones, ...estilos.tarjetaColumna, height: 'auto', minHeight: 150 }}>
             <span style={estilos.tarjetaBisel} aria-hidden="true" />
-            <img src="/assets/images/icono-desafios.png" alt="" style={estilos.tarjetaIcono} />
-            <span style={estilos.tarjetaTextos}>
+            <img src="/assets/images/icono-desafios.png" alt="" style={estilos.tarjetaIconoColumna} />
+            <span style={estilos.tarjetaTextosCentro}>
               <span style={{ ...estilos.tarjetaTitulo, color: '#3B1F0E' }}>Misiones semanales</span>
               <span style={{ ...estilos.tarjetaSub, color: '#6B4A34' }}>Reclamá mates</span>
               <span style={estilos.misionesBarraFila}>
@@ -488,24 +488,22 @@ useEffect(() => {
           </button>
           </div>
           <div className="lobby3-col">
-          <button type="button" onClick={() => setHoja('sala')} aria-label="Crear o unirse a una sala" style={{ ...estilos.tarjetaModulo, ...estilos.fondoCrear, ...estilos.tarjetaFlex }}>
+          <button type="button" onClick={() => setHoja('sala')} aria-label="Crear o unirse a una sala" style={{ ...estilos.tarjetaModulo, ...estilos.fondoCrear, ...estilos.tarjetaFlex, ...estilos.tarjetaColumna }}>
             <span style={estilos.tarjetaBisel} aria-hidden="true" />
-            <img src="/assets/images/icono-crear-sala.png" alt="" style={{ ...estilos.tarjetaIconoGrande, transform: 'rotate(5deg)' }} />
-            <span style={estilos.tarjetaTextos}>
+            <img src="/assets/images/icono-crear-sala.png" alt="" style={{ ...estilos.tarjetaIconoColumna, transform: 'rotate(5deg)' }} />
+            <span style={estilos.tarjetaTextosCentro}>
               <span style={estilos.tarjetaTitulo}>Crear / Unirse</span>
               <span style={estilos.tarjetaSub}>A una sala</span>
             </span>
-            <span style={{ ...estilos.etiquetaTarjeta, background: 'rgba(240,217,160,0.18)' }}>Mesas con Clave</span>
           </button>
           {onIrAnotador && (
-            <button type="button" onClick={onIrAnotador} aria-label="Abrir el Anotador Criollo" style={{ ...estilos.tarjetaModulo, ...estilos.fondoAnotador, ...estilos.tarjetaFlex }}>
+            <button type="button" onClick={onIrAnotador} aria-label="Abrir el Anotador Criollo" style={{ ...estilos.tarjetaModulo, ...estilos.fondoAnotador, ...estilos.tarjetaFlex, ...estilos.tarjetaColumna }}>
               <span style={estilos.tarjetaBisel} aria-hidden="true" />
-              <img src="/assets/images/icono-anotador.png" alt="" style={estilos.tarjetaIconoGrande} />
-              <span style={estilos.tarjetaTextos}>
+              <img src="/assets/images/icono-anotador.png" alt="" style={estilos.tarjetaIconoColumna} />
+              <span style={estilos.tarjetaTextosCentro}>
                 <span style={estilos.tarjetaTitulo}>Anotador Criollo</span>
                 <span style={estilos.tarjetaSub}>Sin conexión</span>
               </span>
-              <span style={{ ...estilos.etiquetaTarjeta, background: 'rgba(200,225,190,0.2)' }}>Modo Off-line / Mesa Real</span>
             </button>
           )}
           </div>
@@ -891,6 +889,10 @@ const estilos = {
   },
   // Pase 531: en las columnas laterales las tarjetas se estiran para igualar el alto de la columna central.
   tarjetaFlex: { height: 'auto', minHeight: 104, flex: 1 },
+  // Pase 603 (paridad con el nativo, Pase 592): Misiones / Crear-Unirse / Anotador con el ícono ARRIBA y los textos ABAJO, centrados.
+  tarjetaColumna: { flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', gap: 6, padding: '12px 14px' },
+  tarjetaIconoColumna: { width: 68, height: 68, objectFit: 'contain', flex: '0 0 auto' },
+  tarjetaTextosCentro: { display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 3, minWidth: 0, width: '100%', flex: '0 0 auto' },
   tarjetaBisel: { position: 'absolute', inset: 2, borderRadius: 13, border: '1.2px solid rgba(212,175,55,0.5)', pointerEvents: 'none' },
   tarjetaIcono: { width: 56, height: 56, objectFit: 'contain', flex: '0 0 auto' },
   tarjetaIconoGrande: { width: 60, height: 60, objectFit: 'contain', flex: '0 0 auto', marginBottom: 14 },
