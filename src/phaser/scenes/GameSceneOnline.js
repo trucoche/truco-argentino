@@ -3447,6 +3447,14 @@ _renderizarEstado(animarReparto) {
       (!!e.flor.nivel && !e.flor.resuelto) ||
       !!e.declaracionEnvido;   // Pase 414: tambien durante la declaracion del envido ("Tengo N" / "Son buenas")
 
+    // Pase 600 (paridad con la app): de quién es el RELOJ. Con un canto pendiente (truco / envido / flor) el servidor lo corre
+    // para quien DEBE RESPONDER, no para quien tiene el turno de jugar carta (`e.turno`). Antes, si yo cantaba truco en mi
+    // turno, el anillo y el "Tu turno" se quedaban de mi lado en vez de pasar al rival.
+    const hayCantoParaResponder = !!(e.truco.pendienteDeRespuesta || (e.envido && e.envido.pendienteDeRespuesta) || (e.flor && e.flor.pendienteDeRespuesta));
+    const hayCantoPendiente = (!!e.truco.nivel && !e.truco.resuelto) || (!!e.envido.tipo && !e.envido.resuelto) || (!!e.flor.nivel && !e.flor.resuelto);
+    const relojEsDelRival = hayCantoPendiente && !hayCantoParaResponder;
+    const relojEsMio = hayCantoParaResponder || (e.turno === 'mio' && !relojEsDelRival);
+
     // Pase siguiente (placa doble): cada lado tiene su propia placa/texto
     // ahora (antes un solo "N - N" combinado en `scoreText`) — cada
     // número, solo, casi nunca llega a 2 cifras muy seguido (el truco se
@@ -3457,7 +3465,7 @@ _renderizarEstado(animarReparto) {
     this._notificarPuntos(e.scores.yo, e.scores.rival);
     this.miManoTexto.setText(e.esMano ? 'Sos mano' : '');
     if (this.manoIconoPropio) this.manoIconoPropio.setVisible(!!e.esMano);
-    this.turnoText.setText((e.turno === 'mio' && !Array.isArray(e.companeros)) ? '● Tu turno' : '');   // Pase 445: en equipos lo reemplaza mi placa
+    this.turnoText.setText((relojEsMio && !Array.isArray(e.companeros)) ? '● Tu turno' : '');   // Pase 445: en equipos lo reemplaza mi placa
     // Pase siguiente: anillo del propio turno — mismo mecanismo que el
     // del rival, pero alrededor de "● Tu turno" (que ya vive justo
     // arriba de "Sos mano"/el ícono de mano propia, a pedido del
@@ -3465,7 +3473,7 @@ _renderizarEstado(animarReparto) {
     // depende de esModoEquipos). Antes no había NINGÚN indicador de
     // tiempo para el turno propio en la web — solo el número ⏱ arriba,
     // lejos de las cartas.
-    if (e.turno === 'mio' && !Array.isArray(e.companeros)) {
+    if (relojEsMio && !Array.isArray(e.companeros)) {
       const padX = 6, padY = 3;
       this._anilloRect = {
         x: this.turnoText.x - this.turnoText.width / 2 - padX,
@@ -3487,7 +3495,7 @@ _renderizarEstado(animarReparto) {
     // persona (ambos pensados para "un solo rival", no para un equipo).
     this.labelRival.setVisible(!esModoEquipos);
     if (this.nombreRivalAngosto && esModoEquipos) this.nombreRivalAngosto.setVisible(false);
-    if (this.manoIconoRival) this.manoIconoRival.setVisible(!esModoEquipos);
+    if (this.manoIconoRival) this.manoIconoRival.setVisible(false);   // Pase 599: se saca el ícono de turno del rival (ya está el anillo de tiempo); queda solo como ancla de la medalla de mano
     // Pase 580: en 1v1, medalla de "Mano" junto al ícono del rival cuando el rival es mano (yo no).
     if (this.medallaManoRival) { this._posicionarMedallaRival(); this.medallaManoRival.setVisible(!esModoEquipos && !e.esMano); }
 
@@ -3508,7 +3516,7 @@ _renderizarEstado(animarReparto) {
     // su creación (ver más arriba). El indicador de turno sigue existiendo
     // (ahora solo vía el ícono `manoIconoRival`: dorado+pulso cuando es su
     // turno, gris quieto cuando no).
-    const esTurnoRival = !esModoEquipos && e.turno !== 'mio';
+    const esTurnoRival = !esModoEquipos && !relojEsMio;   // Pase 600: es el reloj del rival cuando NO es el mío (incluye cuando yo canté y él tiene que responder)
     if (esTurnoRival !== this._rivalTurnoEncendido) {
       this._rivalTurnoEncendido = esTurnoRival;
       if (this.manoIconoRival) {
@@ -4948,7 +4956,7 @@ _posicionarMedallaRival() {
   const m = this.medallaManoRival;
   if (!ic || !ic.scene || !m || !m.scene) return;
   const kpH = ic.displayWidth / 17 || 1;
-  m.setDisplaySize(18 * kpH, 18 * kpH).setPosition(ic.x + 21 * kpH, ic.y);
+  m.setDisplaySize(18 * kpH, 18 * kpH).setPosition(ic.x + 2 * kpH, ic.y);   // Pase 599: el ícono de turno ya no se ve, la medalla ocupa su lugar
 }
 
 _mazoIdDe(nombre) {
@@ -5536,22 +5544,26 @@ _calcularPerspectiva(y) {
   _dibujarBotonRustico(g, w, h, v, simple = false) {
     const P = VARIANTES_RUSTICAS[v];
     const OUT = 0x2c160e;
-    const d = simple ? Math.max(2, h * P.prof * 0.5) : Math.max(3, h * P.prof);      // alto del canto inferior (extrusión); Pase 412: a la mitad en los botones de la pantalla final
+    // Pase 599 (paridad con la app, Pase 590): botones PLANOS — sin canto inferior ni sombra dura (se veía como una segunda capa debajo).
+    const PLANO = true;
+    const d = PLANO ? 0 : (simple ? Math.max(2, h * P.prof * 0.5) : Math.max(3, h * P.prof));      // alto del canto inferior (extrusión); Pase 412: a la mitad en los botones de la pantalla final
     const hb = h - d;                        // alto de la cara frontal
     const R = Math.min(h * 0.24, 11);
     const top = -h / 2;
     const b = Math.max(3, h * 0.13);         // grosor del marco de madera
     // sombra dura de apoyo
-    if (!simple) {
+    if (!simple && !PLANO) {
       g.fillStyle(0x000000, 0.35);
       g.fillRoundedRect(-w / 2 + 1, top + d + 2, w, hb, R);
     }
     // canto (extrusión) en tono más oscuro que el marco
-    g.fillStyle(OUT, 1);
-    g.fillRoundedRect(-w / 2, top + d, w, hb, R);
-    if (!simple) {
-      g.fillStyle(P.marco, 1);
-      g.fillRoundedRect(-w / 2 + 1, top + d - 1, w - 2, hb - 1, R);
+    if (!PLANO) {
+      g.fillStyle(OUT, 1);
+      g.fillRoundedRect(-w / 2, top + d, w, hb, R);
+      if (!simple) {
+        g.fillStyle(P.marco, 1);
+        g.fillRoundedRect(-w / 2 + 1, top + d - 1, w - 2, hb - 1, R);
+      }
     }
     // cara frontal: marco + luz de bisel arriba
     g.fillStyle(P.marco, 1);
