@@ -322,6 +322,23 @@ export default function ChatGlobal({ token, usuario, abrirSolicitudesSenial }) {
     };
   }, [token, usuario]);
 
+  // Pase 594: (solo admin) borra todos los mensajes de UN usuario del Chat Global.
+  const borrarMensajesDeUsuario = async (nombre) => {
+    if (!window.confirm(`¿Borrar todos los mensajes que escribió ${nombre} en el Chat Global? Se borran para todos y no se puede deshacer.`)) return;
+    try {
+      const res = await fetch(`${BASE_URL}/api/admin/chat-global`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ usuario: nombre }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) mostrarToast(`Se borraron ${data.borrados ?? 0} mensajes de ${nombre}.`, 'exito');
+      else mostrarToast(data.error || 'No se pudo borrar.', 'error');
+    } catch (_) {
+      mostrarToast('No se pudo conectar con el servidor.', 'error');
+    }
+  };
+
   // Pase 593: botón "Limpiar" (solo rol admin) — borra todos los mensajes del Chat Global, para todos.
   const limpiarChatAdmin = async () => {
     if (!window.confirm('¿Borrar TODOS los mensajes del Chat Global? Se borran para todos los jugadores y no se puede deshacer.')) return;
@@ -710,6 +727,11 @@ export default function ChatGlobal({ token, usuario, abrirSolicitudesSenial }) {
                           {m.usuario}
                         </span>
                         <span style={estilos.hora}>{horaCorta(m.timestamp)}</span>
+                        {usuario?.rol === 'admin' && (
+                          <span style={estilos.borrarDeUsuario} onClick={() => borrarMensajesDeUsuario(m.usuario)} title={`Borrar todos los mensajes de ${m.usuario}`}>
+                            borrar sus msjs
+                          </span>
+                        )}
                       </div>
                     )}
                     <div style={estilos.textoMensaje}>{m.texto}</div>
@@ -1331,6 +1353,7 @@ const estilos = {
     borderRadius: 5, padding: '1.5px 5px', letterSpacing: 0.3,
   },
   hora: { fontSize: 10.5, color: '#a09085', marginLeft: 2 },
+  borrarDeUsuario: { fontSize: 10, color: '#B3402F', marginLeft: 8, textDecoration: 'underline', cursor: 'pointer' },
   textoMensaje: { fontSize: 15, color: C.chocolate, lineHeight: 1.4, wordBreak: 'break-word' },
   // Ducentésimo quincuagésimo primer pase: casi invisible antes
   // (`C.doradoOscuro` sobre el degradé dorado claro de `burbujaPropia` —
