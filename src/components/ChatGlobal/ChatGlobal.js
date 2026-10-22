@@ -300,17 +300,44 @@ export default function ChatGlobal({ token, usuario, abrirSolicitudesSenial }) {
     const alActualizarOnline = (lista) => {
       setUsuariosOnline(lista);
     };
+    // Pase 593: un admin limpió el chat → se vacía la lista en vivo (si fue de un solo usuario, se recarga el historial).
+    const alLimpiarChat = (info) => {
+      if (!info || !info.usuarioId) { setMensajes([]); return; }
+      fetch(`${API_URL}/historial`, { headers: { Authorization: `Bearer ${token}` } })
+        .then((res) => res.json())
+        .then((data) => { if (Array.isArray(data)) setMensajes(data); })
+        .catch(() => {});
+    };
 
     socket.on('chat-global:mensaje-nuevo', alRecibirMensaje);
     socket.on('chat-global:usuarios-online', alActualizarOnline);
+    socket.on('chat-global:limpiado', alLimpiarChat);
 
     return () => {
       activo = false;
       socket.off('connect', entrarAlChatGlobal);
       socket.off('chat-global:mensaje-nuevo', alRecibirMensaje);
       socket.off('chat-global:usuarios-online', alActualizarOnline);
+      socket.off('chat-global:limpiado', alLimpiarChat);
     };
   }, [token, usuario]);
+
+  // Pase 593: botón "Limpiar" (solo rol admin) — borra todos los mensajes del Chat Global, para todos.
+  const limpiarChatAdmin = async () => {
+    if (!window.confirm('¿Borrar TODOS los mensajes del Chat Global? Se borran para todos los jugadores y no se puede deshacer.')) return;
+    try {
+      const res = await fetch(`${BASE_URL}/api/admin/chat-global`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setMensajes([]);
+        mostrarToast(`Chat limpio (${data.borrados ?? 0} mensajes borrados).`, 'exito');
+      } else {
+        mostrarToast(data.error || 'No se pudo limpiar el chat.', 'error');
+      }
+    } catch (_) {
+      mostrarToast('No se pudo conectar con el servidor.', 'error');
+    }
+  };
 
   // Pase siguiente: carga las solicitudes de amistad pendientes recibidas
   // (no va por socket — no es tan urgente como los mensajes).
@@ -572,6 +599,12 @@ export default function ChatGlobal({ token, usuario, abrirSolicitudesSenial }) {
             </button>
           ))}
         </div>
+
+        {usuario?.rol === 'admin' && (
+          <button style={estilos.botonLimpiarChat} onClick={limpiarChatAdmin} title="Borrar todos los mensajes del chat (solo administrador)">
+            Limpiar
+          </button>
+        )}
 
         <button
           className="cg-boton-usuarios"
@@ -1155,6 +1188,10 @@ const estilos = {
     background: 'transparent', border: 'none', borderRadius: 9, padding: '7px 14px', cursor: 'pointer',
   },
   headerTabActivo: { background: C.dorado, color: C.chocolate, boxShadow: '0 2px 0 rgba(0,0,0,0.2)' },
+  botonLimpiarChat: {
+    background: '#B3402F', color: '#FFF8E7', border: `2px solid ${C.chocolate}`, borderRadius: 10,
+    padding: '6px 12px', fontWeight: 700, fontSize: 13, cursor: 'pointer',
+  },
   botonUsuariosMobile: {
     alignItems: 'center', gap: 6,
     fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 13, color: C.chocolate,
