@@ -432,6 +432,35 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
     }
   };
 
+  // Historial de suspensiones de un jugador (se pide al tocar "Historial"; tocar de nuevo lo oculta).
+  const [historialDe, setHistorialDe] = useState(null); // { id, items: array | null } | null
+  const verHistorial = async (id) => {
+    if (historialDe && historialDe.id === id) { setHistorialDe(null); return; }
+    setHistorialDe({ id, items: null });
+    try {
+      const res = await fetch(`${API_BASE}/admin/usuarios/${id}/suspensiones`, { headers: { 'Authorization': `Bearer ${token}` } });
+      const data = await res.json().catch(() => ({}));
+      setHistorialDe({ id, items: res.ok ? (data.historial || []) : [] });
+    } catch (err) {
+      setHistorialDe({ id, items: [] });
+    }
+  };
+  const bloqueHistorial = (id) => {
+    if (!historialDe || historialDe.id !== id) return null;
+    if (historialDe.items === null) return <p style={estilos.hintBaraja}>Cargando historial...</p>;
+    if (historialDe.items.length === 0) return <p style={estilos.hintBaraja}>Sin suspensiones anteriores.</p>;
+    return (
+      <div style={estilos.listaDenuncias}>
+        {historialDe.items.map(h => (
+          <div key={h.id} style={estilos.denunciaFecha}>
+            {new Date(h.creado_en).toLocaleString()} · {h.accion === 'reactivar' ? '✅ Levantada' : (h.permanente ? '⛔ Permanente' : `⏳ ${h.dias} día${h.dias === 1 ? '' : 's'}`)}
+            {h.admin ? ` · por ${h.admin}` : ''}{h.motivo ? ` · "${h.motivo}"` : ''}
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   const estaSuspendido = (id) => suspendidos.some(x => x.id === id);
 
   // Formulario compartido (duración + motivo) — se muestra debajo de la denuncia o del resultado de búsqueda.
@@ -975,7 +1004,13 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
                     </button>
                   )}
                   {d.denunciado_id != null && estaSuspendido(d.denunciado_id) && <span style={estilos.badgeRevisada}>⛔ Suspendido</span>}
+                  {d.denunciado_id != null && (
+                    <button style={estilos.btnRevisar} onClick={() => verHistorial(d.denunciado_id)}>
+                      {historialDe?.id === d.denunciado_id ? 'Ocultar historial' : 'Historial'}
+                    </button>
+                  )}
                 </div>
+                {d.denunciado_id != null && bloqueHistorial(d.denunciado_id)}
                 {formSusp && d.denunciado_id === formSusp.id && formularioSuspension}
                 </React.Fragment>
               ))}
@@ -1114,13 +1149,19 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
           ) : (
             <div style={estilos.listaDenuncias}>
               {suspendidos.map(u => (
-                <div key={u.id} style={estilos.filaDenuncia}>
+                <React.Fragment key={u.id}>
+                <div style={estilos.filaDenuncia}>
                   <div style={estilos.denunciaTexto}>
                     <strong>{u.username}</strong> (ID {u.id}) · {u.suspension_permanente ? '⛔ Permanente' : `⏳ Hasta ${u.suspendido_hasta ? new Date(u.suspendido_hasta).toLocaleString() : '—'}`}
                     {u.suspension_motivo && <div style={estilos.denunciaMotivo}>"{u.suspension_motivo}"</div>}
                   </div>
                   <button style={estilos.btnRevisar} onClick={() => levantarSuspension(u)}>Levantar</button>
+                  <button style={estilos.btnRevisar} onClick={() => verHistorial(u.id)}>
+                    {historialDe?.id === u.id ? 'Ocultar historial' : 'Historial'}
+                  </button>
                 </div>
+                {bloqueHistorial(u.id)}
+                </React.Fragment>
               ))}
             </div>
           )}
