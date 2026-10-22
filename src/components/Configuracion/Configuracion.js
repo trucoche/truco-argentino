@@ -261,6 +261,23 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
     }
   };
 
+  // ---------- Pase 595: lo que censuró (o vigiló) el filtro de insultos (solo rol 'admin'; se carga al apretar el botón) ----------
+  const [censura, setCensura] = useState(null);   // null = todavía no se cargó
+  const [cargandoCensura, setCargandoCensura] = useState(false);
+  const [filtroCensura, setFiltroCensura] = useState('todo');   // 'todo' | 'enmascarar' | 'vigilar'
+  const cargarCensura = async () => {
+    setCargandoCensura(true);
+    try {
+      const res = await fetch(`${API_BASE}/admin/moderacion?limite=150`, { headers: { 'Authorization': `Bearer ${token}` } });
+      const data = await res.json();
+      if (res.ok) setCensura(data);
+    } catch (err) {
+      console.error('Error cargando la censura:', err);
+    } finally {
+      setCargandoCensura(false);
+    }
+  };
+
   // ---------- Pase 577: reportes de bug / sugerencia (solo rol 'admin') ----------
   const [reportesApp, setReportesApp] = useState([]);
   const [cargandoReportes, setCargandoReportes] = useState(true);
@@ -1164,6 +1181,50 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
                 </React.Fragment>
               ))}
             </div>
+          )}
+        </PlacaMadera>
+      )}
+
+      {/* Pase 595: censura de insultos — solo rol 'admin'. Qué palabra saltó, quién, dónde y el mensaje original. */}
+      {esAdmin && (
+        <PlacaMadera>
+          <div style={estilos.panelTitulo}>🛡️ Censura de insultos (administración)</div>
+          <p style={estilos.hintBaraja}>
+            Se tapan con *** los insultos muy fuertes, la discriminación y las amenazas. "Vigilado" = no se tapa, solo se anota para que veas el contexto
+            (por ahora: "puto/s", "trola/s" y "te mato"). Se guarda 90 días.
+          </p>
+          <div style={estilos.filaBusquedaSponsor}>
+            <button style={estilos.btnRevisar} onClick={cargarCensura} disabled={cargandoCensura}>
+              {cargandoCensura ? 'Cargando…' : (censura ? 'Actualizar' : 'Ver registro')}
+            </button>
+            {censura && ['todo', 'enmascarar', 'vigilar'].map(f => (
+              <button key={f} style={{ ...estilos.btnRevisar, opacity: filtroCensura === f ? 1 : 0.6 }} onClick={() => setFiltroCensura(f)}>
+                {f === 'todo' ? 'Todo' : f === 'enmascarar' ? 'Tapados' : 'Vigilados'}
+              </button>
+            ))}
+          </div>
+          {censura && censura.resumen && censura.resumen.length > 0 && (
+            <p style={estilos.hintBaraja}>
+              <strong>Últimos 30 días:</strong> {censura.resumen.slice(0, 12).map(r => `${r.coincidencia} (${r.cantidad}${r.accion === 'vigilar' ? ', vigilada' : ''})`).join(' · ')}
+            </p>
+          )}
+          {censura && (
+            (censura.registros || []).filter(c => filtroCensura === 'todo' || c.accion === filtroCensura).length === 0 ? (
+              <p style={estilos.hintBaraja}>Todavía no hay registros.</p>
+            ) : (
+              <div style={estilos.listaDenuncias}>
+                {(censura.registros || []).filter(c => filtroCensura === 'todo' || c.accion === filtroCensura).map(c => (
+                  <div key={c.id} style={estilos.filaDenuncia}>
+                    <div style={estilos.denunciaTexto}>
+                      <strong>{c.usuario || 'alguien'}</strong> · {c.canal} · {c.categoria} · {c.accion === 'enmascarar' ? 'TAPADO' : 'vigilado'}
+                      <div style={estilos.denunciaMotivo}>Palabra: "{c.coincidencia}"</div>
+                      <div style={estilos.denunciaMotivo}>Mensaje original: "{c.texto_original}"</div>
+                      <div style={estilos.denunciaFecha}>{new Date(c.creado_en).toLocaleString()}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
           )}
         </PlacaMadera>
       )}
