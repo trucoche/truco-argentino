@@ -94,6 +94,32 @@ function MontoMonedas({ monto, tam = 20, style }) {
 
 // Pase 515: hoja (capa) sobre el lobby; se cierra con la X, con Escape o tocando el fondo.
 // Pase 516: con `variante="redes"` la hoja usa la placa de madera oscura con ribete bronce, remaches y X roja flotante.
+// Pase 610: interruptor de madera (mismo look que SwitchMadera de la app): apagado = madera oscura, encendido = verde.
+function SwitchMadera({ id, valor, onCambio }) {
+  return (
+    <button
+      type="button"
+      id={id}
+      role="switch"
+      aria-checked={valor}
+      onClick={() => onCambio(!valor)}
+      style={{
+        position: 'relative', flex: '0 0 auto', width: 48, height: 26, borderRadius: 999, padding: 0, cursor: 'pointer',
+        border: `2px solid ${C.negroPulido}`, boxSizing: 'border-box',
+        background: valor ? 'linear-gradient(180deg, #3DDD6B 0%, #179B4A 100%)' : `linear-gradient(180deg, ${C.maderaMedia} 0%, ${C.maderaOscura} 100%)`,
+        boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.45)', transition: 'background 0.15s',
+      }}
+    >
+      <span style={{
+        position: 'absolute', top: 1, left: valor ? 23 : 1, width: 20, height: 20, borderRadius: '50%',
+        background: 'radial-gradient(circle at 32% 28%, #FFF3D2 0, #FFF3D2 2px, transparent 3px), #C9973E',
+        border: '1.5px solid #5A3A14', boxSizing: 'border-box', transition: 'left 0.15s',
+        boxShadow: '0 2px 3px rgba(0,0,0,0.45)',
+      }} />
+    </button>
+  );
+}
+
 function Hoja({ titulo, onCerrar, children, variante }) {
   const esRedes = variante === 'redes';
   useEffect(() => {
@@ -118,26 +144,6 @@ function Hoja({ titulo, onCerrar, children, variante }) {
         <div style={{ ...estilos.hojaCuerpo, ...(esRedes ? { padding: 20, position: 'relative' } : {}) }}>{children}</div>
       </div>
     </div>
-  );
-}
-
-function Filigrana() {
-  const path = (
-    <>
-      <path d="M2 44 C2 20 20 2 44 2" stroke={C.doradoOscuro} strokeWidth="1.5" />
-      <path d="M2 34 C2 16 16 2 34 2" stroke={C.dorado} strokeWidth="1.2" />
-      <circle cx="2" cy="44" r="3" fill={C.dorado} />
-      <path d="M8 44 C8 24 24 8 44 8" stroke={C.dorado} strokeWidth="0.8" opacity="0.7" />
-    </>
-  );
-  const base = { position: 'absolute', width: 44, height: 44, opacity: 0.55, pointerEvents: 'none' };
-  return (
-    <>
-      <svg style={{ ...base, top: 6, left: 6 }} viewBox="0 0 46 46" fill="none">{path}</svg>
-      <svg style={{ ...base, top: 6, right: 6, transform: 'scaleX(-1)' }} viewBox="0 0 46 46" fill="none">{path}</svg>
-      <svg style={{ ...base, bottom: 6, left: 6, transform: 'scaleY(-1)' }} viewBox="0 0 46 46" fill="none">{path}</svg>
-      <svg style={{ ...base, bottom: 6, right: 6, transform: 'scale(-1,-1)' }} viewBox="0 0 46 46" fill="none">{path}</svg>
-    </>
   );
 }
 
@@ -603,20 +609,16 @@ useEffect(() => {
       {hoja === 'sala' && (
         <Hoja titulo="Crear / Unirse a sala" onCerrar={() => setHoja(null)}>
           <div style={estilos.hojaGrid}>
-      <div ref={panelCrearSalaRef} style={estilos.accesoCardExterior}>
-        <span style={{ ...estilos.remache, top: 8, left: 8 }} />
-        <span style={{ ...estilos.remache, top: 8, right: 8 }} />
-        <span style={{ ...estilos.remache, bottom: 8, left: 8 }} />
-        <span style={{ ...estilos.remache, bottom: 8, right: 8 }} />
-        <div style={estilos.accesoCard}>
-        <Filigrana />
+      <div ref={panelCrearSalaRef} style={estilos.kitRoble}>
+        {/* Pase 610: mismo kit que la app (marco de roble, título dorado, interior de pergamino). */}
+        <div style={estilos.kitTitulo}>
+          <img src="/assets/images/icono-crear-sala.png" alt="" style={estilos.kitIcono} />
+          <span>Crear sala</span>
+        </div>
+        <div style={estilos.kitInterior}>
         {/* Centésimo cuadragésimo séptimo pase: el emoji 🃏 (joker) que
             acompañaba "Crear sala" se reemplaza por el ícono ilustrado
             (libro TC) que pasó el usuario. */}
-        <div style={estilos.panelTitle}>
-          <img src="/assets/images/icono-crear-sala.png" alt="" style={estilos.iconoPanelTitle} /> Crear sala
-        </div>
-
         {!creandoSala ? (
           <button onClick={() => setCreandoSala(true)} style={estilos.btnNuevaSala}>+ Nueva sala</button>
         ) : (
@@ -630,7 +632,7 @@ useEffect(() => {
                       key={m}
                       type="button"
                       onClick={() => setModo(m)}
-                      style={{ ...estilos.opcionBtn, ...(modo === m ? estilos.opcionBtnActiva : {}) }}
+                      style={{ ...estilos.chipForm, ...(modo === m ? estilos.chipFormActivo : {}) }}
                     >
                       {m}
                     </button>
@@ -645,7 +647,7 @@ useEffect(() => {
                       key={p}
                       type="button"
                       onClick={() => setPuntosParaGanar(p)}
-                      style={{ ...estilos.opcionBtn, ...(puntosParaGanar === p ? estilos.opcionBtnActiva : {}) }}
+                      style={{ ...estilos.chipForm, ...(puntosParaGanar === p ? estilos.chipFormActivo : {}) }}
                     >
                       {p} pts
                     </button>
@@ -658,31 +660,22 @@ useEffect(() => {
               <label style={estilos.label}>Tiempo por turno</label>
               <div style={estilos.opcionesRow}>
                 {TIEMPO_OPCIONES.map((t) => (
-                  <button
-                    key={t.valor}
-                    type="button"
-                    onClick={() => setTiempoPorTurno(t.valor)}
-                    style={{
-                      ...estilos.opcionBtn,
-                      ...(t.recomendada ? estilos.opcionBtnRecomendada : {}),
-                      ...(tiempoPorTurno === t.valor ? estilos.opcionBtnActiva : {})
-                    }}
-                  >
-                    {t.label}
-                    {t.recomendada && <span style={estilos.badgeRecomendada}>Recomendado</span>}
-                  </button>
+                  <div key={t.valor} style={estilos.chipWrap}>
+                    {t.recomendada && <span style={estilos.listonRecomendado}>Recomendado</span>}
+                    <button
+                      type="button"
+                      onClick={() => setTiempoPorTurno(t.valor)}
+                      style={{ ...estilos.chipForm, width: '100%', ...(tiempoPorTurno === t.valor ? estilos.chipFormActivo : {}) }}
+                    >
+                      {t.label}
+                    </button>
+                  </div>
                 ))}
               </div>
             </div>
 
             <div style={estilos.checkboxRow}>
-              <input
-                type="checkbox"
-                id="privada"
-                checked={privada}
-                onChange={(e) => setPrivada(e.target.checked)}
-                style={estilos.checkbox}
-              />
+              <SwitchMadera id="privada" valor={privada} onCambio={setPrivada} />
               <label htmlFor="privada" style={{ margin: 0, fontWeight: 700, fontSize: 16, color: C.chocolate }}>
                 Sala privada <span style={{ fontWeight: 400, fontSize: 14, color: '#7a6660' }}>
                   {/* Pase siguiente #3: se restaura la mención del costo — ver
@@ -693,13 +686,7 @@ useEffect(() => {
             </div>
 
             <div style={estilos.checkboxRow}>
-              <input
-                type="checkbox"
-                id="conFlor"
-                checked={conFlor}
-                onChange={(e) => setConFlor(e.target.checked)}
-                style={estilos.checkbox}
-              />
+              <SwitchMadera id="conFlor" valor={conFlor} onCambio={setConFlor} />
               <label htmlFor="conFlor" style={{ margin: 0, fontWeight: 700, fontSize: 16, color: C.chocolate }}>
                 Jugar con Flor
               </label>
@@ -721,18 +708,12 @@ useEffect(() => {
         </div>
       </div>
 
-      <div style={estilos.accesoCardExterior}>
-        <span style={{ ...estilos.remache, top: 8, left: 8 }} />
-        <span style={{ ...estilos.remache, top: 8, right: 8 }} />
-        <span style={{ ...estilos.remache, bottom: 8, left: 8 }} />
-        <span style={{ ...estilos.remache, bottom: 8, right: 8 }} />
-        <div style={estilos.accesoCard}>
-      {/* Centésimo cuadragésimo séptimo pase: el emoji 🔑 se reemplaza por
-          la llave ilustrada — mismo criterio en "Sala privada creada" más
-          abajo. */}
-      <div style={estilos.panelTitle}>
-        <img src="/assets/images/icono-sala-privada.png" alt="" style={estilos.iconoPanelTitle} /> Unirse con código
-      </div>
+      <div style={estilos.kitCuero}>
+        <div style={estilos.kitTitulo}>
+          <img src="/assets/images/icono-sala-privada.png" alt="" style={estilos.kitIcono} />
+          <span>Unirse con código</span>
+        </div>
+        <div style={estilos.kitInterior}>
         {/* Pase de rediseño estructural: campo "ahuecado" estilo cuero
             oscuro (antes blanco liso, igual que cualquier <input> de la
             app) — mismo criterio "hundido" que `tabInactiva` de
@@ -1031,6 +1012,46 @@ const estilos = {
       `0 8px 0 ${C.negroPulido}`,
       '0 16px 26px rgba(0,0,0,0.4)',
     ].join(', '),
+  },
+  // Pase 610: kit "roble"/"cuero" de la app (título dorado sobre el marco, interior de pergamino).
+  kitRoble: {
+    position: 'relative', boxSizing: 'border-box',
+    background: 'linear-gradient(160deg, #5D4037 0%, #4E342E 55%, #3A2520 100%)',
+    border: '2px solid #C08A3E', borderRadius: 18, padding: 8,
+    boxShadow: 'inset 0 1px 0 rgba(212,175,55,0.5), 0 8px 0 #1a1410, 0 16px 26px rgba(0,0,0,0.4)',
+  },
+  kitCuero: {
+    position: 'relative', boxSizing: 'border-box',
+    background: 'linear-gradient(160deg, #3B1A12 0%, #301610 55%, #250E08 100%)',
+    border: '2px solid #8C6239', borderRadius: 18, padding: 8,
+    boxShadow: 'inset 0 1px 0 rgba(212,175,55,0.5), 0 8px 0 #1a1410, 0 16px 26px rgba(0,0,0,0.4)',
+  },
+  kitTitulo: {
+    display: 'flex', alignItems: 'center', gap: 8, padding: '2px 6px 8px',
+    fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 24, color: '#FFD700',
+    textShadow: '1px 1.5px 2px rgba(0,0,0,0.5)',
+  },
+  kitIcono: { width: 36, height: 36, objectFit: 'contain' },
+  kitInterior: {
+    background: '#F4E2C2', border: '2px solid #C9A66B', borderRadius: 12, padding: 14, boxSizing: 'border-box',
+  },
+  chipForm: {
+    flex: 1, minWidth: 56,
+    fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 15,
+    color: '#FFFBEB', background: '#8B5A2B',
+    border: `2px solid ${C.negroPulido}`, borderRadius: 999, padding: '8px 6px', cursor: 'pointer', textAlign: 'center',
+    boxShadow: 'inset 0 3px 5px rgba(74,44,17,0.55), inset 0 -1px 0 rgba(255,255,255,0.12)',
+  },
+  chipFormActivo: {
+    background: 'linear-gradient(180deg, #F5B041 0%, #EB984E 100%)', color: C.chocolate,
+    border: '2px solid #000', boxShadow: '0 3px 0 #000, inset 0 1px 0 rgba(255,255,255,0.5)',
+  },
+  chipWrap: { position: 'relative', flex: 1, minWidth: 56, display: 'flex', paddingTop: 6 },
+  listonRecomendado: {
+    position: 'absolute', top: -4, left: '50%', transform: 'translateX(-50%)', zIndex: 3, whiteSpace: 'nowrap',
+    background: C.doradoOscuro, border: '1.5px solid #000', borderRadius: 999, padding: '2px 8px',
+    fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 9, color: '#fff', letterSpacing: 0.3,
+    textTransform: 'uppercase', lineHeight: 1.2, boxShadow: '0 1.5px 2px rgba(0,0,0,0.35)', pointerEvents: 'none',
   },
   accesoCard: {
     position: 'relative', overflow: 'hidden',

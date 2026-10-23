@@ -4718,6 +4718,12 @@ _dibujarManoJugador(cartas, yBase, jugable, animar = false) {
         img.on('pointerdown', () => {
           if (this._jugadaEnviada) return;   // Pase 414: un solo toque por turno (evita el aviso "no es tu turno")
           this._jugadaEnviada = true;
+          // Pase 610: se recuerda dónde está la carta (centro, tamaño, ángulo) para que, al llegar el estado, vuele desde ahí a su lugar en la mesa (como en la app).
+          try {
+            const cy0 = img.y - altoCarta * 0.35 * Math.cos(img.rotation);
+            const cx0 = img.x + altoCarta * 0.35 * Math.sin(img.rotation);
+            this._vueloPendiente = { cartaId: carta.id, x: cx0, y: cy0, ancho: img.displayWidth, alto: img.displayHeight, rot: img.rotation, t: Date.now() };
+          } catch (err) {}
           try { this.sound.play('jugar-carta', { volume: 0.6 * (this.efectosVolumen ?? 1) }); } catch (err) {}
           this.socket.emit('jugar-carta', { codigoSala: this.codigoSala, cartaId: carta.id });
         });
@@ -5188,8 +5194,10 @@ _dibujarDueloCartas(cartasRivalArr, cartasMiasArr, yCentro, escala, depthBase) {
       const rotRad = rotDeg * Math.PI / 180;
 
       const persp = this._calcularPerspectiva(destinoY);
-      const anchoFinal = anchoBase * persp.scale;
-      const altoFinal  = altoBase * persp.scale;
+      // Pase 610: tamaños como en la app (la carta de abajo, la mía, se ve un poco más grande que la del rival; antes ambas quedaban más chicas).
+      const ajusteTam = rotDeg < 0 ? 1.04 : 1.07;
+      const anchoFinal = anchoBase * persp.scale * ajusteTam;
+      const altoFinal  = altoBase * persp.scale * ajusteTam;
 
       const SOMBRA_OFFSET_X = 4;
       const sombra = this.add.ellipse(
@@ -5213,6 +5221,7 @@ _dibujarDueloCartas(cartasRivalArr, cartasMiasArr, yCentro, escala, depthBase) {
         .setDepth(depth)
         .setRotation(rotRad);
       this._sprites.push(img);
+      this._volarCartaJugada(img, sombra, carta, destinoX, destinoY, anchoFinal, altoFinal, rotRad, persp.sombraAlpha);   // Pase 610
     };
 
     // Estimación para el caso más común (con ganador) — se usa para poner
@@ -5388,7 +5397,37 @@ _dibujarFilaCartas(cartas, y, jugable, esMiMano = false, escala = 1, animar = fa
       }
 
       this._sprites.push(img);
+      if (esCartaJugada) this._volarCartaJugada(img, sombra, carta, destinoX, destinoY, anchoFinal, altoFinal, rotacion, persp.sombraAlpha);   // Pase 610
     });
+}
+
+// Pase 610: vuelo de la carta que acabo de tirar — un solo viaje corto y suave (340 ms, frena al llegar) desde donde estaba en la mano
+// hasta su lugar final en la mesa, con un arco chico (máx. 8 px) y sin levantarse ni "caer" al terminar: es el mismo recorrido de la app.
+_volarCartaJugada(img, sombra, carta, destX, destY, anchoF, altoF, rot, sombraAlpha) {
+  const p = this._vueloPendiente;
+  if (!p || !carta || p.cartaId !== carta.id) return false;
+  this._vueloPendiente = null;
+  if (Date.now() - p.t > 4000 || !img.scene) return false;
+  const profundidad = img.depth;
+  img.setPosition(p.x, p.y).setDisplaySize(p.ancho, p.alto).setRotation(p.rot).setDepth(900);
+  if (sombra && sombra.scene) sombra.setAlpha(0);
+  const prog = { t: 0 };
+  this.tweens.add({
+    targets: prog, t: 1, duration: 340, ease: 'Quad.easeOut',
+    onUpdate: () => {
+      if (!img.scene) return;
+      const k = prog.t;
+      img.setPosition(p.x + (destX - p.x) * k, p.y + (destY - p.y) * k - 8 * Math.sin(Math.PI * k));
+      img.setDisplaySize(p.ancho + (anchoF - p.ancho) * k, p.alto + (altoF - p.alto) * k);
+      img.setRotation(p.rot + (rot - p.rot) * k);
+    },
+    onComplete: () => {
+      if (!img.scene) return;
+      img.setPosition(destX, destY).setDisplaySize(anchoF, altoF).setRotation(rot).setDepth(profundidad);
+      if (sombra && sombra.scene) this.tweens.add({ targets: sombra, alpha: sombraAlpha, duration: 120, ease: 'Linear' });
+    }
+  });
+  return true;
 }
 
 // Pase 444/445: placa de pergamino con marco de madera para el nombre de un asiento. Acento verde

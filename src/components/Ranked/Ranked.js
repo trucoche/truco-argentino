@@ -81,7 +81,6 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
           {rango && (
             <div style={{ width: '100%', textAlign: 'center' }}>
               <div style={estilos.rangoNombre}>{tituloRango}</div>
-              <div style={estilos.rangoConcepto}>{rango.concepto}</div>
               <div style={estilos.barraFondo}>
                 <div style={{ ...estilos.barraRelleno, width: `${Math.round(progreso * 100)}%` }} />
               </div>
@@ -212,7 +211,6 @@ const estilos = {
     fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 28, color: C.doradoClaro,
     textShadow: '1px 2px 0 #000',
   },
-  rangoConcepto: { fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 13.5, color: C.crema, opacity: 0.9, marginTop: 4, lineHeight: 1.4 },
   barraFondo: { height: 16, borderRadius: 10, border: '2.5px solid #000', background: '#2a1c14', overflow: 'hidden', marginTop: 14 },
   barraRelleno: { height: '100%', background: C.dorado, borderRight: '2px solid #B9770E' },
   barraTexto: { fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 12.5, color: C.crema, marginTop: 6 },
