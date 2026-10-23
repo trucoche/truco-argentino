@@ -114,7 +114,7 @@ const PUESTO_MAXIMO_VISIBLE = 16;
 // Pase 370: pestañas de alcance del ranking. El orden NO cambia (victorias),
 // solo cambia a quién se compara: todos, mi provincia o mi localidad.
 const ALCANCES = [
-  { clave: 'global', texto: 'Global' },
+  { clave: 'global', texto: 'Nacional' },
   { clave: 'provincia', texto: 'Provincia' },
   { clave: 'localidad', texto: 'Mi Localidad' },
 ];
