@@ -9,6 +9,7 @@ import ConfiguracionMesaModal from './ConfiguracionMesaModal';
 import PerfilRivalModal from '../PerfilRival/PerfilRivalModal';
 import AnotadorCriollo from './AnotadorCriollo';
 import { getConfigFoto } from '../../constants/modoFoto';
+import { confirmarPopup } from '../Popup/PopupMadera';
 
 // Pase 404: estilo del marcador de la mesa ('numeros' | 'fosforos'), recordado entre partidas.
 const CLAVE_MARCADOR_ESTILO = 'tc_marcador_estilo';
@@ -176,6 +177,19 @@ useEffect(() => {
   // Pase 611: Modo foto con "interfaz limpia" (solo en las mesas simuladas PREVIEW_*): sin chat, audio ni ajustes.
   const fotoLimpia = String(codigoSala || '').startsWith('PREVIEW_') && (() => { const f = getConfigFoto(); return f.activo && f.ocultarUI; })();
 
+  // Pase 613: "Rendirme" (solo 1v1 en curso): derrota normal, sin puntos de más ni castigo.
+  const puedeRendirse = mostrarConfiguracion && !String(codigoSala || '').startsWith('PREVIEW_')
+    && !!gameRef.current?.scene.getScene('GameSceneOnline')?.puedeRendirse?.();
+  const rendirme = async () => {
+    setMostrarConfiguracion(false);
+    const ok = await confirmarPopup({
+      titulo: '¿Rendirte?',
+      mensaje: 'Perdés esta partida como una derrota normal, sin puntos de más ni castigo.',
+      textoSi: 'Rendirme', textoNo: 'Seguir jugando', cinta: 'roja', tipoSi: 'carmesi',
+    });
+    if (ok) gameRef.current?.scene.getScene('GameSceneOnline')?.rendirse?.();
+  };
+
   return (
     <div style={estilosPagina.fondoPagina}>
       <div style={angosto ? estilosPagina.contenedorJuegoAngosto : estilosPagina.contenedorJuego}>
@@ -201,6 +215,7 @@ useEffect(() => {
           onCambiarEfectosVolumen={onCambiarEfectosVolumen}
           marcadorEstilo={marcadorEstilo}
           onCambiarMarcadorEstilo={cambiarMarcadorEstilo}
+          onRendirse={puedeRendirse ? rendirme : undefined}
         />
         <AnotadorCriollo
           visible={anotadorAbierto}

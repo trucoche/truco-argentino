@@ -34,6 +34,7 @@ const C = {
 export default function ConfiguracionMesaModal({
   visible, onCerrar, musicaVolumen, onCambiarMusicaVolumen, vocesVolumen, onCambiarVocesVolumen, efectosVolumen = 1, onCambiarEfectosVolumen,
   marcadorEstilo = 'numeros', onCambiarMarcadorEstilo,
+  onRendirse,   // Pase 613: solo en partidas 1v1 en curso
 }) {
   if (!visible) return null;
 
@@ -50,7 +51,7 @@ export default function ConfiguracionMesaModal({
       anchoMax={340}
       centrado={false}
       onCerrar={onCerrar}
-      botones={[{ texto: 'Cerrar', tipo: 'dorado', onClick: onCerrar }]}
+      botones={[...(onRendirse ? [{ texto: 'Rendirme', tipo: 'carmesi', onClick: onRendirse }] : []), { texto: 'Cerrar', tipo: 'dorado', onClick: onCerrar }]}
     >
       <div style={estilos.fila}>
         <label style={estilos.label}>

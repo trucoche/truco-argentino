@@ -20,6 +20,17 @@ const C = {
   verdeOscuro: '#1f7a3c', crimsonOscuro: '#c2352a',
 };
 
+// Pase 613: enfriamiento por abandonos (mismo criterio que la app).
+function textoEspera(seg) {
+  if (seg >= 3600) return `${Math.floor(seg / 3600)} h ${String(Math.floor((seg % 3600) / 60)).padStart(2, '0')} min`;
+  return `${String(Math.floor(seg / 60)).padStart(2, '0')}:${String(seg % 60).padStart(2, '0')}`;
+}
+// Cuánto dura el próximo enfriamiento según los abandonos recientes (el siguiente abandono cuenta como n + 1).
+function proximoEnfriamiento(n) {
+  const siguiente = n + 1;
+  return siguiente >= 4 ? '24 horas' : siguiente === 3 ? '30 minutos' : siguiente === 2 ? '5 minutos' : '';
+}
+
 export default function Ranked({token, onEntrarAPartida, usuario }) {
   const [resumen, setResumen] = useState(null);
   const [cargando, setCargando] = useState(true);
@@ -28,6 +39,8 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
   const [error, setError] = useState('');
   const [historial, setHistorial] = useState(null);   // Pase 612
   const [partidaAbierta, setPartidaAbierta] = useState(null);
+  const [bloqueoFin, setBloqueoFin] = useState(0);   // Pase 613: hora (ms) en que termina el enfriamiento por abandonos
+  const [ahora, setAhora] = useState(Date.now());
 
   const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
 
@@ -47,6 +60,20 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
 
   useEffect(() => { cargarResumen(); }, [cargarResumen]);
 
+  // Pase 613: cuenta regresiva del enfriamiento por abandonos.
+  useEffect(() => {
+    setBloqueoFin(resumen?.bloqueo?.bloqueado ? Date.now() + resumen.bloqueo.segundos * 1000 : 0);
+    setAhora(Date.now());
+  }, [resumen]);
+  useEffect(() => {
+    if (!bloqueoFin) return undefined;
+    const t = setInterval(() => setAhora(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [bloqueoFin]);
+  const segundosBloqueo = Math.max(0, Math.ceil((bloqueoFin - ahora) / 1000));
+  const bloqueado = bloqueoFin > 0 && segundosBloqueo > 0;
+  const abandonosRecientes = resumen?.bloqueo?.abandonosRecientes ?? 0;
+
   // Pase 612: últimas partidas de Liga (accesorio: si falla, la pantalla sigue sin ese panel).
   useEffect(() => {
     let vivo = true;
@@ -61,7 +88,7 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
   }, [token]);
 
   const buscarPartida = async () => {
-    if (buscando) return;
+    if (buscando || bloqueado) return;
     setError('');
     setBuscando(true);
     try {
@@ -130,9 +157,19 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
 
           {error && <div style={estilos.error}>{error}</div>}
 
-          <button onClick={buscarPartida} disabled={buscando} style={estilos.btnBuscar}>
-            {buscando ? 'Buscando...' : 'BUSCAR PARTIDA DE LIGA'}
+          <button onClick={buscarPartida} disabled={buscando || bloqueado} style={{ ...estilos.btnBuscar, ...(bloqueado ? { opacity: 0.6, cursor: 'not-allowed' } : {}) }}>
+            {buscando ? 'Buscando...' : bloqueado ? `ESPERÁ ${textoEspera(segundosBloqueo)}` : 'BUSCAR PARTIDA DE LIGA'}
           </button>
+
+          {/* Pase 613: aviso de abandonos (enfriamiento activo o advertencia del próximo) */}
+          {bloqueado ? (
+            <div style={estilos.error}>{`Abandonaste partidas de Liga seguido: podés volver a buscar en ${textoEspera(segundosBloqueo)}.`}</div>
+          ) : abandonosRecientes > 0 ? (
+            <div style={estilos.avisoAbandono}>
+              {`Abandonaste ${abandonosRecientes} ${abandonosRecientes === 1 ? 'partida' : 'partidas'} de Liga en los últimos ${resumen?.penalidadAbandono?.diasVentana ?? 7} días.`
+                + (proximoEnfriamiento(abandonosRecientes) ? ` Otro abandono te deja ${proximoEnfriamiento(abandonosRecientes)} sin poder buscar Liga.` : '')}
+            </div>
+          ) : null}
 
           <div style={estilos.hintBuscando}>
             {salasBuscando > 0
@@ -193,6 +230,7 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
             <li>Al ascender de rango ganás escudos que te protegen de bajar de liga.</li>
             <li>En Mancebo las derrotas no restan puntos.</li>
             <li>Solo las partidas de Liga Criolla mueven tu rango: las salas casuales no.</li>
+            <li>Abandonar una partida de Liga resta 10 pts de más; si abandonás seguido, no podés buscar Liga por un rato. Si querés irte, rendite (1v1): es una derrota normal.</li>
           </ul>
         </PlacaMadera>
         </div>
@@ -376,6 +414,7 @@ const estilos = {
     color: C.chocolate, background: C.dorado, border: '3px solid #000', borderRadius: 999, cursor: 'pointer',
     boxShadow: '0 4px 0 #B9770E, 0 7px 0 #000', marginBottom: 8, letterSpacing: 0.4,
   },
+  avisoAbandono: { fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 12, color: '#9A3412', textAlign: 'center', marginTop: 10 },
   hintBuscando: { fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 12, color: '#8c8078', textAlign: 'center', marginTop: 10 },
   statsGrid: { display: 'flex', gap: 10 },
   statTile: {

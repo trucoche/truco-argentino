@@ -2784,7 +2784,9 @@ _conectarSocket() {
         // cartel del título.
         const extra = data.motivo === 'abandono'
           ? (gano ? 'El rival abandonó la partida.' : 'Perdiste por desconexión.')
-          : '';
+          : (data.motivo === 'rendicion'
+            ? (gano ? 'El rival se rindió.' : 'Te rendiste.')
+            : '');
 
         const hayRevelacionPendiente = this._mostrandoRevelacionFlor || this._mostrandoResultadoFlor || this._mostrandoResultadoEnvido || this._mostrandoRevelacionEnvido;
         const delay = hayRevelacionPendiente ? 3800 : 0;
@@ -6626,6 +6628,16 @@ _responderFlor(respuesta) {
 
 _irseAlMazo() {
   this.socket.emit('irse-al-mazo', { codigoSala: this.codigoSala });
+}
+
+// Pase 613: rendirse (solo 1v1 con la partida en curso): derrota normal, sin abandono ni castigo extra.
+puedeRendirse() {
+  const e = this.estado;
+  return !!(e && this._salaEnJuego && e.rondaActiva && !e.juegoTerminado && !Array.isArray(e.companeros));
+}
+rendirse() {
+  if (!this.puedeRendirse()) return;
+  this.socket.emit('rendirse', { codigoSala: this.codigoSala });
 }
 
   _cantarTruco() {
