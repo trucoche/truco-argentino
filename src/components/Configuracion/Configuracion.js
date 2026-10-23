@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import PersonajeSelector from '../Lobby/PersonajeSelector';
 import ReportarModal from '../Reportar/ReportarModal';
 import SelectorPersonalizacion from '../Personalizacion/SelectorPersonalizacion';
+import ModoFotoAdmin from './ModoFotoAdmin';
 import { API_URL as BASE_URL } from '../../config';
 
 const API_URL = `${BASE_URL}/api/auth`;
@@ -1228,6 +1229,9 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
           )}
         </PlacaMadera>
       )}
+
+      {/* Pase 611: Modo foto — mesa simulada para capturas (solo rol 'admin'). */}
+      {esAdmin && <ModoFotoAdmin />}
 
       {/* Pase 563: sponsors de Cafecito — solo rol 'admin'. Buscar al donante, ver a quién encontró y otorgar. */}
       {esAdmin && (

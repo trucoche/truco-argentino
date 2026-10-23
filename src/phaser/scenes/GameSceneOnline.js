@@ -4,6 +4,7 @@ import { ANCHO_MAX_CSS } from '../config/gameConfigOnline';
 import { CARD_RANKS } from '../utils/constants';
 import { RANGOS_UI } from '../../components/Perfil/rangosUi';
 import { MAZOS } from '../../constants/personalizacion';
+import { crearEstadoFoto, getConfigFoto } from '../../constants/modoFoto';
 
 // Decimotercer pase: bug de fondo detrás de "el dorso del rival sigue
 // borroso aunque Ctrl+Shift+R en Edge" — el navegador cachea las imágenes
@@ -2628,7 +2629,15 @@ _conectarSocket() {
       this._destruirBannerEsperaTitulo();
       if (this.mesaImg) this.mesaImg.setVisible(true);
       if (this.sombraMesa) this.sombraMesa.setVisible(true);
-      this.estado = this._crearEstadoMockPorModo(modo);
+      // Pase 611: Modo foto (/?preview=<modo>&foto=1, lo abre el formulario de Ajustes del admin): escena, nombres, puntos y dorso elegidos.
+      const foto = getConfigFoto();
+      if (foto.activo && foto.modo === modo) {
+        if (foto.yo) this.usuario = { ...(this.usuario || {}), username: foto.yo };
+        this._jugadoresSala = [...foto.compas, ...foto.rivales].filter(Boolean).map((n) => ({ username: n, mazo_id: foto.mazo }));
+        this.estado = crearEstadoFoto(foto);
+      } else {
+        this.estado = this._crearEstadoMockPorModo(modo);
+      }
       if (this.onEsEquipos) this.onEsEquipos(Array.isArray(this.estado.companeros));
       this._renderizarEstado(true);
       return;

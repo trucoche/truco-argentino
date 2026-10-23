@@ -8,6 +8,7 @@ import ConfiguracionMesaBoton from './ConfiguracionMesaBoton';
 import ConfiguracionMesaModal from './ConfiguracionMesaModal';
 import PerfilRivalModal from '../PerfilRival/PerfilRivalModal';
 import AnotadorCriollo from './AnotadorCriollo';
+import { getConfigFoto } from '../../constants/modoFoto';
 
 // Pase 404: estilo del marcador de la mesa ('numeros' | 'fosforos'), recordado entre partidas.
 const CLAVE_MARCADOR_ESTILO = 'tc_marcador_estilo';
@@ -172,16 +173,23 @@ useEffect(() => {
     if (escena) escena.efectosVolumen = efectosVolumen;
   }, [efectosVolumen]);
 
+  // Pase 611: Modo foto con "interfaz limpia" (solo en las mesas simuladas PREVIEW_*): sin chat, audio ni ajustes.
+  const fotoLimpia = String(codigoSala || '').startsWith('PREVIEW_') && (() => { const f = getConfigFoto(); return f.activo && f.ocultarUI; })();
+
   return (
     <div style={estilosPagina.fondoPagina}>
       <div style={angosto ? estilosPagina.contenedorJuegoAngosto : estilosPagina.contenedorJuego}>
         <div id="game-container" style={{ width: '100%', height: '100%' }} />
-        <ChatMesa codigoSala={codigoSala} esEquipos={esEquipos} personaje={usuario?.personaje || 'gaucho'} token={token} usuarioActual={usuario?.username} />
+        {fotoLimpia && (
+          // Salida escondida del Modo foto: esquina superior izquierda, invisible.
+          <div onClick={() => { window.location.href = '/'; }} style={{ position: 'absolute', top: 0, left: 0, width: 56, height: 56, zIndex: 90, cursor: 'default' }} />
+        )}
+        {!fotoLimpia && <ChatMesa codigoSala={codigoSala} esEquipos={esEquipos} personaje={usuario?.personaje || 'gaucho'} token={token} usuarioActual={usuario?.username} />}
         {/* Pase 443: el botón de mostrar/esconder cartas ahora se dibuja dentro de la botonera (GameSceneOnline.js, _dibujarBotonCartasEquipo). */}
-        {audioInfo.privada && (
+        {audioInfo.privada && !fotoLimpia && (
           <AudioMesaBoton audioRoomUrl={audioInfo.audioRoomUrl} nombreUsuario={usuario?.username} />
         )}
-        <ConfiguracionMesaBoton onAbrir={() => setMostrarConfiguracion(true)} />
+        {!fotoLimpia && <ConfiguracionMesaBoton onAbrir={() => setMostrarConfiguracion(true)} />}
         <ConfiguracionMesaModal
           visible={mostrarConfiguracion}
           onCerrar={() => setMostrarConfiguracion(false)}
