@@ -54,10 +54,7 @@ export function Cinta({ titulo, cinta = 'dorada' }) {
 function BotonX({ onClick }) {
   return (
     <button type="button" className="pm-cerrar" onClick={onClick} aria-label="Cerrar">
-      <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
-        <path d="M2.5 2.5 L11.5 11.5 M11.5 2.5 L2.5 11.5" stroke="#000" strokeWidth="5" strokeLinecap="round" />
-        <path d="M2.5 2.5 L11.5 11.5 M11.5 2.5 L2.5 11.5" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" />
-      </svg>
+      <img src="/assets/images/boton-cerrar.webp" alt="" width="38" height="38" draggable="false" />   {/* Pase 604: botón de cerrar con imagen */}
     </button>
   );
 }

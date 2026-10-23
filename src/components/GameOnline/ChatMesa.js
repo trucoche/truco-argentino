@@ -195,7 +195,7 @@ export default function ChatMesa({ codigoSala, esEquipos, personaje = 'gaucho', 
     <div style={estilos.contenedor}>
       <div style={estilos.header}>
         <span>Chat de la mesa</span>
-        <button onClick={() => setAbierto(false)} style={estilos.botonCerrar}>✕</button>
+        <button onClick={() => setAbierto(false)} aria-label="Cerrar" style={estilos.botonCerrar}><img src="/assets/images/boton-cerrar.webp" alt="" draggable="false" style={{ display: 'block', width: '100%', height: '100%', pointerEvents: 'none' }} /></button>
       </div>
 
       {esEquipos && (
@@ -411,8 +411,8 @@ const estilos = {
     fontSize: 13, fontWeight: '700', fontFamily: "'Fredoka', sans-serif"
   },
   botonCerrar: {
-    background: 'linear-gradient(160deg, #FFFCF5, #FAEBD2)', border: '2px solid #4A2C2A', borderRadius: 6,
-    width: 22, height: 22, color: '#4A2C2A', cursor: 'pointer', fontSize: 12,
+    background: 'none', border: 0, padding: 0,
+    width: 28, height: 28, cursor: 'pointer',
     display: 'flex', alignItems: 'center', justifyContent: 'center'
   },
   mensajes: {

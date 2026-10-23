@@ -911,7 +911,7 @@ export default function ChatGlobal({ token, usuario, abrirSolicitudesSenial }) {
         <div className={`cg-sidebar ${sidebarAbierto ? 'cg-sidebar-abierta' : ''}`} style={estilos.sidebar}>
           <div style={estilos.sidebarHeader}>
             <span style={estilos.sidebarTitulo}>Jugadores en línea</span>
-            <button className="cg-boton-usuarios" style={estilos.botonCerrarSidebar} onClick={() => setSidebarAbierto(false)}>✕</button>
+            <button className="cg-boton-usuarios" style={estilos.botonCerrarSidebar} onClick={() => setSidebarAbierto(false)} aria-label="Cerrar"><img src="/assets/images/boton-cerrar.webp" alt="" draggable="false" style={{ display: 'block', width: '100%', height: '100%', pointerEvents: 'none' }} /></button>
           </div>
           {solicitudesAmistad.length > 0 && (
             <div style={estilos.panelSolicitudes}>
@@ -1453,8 +1453,8 @@ const estilos = {
   // fondo de la columna pasó de casi-blanco a cuero oscuro.
   sidebarTitulo: { fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 14.5, color: C.crema },
   botonCerrarSidebar: {
-    background: C.crema, border: `2px solid ${C.chocolate}`, borderRadius: 8,
-    width: 26, height: 26, cursor: 'pointer', fontSize: 12, color: C.chocolate,
+    background: 'none', border: 0, padding: 0,
+    width: 30, height: 30, cursor: 'pointer',
   },
   // Ducentésimo cuadragésimo sexto pase: "campo estilo madera ahuecada/
   // cuero oscuro con ícono de lupa dorada" — de un input blanco plano a un

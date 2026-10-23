@@ -113,7 +113,7 @@ function Hoja({ titulo, onCerrar, children, variante }) {
         )}
         <div style={{ ...estilos.hojaCabecera, ...(esRedes ? estilos.redesCabecera : {}) }}>
           <span style={{ ...estilos.hojaTitulo, ...(esRedes ? estilos.redesTitulo : {}) }}>{titulo}</span>
-          <button type="button" onClick={onCerrar} aria-label="Cerrar" style={esRedes ? estilos.redesCerrar : estilos.hojaCerrar}>✕</button>
+          <button type="button" onClick={onCerrar} aria-label="Cerrar" style={esRedes ? estilos.redesCerrar : estilos.hojaCerrar}><img src="/assets/images/boton-cerrar.webp" alt="" draggable="false" style={estilos.imgCerrar} /></button>
         </div>
         <div style={{ ...estilos.hojaCuerpo, ...(esRedes ? { padding: 20, position: 'relative' } : {}) }}>{children}</div>
       </div>
@@ -964,7 +964,9 @@ const estilos = {
   hojaCaja: { margin: 'auto', width: '100%', maxWidth: 900, borderRadius: 18, border: `3px solid ${C.negroPulido}`, background: C.maderaMedia, overflow: 'hidden', boxShadow: '0 16px 40px rgba(0,0,0,0.6)' },
   hojaCabecera: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 14px', background: C.maderaOscura },
   hojaTitulo: { fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 19, color: C.doradoClaro },
-  hojaCerrar: { width: 34, height: 34, borderRadius: '50%', border: '2px solid #000', background: '#E74C3C', color: '#fff', fontWeight: 800, fontSize: 15, cursor: 'pointer' },
+  // Pase 604: botón de cerrar con imagen (sin fondo ni borde propios)
+  hojaCerrar: { width: 36, height: 36, padding: 0, border: 0, background: 'none', cursor: 'pointer', flex: '0 0 auto' },
+  imgCerrar: { display: 'block', width: '100%', height: '100%', pointerEvents: 'none' },
   hojaCuerpo: { padding: 12 },
   hojaGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, alignItems: 'stretch' },
   redesCaja: { display: 'flex', flexDirection: 'column', gap: 0, maxWidth: 520, margin: '0 auto' },
@@ -983,7 +985,7 @@ const estilos = {
   redesCabecera: { background: 'transparent', justifyContent: 'center', padding: '20px 56px 0' },
   redesTitulo: { fontSize: 22, textAlign: 'center' },
   redesRemache: { position: 'absolute', width: 10, height: 10, borderRadius: '50%', background: 'radial-gradient(circle at 35% 30%, #F1D58A, #A9791F 60%, #5C3D0E)', boxShadow: '0 1px 2px rgba(0,0,0,0.6)', pointerEvents: 'none' },
-  redesCerrar: { position: 'absolute', top: -12, right: -12, width: 36, height: 36, borderRadius: '50%', border: '2.5px solid #C9A24A', background: 'linear-gradient(180deg, #E5483F, #B02820)', color: '#fff', fontWeight: 800, fontSize: 16, cursor: 'pointer', boxShadow: '0 2px 5px rgba(0,0,0,0.55)', zIndex: 5, padding: 0, lineHeight: '30px' },
+  redesCerrar: { position: 'absolute', top: -14, right: -14, width: 40, height: 40, border: 0, background: 'none', cursor: 'pointer', zIndex: 5, padding: 0 },
   redesAviso: { margin: '8px 0', background: '#F4E8D1', border: '1.5px solid #A8523A', borderRadius: 10, padding: '8px 12px', fontWeight: 700, fontSize: 13, color: '#8B1A1A', textAlign: 'center' },
   redesAvisoOk: { borderColor: '#5E7F3A', color: '#2F4A1A' },
   // ===== fin Pase 515 =====
