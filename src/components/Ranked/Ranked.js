@@ -26,6 +26,8 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
   const [modo, setModo] = useState('1v1');
   const [buscando, setBuscando] = useState(false);
   const [error, setError] = useState('');
+  const [historial, setHistorial] = useState(null);   // Pase 612
+  const [partidaAbierta, setPartidaAbierta] = useState(null);
 
   const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
 
@@ -44,6 +46,19 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
   }, [token]);
 
   useEffect(() => { cargarResumen(); }, [cargarResumen]);
+
+  // Pase 612: últimas partidas de Liga (accesorio: si falla, la pantalla sigue sin ese panel).
+  useEffect(() => {
+    let vivo = true;
+    (async () => {
+      try {
+        const res = await fetch(`${API_SALAS}/ranked/historial?limite=10`, { headers: { Authorization: `Bearer ${token}` } });
+        const data = await res.json();
+        if (vivo && res.ok && Array.isArray(data.partidas)) setHistorial(data);
+      } catch (err) { console.error('Error cargando historial de la Liga:', err); }
+    })();
+    return () => { vivo = false; };
+  }, [token]);
 
   const buscarPartida = async () => {
     if (buscando) return;
@@ -127,6 +142,31 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
         </PlacaMadera>
         </div>
 
+        {/* Pase 612: clasificación (primeras 5 partidas) o serie de ascenso en curso */}
+        {((resumen?.clasificacion && !resumen.clasificacion.completa) || resumen?.serie?.activa) && (
+          <div style={estilos.fila}>
+            {resumen.clasificacion && !resumen.clasificacion.completa && (
+              <PlacaMadera style={{ display: 'flex', flexDirection: 'column', flex: '1 1 300px', minWidth: 0 }} interiorStyle={{ padding: 18, flex: 1 }}>
+                <div style={estilos.panelTitulo}>{`Clasificando ${resumen.clasificacion.jugadas}/${resumen.clasificacion.total}`}</div>
+                <Circulos total={resumen.clasificacion.total} verdes={resumen.clasificacion.victorias} rojos={Math.max(0, resumen.clasificacion.jugadas - resumen.clasificacion.victorias)} />
+                <div style={estilos.serieNota}>
+                  {`Tus primeras ${resumen.clasificacion.total} partidas de Liga no mueven puntos: al terminar la última te asignamos tu rango según las victorias.`}
+                </div>
+              </PlacaMadera>
+            )}
+            {resumen.serie && resumen.serie.activa && (
+              <PlacaMadera style={{ display: 'flex', flexDirection: 'column', flex: '1 1 300px', minWidth: 0 }} interiorStyle={{ padding: 18, flex: 1 }}>
+                <div style={estilos.panelTitulo}>{`Serie de ascenso${resumen.serie.objetivo ? ` a ${resumen.serie.objetivo}` : ''}`}</div>
+                <div style={estilos.serieFila}><span style={estilos.serieEtiqueta}>Victorias</span><Circulos total={resumen.serie.ganarPara} verdes={resumen.serie.victorias} rojos={0} /></div>
+                <div style={estilos.serieFila}><span style={estilos.serieEtiqueta}>Derrotas</span><Circulos total={resumen.serie.perderPara} verdes={0} rojos={resumen.serie.derrotas} /></div>
+                <div style={estilos.serieNota}>
+                  {`Ganá ${Math.max(0, resumen.serie.ganarPara - resumen.serie.victorias)} más para subir. Con ${resumen.serie.perderPara} derrotas la serie se cae y volvés al 75 % de tu barra.`}
+                </div>
+              </PlacaMadera>
+            )}
+          </div>
+        )}
+
         {/* Fila 2: temporada + cómo se suma */}
         <div style={estilos.fila}>
         {/* D. Stats */}
@@ -156,6 +196,47 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
           </ul>
         </PlacaMadera>
         </div>
+
+        {/* Pase 612: curva de puntos y últimas partidas de Liga */}
+        {(historial?.partidas?.length ?? 0) > 0 && (
+          <div style={estilos.fila}>
+            <PlacaMadera style={{ display: 'flex', flexDirection: 'column', flex: '1 1 100%', minWidth: 0 }} interiorStyle={{ padding: 18, flex: 1 }}>
+              <div style={estilos.panelTitulo}>Últimas partidas</div>
+              <CurvaPuntos curva={historial.curva} />
+              <div style={estilos.partidasLista}>
+                {historial.partidas.map((p) => {
+                  const gano = p.resultado === 'victoria';
+                  const abierta = partidaAbierta === p.id;
+                  const e = p.estadisticas || {};
+                  const envidos = (e.envidos || 0) + (e.reales_envido || 0) + (e.faltas_envido || 0);
+                  return (
+                    <button key={p.id} type="button" onClick={() => setPartidaAbierta(abierta ? null : p.id)} style={estilos.partidaFila}>
+                      <div style={estilos.partidaPrincipal}>
+                        <span style={{ ...estilos.partidaInsignia, ...(gano ? estilos.partidaGano : estilos.partidaPerdio) }}>{gano ? 'V' : 'D'}</span>
+                        <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+                          <div style={estilos.partidaTitulo}>{p.modo}{p.rival ? ` · vs ${p.rival}` : ''}</div>
+                          <div style={estilos.partidaSub}>{`${p.tantosPropios} - ${p.tantosRival}${p.abandono ? ' · abandono' : ''} · ${fechaCorta(p.fecha)}`}</div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ ...estilos.partidaDelta, color: p.delta > 0 ? C.verdeOscuro : p.delta < 0 ? C.crimsonOscuro : C.chocolate }}>{p.delta > 0 ? `+${p.delta}` : `${p.delta}`}</div>
+                          <div style={estilos.partidaSub}>{p.puntosDespues} pts</div>
+                        </div>
+                      </div>
+                      {abierta && (
+                        <div style={estilos.partidaDetalle}>
+                          {`Trucos ${e.trucos || 0} · Envidos ${envidos} · Flores ${e.flores || 0} · Al mazo ${e.mazos || 0} · Faroles ${e.faroles || 0}`}
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+              {historial.mejorVictoria && (
+                <div style={estilos.notaStats}>{`Mejor victoria: ${historial.mejorVictoria.rival} (${historial.mejorVictoria.rivalPuntos} pts)`}</div>
+              )}
+            </PlacaMadera>
+          </div>
+        )}
 
         {/* Fila 3 (Pase 607): hitos con premio de mates, con barra de progreso como las misiones */}
         {(resumen?.hitos?.length ?? 0) > 0 && (
@@ -189,6 +270,49 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
   );
 }
 
+function fechaCorta(iso) {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+// Pase 612: fila de círculos (series y clasificación): verdes = victorias, rojos = derrotas, vacíos = pendientes.
+function Circulos({ total, verdes, rojos }) {
+  return (
+    <div style={estilos.circulosFila}>
+      {Array.from({ length: total }, (_, i) => {
+        const estado = i < verdes ? 'v' : i < verdes + rojos ? 'd' : 'p';
+        return (
+          <span key={i} style={{ ...estilos.circulo, ...(estado === 'v' ? estilos.circuloVerde : estado === 'd' ? estilos.circuloRojo : {}) }}>
+            {estado === 'v' ? '✓' : estado === 'd' ? '✕' : ''}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+// Pase 612: curva de puntos de las últimas partidas (de la más vieja a la más nueva).
+function CurvaPuntos({ curva }) {
+  if (!curva || curva.length < 2) return null;
+  const W = 600, H = 90, pad = 12;
+  const min = Math.min(...curva), max = Math.max(...curva);
+  const rango = Math.max(max - min, 1);
+  const x = (i) => pad + (i * (W - pad * 2)) / (curva.length - 1);
+  const y = (v) => pad + (1 - (v - min) / rango) * (H - pad * 2);
+  const puntos = curva.map((v, i) => `${x(i)},${y(v)}`).join(' ');
+  return (
+    <div style={estilos.curvaCaja}>
+      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto', display: 'block' }} role="img" aria-label="Curva de puntos de tus últimas partidas">
+        <line x1={pad} x2={W - pad} y1={H - pad} y2={H - pad} stroke="#C9A66B" strokeWidth="1" />
+        <polyline points={puntos} fill="none" stroke="#B9770E" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" />
+        <circle cx={x(curva.length - 1)} cy={y(curva[curva.length - 1])} r="6" fill="#F5B041" stroke="#4A2C2A" strokeWidth="2.5" />
+      </svg>
+      <div style={estilos.curvaEjes}><span>{min} pts</span><span>{max} pts</span></div>
+    </div>
+  );
+}
+
 function Stat({ label, valor, color }) {
   return (
     <div style={estilos.statTile}>
@@ -201,6 +325,25 @@ function Stat({ label, valor, color }) {
 const CONTORNO_TEXTO = '-1.5px -1.5px 0 #000, 0 -1.5px 0 #000, 1.5px -1.5px 0 #000, -1.5px 0 0 #000, 1.5px 0 0 #000, -1.5px 1.5px 0 #000, 0 1.5px 0 #000, 1.5px 1.5px 0 #000';
 
 const estilos = {
+  circulosFila: { display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' },
+  circulo: { width: 32, height: 32, borderRadius: '50%', border: '2.5px solid #6E4B28', background: 'rgba(110,75,40,0.18)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 16, boxSizing: 'border-box' },
+  circuloVerde: { background: C.verdeOscuro, borderColor: '#14532d' },
+  circuloRojo: { background: C.crimsonOscuro, borderColor: '#7f1d1d' },
+  serieFila: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 8 },
+  serieEtiqueta: { fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 14, color: C.chocolate },
+  serieNota: { fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 13, color: '#6B4A34', textAlign: 'center', marginTop: 10, lineHeight: 1.35 },
+  curvaCaja: { marginBottom: 12, background: '#FFF9EA', borderRadius: 12, border: '2px solid #C9A66B', padding: '6px 8px 4px' },
+  curvaEjes: { display: 'flex', justifyContent: 'space-between', fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 11, color: '#6B4A34' },
+  partidasLista: { display: 'flex', flexDirection: 'column', gap: 8 },
+  partidaFila: { background: '#FFF9EA', borderRadius: 12, border: '2px solid #C9A66B', padding: '8px 12px', cursor: 'pointer', width: '100%', font: 'inherit', display: 'block' },
+  partidaPrincipal: { display: 'flex', alignItems: 'center', gap: 12 },
+  partidaInsignia: { width: 30, height: 30, borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', border: '2px solid', fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 15, color: '#fff', flex: '0 0 auto', boxSizing: 'border-box' },
+  partidaGano: { background: C.verdeOscuro, borderColor: '#14532d' },
+  partidaPerdio: { background: C.crimsonOscuro, borderColor: '#7f1d1d' },
+  partidaTitulo: { fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 14, color: C.chocolate, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
+  partidaSub: { fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 12, color: '#6B4A34' },
+  partidaDelta: { fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 18 },
+  partidaDetalle: { fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 12.5, color: '#6B4A34', marginTop: 8, textAlign: 'center' },
   pagina: { width: '100%', padding: '8px 12px 40px', boxSizing: 'border-box' },
   columna: { maxWidth: 940, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 18 },
   fila: { display: 'flex', flexWrap: 'wrap', gap: 18, alignItems: 'stretch' },
