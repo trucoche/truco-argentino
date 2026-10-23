@@ -157,6 +157,34 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
           </ul>
         </PlacaMadera>
         </div>
+
+        {/* Fila 3 (Pase 607): hitos con premio de mates, con barra de progreso como las misiones */}
+        {(resumen?.hitos?.length ?? 0) > 0 && (
+          <div style={estilos.fila}>
+            <PlacaMadera style={{ display: 'flex', flexDirection: 'column', flex: '1 1 100%', minWidth: 0 }} interiorStyle={{ padding: 18, flex: 1 }}>
+              <div style={estilos.panelTitulo}>{`Hitos de la Liga · ${resumen.hitos.filter((h) => h.cobrado).length}/${resumen.hitos.length}`}</div>
+              <div style={estilos.hitosGrid}>
+                {resumen.hitos.map((h) => (
+                  <div key={h.id} style={estilos.hitoFila}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ ...estilos.hitoTexto, ...(h.cobrado ? { color: '#6B4A34' } : {}) }}>{h.texto}</div>
+                      <div style={estilos.hitoBarraFila}>
+                        <div style={estilos.hitoBarraPista}>
+                          <div style={{ ...estilos.hitoBarraRelleno, ...(h.cobrado ? { background: C.verdeOscuro } : {}), width: `${Math.round((h.actual / h.meta) * 100)}%` }} />
+                        </div>
+                        <span style={estilos.hitoBarraTexto}>{h.actual}/{h.meta}</span>
+                      </div>
+                    </div>
+                    <div style={{ ...estilos.hitoPremio, ...(h.cobrado ? { background: C.verdeOscuro, borderColor: '#14532d', color: '#fff' } : {}) }}>
+                      <div style={{ fontSize: 15, lineHeight: 1.1 }}>{h.cobrado ? '✓' : `+${h.mates}`}</div>
+                      {!h.cobrado && <div style={{ fontSize: 9, fontWeight: 700 }}>mates</div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </PlacaMadera>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -215,5 +243,13 @@ const estilos = {
   statValor: { fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 22, color: C.chocolate },
   statLabel: { fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 11.5, color: '#7a6660', marginTop: 2 },
   notaStats: { fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 12, color: '#7a6660', textAlign: 'center', marginTop: 12 },
+  hitosGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 10 },
+  hitoFila: { display: 'flex', alignItems: 'center', gap: 10, background: '#F4E2C2', borderRadius: 12, border: '2px solid #C9A66B', padding: '8px 10px' },
+  hitoTexto: { fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 13, color: C.chocolate },
+  hitoBarraFila: { display: 'flex', alignItems: 'center', gap: 8, marginTop: 5 },
+  hitoBarraPista: { flex: 1, height: 10, borderRadius: 6, background: 'rgba(110,75,40,0.22)', border: '1px solid #6E4B28', overflow: 'hidden' },
+  hitoBarraRelleno: { height: '100%', background: C.dorado },
+  hitoBarraTexto: { fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 11.5, color: '#6B4A34', minWidth: 30, textAlign: 'right' },
+  hitoPremio: { minWidth: 52, textAlign: 'center', padding: '4px 6px', borderRadius: 10, background: C.dorado, border: '2px solid #B9853F', color: C.chocolate, fontFamily: "'Fredoka', sans-serif", fontWeight: 700 },
   lista: { margin: 0, paddingLeft: 20, fontFamily: "'Nunito', sans-serif", fontWeight: 600, fontSize: 13, color: '#5a4a45', lineHeight: 1.5 },
 };
