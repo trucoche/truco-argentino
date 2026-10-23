@@ -107,7 +107,7 @@ const SECCIONES = [
       'Registrar las compras y los movimientos de mates, y conservarlos como registro de las transacciones',
     ],
     parrafos: [
-      'Si detectamos un uso fraudulento del juego o de la economía virtual (por ejemplo, coordinar partidas para transferirse créditos de forma artificial, explotar errores del sistema, o usar múltiples cuentas para manipular resultados), podemos suspender o eliminar la cuenta involucrada. Si la gravedad lo amerita, esta medida puede extenderse a otras cuentas que identifiquemos como vinculadas a la misma persona.',
+      'Si detectamos un uso fraudulento del juego o de la economía virtual (por ejemplo, coordinar partidas para transferirse mates de forma artificial, explotar errores del sistema, o usar múltiples cuentas para manipular resultados), podemos suspender o eliminar la cuenta involucrada. Si la gravedad lo amerita, esta medida puede extenderse a otras cuentas que identifiquemos como vinculadas a la misma persona.',
     ],
   },
   {
