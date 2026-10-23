@@ -122,7 +122,7 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
           <div style={estilos.hintBuscando}>
             {salasBuscando > 0
               ? `Hay ${salasBuscando} ${salasBuscando === 1 ? 'sala esperando' : 'salas esperando'} en ${modo}`
-              : `Nadie esperando en ${modo} ahora: serás el primero en la cola`}
+              : `Nadie esperando en ${modo} ahora: ¡creá una sala y sé el primero!`}
           </div>
         </PlacaMadera>
         </div>
