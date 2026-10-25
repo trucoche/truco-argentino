@@ -51,6 +51,17 @@ const PESTANAS_AJUSTES = [
   { id: 'sonido', texto: 'Sonido' },
   { id: 'cuenta', texto: 'Cuenta' },
 ];
+// Pase 626: las herramientas de administración (solo rol 'admin') van en su propia pestaña, con subpestañas como en la app.
+const PESTANA_ADMIN = { id: 'admin', texto: 'Admin' };
+const SUBPESTANAS_ADMIN = [
+  { id: 'reportes', texto: 'Reportes' },
+  { id: 'denuncias', texto: 'Denuncias' },
+  { id: 'regalos', texto: 'Regalos' },
+  { id: 'sponsors', texto: 'Sponsors' },
+  { id: 'suspendidos', texto: 'Suspendidos' },
+  { id: 'censura', texto: 'Censura' },
+  { id: 'foto', texto: 'Modo foto' },
+];
 
 export default function Configuracion({ token, usuario, onPersonajeCambiado, musicaVolumen, onCambiarMusicaVolumen, efectosVolumen = 1, onCambiarEfectosVolumen, onNavegar }) {
   const [modoOscuro, setModoOscuro] = useState(false);
@@ -60,6 +71,7 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
   const [enviandoEliminacion, setEnviandoEliminacion] = useState(false);
   const [guardandoGenero, setGuardandoGenero] = useState(false);
   const [pestana, setPestana] = useState('perfil');   // Pase 539: Ajustes por pestañas
+  const [subAdmin, setSubAdmin] = useState('reportes');   // Pase 626: subpestaña de la pestaña Admin
   const [reportarAbierto, setReportarAbierto] = useState(false);   // Pase 577: Reportar bug / sugerencia
 
   // Pase 324: el selector de Género se mudó del Perfil a Ajustes (misma lógica).
@@ -727,7 +739,7 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
 
       {/* Pase 539: pestañas — cada una agrupa un tipo de opciones. */}
       <div style={estilos.pestanas} role="tablist">
-        {PESTANAS_AJUSTES.map((t) => (
+        {(esAdmin ? [...PESTANAS_AJUSTES, PESTANA_ADMIN] : PESTANAS_AJUSTES).map((t) => (
           <button
             key={t.id}
             role="tab"
@@ -1063,12 +1075,34 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
         )}
       </PlacaMadera>
 
+      {/* Pase 626: subpestañas de la pestaña Admin (con la cantidad de pendientes en Reportes y Denuncias). */}
+      {esAdmin && pestana === 'admin' && (
+        <div style={estilos.subPestanas} role="tablist">
+          {SUBPESTANAS_ADMIN.map((t) => {
+            const pendientes = t.id === 'reportes' ? reportesApp.filter((r) => !r.revisado).length
+              : t.id === 'denuncias' ? denuncias.filter((d) => !d.revisado).length
+              : t.id === 'suspendidos' ? suspendidos.length : 0;
+            return (
+              <button
+                key={t.id}
+                role="tab"
+                aria-selected={subAdmin === t.id}
+                onClick={() => setSubAdmin(t.id)}
+                style={{ ...estilos.subPestana, ...(subAdmin === t.id ? estilos.pestanaActiva : {}) }}
+              >
+                {t.texto}{pendientes ? ` (${pendientes})` : ''}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* Centésimo quinto pase: panel de administración de denuncias —
           solo visible con rol 'admin' (viaja en el JWT desde el login,
           ver routes/auth.js). Para que tu cuenta lo vea hace falta correr
           a mano `UPDATE usuarios SET rol='admin' WHERE username='...';`
           y volver a loguearte (el token viejo no tiene el rol nuevo). */}
-      {esAdmin && (
+      {esAdmin && pestana === 'admin' && subAdmin === 'denuncias' && (
         <PlacaMadera>
           <div style={estilos.panelTitulo}>🚩 Denuncias (administración)</div>
           {cargandoDenuncias ? (
@@ -1118,7 +1152,7 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
       )}
 
       {/* Pase 577: reportes de bug / sugerencia enviados desde la app y la web — solo rol 'admin'. */}
-      {esAdmin && (
+      {esAdmin && pestana === 'admin' && subAdmin === 'reportes' && (
         <PlacaMadera>
           <div style={estilos.panelTitulo}>🐞 Reportes de la app (administración)</div>
           {cargandoReportes ? (
@@ -1188,7 +1222,7 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
       )}
 
       {/* Pase 589: suspensión de cuentas — solo rol 'admin'. Suspender por nombre/ID y ver/levantar las vigentes. */}
-      {esAdmin && (
+      {esAdmin && pestana === 'admin' && subAdmin === 'suspendidos' && (
         <PlacaMadera>
           <div style={estilos.panelTitulo}>⛔ Suspensiones (administración)</div>
           <p style={estilos.hintBaraja}>Para suspender a alguien que no está en las denuncias, buscalo por ID o nombre de usuario exacto.</p>
@@ -1267,7 +1301,7 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
       )}
 
       {/* Pase 595: censura de insultos — solo rol 'admin'. Qué palabra saltó, quién, dónde y el mensaje original. */}
-      {esAdmin && (
+      {esAdmin && pestana === 'admin' && subAdmin === 'censura' && (
         <PlacaMadera>
           <div style={estilos.panelTitulo}>🛡️ Censura de insultos (administración)</div>
           <p style={estilos.hintBaraja}>
@@ -1311,10 +1345,10 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
       )}
 
       {/* Pase 611: Modo foto — mesa simulada para capturas (solo rol 'admin'). */}
-      {esAdmin && <ModoFotoAdmin />}
+      {esAdmin && pestana === 'admin' && subAdmin === 'foto' && <ModoFotoAdmin />}
 
       {/* Pase 623: regalos de mates con mensaje — solo rol 'admin'. */}
-      {esAdmin && (
+      {esAdmin && pestana === 'admin' && subAdmin === 'regalos' && (
         <PlacaMadera>
           <div style={estilos.panelTitulo}>🎁 Regalar mates con mensaje (administración)</div>
           <p style={estilos.hintBaraja}>Buscá al jugador por ID o nombre de usuario, escribí cuántos mates y el mensaje de agradecimiento. Le sale un cartel la próxima vez que entra al lobby.</p>
@@ -1403,7 +1437,7 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
       )}
 
       {/* Pase 563: sponsors de Cafecito — solo rol 'admin'. Buscar al donante, ver a quién encontró y otorgar. */}
-      {esAdmin && (
+      {esAdmin && pestana === 'admin' && subAdmin === 'sponsors' && (
         <PlacaMadera>
           <div style={estilos.panelTitulo}>☕ Sponsors de Cafecito (administración)</div>
           <p style={estilos.hintBaraja}>Buscá por ID o por nombre de usuario, como lo escribió el donante en el mensaje de Cafecito.</p>
@@ -1573,6 +1607,11 @@ const estilos = {
   pestana: {
     flex: 1, height: 40, padding: '0 8px', borderRadius: 999, border: '2.5px solid #5C3D21', borderBottom: '4px solid #1a100a',
     background: '#3E2723', color: 'rgba(255,248,237,0.8)', fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 15, cursor: 'pointer',
+  },
+  subPestanas: { display: 'flex', flexWrap: 'wrap', gap: 8, margin: '0 0 4px' },
+  subPestana: {
+    flex: '1 1 auto', height: 36, padding: '0 14px', borderRadius: 999, border: '2.5px solid #5C3D21', borderBottom: '4px solid #1a100a',
+    background: '#3E2723', color: 'rgba(255,248,237,0.8)', fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 14, cursor: 'pointer', whiteSpace: 'nowrap',
   },
   pestanaActiva: { background: '#F5B041', border: '2.5px solid #1a1410', borderBottom: '4px solid #B9770E', color: '#3B1F0E' },
   sectionTitle: { fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 16, color: C.crema, margin: '4px 0 10px 4px' },
