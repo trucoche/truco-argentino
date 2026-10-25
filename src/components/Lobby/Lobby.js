@@ -523,15 +523,15 @@ useEffect(() => {
           </div>
         </div>
 
-          <button type="button" className="lb-entrada lb-d6" onClick={() => { setAvisoRedes(''); setHoja('redes'); }} aria-label={`Mates gratis. Seguinos en redes y ganá hasta ${RECOMPENSA_SOCIAL_TOTAL} mates`} style={{ ...estilos.tarjetaModulo, ...estilos.fondoSocial, marginBottom: 16 }}>
+          <button type="button" className="lb-entrada lb-d6 lb-mates" onClick={() => { setAvisoRedes(''); setHoja('redes'); }} aria-label={`Mates gratis. Seguinos en redes y ganá hasta ${RECOMPENSA_SOCIAL_TOTAL} mates`} style={{ ...estilos.tarjetaModulo, ...estilos.fondoSocial, marginBottom: 16 }}>
             <span style={estilos.tarjetaBisel} aria-hidden="true" />
             <img className="lb-pulso" src="/assets/images/regalo.png" alt="" style={{ ...estilos.tarjetaIcono, animationDelay: '300ms' }} />
-            <span style={estilos.tarjetaTextos}>
+            <span className="lb-mates-textos" style={estilos.tarjetaTextos}>
               <span style={estilos.tarjetaTitulo}>Mates Gratis</span>
               <span style={estilos.tarjetaSub}>Seguinos en redes</span>
             </span>
             {/* Pase 564: cada ícono abre la red directo (no es <button> anidado: el botón de la tarjeta abre "Mates Gratis"). */}
-            <span style={estilos.socialChips}>
+            <span className="lb-mates-chips" style={estilos.socialChips}>
               {REDES_SOCIALES.map((red) => (
                 <span
                   key={red.id}
@@ -543,11 +543,14 @@ useEffect(() => {
                   onClick={(e) => { e.stopPropagation(); seguirRed(red); }}
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); seguirRed(red); } }}
                 >
-                  <img src={red.icono} alt="" width={56} height={56} style={estilos.socialChipImg} />
+                  <img src={red.icono} alt="" width={68} height={68} style={estilos.socialChipImg} />
                 </span>
               ))}
             </span>
-            <span style={estilos.socialBadge}><MontoMonedas monto={RECOMPENSA_SOCIAL_TOTAL} tam={16} /></span>
+            <span style={estilos.socialBadge}>
+              <span style={estilos.socialBadgeEtiqueta}>Ganá hasta</span>
+              <MontoMonedas monto={RECOMPENSA_SOCIAL_TOTAL} tam={26} />
+            </span>
           </button>
 
           <ReportarModal visible={reportarAbierto} onCerrar={() => setReportarAbierto(false)} token={token} pantalla="lobby" />
@@ -876,6 +879,12 @@ const CSS_LOBBY_COLUMNAS = `
 .lb-pendulo { animation: lbPendulo 1400ms ease-in-out infinite alternate; transform-origin: 50% 0; }
 .lb-latido { animation: lbLatido 2000ms ease-in-out infinite; }
 .lb-destello { position: absolute; top: -14px; bottom: -14px; left: -50px; width: 26px; background: rgba(255,255,255,0.5); transform: rotate(20deg); pointer-events: none; animation: lbDestello 5000ms ease-in-out infinite; }
+@media (max-width: 760px) {
+  .lb-mates { flex-wrap: wrap; row-gap: 10px; padding: 12px 14px !important; }
+  .lb-mates-textos { flex: 1 1 150px !important; }
+  .lb-mates-chips { gap: 8px !important; }
+  .lb-mates-chips img { width: 48px !important; height: 48px !important; }
+}
 @media (prefers-reduced-motion: reduce) {
   .lobby3-col > *, .lb-entrada, .lb-flota, .lb-pulso, .lb-pendulo, .lb-latido, .lb-destello { animation: none !important; }
 }
@@ -906,7 +915,7 @@ const estilos = {
   tarjetaIconoColumna: { width: 112, height: 112, objectFit: 'contain', flex: '0 0 auto' },
   tarjetaTextosCentro: { display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 3, minWidth: 0, width: '100%', flex: '0 0 auto' },
   tarjetaBisel: { position: 'absolute', inset: 2, borderRadius: 13, border: '1.2px solid rgba(212,175,55,0.5)', pointerEvents: 'none' },
-  tarjetaIcono: { width: 76, height: 76, objectFit: 'contain', flex: '0 0 auto' },
+  tarjetaIcono: { width: 96, height: 96, objectFit: 'contain', flex: '0 0 auto' },
   tarjetaIconoXL: { width: 160, height: 160 },
   tarjetaIconoGrande: { width: 60, height: 60, objectFit: 'contain', flex: '0 0 auto', marginBottom: 14 },
   tarjetaTextos: { display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0, flex: 1 },
@@ -935,7 +944,7 @@ const estilos = {
     background: 'repeating-linear-gradient(0deg, rgba(0,0,0,0.14) 0 1px, transparent 1px 9px), linear-gradient(160deg, #5D4037, #4E342E 55%, #3A2520)',
   },
   fondoSocial: {
-    border: '2px solid #FFD700', height: 96,
+    border: '2px solid #FFD700', height: 'auto', minHeight: 118, padding: '12px 20px', gap: 18,
     background: 'repeating-linear-gradient(45deg, rgba(255,255,255,0.04) 0 1px, transparent 1px 6px), linear-gradient(160deg, #2A1B40, #231635 55%, #1B1028)',
   },
   ligaPastilla: { alignSelf: 'flex-start', maxWidth: '100%', background: 'rgba(255,235,205,0.15)', borderRadius: 8, padding: '2px 8px', fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 15.5, color: '#E0D0B0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
@@ -950,13 +959,14 @@ const estilos = {
   misionesBarraPista: { flex: 1, height: 12, borderRadius: 5, background: 'rgba(110,75,40,0.22)', border: '1px solid #6E4B28', overflow: 'hidden', display: 'block' },
   misionesBarraRelleno: { display: 'block', height: '100%', background: '#5E8C3A' },
   misionesBarraTexto: { fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 15, color: '#3B1F0E' },
-  socialChips: { display: 'flex', gap: 10, flex: '0 0 auto', marginRight: 84 },
+  socialChips: { display: 'flex', gap: 14, flex: '0 0 auto' },
   socialChip: { width: 28, height: 28, borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', border: '1.5px solid rgba(255,255,255,0.7)', fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 11, color: '#fff' },
-  socialChipImg: { width: 56, height: 56, display: 'block' },
+  socialChipImg: { width: 68, height: 68, display: 'block', filter: 'drop-shadow(0 3px 3px rgba(0,0,0,0.45))' },
   redesChipImg: { width: 48, height: 48, flexShrink: 0, display: 'block' },
   redesMonto: { fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 13, color: '#FFD668' },
   redesBotonFila: { display: 'inline-flex', alignItems: 'center', gap: 5 },
-  socialBadge: { position: 'absolute', top: 5, right: 12, background: '#FFD700', border: '1px solid #FFF3A0', borderRadius: 9, padding: '0 9px', fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 14, color: '#3B1F0E', display: 'inline-flex', alignItems: 'center' },
+  socialBadge: { flex: '0 0 auto', background: 'linear-gradient(180deg, #FFE066, #FFC21A)', border: '2px solid #FFF3A0', borderRadius: 14, padding: '5px 16px 7px', fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 26, color: '#3B1F0E', display: 'inline-flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.05, boxShadow: '0 3px 0 #A66F00, 0 0 14px rgba(255,215,0,0.35)' },
+  socialBadgeEtiqueta: { fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 11, letterSpacing: 0.4, textTransform: 'uppercase', color: '#6B4A12' },
   // Zócalo de salas (alto fijo 130 px en la lista)
   zocaloExterior: {
     flex: '1 1 auto', display: 'flex', flexDirection: 'column',
