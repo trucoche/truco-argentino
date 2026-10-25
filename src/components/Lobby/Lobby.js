@@ -504,7 +504,7 @@ useEffect(() => {
           <div className="lobby3-col">
           <button type="button" onClick={() => setHoja('sala')} aria-label="Crear o unirse a una sala" style={{ ...estilos.tarjetaModulo, ...estilos.fondoCrear, ...estilos.tarjetaFlex, ...estilos.tarjetaColumna }}>
             <span style={estilos.tarjetaBisel} aria-hidden="true" />
-            <img src="/assets/images/icono-crear-sala.png" alt="" style={{ ...estilos.tarjetaIconoColumna, transform: 'rotate(5deg)' }} />
+            <img src="/assets/images/icono-crear-sala.png" alt="" style={{ ...estilos.tarjetaIconoColumna, ...estilos.tarjetaIconoXL, transform: 'rotate(5deg)' }} />
             <span style={estilos.tarjetaTextosCentro}>
               <span style={estilos.tarjetaTitulo}>Crear / Unirse</span>
               <span style={estilos.tarjetaSub}>A una sala</span>
@@ -513,7 +513,7 @@ useEffect(() => {
           {onIrAnotador && (
             <button type="button" onClick={onIrAnotador} aria-label="Abrir el Anotador Criollo" style={{ ...estilos.tarjetaModulo, ...estilos.fondoAnotador, ...estilos.tarjetaFlex, ...estilos.tarjetaColumna }}>
               <span style={estilos.tarjetaBisel} aria-hidden="true" />
-              <img src="/assets/images/icono-anotador.png" alt="" style={estilos.tarjetaIconoColumna} />
+              <img src="/assets/images/icono-anotador.png" alt="" style={{ ...estilos.tarjetaIconoColumna, ...estilos.tarjetaIconoXL }} />
               <span style={estilos.tarjetaTextosCentro}>
                 <span style={estilos.tarjetaTitulo}>Anotador Criollo</span>
                 <span style={estilos.tarjetaSub}>Sin conexión</span>
@@ -543,7 +543,7 @@ useEffect(() => {
                   onClick={(e) => { e.stopPropagation(); seguirRed(red); }}
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); seguirRed(red); } }}
                 >
-                  <img src={red.icono} alt="" width={38} height={38} style={estilos.socialChipImg} />
+                  <img src={red.icono} alt="" width={56} height={56} style={estilos.socialChipImg} />
                 </span>
               ))}
             </span>
@@ -775,10 +775,10 @@ useEffect(() => {
                     <span style={{ ...estilos.redesBoton, ...estilos.redesBotonHecho }}>✓ Reclamado</span>
                   ) : abierta && RECLAMO_SOCIAL_ACTIVO ? (
                     <button type="button" onClick={() => reclamarRed(red)} style={{ ...estilos.redesBoton, ...estilos.redesBotonOro }}>
-                      {reclamandoRed === red.id ? 'Reclamando…' : (<span style={estilos.redesBotonFila}>Reclamar <MontoMonedas monto={RECOMPENSA_SOCIAL} tam={16} /></span>)}
+                      {reclamandoRed === red.id ? 'Reclamando…' : (Reclamar)}
                     </button>
                   ) : (
-                    <button type="button" onClick={() => seguirRed(red)} style={{ ...estilos.redesBoton, ...estilos.redesBotonOro }}><span style={estilos.redesBotonFila}>Seguir <MontoMonedas monto={RECOMPENSA_SOCIAL} tam={16} /></span></button>
+                    <button type="button" onClick={() => seguirRed(red)} style={{ ...estilos.redesBoton, ...estilos.redesBotonOro }}>Seguir</button>
                   )}
                 </div>
               );
@@ -907,6 +907,7 @@ const estilos = {
   tarjetaTextosCentro: { display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 3, minWidth: 0, width: '100%', flex: '0 0 auto' },
   tarjetaBisel: { position: 'absolute', inset: 2, borderRadius: 13, border: '1.2px solid rgba(212,175,55,0.5)', pointerEvents: 'none' },
   tarjetaIcono: { width: 76, height: 76, objectFit: 'contain', flex: '0 0 auto' },
+  tarjetaIconoXL: { width: 160, height: 160 },
   tarjetaIconoGrande: { width: 60, height: 60, objectFit: 'contain', flex: '0 0 auto', marginBottom: 14 },
   tarjetaTextos: { display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0, flex: 1 },
   tarjetaTitulo: { fontWeight: 700, fontSize: 24, color: '#FFF8E7', textShadow: '1px 1.5px 2px rgba(0,0,0,0.5)', lineHeight: 1.15 },
@@ -949,9 +950,9 @@ const estilos = {
   misionesBarraPista: { flex: 1, height: 12, borderRadius: 5, background: 'rgba(110,75,40,0.22)', border: '1px solid #6E4B28', overflow: 'hidden', display: 'block' },
   misionesBarraRelleno: { display: 'block', height: '100%', background: '#5E8C3A' },
   misionesBarraTexto: { fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 15, color: '#3B1F0E' },
-  socialChips: { display: 'flex', gap: 6, flex: '0 0 auto', marginRight: 84 },
+  socialChips: { display: 'flex', gap: 10, flex: '0 0 auto', marginRight: 84 },
   socialChip: { width: 28, height: 28, borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', border: '1.5px solid rgba(255,255,255,0.7)', fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 11, color: '#fff' },
-  socialChipImg: { width: 38, height: 38, display: 'block' },
+  socialChipImg: { width: 56, height: 56, display: 'block' },
   redesChipImg: { width: 48, height: 48, flexShrink: 0, display: 'block' },
   redesMonto: { fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 13, color: '#FFD668' },
   redesBotonFila: { display: 'inline-flex', alignItems: 'center', gap: 5 },
