@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { API_URL as BASE_URL } from '../../config';
 import { rangoUi } from '../Perfil/rangosUi';
 import { PlacaMadera } from '../Popup/PopupMadera';
@@ -38,6 +38,7 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
   const [buscando, setBuscando] = useState(false);
   const [error, setError] = useState('');
   const [historial, setHistorial] = useState(null);   // Pase 612
+  const [lineaRangos, setLineaRangos] = useState(null);   // Pase 620
   const [partidaAbierta, setPartidaAbierta] = useState(null);
   const [bloqueoFin, setBloqueoFin] = useState(0);   // Pase 613: hora (ms) en que termina el enfriamiento por abandonos
   const [ahora, setAhora] = useState(Date.now());
@@ -83,6 +84,19 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
         const data = await res.json();
         if (vivo && res.ok && Array.isArray(data.partidas)) setHistorial(data);
       } catch (err) { console.error('Error cargando historial de la Liga:', err); }
+    })();
+    return () => { vivo = false; };
+  }, [token]);
+
+  // Pase 620: línea de tiempo de rangos y eventos de inauguración (accesorio: si falla, el panel no se muestra).
+  useEffect(() => {
+    let vivo = true;
+    (async () => {
+      try {
+        const res = await fetch(`${API_SALAS}/ranked/rangos`, { headers: { Authorization: `Bearer ${token}` } });
+        const data = await res.json();
+        if (vivo && res.ok && Array.isArray(data.rangos)) setLineaRangos(data);
+      } catch (err) { console.error('Error cargando la línea de rangos:', err); }
     })();
     return () => { vivo = false; };
   }, [token]);
@@ -276,6 +290,36 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
           </div>
         )}
 
+        {/* Fila (Pase 620): línea de tiempo de rangos con premios y eventos de inauguración */}
+        {lineaRangos && (
+          <div style={estilos.fila}>
+            <PlacaMadera style={{ display: 'flex', flexDirection: 'column', flex: '1 1 100%', minWidth: 0 }} interiorStyle={{ padding: 18, flex: 1 }}>
+              <div style={estilos.panelTitulo}>Rangos y premios</div>
+              <div style={estilos.rangosIntro}>
+                {`Arrastrá hacia los costados. Cada vez que llegás a un rango nuevo cobrás mates una sola vez (hasta ${lineaRangos.totalMates} en total).`}
+              </div>
+              <LineaRangos data={lineaRangos} />
+              {lineaRangos.eventos.length > 0 && (
+                <div style={estilos.eventosCaja}>
+                  <div style={estilos.eventosTitulo}>Eventos de inauguración</div>
+                  <div style={estilos.eventosGrid}>
+                    {lineaRangos.eventos.map((e) => (
+                      <div key={e.id} style={{ ...estilos.eventoFila, ...(e.abierto ? {} : { opacity: 0.55 }) }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={estilos.eventoNombre}>{e.titulo}</div>
+                          <div style={estilos.eventoTexto}>{e.texto}</div>
+                          {e.meta ? <div style={estilos.eventoProgreso}>{`${e.actual || 0}/${e.meta} partidas${e.premio ? ` · ${e.premio}` : ''}`}</div> : null}
+                        </div>
+                        <div style={estilos.eventoFecha}>{e.abierto ? `Hasta ${fechaCorta(e.hasta)}` : 'Cerrado'}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </PlacaMadera>
+          </div>
+        )}
+
         {/* Fila 3 (Pase 607): hitos con premio de mates, con barra de progreso como las misiones */}
         {(resumen?.hitos?.length ?? 0) > 0 && (
           <div style={estilos.fila}>
@@ -304,6 +348,60 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// Pase 620: línea de tiempo de rangos. Se arrastra con el mouse o el dedo (y con la rueda/trackpad); al abrir queda centrada en el rango actual.
+const ANCHO_NODO = 132;
+function LineaRangos({ data }) {
+  const ref = useRef(null);
+  const arrastre = useRef(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.scrollLeft = Math.max(0, (data.rangoActual - 1) * ANCHO_NODO + ANCHO_NODO / 2 - el.clientWidth / 2);
+  }, [data.rangoActual]);
+  const ultimo = data.rangos.length - 1;
+  const empezar = (e) => {
+    if (e.pointerType === 'touch') return;   // el dedo ya desplaza solo
+    arrastre.current = { x: e.clientX, left: ref.current.scrollLeft };
+    ref.current.setPointerCapture?.(e.pointerId);
+  };
+  const mover = (e) => { if (arrastre.current) ref.current.scrollLeft = arrastre.current.left - (e.clientX - arrastre.current.x); };
+  const soltar = () => { arrastre.current = null; };
+  return (
+    <div ref={ref} style={estilos.lineaCaja} onPointerDown={empezar} onPointerMove={mover} onPointerUp={soltar} onPointerCancel={soltar} role="list" aria-label="Rangos de la Liga Criolla">
+      {data.rangos.map((r, i) => {
+        const ui = rangoUi({ id: r.id });
+        const siguienteAlcanzado = !!data.rangos[i + 1]?.alcanzado;
+        return (
+          <div key={r.id} style={estilos.nodo} role="listitem">
+            <div style={{ ...estilos.nodoPuntos, ...(r.actual ? { color: '#B9770E' } : {}) }}>{`${r.min} pts`}</div>
+            <div style={estilos.nodoLineaFila}>
+              <div style={{ ...estilos.nodoLinea, ...(i === 0 ? { background: 'transparent' } : r.alcanzado ? { background: C.dorado } : {}) }} />
+              <div style={{ ...estilos.nodoPunto, ...(r.alcanzado ? { background: C.dorado, borderColor: '#B9770E' } : {}), ...(r.actual ? estilos.nodoPuntoActual : {}) }} />
+              <div style={{ ...estilos.nodoLinea, ...(i === ultimo ? { background: 'transparent' } : siguienteAlcanzado ? { background: C.dorado } : {}) }} />
+            </div>
+            <img src={ui.logo} alt="" draggable={false} style={{ ...estilos.nodoLogo, ...(r.alcanzado ? {} : { opacity: 0.45 }) }} />
+            <div style={{ ...estilos.nodoNombre, ...(r.actual ? { color: '#B9770E' } : {}) }}>{r.nombre}</div>
+            {r.mates > 0 ? (
+              <div style={{ ...estilos.nodoMates, ...(r.cobrado ? { background: C.verdeOscuro, borderColor: '#14532d', color: '#fff' } : {}) }}>
+                {r.cobrado ? `✓ +${r.mates}` : `+${r.mates} mates`}
+              </div>
+            ) : (
+              <div style={estilos.nodoInicio}>Inicio</div>
+            )}
+            {r.cosmetico ? (
+              <div style={{ ...estilos.nodoCosmetico, ...(r.cosmetico.disponible && r.alcanzado ? { borderStyle: 'solid', borderColor: C.verdeOscuro } : {}) }}>
+                <div style={estilos.nodoCosmeticoTexto}>{r.cosmetico.texto}</div>
+                <div style={estilos.nodoCosmeticoSub}>{r.cosmetico.disponible ? (r.alcanzado ? 'Desbloqueado' : 'Se desbloquea acá') : 'Próximamente'}</div>
+              </div>
+            ) : <div style={estilos.nodoCosmeticoVacio} />}
+            {r.actual ? <div style={estilos.nodoAqui}>ESTÁS ACÁ</div> : <div style={{ height: 22 }} />}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -363,6 +461,31 @@ function Stat({ label, valor, color }) {
 const CONTORNO_TEXTO = '-1.5px -1.5px 0 #000, 0 -1.5px 0 #000, 1.5px -1.5px 0 #000, -1.5px 0 0 #000, 1.5px 0 0 #000, -1.5px 1.5px 0 #000, 0 1.5px 0 #000, 1.5px 1.5px 0 #000';
 
 const estilos = {
+  rangosIntro: { fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 13, color: '#6B4A34', textAlign: 'center', margin: '4px 0 10px', lineHeight: 1.35 },
+  lineaCaja: { display: 'flex', overflowX: 'auto', cursor: 'grab', userSelect: 'none', touchAction: 'pan-x pan-y', paddingBottom: 8, scrollbarWidth: 'thin' },
+  nodo: { flex: `0 0 ${ANCHO_NODO}px`, width: ANCHO_NODO, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 },
+  nodoPuntos: { fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 13, color: '#6B4A34' },
+  nodoLineaFila: { display: 'flex', alignItems: 'center', alignSelf: 'stretch', height: 18 },
+  nodoLinea: { flex: 1, height: 5, background: 'rgba(110,75,40,0.35)' },
+  nodoPunto: { width: 14, height: 14, borderRadius: '50%', border: '2px solid #6E4B28', background: '#E8D5AE', boxSizing: 'border-box', flexShrink: 0 },
+  nodoPuntoActual: { width: 20, height: 20, border: '3px solid #4A2C2A', background: C.doradoClaro },
+  nodoLogo: { width: 84, height: 84, objectFit: 'contain', pointerEvents: 'none' },
+  nodoNombre: { fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 16, color: C.chocolate },
+  nodoMates: { padding: '2px 10px', borderRadius: 12, background: C.dorado, border: '2px solid #B9853F', fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 13, color: C.chocolate },
+  nodoInicio: { padding: '2px 10px', border: '2px solid transparent', fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 13, color: '#6B4A34' },
+  nodoCosmetico: { width: ANCHO_NODO - 18, height: 56, boxSizing: 'border-box', borderRadius: 10, border: '2px dashed #A07A45', background: 'rgba(255,249,234,0.7)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 6px', textAlign: 'center' },
+  nodoCosmeticoVacio: { height: 56 },
+  nodoCosmeticoTexto: { fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 12, color: C.chocolate, lineHeight: 1.15 },
+  nodoCosmeticoSub: { fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 11, color: '#8A6A44', marginTop: 2 },
+  nodoAqui: { background: C.chocolate, color: C.doradoClaro, borderRadius: 8, padding: '2px 10px', fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 11.5, letterSpacing: 0.5 },
+  eventosCaja: { marginTop: 12 },
+  eventosTitulo: { fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 16, color: C.chocolate, marginBottom: 8 },
+  eventosGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 10 },
+  eventoFila: { display: 'flex', alignItems: 'center', gap: 10, background: '#FFF9EA', borderRadius: 10, border: '2px solid #C9A66B', padding: '8px 10px' },
+  eventoNombre: { fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 14, color: C.chocolate },
+  eventoTexto: { fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 12.5, color: '#6B4A34', lineHeight: 1.3, marginTop: 2 },
+  eventoProgreso: { fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 12.5, color: '#B9770E', marginTop: 3 },
+  eventoFecha: { padding: '3px 9px', borderRadius: 8, background: C.dorado, border: '2px solid #B9853F', fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 12, color: C.chocolate, whiteSpace: 'nowrap' },
   circulosFila: { display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' },
   circulo: { width: 32, height: 32, borderRadius: '50%', border: '2.5px solid #6E4B28', background: 'rgba(110,75,40,0.18)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 16, boxSizing: 'border-box' },
   circuloVerde: { background: C.verdeOscuro, borderColor: '#14532d' },
