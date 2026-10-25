@@ -39,6 +39,12 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
   const [error, setError] = useState('');
   const [historial, setHistorial] = useState(null);   // Pase 612
   const [lineaRangos, setLineaRangos] = useState(null);   // Pase 620
+  const [altoVentana, setAltoVentana] = useState(typeof window !== 'undefined' ? window.innerHeight : 900);   // Pase 624
+  useEffect(() => {
+    const alRedimensionar = () => setAltoVentana(window.innerHeight);
+    window.addEventListener('resize', alRedimensionar);
+    return () => window.removeEventListener('resize', alRedimensionar);
+  }, []);
   const [popup, setPopup] = useState(null);   // Pase 622: 'rangos' | 'temporada' | 'partidas' | 'hitos' | 'reglas' (tarjetas secundarias en popup)
   const [partidaAbierta, setPartidaAbierta] = useState(null);
   const [bloqueoFin, setBloqueoFin] = useState(0);   // Pase 613: hora (ms) en que termina el enfriamiento por abandonos
@@ -125,7 +131,94 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
   const progreso = rango && !rango.esTop500 ? Math.max(0, Math.min(1, rango.progreso || 0)) : 1;
   const salasBuscando = resumen?.buscando?.[modo] ?? 0;
 
+  // Pase 624: con la ventana alta se muestra abierta la información principal; con la ventana chica quedan las tarjetas que abren carteles.
+  const nivelEspacio = altoVentana >= 1240 ? 2 : altoVentana >= 1000 ? 1 : 0;
+
   if (cargando) return <div style={estilos.cargando}>Cargando…</div>;
+
+  // Pase 624: el contenido de Rangos / Temporada / Hitos se usa en el cartel y, si la ventana es alta, directamente en la página.
+  const renderRangos = () => (
+          <div>
+            <div style={estilos.rangosIntro}>
+              {`Arrastrá hacia los costados. Cada vez que llegás a un rango nuevo cobrás mates una sola vez (hasta ${lineaRangos.totalMates} en total).`}
+            </div>
+            <LineaRangos data={lineaRangos} />
+            {lineaRangos.eventos.length > 0 && (
+              <div style={estilos.eventosCaja}>
+                <div style={estilos.eventosTitulo}>Eventos de inauguración</div>
+                <div style={estilos.eventosGrid}>
+                  {lineaRangos.eventos.map((e) => (
+                    <div key={e.id} style={{ ...estilos.eventoFila, ...(e.abierto ? {} : { opacity: 0.55 }) }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={estilos.eventoNombre}>{e.titulo}</div>
+                        <div style={estilos.eventoTexto}>{e.texto}</div>
+                        {e.meta ? <div style={estilos.eventoProgreso}>{`${e.actual || 0}/${e.meta} partidas${e.premio ? ` · ${e.premio}` : ''}`}</div> : null}
+                      </div>
+                      <div style={estilos.eventoFecha}>{e.abierto ? `Hasta ${fechaCorta(e.hasta)}` : 'Cerrado'}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+  );
+  const renderTemporada = () => (
+          <div>
+            {resumen?.clasificacion && !resumen.clasificacion.completa && (
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ ...estilos.serieEtiqueta, textAlign: 'center', marginBottom: 8 }}>{`Clasificando ${resumen.clasificacion.jugadas}/${resumen.clasificacion.total}`}</div>
+                <Circulos total={resumen.clasificacion.total} verdes={resumen.clasificacion.victorias} rojos={Math.max(0, resumen.clasificacion.jugadas - resumen.clasificacion.victorias)} />
+                <div style={estilos.serieNota}>
+                  {`Tus primeras ${resumen.clasificacion.total} partidas de Liga no mueven puntos: al terminar la última te asignamos tu rango según las victorias.`}
+                </div>
+              </div>
+            )}
+            {resumen?.serie && resumen.serie.activa && (
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ ...estilos.serieEtiqueta, textAlign: 'center', marginBottom: 8 }}>{`Serie de ascenso${resumen.serie.objetivo ? ` a ${resumen.serie.objetivo}` : ''}`}</div>
+                <div style={estilos.serieFila}><span style={estilos.serieEtiqueta}>Victorias</span><Circulos total={resumen.serie.ganarPara} verdes={resumen.serie.victorias} rojos={0} /></div>
+                <div style={estilos.serieFila}><span style={estilos.serieEtiqueta}>Derrotas</span><Circulos total={resumen.serie.perderPara} verdes={0} rojos={resumen.serie.derrotas} /></div>
+                <div style={estilos.serieNota}>
+                  {`Ganá ${Math.max(0, resumen.serie.ganarPara - resumen.serie.victorias)} más para subir. Con ${resumen.serie.perderPara} derrotas la serie se cae y volvés al 75 % de tu barra.`}
+                </div>
+              </div>
+            )}
+            <div style={estilos.statsGrid}>
+              <Stat label="Jugadas" valor={resumen?.jugadas ?? 0} />
+              <Stat label="% Victorias" valor={`${resumen?.porcentajeVictorias ?? 0}%`} color={C.verdeOscuro} />
+              <Stat label="Racha" valor={resumen?.rachaVictorias ?? 0} color={C.crimsonOscuro} />
+            </div>
+            <div style={estilos.notaStats}>
+              {`Racha máxima: ${resumen?.rachaMaxima ?? 0}`}
+              {(resumen?.escudos ?? 0) > 0 ? ` · Escudos de liga: ${resumen.escudos}` : ''}
+            </div>
+          </div>
+  );
+  const renderHitos = () => (
+    (resumen?.hitos?.length ?? 0) > 0 ? (
+          <div style={estilos.hitosGrid}>
+            {resumen.hitos.map((h) => (
+              <div key={h.id} style={estilos.hitoFila}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ ...estilos.hitoTexto, ...(h.cobrado ? { color: '#6B4A34' } : {}) }}>{h.texto}</div>
+                  <div style={estilos.hitoBarraFila}>
+                    <div style={estilos.hitoBarraPista}>
+                      <div style={{ ...estilos.hitoBarraRelleno, ...(h.cobrado ? { background: C.verdeOscuro } : {}), width: `${Math.round((h.actual / h.meta) * 100)}%` }} />
+                    </div>
+                    <span style={estilos.hitoBarraTexto}>{h.actual}/{h.meta}</span>
+                  </div>
+                </div>
+                <div style={{ ...estilos.hitoPremio, ...(h.cobrado ? { background: C.verdeOscuro, borderColor: '#14532d', color: '#fff' } : {}) }}>
+                  <div style={{ fontSize: 15, lineHeight: 1.1 }}>{h.cobrado ? '✓' : `+${h.mates}`}</div>
+                  {!h.cobrado && <div style={{ fontSize: 9, fontWeight: 700 }}>mates</div>}
+                </div>
+              </div>
+            ))}
+          </div>
+    ) : (
+      <div style={estilos.notaStats}>Todavía no hay hitos para mostrar.</div>
+    )
+  );
 
   return (
     <div style={estilos.pagina}>
@@ -200,12 +293,34 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
         </PlacaMadera>
         </div>
 
+        {/* Pase 624: ventana alta → Rangos abierto en la página */}
+        {nivelEspacio >= 1 && lineaRangos && (
+          <PlacaMadera style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }} interiorStyle={{ padding: 14 }}>
+            <div style={{ ...estilos.panelTitulo, marginBottom: 4 }}>Rangos y premios</div>
+            {renderRangos()}
+          </PlacaMadera>
+        )}
+
+        {/* Pase 624: ventana muy alta → Temporada y Hitos abiertos también */}
+        {nivelEspacio >= 2 && (
+          <div style={estilos.fila}>
+            <PlacaMadera style={{ display: 'flex', flexDirection: 'column', flex: '1 1 300px', minWidth: 0 }} interiorStyle={{ padding: 14, flex: 1 }}>
+              <div style={{ ...estilos.panelTitulo, marginBottom: 8 }}>Tu temporada</div>
+              {renderTemporada()}
+            </PlacaMadera>
+            <PlacaMadera style={{ display: 'flex', flexDirection: 'column', flex: '1 1 300px', minWidth: 0 }} interiorStyle={{ padding: 14, flex: 1 }}>
+              <div style={{ ...estilos.panelTitulo, marginBottom: 8 }}>{`Hitos de la Liga · ${(resumen?.hitos ?? []).filter((h) => h.cobrado).length}/${resumen?.hitos?.length ?? 0}`}</div>
+              {renderHitos()}
+            </PlacaMadera>
+          </div>
+        )}
+
         {/* Pase 622: una sola pantalla sin scroll: las tarjetas secundarias abren su cartel (igual que en la app) */}
         <div style={estilos.tilesFila}>
-          <TileLiga icono={ui.logo} titulo="Rangos" sub="Premios" onClick={() => setPopup('rangos')} />
-          <TileLiga icono="/assets/images/icono-rendimiento.png" titulo="Temporada" sub={`${resumen?.porcentajeVictorias ?? 0}% victorias`} onClick={() => setPopup('temporada')} />
+          {(nivelEspacio < 1 || !lineaRangos) && <TileLiga icono={ui.logo} titulo="Rangos" sub="Premios" onClick={() => setPopup('rangos')} />}
+          {nivelEspacio < 2 && <TileLiga icono="/assets/images/icono-rendimiento.png" titulo="Temporada" sub={`${resumen?.porcentajeVictorias ?? 0}% victorias`} onClick={() => setPopup('temporada')} />}
           <TileLiga icono="/assets/images/icono-rango.png" titulo="Partidas" sub={`${Math.min(10, historial?.partidas?.length ?? 0)} últimas`} onClick={() => setPopup('partidas')} />
-          <TileLiga icono="/assets/images/icono-logros.png" titulo="Hitos" sub={`${(resumen?.hitos ?? []).filter((h) => h.cobrado).length}/${resumen?.hitos?.length ?? 0}`} onClick={() => setPopup('hitos')} />
+          {nivelEspacio < 2 && <TileLiga icono="/assets/images/icono-logros.png" titulo="Hitos" sub={`${(resumen?.hitos ?? []).filter((h) => h.cobrado).length}/${resumen?.hitos?.length ?? 0}`} onClick={() => setPopup('hitos')} />}
           <TileLiga icono="/assets/images/icono-misiones.png" titulo="Reglas" sub="Cómo sumás" onClick={() => setPopup('reglas')} />
         </div>
 
@@ -219,65 +334,10 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
           onCerrar={() => setPopup(null)}
           botones={[{ texto: 'Cerrar', onClick: () => setPopup(null) }]}
         >
-          {popup === 'rangos' && lineaRangos && (
-            <div>
-              <div style={estilos.rangosIntro}>
-                {`Arrastrá hacia los costados. Cada vez que llegás a un rango nuevo cobrás mates una sola vez (hasta ${lineaRangos.totalMates} en total).`}
-              </div>
-              <LineaRangos data={lineaRangos} />
-              {lineaRangos.eventos.length > 0 && (
-                <div style={estilos.eventosCaja}>
-                  <div style={estilos.eventosTitulo}>Eventos de inauguración</div>
-                  <div style={estilos.eventosGrid}>
-                    {lineaRangos.eventos.map((e) => (
-                      <div key={e.id} style={{ ...estilos.eventoFila, ...(e.abierto ? {} : { opacity: 0.55 }) }}>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={estilos.eventoNombre}>{e.titulo}</div>
-                          <div style={estilos.eventoTexto}>{e.texto}</div>
-                          {e.meta ? <div style={estilos.eventoProgreso}>{`${e.actual || 0}/${e.meta} partidas${e.premio ? ` · ${e.premio}` : ''}`}</div> : null}
-                        </div>
-                        <div style={estilos.eventoFecha}>{e.abierto ? `Hasta ${fechaCorta(e.hasta)}` : 'Cerrado'}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
+          {popup === 'rangos' && lineaRangos && renderRangos()}
           {popup === 'rangos' && !lineaRangos && <div style={estilos.notaStats}>No se pudo cargar la línea de rangos. Volvé a intentar en un momento.</div>}
 
-          {popup === 'temporada' && (
-            <div>
-              {resumen?.clasificacion && !resumen.clasificacion.completa && (
-                <div style={{ marginBottom: 14 }}>
-                  <div style={{ ...estilos.serieEtiqueta, textAlign: 'center', marginBottom: 8 }}>{`Clasificando ${resumen.clasificacion.jugadas}/${resumen.clasificacion.total}`}</div>
-                  <Circulos total={resumen.clasificacion.total} verdes={resumen.clasificacion.victorias} rojos={Math.max(0, resumen.clasificacion.jugadas - resumen.clasificacion.victorias)} />
-                  <div style={estilos.serieNota}>
-                    {`Tus primeras ${resumen.clasificacion.total} partidas de Liga no mueven puntos: al terminar la última te asignamos tu rango según las victorias.`}
-                  </div>
-                </div>
-              )}
-              {resumen?.serie && resumen.serie.activa && (
-                <div style={{ marginBottom: 14 }}>
-                  <div style={{ ...estilos.serieEtiqueta, textAlign: 'center', marginBottom: 8 }}>{`Serie de ascenso${resumen.serie.objetivo ? ` a ${resumen.serie.objetivo}` : ''}`}</div>
-                  <div style={estilos.serieFila}><span style={estilos.serieEtiqueta}>Victorias</span><Circulos total={resumen.serie.ganarPara} verdes={resumen.serie.victorias} rojos={0} /></div>
-                  <div style={estilos.serieFila}><span style={estilos.serieEtiqueta}>Derrotas</span><Circulos total={resumen.serie.perderPara} verdes={0} rojos={resumen.serie.derrotas} /></div>
-                  <div style={estilos.serieNota}>
-                    {`Ganá ${Math.max(0, resumen.serie.ganarPara - resumen.serie.victorias)} más para subir. Con ${resumen.serie.perderPara} derrotas la serie se cae y volvés al 75 % de tu barra.`}
-                  </div>
-                </div>
-              )}
-              <div style={estilos.statsGrid}>
-                <Stat label="Jugadas" valor={resumen?.jugadas ?? 0} />
-                <Stat label="% Victorias" valor={`${resumen?.porcentajeVictorias ?? 0}%`} color={C.verdeOscuro} />
-                <Stat label="Racha" valor={resumen?.rachaVictorias ?? 0} color={C.crimsonOscuro} />
-              </div>
-              <div style={estilos.notaStats}>
-                {`Racha máxima: ${resumen?.rachaMaxima ?? 0}`}
-                {(resumen?.escudos ?? 0) > 0 ? ` · Escudos de liga: ${resumen.escudos}` : ''}
-              </div>
-            </div>
-          )}
+          {popup === 'temporada' && renderTemporada()}
 
           {popup === 'partidas' && ((historial?.partidas?.length ?? 0) > 0 ? (
             <div>
@@ -318,29 +378,7 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
             <div style={estilos.notaStats}>Todavía no jugaste partidas de Liga. Cuando juegues, las vas a ver acá con tu curva de puntos.</div>
           ))}
 
-          {popup === 'hitos' && ((resumen?.hitos?.length ?? 0) > 0 ? (
-            <div style={estilos.hitosGrid}>
-              {resumen.hitos.map((h) => (
-                <div key={h.id} style={estilos.hitoFila}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ ...estilos.hitoTexto, ...(h.cobrado ? { color: '#6B4A34' } : {}) }}>{h.texto}</div>
-                    <div style={estilos.hitoBarraFila}>
-                      <div style={estilos.hitoBarraPista}>
-                        <div style={{ ...estilos.hitoBarraRelleno, ...(h.cobrado ? { background: C.verdeOscuro } : {}), width: `${Math.round((h.actual / h.meta) * 100)}%` }} />
-                      </div>
-                      <span style={estilos.hitoBarraTexto}>{h.actual}/{h.meta}</span>
-                    </div>
-                  </div>
-                  <div style={{ ...estilos.hitoPremio, ...(h.cobrado ? { background: C.verdeOscuro, borderColor: '#14532d', color: '#fff' } : {}) }}>
-                    <div style={{ fontSize: 15, lineHeight: 1.1 }}>{h.cobrado ? '✓' : `+${h.mates}`}</div>
-                    {!h.cobrado && <div style={{ fontSize: 9, fontWeight: 700 }}>mates</div>}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div style={estilos.notaStats}>Todavía no hay hitos para mostrar.</div>
-          ))}
+          {popup === 'hitos' && renderHitos()}
 
           {popup === 'reglas' && (
             <ul style={estilos.lista}>
@@ -477,9 +515,9 @@ function Stat({ label, valor, color }) {
 }
 
 const estilos = {
-  tilesFila: { display: 'flex', flexWrap: 'wrap', gap: 14 },
+  tilesFila: { display: 'flex', flexWrap: 'wrap', gap: 14, justifyContent: 'center' },
   tile: {
-    flex: '1 1 150px', minHeight: 150, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
+    flex: '1 1 150px', maxWidth: 260, minHeight: 150, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
     background: '#3B1A12', border: '3px solid #8C6239', borderRadius: 16, cursor: 'pointer', padding: '12px 8px', boxShadow: '0 4px 0 #000',
   },
   tileIcono: { width: 76, height: 76, objectFit: 'contain' },
