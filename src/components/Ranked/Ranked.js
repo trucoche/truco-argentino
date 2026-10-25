@@ -39,6 +39,7 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
   const [error, setError] = useState('');
   const [historial, setHistorial] = useState(null);   // Pase 612
   const [lineaRangos, setLineaRangos] = useState(null);   // Pase 620
+  const [reglasAbiertas, setReglasAbiertas] = useState(false);   // Pase 621: "Cómo se suma" en un popup como en la app
   const [partidaAbierta, setPartidaAbierta] = useState(null);
   const [bloqueoFin, setBloqueoFin] = useState(0);   // Pase 613: hora (ms) en que termina el enfriamiento por abandonos
   const [ahora, setAhora] = useState(Date.now());

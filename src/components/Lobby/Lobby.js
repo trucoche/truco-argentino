@@ -778,7 +778,7 @@ useEffect(() => {
                     <span style={{ ...estilos.redesBoton, ...estilos.redesBotonHecho }}>✓ Reclamado</span>
                   ) : abierta && RECLAMO_SOCIAL_ACTIVO ? (
                     <button type="button" onClick={() => reclamarRed(red)} style={{ ...estilos.redesBoton, ...estilos.redesBotonOro }}>
-                      {reclamandoRed === red.id ? 'Reclamando…' : (Reclamar)}
+                      {reclamandoRed === red.id ? 'Reclamando…' : 'Reclamar'}
                     </button>
                   ) : (
                     <button type="button" onClick={() => seguirRed(red)} style={{ ...estilos.redesBoton, ...estilos.redesBotonOro }}>Seguir</button>
