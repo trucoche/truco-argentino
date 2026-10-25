@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { API_URL as BASE_URL } from '../../config';
 import { rangoUi } from '../Perfil/rangosUi';
-import { PlacaMadera } from '../Popup/PopupMadera';
+import PopupMadera, { PlacaMadera } from '../Popup/PopupMadera';
 
 // Pase 336: pantalla de la Liga Criolla (clasificatorio). Datos de GET /api/salas/ranked/resumen,
 // búsqueda con POST /api/salas/ranked (cola emparejada por rango; reglas fijas: 15 puntos, sin Flor).
@@ -218,25 +218,37 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
           </div>
         )}
 
-        {/* Fila 2: temporada + cómo se suma */}
+        {/* Fila 2: temporada (compacta) + cómo se suma (abre un popup, Pase 621) */}
         <div style={estilos.fila}>
-        {/* D. Stats */}
-        <PlacaMadera style={{ display: 'flex', flexDirection: 'column', flex: '1 1 300px', minWidth: 0 }} interiorStyle={{ padding: 18, flex: 1 }}>
-          <div style={estilos.panelTitulo}>Tu temporada</div>
+        <PlacaMadera style={{ display: 'flex', flexDirection: 'column', flex: '1 1 300px', minWidth: 0 }} interiorStyle={{ padding: 12, flex: 1 }}>
+          <div style={{ ...estilos.panelTitulo, marginBottom: 8 }}>Tu temporada</div>
           <div style={estilos.statsGrid}>
             <Stat label="Jugadas" valor={resumen?.jugadas ?? 0} />
             <Stat label="% Victorias" valor={`${resumen?.porcentajeVictorias ?? 0}%`} color={C.verdeOscuro} />
             <Stat label="Racha" valor={resumen?.rachaVictorias ?? 0} color={C.crimsonOscuro} />
           </div>
-          <div style={estilos.notaStats}>
+          <div style={{ ...estilos.notaStats, marginTop: 8 }}>
             {`Racha máxima: ${resumen?.rachaMaxima ?? 0}`}
             {(resumen?.escudos ?? 0) > 0 ? ` · Escudos de liga: ${resumen.escudos}` : ''}
           </div>
         </PlacaMadera>
 
-        {/* Cómo se puntúa */}
-        <PlacaMadera style={{ display: 'flex', flexDirection: 'column', flex: '1 1 300px', minWidth: 0 }} interiorStyle={{ padding: 18, flex: 1 }}>
-          <div style={estilos.panelTitulo}>Cómo se suma</div>
+        <PlacaMadera style={{ display: 'flex', flexDirection: 'column', flex: '0 1 240px', minWidth: 200 }} interiorStyle={{ padding: 12, flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <div style={{ ...estilos.panelTitulo, marginBottom: 6 }}>Cómo se suma</div>
+          <div style={{ ...estilos.notaStats, marginTop: 0, marginBottom: 10 }}>Qué hace subir o bajar tus puntos</div>
+          <button type="button" onClick={() => setReglasAbiertas(true)} style={estilos.btnReglas}>Ver reglas</button>
+        </PlacaMadera>
+        </div>
+
+        <PopupMadera
+          visible={reglasAbiertas}
+          titulo="Cómo se suma"
+          anchoMax={460}
+          scroll
+          centrado={false}
+          onCerrar={() => setReglasAbiertas(false)}
+          botones={[{ texto: 'Cerrar', onClick: () => setReglasAbiertas(false) }]}
+        >
           <ul style={estilos.lista}>
             <li>Ganarle a alguien de mayor rango suma más; ganarle a uno de menor rango suma menos.</li>
             <li>Perder contra alguien de menor rango resta más.</li>
@@ -246,8 +258,7 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
             <li>Solo las partidas de Liga Criolla mueven tu rango: las salas casuales no.</li>
             <li>Abandonar una partida de Liga resta 10 pts de más; si abandonás seguido, no podés buscar Liga por un rato. Si querés irte, rendite (1v1): es una derrota normal.</li>
           </ul>
-        </PlacaMadera>
-        </div>
+        </PopupMadera>
 
         {/* Pase 612: curva de puntos y últimas partidas de Liga */}
         {(historial?.partidas?.length ?? 0) > 0 && (
@@ -256,7 +267,7 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
               <div style={estilos.panelTitulo}>Últimas partidas</div>
               <CurvaPuntos curva={historial.curva} />
               <div style={estilos.partidasLista}>
-                {historial.partidas.map((p) => {
+                {historial.partidas.slice(0, 10).map((p) => {
                   const gano = p.resultado === 'victoria';
                   const abierta = partidaAbierta === p.id;
                   const e = p.estadisticas || {};
@@ -495,7 +506,7 @@ const estilos = {
   serieNota: { fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 13, color: '#6B4A34', textAlign: 'center', marginTop: 10, lineHeight: 1.35 },
   curvaCaja: { marginBottom: 12, background: '#FFF9EA', borderRadius: 12, border: '2px solid #C9A66B', padding: '6px 8px 4px' },
   curvaEjes: { display: 'flex', justifyContent: 'space-between', fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 11, color: '#6B4A34' },
-  partidasLista: { display: 'flex', flexDirection: 'column', gap: 8 },
+  partidasLista: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 8, alignItems: 'start' },
   partidaFila: { background: '#FFF9EA', borderRadius: 12, border: '2px solid #C9A66B', padding: '8px 12px', cursor: 'pointer', width: '100%', font: 'inherit', display: 'block' },
   partidaPrincipal: { display: 'flex', alignItems: 'center', gap: 12 },
   partidaInsignia: { width: 30, height: 30, borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', border: '2px solid', fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 15, color: '#fff', flex: '0 0 auto', boxSizing: 'border-box' },
@@ -539,9 +550,13 @@ const estilos = {
   },
   avisoAbandono: { fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 12, color: '#9A3412', textAlign: 'center', marginTop: 10 },
   hintBuscando: { fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 12, color: '#8c8078', textAlign: 'center', marginTop: 10 },
+  btnReglas: {
+    alignSelf: 'center', padding: '8px 22px', borderRadius: 999, border: '3px solid #B9770E', background: C.dorado, color: C.chocolate,
+    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 15, cursor: 'pointer', boxShadow: '0 3px 0 #B9770E',
+  },
   statsGrid: { display: 'flex', gap: 10 },
   statTile: {
-    flex: 1, textAlign: 'center', padding: '12px 6px', borderRadius: 12, border: '2px solid rgba(26,20,16,0.35)', background: '#FFF3D6',
+    flex: 1, textAlign: 'center', padding: '8px 6px', borderRadius: 12, border: '2px solid rgba(26,20,16,0.35)', background: '#FFF3D6',
   },
   statValor: { fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 22, color: C.chocolate },
   statLabel: { fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 11.5, color: '#7a6660', marginTop: 2 },
