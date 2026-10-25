@@ -403,7 +403,7 @@ useEffect(() => {
             return (
               <button type="button" onClick={onIrARanked} aria-label="Liga Criolla" style={{ ...estilos.tarjetaModulo, ...estilos.fondoLiga, ...estilos.tarjetaFlex, ...estilos.tarjetaColumna }}>
                 <span style={estilos.tarjetaBisel} aria-hidden="true" />
-                <img src={ui.logo} alt="" style={estilos.tarjetaIconoColumna} />
+                <img className="lb-pulso" src={ui.logo} alt="" style={estilos.tarjetaIconoColumna} />
                 <span style={estilos.tarjetaTextosCentro}>
                   <span style={{ ...estilos.tarjetaTitulo, color: '#FFD700' }}>Liga Criolla</span>
                   {titulo
@@ -423,9 +423,9 @@ useEffect(() => {
             {['top-left', 'top-right', 'bottom-left', 'bottom-right'].map((pos) => (
               <span key={pos} aria-hidden="true" style={{ ...estilos.tachuelaMini, [pos.startsWith('top') ? 'top' : 'bottom']: 5, [pos.endsWith('left') ? 'left' : 'right']: 5 }} />
             ))}
-            <span style={{ ...estilos.trofeoCaja, width: 76, height: 76 }}>
+            <span style={{ ...estilos.trofeoCaja, width: 104, height: 104 }}>
               <span style={estilos.trofeoResplandor} aria-hidden="true" />
-              <img src="/assets/images/trofeo.png" alt="" style={{ ...estilos.trofeoImg, width: 76, height: 76 }} />
+              <img className="lb-flota" src="/assets/images/trofeo.png" alt="" style={{ ...estilos.trofeoImg, width: 104, height: 104, animationDelay: '500ms' }} />
             </span>
             <span style={estilos.tarjetaTextosCentro}>
               <span style={estilos.tarjetaTitulo}>Torneos</span>
@@ -475,7 +475,8 @@ useEffect(() => {
                 ))}
               </div>
             </div>
-            <button onClick={handleJugarYa} disabled={buscandoPartida} style={estilos.btnJugarYa}>
+            <button onClick={handleJugarYa} disabled={buscandoPartida} className={buscandoPartida ? undefined : 'lb-latido'} style={estilos.btnJugarYa}>
+              {!buscandoPartida && <span className="lb-destello" aria-hidden="true" />}
               {buscandoPartida ? 'Buscando...' : (
                 <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                   <img src="/assets/images/icono-rayo.png" alt="" style={estilos.iconoRayoBoton} />
@@ -485,9 +486,9 @@ useEffect(() => {
             </button>
             </div>
           </div>
-          <button type="button" onClick={() => setHoja('misiones')} aria-label="Misiones semanales" style={{ ...estilos.tarjetaModulo, ...estilos.fondoMisiones, ...estilos.tarjetaColumna, height: 'auto', minHeight: 150 }}>
+          <button type="button" onClick={() => setHoja('misiones')} aria-label="Misiones semanales" style={{ ...estilos.tarjetaModulo, ...estilos.fondoMisiones, ...estilos.tarjetaColumna, height: 'auto', minHeight: 150, flex: 1 }}>
             <span style={estilos.tarjetaBisel} aria-hidden="true" />
-            <img src="/assets/images/icono-desafios.png" alt="" style={estilos.tarjetaIconoColumna} />
+            <img className="lb-pendulo" src="/assets/images/icono-misiones.png" alt="" style={estilos.tarjetaIconoColumna} />
             <span style={estilos.tarjetaTextosCentro}>
               <span style={{ ...estilos.tarjetaTitulo, color: '#3B1F0E' }}>Misiones semanales</span>
               <span style={{ ...estilos.tarjetaSub, color: '#6B4A34' }}>Reclamá mates</span>
@@ -522,9 +523,9 @@ useEffect(() => {
           </div>
         </div>
 
-          <button type="button" onClick={() => { setAvisoRedes(''); setHoja('redes'); }} aria-label={`Mates gratis. Seguinos en redes y ganá hasta ${RECOMPENSA_SOCIAL_TOTAL} mates`} style={{ ...estilos.tarjetaModulo, ...estilos.fondoSocial, marginBottom: 16 }}>
+          <button type="button" className="lb-entrada lb-d6" onClick={() => { setAvisoRedes(''); setHoja('redes'); }} aria-label={`Mates gratis. Seguinos en redes y ganá hasta ${RECOMPENSA_SOCIAL_TOTAL} mates`} style={{ ...estilos.tarjetaModulo, ...estilos.fondoSocial, marginBottom: 16 }}>
             <span style={estilos.tarjetaBisel} aria-hidden="true" />
-            <img src="/assets/images/regalo.png" alt="" style={estilos.tarjetaIcono} />
+            <img className="lb-pulso" src="/assets/images/regalo.png" alt="" style={{ ...estilos.tarjetaIcono, animationDelay: '300ms' }} />
             <span style={estilos.tarjetaTextos}>
               <span style={estilos.tarjetaTitulo}>Mates Gratis</span>
               <span style={estilos.tarjetaSub}>Seguinos en redes</span>
@@ -542,7 +543,7 @@ useEffect(() => {
                   onClick={(e) => { e.stopPropagation(); seguirRed(red); }}
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); seguirRed(red); } }}
                 >
-                  <img src={red.icono} alt="" width={28} height={28} style={estilos.socialChipImg} />
+                  <img src={red.icono} alt="" width={38} height={38} style={estilos.socialChipImg} />
                 </span>
               ))}
             </span>
@@ -563,7 +564,7 @@ useEffect(() => {
       )}
 
         {/* Zócalo de salas: alto fijo de 130 px (la lista scrollea por dentro), así que crear o borrar salas no mueve nada de lo de arriba. */}
-        <div style={estilos.zocaloExterior}>
+        <div className="lb-entrada lb-d7" style={estilos.zocaloExterior}>
           <div style={estilos.zocaloCabecera}>
             <span style={estilos.zocaloTitulo}>🎲 Salas disponibles</span>
             <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -857,6 +858,27 @@ const CSS_LOBBY_COLUMNAS = `
 .lobby3-col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 /* Pase 616: en escritorio el lobby ocupa el alto de la pantalla (header + márgenes ≈ 215 px) y el zócalo de salas toma lo que sobra. */
 @media (min-width: 900px) { .lobby3-wrap { min-height: calc(100vh - 215px); } }
+/* Pase 617: movimiento como en el nativo. Entrada escalonada (cae 14 px con fundido), íconos que flotan / laten / se balancean
+   como un cartel colgado, latido y destello del botón "Jugar ya". Se apaga con prefers-reduced-motion. */
+@keyframes lbEntrada { from { opacity: 0; transform: translateY(-14px); } to { opacity: 1; transform: none; } }
+@keyframes lbFlota { from { transform: translateY(-3px); } to { transform: translateY(3px); } }
+@keyframes lbPulso { from { transform: scale(1); } to { transform: scale(1.05); } }
+@keyframes lbPendulo { from { transform: rotate(-3deg); } to { transform: rotate(3deg); } }
+@keyframes lbLatido { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.03); } }
+@keyframes lbDestello { 0%, 86% { left: -50px; } 100% { left: calc(100% + 30px); } }
+.lobby3-col > *, .lb-entrada { animation: lbEntrada 420ms ease-out both; }
+.lobby3-col > :nth-child(2) { animation-delay: 120ms; }
+.lobby3-col-centro > :nth-child(1) { animation-delay: 60ms; }
+.lobby3-col-centro > :nth-child(2) { animation-delay: 180ms; }
+.lb-d6 { animation-delay: 300ms; } .lb-d7 { animation-delay: 360ms; }
+.lb-flota { animation: lbFlota 1500ms ease-in-out infinite alternate; }
+.lb-pulso { animation: lbPulso 900ms ease-in-out infinite alternate; }
+.lb-pendulo { animation: lbPendulo 1400ms ease-in-out infinite alternate; transform-origin: 50% 0; }
+.lb-latido { animation: lbLatido 2000ms ease-in-out infinite; }
+.lb-destello { position: absolute; top: -14px; bottom: -14px; left: -50px; width: 26px; background: rgba(255,255,255,0.5); transform: rotate(20deg); pointer-events: none; animation: lbDestello 5000ms ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .lobby3-col > *, .lb-entrada, .lb-flota, .lb-pulso, .lb-pendulo, .lb-latido, .lb-destello { animation: none !important; }
+}
 @media (max-width: 899px) {
   .lobby3-grid { grid-template-columns: 1fr; }
   .lobby3-col-centro { order: -1; }
@@ -880,15 +902,15 @@ const estilos = {
   // Pase 531: en las columnas laterales las tarjetas se estiran para igualar el alto de la columna central.
   tarjetaFlex: { height: 'auto', minHeight: 104, flex: 1 },
   // Pase 603 (paridad con el nativo, Pase 592): Misiones / Crear-Unirse / Anotador con el ícono ARRIBA y los textos ABAJO, centrados.
-  tarjetaColumna: { flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', gap: 6, padding: '12px 14px' },
-  tarjetaIconoColumna: { width: 80, height: 80, objectFit: 'contain', flex: '0 0 auto' },
+  tarjetaColumna: { flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', gap: 8, padding: '12px 14px' },
+  tarjetaIconoColumna: { width: 112, height: 112, objectFit: 'contain', flex: '0 0 auto' },
   tarjetaTextosCentro: { display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 3, minWidth: 0, width: '100%', flex: '0 0 auto' },
   tarjetaBisel: { position: 'absolute', inset: 2, borderRadius: 13, border: '1.2px solid rgba(212,175,55,0.5)', pointerEvents: 'none' },
-  tarjetaIcono: { width: 56, height: 56, objectFit: 'contain', flex: '0 0 auto' },
+  tarjetaIcono: { width: 76, height: 76, objectFit: 'contain', flex: '0 0 auto' },
   tarjetaIconoGrande: { width: 60, height: 60, objectFit: 'contain', flex: '0 0 auto', marginBottom: 14 },
   tarjetaTextos: { display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0, flex: 1 },
-  tarjetaTitulo: { fontWeight: 700, fontSize: 18, color: '#FFF8E7', textShadow: '1px 1.5px 2px rgba(0,0,0,0.5)', lineHeight: 1.15 },
-  tarjetaSub: { fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 13.5, color: '#E0D0B0', lineHeight: 1.2 },
+  tarjetaTitulo: { fontWeight: 700, fontSize: 24, color: '#FFF8E7', textShadow: '1px 1.5px 2px rgba(0,0,0,0.5)', lineHeight: 1.15 },
+  tarjetaSub: { fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 16, color: '#E0D0B0', lineHeight: 1.2 },
   etiquetaTarjeta: { position: 'absolute', left: 10, right: 10, bottom: 7, height: 17, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 11, color: '#E8EFD8' },
   // Fondos texturizados (cuero borgoña, terciopelo carmesí, pergamino/corcho, paño verde, roble, azul noche)
   fondoLiga: {
@@ -912,24 +934,24 @@ const estilos = {
     background: 'repeating-linear-gradient(0deg, rgba(0,0,0,0.14) 0 1px, transparent 1px 9px), linear-gradient(160deg, #5D4037, #4E342E 55%, #3A2520)',
   },
   fondoSocial: {
-    border: '2px solid #FFD700', height: 76,
+    border: '2px solid #FFD700', height: 96,
     background: 'repeating-linear-gradient(45deg, rgba(255,255,255,0.04) 0 1px, transparent 1px 6px), linear-gradient(160deg, #2A1B40, #231635 55%, #1B1028)',
   },
-  ligaPastilla: { alignSelf: 'flex-start', maxWidth: '100%', background: 'rgba(255,235,205,0.15)', borderRadius: 8, padding: '2px 8px', fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 13, color: '#E0D0B0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
-  ligaBarraPista: { display: 'block', width: '78%', height: 9, borderRadius: 5, background: 'rgba(0,0,0,0.38)', border: '1px solid #8C6239', overflow: 'hidden', marginTop: 3 },
+  ligaPastilla: { alignSelf: 'flex-start', maxWidth: '100%', background: 'rgba(255,235,205,0.15)', borderRadius: 8, padding: '2px 8px', fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 15.5, color: '#E0D0B0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
+  ligaBarraPista: { display: 'block', width: '78%', height: 12, borderRadius: 5, background: 'rgba(0,0,0,0.38)', border: '1px solid #8C6239', overflow: 'hidden', marginTop: 3 },
   ligaBarraRelleno: { display: 'block', height: '100%', background: '#F5B041' },
-  torneoAbierto: { alignSelf: 'center', background: 'rgba(255,215,0,0.16)', border: '1px solid rgba(255,215,0,0.6)', borderRadius: 999, padding: '2px 12px', fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 13, color: '#FFD700' },
+  torneoAbierto: { alignSelf: 'center', background: 'rgba(255,215,0,0.16)', border: '1px solid rgba(255,215,0,0.6)', borderRadius: 999, padding: '3px 14px', fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 15.5, color: '#FFD700' },
   tachuelaMini: { position: 'absolute', width: 6, height: 6, borderRadius: '50%', background: '#B9853F', border: '0.5px solid #6E4B28' },
   trofeoCaja: { position: 'relative', width: 44, height: 44, flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center' },
   trofeoResplandor: { position: 'absolute', inset: 0, borderRadius: '50%', background: 'rgba(255,215,0,0.16)', boxShadow: '0 0 6px 2px rgba(255,215,0,0.55)' },
   trofeoImg: { position: 'relative', width: 44, height: 44, objectFit: 'contain' },
   misionesBarraFila: { display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 },
-  misionesBarraPista: { flex: 1, height: 9, borderRadius: 5, background: 'rgba(110,75,40,0.22)', border: '1px solid #6E4B28', overflow: 'hidden', display: 'block' },
+  misionesBarraPista: { flex: 1, height: 12, borderRadius: 5, background: 'rgba(110,75,40,0.22)', border: '1px solid #6E4B28', overflow: 'hidden', display: 'block' },
   misionesBarraRelleno: { display: 'block', height: '100%', background: '#5E8C3A' },
-  misionesBarraTexto: { fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 12.5, color: '#3B1F0E' },
+  misionesBarraTexto: { fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 15, color: '#3B1F0E' },
   socialChips: { display: 'flex', gap: 6, flex: '0 0 auto', marginRight: 84 },
   socialChip: { width: 28, height: 28, borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', border: '1.5px solid rgba(255,255,255,0.7)', fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 11, color: '#fff' },
-  socialChipImg: { width: 28, height: 28, display: 'block' },
+  socialChipImg: { width: 38, height: 38, display: 'block' },
   redesChipImg: { width: 48, height: 48, flexShrink: 0, display: 'block' },
   redesMonto: { fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 13, color: '#FFD668' },
   redesBotonFila: { display: 'inline-flex', alignItems: 'center', gap: 5 },
@@ -1339,7 +1361,7 @@ btnJugarYa: {
   background: `linear-gradient(180deg, ${C.doradoClaro}, ${C.dorado})`, color: C.chocolate,
   border: '3px solid #000', borderRadius: 999, padding: '16px 20px',
   boxShadow: '0 6px 0 #000, 0 0 22px rgba(255,182,39,0.55)',
-  cursor: 'pointer', width: '100%'
+  cursor: 'pointer', width: '100%', position: 'relative', overflow: 'hidden'
 },
   // Quincuagésimo séptimo pase — punto 5: título reforzado (18.5→19.5 +
   // ícono propio, antes era el único título de sección sin emoji) y con
