@@ -33,11 +33,15 @@ function Vista({ campo, item, rangoAssets }) {
   return <img src={item.dorso} alt="" style={{ width: 54 * item.proporcionDorso, height: 54, objectFit: 'contain' }} />;
 }
 
+// Pase 628: rango que desbloquea cada pieza del set "Sol de Mayo" (ver rangoMin en constants/personalizacion.js).
+const NOMBRES_RANGO_SET = { 4: 'Gaucho', 8: 'Caudillo', 10: 'Martín Fierro' };
+
 export default function SelectorPersonalizacion({ usuario, token, recargarPerfil, onApoyar }) {
   const [sel, setSel] = useState({ ...PERSONALIZACION_POR_DEFECTO });
   const rangoAssets = rangoUi(usuario && usuario.rango);
   const kit = !!(usuario && usuario.kit_fundador);
   const esSponsor = !!(usuario && usuario.es_sponsor);
+  const rangoId = (usuario && usuario.rango_max) || 0;   // Pase 628: mayor rango alcanzado (desbloquea el set Sol de Mayo)
 
   // Sincroniza con lo guardado en la cuenta cada vez que llega el perfil.
   useEffect(() => {
@@ -50,7 +54,7 @@ export default function SelectorPersonalizacion({ usuario, token, recargarPerfil
   }, [usuario && usuario.anillo_id, usuario && usuario.banner_id, usuario && usuario.mazo_id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const elegir = async (campo, item) => {
-    if (!estaDisponible(item, { kitFundador: kit, esSponsor })) {
+    if (!estaDisponible(item, { kitFundador: kit, esSponsor, rangoId })) {
       if (item.soloSponsor) {
         const apoyar = await confirmarPopup({
           titulo: 'Diseño de Sponsor',
@@ -60,6 +64,12 @@ export default function SelectorPersonalizacion({ usuario, token, recargarPerfil
           tipoSi: 'celeste',
         });
         if (apoyar && onApoyar) onApoyar();
+      } else if (item.rangoMin) {
+        mostrarAviso({
+          titulo: 'Diseño de la Liga Criolla',
+          mensaje: `Se desbloquea al llegar al rango ${NOMBRES_RANGO_SET[item.rangoMin] || ''} en la Liga Criolla.`,
+          botones: [{ texto: 'Entendido', tipo: 'dorado' }],
+        });
       } else {
         mostrarAviso({
           titulo: 'Diseño exclusivo',
@@ -102,7 +112,7 @@ export default function SelectorPersonalizacion({ usuario, token, recargarPerfil
           )}
           <div style={estilos.fila}>
             {cat.items.map((item) => {
-              const libre = estaDisponible(item, { kitFundador: kit, esSponsor });
+              const libre = estaDisponible(item, { kitFundador: kit, esSponsor, rangoId });
               const activo = sel[cat.campo] === item.id;
               return (
                 <button
