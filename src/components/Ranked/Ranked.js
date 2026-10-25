@@ -39,7 +39,7 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
   const [error, setError] = useState('');
   const [historial, setHistorial] = useState(null);   // Pase 612
   const [lineaRangos, setLineaRangos] = useState(null);   // Pase 620
-  const [reglasAbiertas, setReglasAbiertas] = useState(false);   // Pase 621: "Cómo se suma" en un popup como en la app
+  const [popup, setPopup] = useState(null);   // Pase 622: 'rangos' | 'temporada' | 'partidas' | 'hitos' | 'reglas' (tarjetas secundarias en popup)
   const [partidaAbierta, setPartidaAbierta] = useState(null);
   const [bloqueoFin, setBloqueoFin] = useState(0);   // Pase 613: hora (ms) en que termina el enfriamiento por abandonos
   const [ahora, setAhora] = useState(Date.now());
@@ -144,6 +144,12 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
               <div style={estilos.barraTexto}>
                 {rango.esTop500 ? `${rango.puntos} pts · rango máximo` : `${rango.puntos} / ${rango.rangoMax + 1} pts`}
               </div>
+              {resumen?.clasificacion && !resumen.clasificacion.completa && (
+                <div style={estilos.miniSerie}>{`Clasificando ${resumen.clasificacion.jugadas}/${resumen.clasificacion.total}`}</div>
+              )}
+              {resumen?.serie?.activa && (
+                <div style={estilos.miniSerie}>{`Serie de ascenso: ${resumen.serie.victorias}/${resumen.serie.ganarPara} ✓ · ${resumen.serie.derrotas}/${resumen.serie.perderPara} ✕`}</div>
+              )}
             </div>
           )}
         </PlacaMadera>
@@ -194,78 +200,87 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
         </PlacaMadera>
         </div>
 
-        {/* Pase 612: clasificación (primeras 5 partidas) o serie de ascenso en curso */}
-        {((resumen?.clasificacion && !resumen.clasificacion.completa) || resumen?.serie?.activa) && (
-          <div style={estilos.fila}>
-            {resumen.clasificacion && !resumen.clasificacion.completa && (
-              <PlacaMadera style={{ display: 'flex', flexDirection: 'column', flex: '1 1 300px', minWidth: 0 }} interiorStyle={{ padding: 18, flex: 1 }}>
-                <div style={estilos.panelTitulo}>{`Clasificando ${resumen.clasificacion.jugadas}/${resumen.clasificacion.total}`}</div>
-                <Circulos total={resumen.clasificacion.total} verdes={resumen.clasificacion.victorias} rojos={Math.max(0, resumen.clasificacion.jugadas - resumen.clasificacion.victorias)} />
-                <div style={estilos.serieNota}>
-                  {`Tus primeras ${resumen.clasificacion.total} partidas de Liga no mueven puntos: al terminar la última te asignamos tu rango según las victorias.`}
-                </div>
-              </PlacaMadera>
-            )}
-            {resumen.serie && resumen.serie.activa && (
-              <PlacaMadera style={{ display: 'flex', flexDirection: 'column', flex: '1 1 300px', minWidth: 0 }} interiorStyle={{ padding: 18, flex: 1 }}>
-                <div style={estilos.panelTitulo}>{`Serie de ascenso${resumen.serie.objetivo ? ` a ${resumen.serie.objetivo}` : ''}`}</div>
-                <div style={estilos.serieFila}><span style={estilos.serieEtiqueta}>Victorias</span><Circulos total={resumen.serie.ganarPara} verdes={resumen.serie.victorias} rojos={0} /></div>
-                <div style={estilos.serieFila}><span style={estilos.serieEtiqueta}>Derrotas</span><Circulos total={resumen.serie.perderPara} verdes={0} rojos={resumen.serie.derrotas} /></div>
-                <div style={estilos.serieNota}>
-                  {`Ganá ${Math.max(0, resumen.serie.ganarPara - resumen.serie.victorias)} más para subir. Con ${resumen.serie.perderPara} derrotas la serie se cae y volvés al 75 % de tu barra.`}
-                </div>
-              </PlacaMadera>
-            )}
-          </div>
-        )}
-
-        {/* Fila 2: temporada (compacta) + cómo se suma (abre un popup, Pase 621) */}
-        <div style={estilos.fila}>
-        <PlacaMadera style={{ display: 'flex', flexDirection: 'column', flex: '1 1 300px', minWidth: 0 }} interiorStyle={{ padding: 12, flex: 1 }}>
-          <div style={{ ...estilos.panelTitulo, marginBottom: 8 }}>Tu temporada</div>
-          <div style={estilos.statsGrid}>
-            <Stat label="Jugadas" valor={resumen?.jugadas ?? 0} />
-            <Stat label="% Victorias" valor={`${resumen?.porcentajeVictorias ?? 0}%`} color={C.verdeOscuro} />
-            <Stat label="Racha" valor={resumen?.rachaVictorias ?? 0} color={C.crimsonOscuro} />
-          </div>
-          <div style={{ ...estilos.notaStats, marginTop: 8 }}>
-            {`Racha máxima: ${resumen?.rachaMaxima ?? 0}`}
-            {(resumen?.escudos ?? 0) > 0 ? ` · Escudos de liga: ${resumen.escudos}` : ''}
-          </div>
-        </PlacaMadera>
-
-        <PlacaMadera style={{ display: 'flex', flexDirection: 'column', flex: '0 1 240px', minWidth: 200 }} interiorStyle={{ padding: 12, flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-          <div style={{ ...estilos.panelTitulo, marginBottom: 6 }}>Cómo se suma</div>
-          <div style={{ ...estilos.notaStats, marginTop: 0, marginBottom: 10 }}>Qué hace subir o bajar tus puntos</div>
-          <button type="button" onClick={() => setReglasAbiertas(true)} style={estilos.btnReglas}>Ver reglas</button>
-        </PlacaMadera>
+        {/* Pase 622: una sola pantalla sin scroll: las tarjetas secundarias abren su cartel (igual que en la app) */}
+        <div style={estilos.tilesFila}>
+          <TileLiga icono={ui.logo} titulo="Rangos" sub="Premios" onClick={() => setPopup('rangos')} />
+          <TileLiga icono="/assets/images/icono-rendimiento.png" titulo="Temporada" sub={`${resumen?.porcentajeVictorias ?? 0}% victorias`} onClick={() => setPopup('temporada')} />
+          <TileLiga icono="/assets/images/icono-rango.png" titulo="Partidas" sub={`${Math.min(10, historial?.partidas?.length ?? 0)} últimas`} onClick={() => setPopup('partidas')} />
+          <TileLiga icono="/assets/images/icono-logros.png" titulo="Hitos" sub={`${(resumen?.hitos ?? []).filter((h) => h.cobrado).length}/${resumen?.hitos?.length ?? 0}`} onClick={() => setPopup('hitos')} />
+          <TileLiga icono="/assets/images/icono-misiones.png" titulo="Reglas" sub="Cómo sumás" onClick={() => setPopup('reglas')} />
         </div>
 
         <PopupMadera
-          visible={reglasAbiertas}
-          titulo="Cómo se suma"
-          anchoMax={460}
+          visible={!!popup}
+          titulo={popup === 'rangos' ? 'Rangos y premios' : popup === 'temporada' ? 'Tu temporada' : popup === 'partidas' ? 'Últimas partidas'
+            : popup === 'hitos' ? `Hitos de la Liga · ${(resumen?.hitos ?? []).filter((h) => h.cobrado).length}/${resumen?.hitos?.length ?? 0}` : 'Cómo se suma'}
+          anchoMax={popup === 'rangos' ? 1000 : popup === 'partidas' || popup === 'hitos' ? 760 : 520}
           scroll
           centrado={false}
-          onCerrar={() => setReglasAbiertas(false)}
-          botones={[{ texto: 'Cerrar', onClick: () => setReglasAbiertas(false) }]}
+          onCerrar={() => setPopup(null)}
+          botones={[{ texto: 'Cerrar', onClick: () => setPopup(null) }]}
         >
-          <ul style={estilos.lista}>
-            <li>Ganarle a alguien de mayor rango suma más; ganarle a uno de menor rango suma menos.</li>
-            <li>Perder contra alguien de menor rango resta más.</li>
-            <li>3 victorias seguidas dan +10 pts extra por victoria.</li>
-            <li>Al ascender de rango ganás escudos que te protegen de bajar de liga.</li>
-            <li>En Mancebo las derrotas no restan puntos.</li>
-            <li>Solo las partidas de Liga Criolla mueven tu rango: las salas casuales no.</li>
-            <li>Abandonar una partida de Liga resta 10 pts de más; si abandonás seguido, no podés buscar Liga por un rato. Si querés irte, rendite (1v1): es una derrota normal.</li>
-          </ul>
-        </PopupMadera>
+          {popup === 'rangos' && lineaRangos && (
+            <div>
+              <div style={estilos.rangosIntro}>
+                {`Arrastrá hacia los costados. Cada vez que llegás a un rango nuevo cobrás mates una sola vez (hasta ${lineaRangos.totalMates} en total).`}
+              </div>
+              <LineaRangos data={lineaRangos} />
+              {lineaRangos.eventos.length > 0 && (
+                <div style={estilos.eventosCaja}>
+                  <div style={estilos.eventosTitulo}>Eventos de inauguración</div>
+                  <div style={estilos.eventosGrid}>
+                    {lineaRangos.eventos.map((e) => (
+                      <div key={e.id} style={{ ...estilos.eventoFila, ...(e.abierto ? {} : { opacity: 0.55 }) }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={estilos.eventoNombre}>{e.titulo}</div>
+                          <div style={estilos.eventoTexto}>{e.texto}</div>
+                          {e.meta ? <div style={estilos.eventoProgreso}>{`${e.actual || 0}/${e.meta} partidas${e.premio ? ` · ${e.premio}` : ''}`}</div> : null}
+                        </div>
+                        <div style={estilos.eventoFecha}>{e.abierto ? `Hasta ${fechaCorta(e.hasta)}` : 'Cerrado'}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          {popup === 'rangos' && !lineaRangos && <div style={estilos.notaStats}>No se pudo cargar la línea de rangos. Volvé a intentar en un momento.</div>}
 
-        {/* Pase 612: curva de puntos y últimas partidas de Liga */}
-        {(historial?.partidas?.length ?? 0) > 0 && (
-          <div style={estilos.fila}>
-            <PlacaMadera style={{ display: 'flex', flexDirection: 'column', flex: '1 1 100%', minWidth: 0 }} interiorStyle={{ padding: 18, flex: 1 }}>
-              <div style={estilos.panelTitulo}>Últimas partidas</div>
+          {popup === 'temporada' && (
+            <div>
+              {resumen?.clasificacion && !resumen.clasificacion.completa && (
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ ...estilos.serieEtiqueta, textAlign: 'center', marginBottom: 8 }}>{`Clasificando ${resumen.clasificacion.jugadas}/${resumen.clasificacion.total}`}</div>
+                  <Circulos total={resumen.clasificacion.total} verdes={resumen.clasificacion.victorias} rojos={Math.max(0, resumen.clasificacion.jugadas - resumen.clasificacion.victorias)} />
+                  <div style={estilos.serieNota}>
+                    {`Tus primeras ${resumen.clasificacion.total} partidas de Liga no mueven puntos: al terminar la última te asignamos tu rango según las victorias.`}
+                  </div>
+                </div>
+              )}
+              {resumen?.serie && resumen.serie.activa && (
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ ...estilos.serieEtiqueta, textAlign: 'center', marginBottom: 8 }}>{`Serie de ascenso${resumen.serie.objetivo ? ` a ${resumen.serie.objetivo}` : ''}`}</div>
+                  <div style={estilos.serieFila}><span style={estilos.serieEtiqueta}>Victorias</span><Circulos total={resumen.serie.ganarPara} verdes={resumen.serie.victorias} rojos={0} /></div>
+                  <div style={estilos.serieFila}><span style={estilos.serieEtiqueta}>Derrotas</span><Circulos total={resumen.serie.perderPara} verdes={0} rojos={resumen.serie.derrotas} /></div>
+                  <div style={estilos.serieNota}>
+                    {`Ganá ${Math.max(0, resumen.serie.ganarPara - resumen.serie.victorias)} más para subir. Con ${resumen.serie.perderPara} derrotas la serie se cae y volvés al 75 % de tu barra.`}
+                  </div>
+                </div>
+              )}
+              <div style={estilos.statsGrid}>
+                <Stat label="Jugadas" valor={resumen?.jugadas ?? 0} />
+                <Stat label="% Victorias" valor={`${resumen?.porcentajeVictorias ?? 0}%`} color={C.verdeOscuro} />
+                <Stat label="Racha" valor={resumen?.rachaVictorias ?? 0} color={C.crimsonOscuro} />
+              </div>
+              <div style={estilos.notaStats}>
+                {`Racha máxima: ${resumen?.rachaMaxima ?? 0}`}
+                {(resumen?.escudos ?? 0) > 0 ? ` · Escudos de liga: ${resumen.escudos}` : ''}
+              </div>
+            </div>
+          )}
+
+          {popup === 'partidas' && ((historial?.partidas?.length ?? 0) > 0 ? (
+            <div>
               <CurvaPuntos curva={historial.curva} />
               <div style={estilos.partidasLista}>
                 {historial.partidas.slice(0, 10).map((p) => {
@@ -298,69 +313,60 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
               {historial.mejorVictoria && (
                 <div style={estilos.notaStats}>{`Mejor victoria: ${historial.mejorVictoria.rival} (${historial.mejorVictoria.rivalPuntos} pts)`}</div>
               )}
-            </PlacaMadera>
-          </div>
-        )}
+            </div>
+          ) : (
+            <div style={estilos.notaStats}>Todavía no jugaste partidas de Liga. Cuando juegues, las vas a ver acá con tu curva de puntos.</div>
+          ))}
 
-        {/* Fila (Pase 620): línea de tiempo de rangos con premios y eventos de inauguración */}
-        {lineaRangos && (
-          <div style={estilos.fila}>
-            <PlacaMadera style={{ display: 'flex', flexDirection: 'column', flex: '1 1 100%', minWidth: 0 }} interiorStyle={{ padding: 18, flex: 1 }}>
-              <div style={estilos.panelTitulo}>Rangos y premios</div>
-              <div style={estilos.rangosIntro}>
-                {`Arrastrá hacia los costados. Cada vez que llegás a un rango nuevo cobrás mates una sola vez (hasta ${lineaRangos.totalMates} en total).`}
-              </div>
-              <LineaRangos data={lineaRangos} />
-              {lineaRangos.eventos.length > 0 && (
-                <div style={estilos.eventosCaja}>
-                  <div style={estilos.eventosTitulo}>Eventos de inauguración</div>
-                  <div style={estilos.eventosGrid}>
-                    {lineaRangos.eventos.map((e) => (
-                      <div key={e.id} style={{ ...estilos.eventoFila, ...(e.abierto ? {} : { opacity: 0.55 }) }}>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={estilos.eventoNombre}>{e.titulo}</div>
-                          <div style={estilos.eventoTexto}>{e.texto}</div>
-                          {e.meta ? <div style={estilos.eventoProgreso}>{`${e.actual || 0}/${e.meta} partidas${e.premio ? ` · ${e.premio}` : ''}`}</div> : null}
-                        </div>
-                        <div style={estilos.eventoFecha}>{e.abierto ? `Hasta ${fechaCorta(e.hasta)}` : 'Cerrado'}</div>
+          {popup === 'hitos' && ((resumen?.hitos?.length ?? 0) > 0 ? (
+            <div style={estilos.hitosGrid}>
+              {resumen.hitos.map((h) => (
+                <div key={h.id} style={estilos.hitoFila}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ ...estilos.hitoTexto, ...(h.cobrado ? { color: '#6B4A34' } : {}) }}>{h.texto}</div>
+                    <div style={estilos.hitoBarraFila}>
+                      <div style={estilos.hitoBarraPista}>
+                        <div style={{ ...estilos.hitoBarraRelleno, ...(h.cobrado ? { background: C.verdeOscuro } : {}), width: `${Math.round((h.actual / h.meta) * 100)}%` }} />
                       </div>
-                    ))}
+                      <span style={estilos.hitoBarraTexto}>{h.actual}/{h.meta}</span>
+                    </div>
+                  </div>
+                  <div style={{ ...estilos.hitoPremio, ...(h.cobrado ? { background: C.verdeOscuro, borderColor: '#14532d', color: '#fff' } : {}) }}>
+                    <div style={{ fontSize: 15, lineHeight: 1.1 }}>{h.cobrado ? '✓' : `+${h.mates}`}</div>
+                    {!h.cobrado && <div style={{ fontSize: 9, fontWeight: 700 }}>mates</div>}
                   </div>
                 </div>
-              )}
-            </PlacaMadera>
-          </div>
-        )}
+              ))}
+            </div>
+          ) : (
+            <div style={estilos.notaStats}>Todavía no hay hitos para mostrar.</div>
+          ))}
 
-        {/* Fila 3 (Pase 607): hitos con premio de mates, con barra de progreso como las misiones */}
-        {(resumen?.hitos?.length ?? 0) > 0 && (
-          <div style={estilos.fila}>
-            <PlacaMadera style={{ display: 'flex', flexDirection: 'column', flex: '1 1 100%', minWidth: 0 }} interiorStyle={{ padding: 18, flex: 1 }}>
-              <div style={estilos.panelTitulo}>{`Hitos de la Liga · ${resumen.hitos.filter((h) => h.cobrado).length}/${resumen.hitos.length}`}</div>
-              <div style={estilos.hitosGrid}>
-                {resumen.hitos.map((h) => (
-                  <div key={h.id} style={estilos.hitoFila}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ ...estilos.hitoTexto, ...(h.cobrado ? { color: '#6B4A34' } : {}) }}>{h.texto}</div>
-                      <div style={estilos.hitoBarraFila}>
-                        <div style={estilos.hitoBarraPista}>
-                          <div style={{ ...estilos.hitoBarraRelleno, ...(h.cobrado ? { background: C.verdeOscuro } : {}), width: `${Math.round((h.actual / h.meta) * 100)}%` }} />
-                        </div>
-                        <span style={estilos.hitoBarraTexto}>{h.actual}/{h.meta}</span>
-                      </div>
-                    </div>
-                    <div style={{ ...estilos.hitoPremio, ...(h.cobrado ? { background: C.verdeOscuro, borderColor: '#14532d', color: '#fff' } : {}) }}>
-                      <div style={{ fontSize: 15, lineHeight: 1.1 }}>{h.cobrado ? '✓' : `+${h.mates}`}</div>
-                      {!h.cobrado && <div style={{ fontSize: 9, fontWeight: 700 }}>mates</div>}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </PlacaMadera>
-          </div>
-        )}
+          {popup === 'reglas' && (
+            <ul style={estilos.lista}>
+              <li>Ganarle a alguien de mayor rango suma más; ganarle a uno de menor rango suma menos.</li>
+              <li>Perder contra alguien de menor rango resta más.</li>
+              <li>3 victorias seguidas dan +10 pts extra por victoria.</li>
+              <li>Al ascender de rango ganás escudos que te protegen de bajar de liga.</li>
+              <li>En Mancebo las derrotas no restan puntos.</li>
+              <li>Solo las partidas de Liga Criolla mueven tu rango: las salas casuales no.</li>
+              <li>Abandonar una partida de Liga resta 10 pts de más; si abandonás seguido, no podés buscar Liga por un rato. Si querés irte, rendite (1v1): es una derrota normal.</li>
+            </ul>
+          )}
+        </PopupMadera>
       </div>
     </div>
+  );
+}
+
+// Pase 622: tarjeta chica del kit (cuero + filo de bronce) que abre un cartel.
+function TileLiga({ icono, titulo, sub, onClick }) {
+  return (
+    <button type="button" onClick={onClick} style={estilos.tile}>
+      <img src={icono} alt="" draggable={false} style={estilos.tileIcono} />
+      <div style={estilos.tileTitulo}>{titulo}</div>
+      <div style={estilos.tileSub}>{sub}</div>
+    </button>
   );
 }
 
@@ -470,9 +476,16 @@ function Stat({ label, valor, color }) {
   );
 }
 
-const CONTORNO_TEXTO = '-1.5px -1.5px 0 #000, 0 -1.5px 0 #000, 1.5px -1.5px 0 #000, -1.5px 0 0 #000, 1.5px 0 0 #000, -1.5px 1.5px 0 #000, 0 1.5px 0 #000, 1.5px 1.5px 0 #000';
-
 const estilos = {
+  tilesFila: { display: 'flex', flexWrap: 'wrap', gap: 14 },
+  tile: {
+    flex: '1 1 150px', minHeight: 150, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
+    background: '#3B1A12', border: '3px solid #8C6239', borderRadius: 16, cursor: 'pointer', padding: '12px 8px', boxShadow: '0 4px 0 #000',
+  },
+  tileIcono: { width: 76, height: 76, objectFit: 'contain' },
+  tileTitulo: { fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 19, color: C.doradoClaro },
+  tileSub: { fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 13, color: C.crema, opacity: 0.85 },
+  miniSerie: { fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 12.5, color: C.crema, marginTop: 6 },
   rangosIntro: { fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 13, color: '#6B4A34', textAlign: 'center', margin: '4px 0 10px', lineHeight: 1.35 },
   lineaCaja: { display: 'flex', overflowX: 'auto', cursor: 'grab', userSelect: 'none', touchAction: 'pan-x pan-y', paddingBottom: 8, scrollbarWidth: 'thin' },
   nodo: { flex: `0 0 ${ANCHO_NODO}px`, width: ANCHO_NODO, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 },
