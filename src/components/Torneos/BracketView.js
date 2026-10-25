@@ -331,7 +331,7 @@ export default function BracketView({ torneoId, usuario, token, onVolver, onEntr
 
       {/* ---- Encabezado ---- */}
       <Marco style={{ marginBottom: 16 }} innerStyle={estilos.headerInterior}>
-        <button onClick={onVolver} style={estilos.btnVolver}>← Volver</button>
+        <button onClick={onVolver} style={estilos.btnVolver}><img src="/assets/images/boton-volver.webp" alt="" draggable="false" style={{ width: 24, height: 24, verticalAlign: 'middle', marginRight: 6 }} />Volver</button>
         <img src="/assets/images/trofeo.png" alt="" style={estilos.headerTrofeo} />
         <div style={estilos.headerCentro}>
           <div style={estilos.pageTitle}>{torneo.titulo}</div>

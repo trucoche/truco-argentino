@@ -294,7 +294,7 @@ export default function AnotadorOffline({ onVolver }) {
         <header className="ao-cabecera">
           <div className="ao-fila-titulo">
             {onVolver && (
-              <button type="button" className="ao-volver" onClick={onVolver} aria-label="Volver">←</button>
+              <button type="button" className="ao-volver" onClick={onVolver} aria-label="Volver"><img src="/assets/images/boton-volver.webp" alt="" draggable="false" style={{ display: 'block', width: '100%', height: '100%', pointerEvents: 'none' }} /></button>
             )}
             <h1 className="ao-titulo">
               <img src="/assets/images/icono-anotador.png" alt="" className="ao-titulo-icono" />

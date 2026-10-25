@@ -363,7 +363,7 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
                       </div>
                       {abierta && (
                         <div style={estilos.partidaDetalle}>
-                          {`Trucos ${e.trucos || 0} · Envidos ${envidos} · Flores ${e.flores || 0} · Al mazo ${e.mazos || 0} · Faroles ${e.faroles || 0}`}
+                          {`Trucos ${e.trucos || 0} · Envidos ${envidos} · Flores ${e.flores || 0} · Al mazo ${e.mazos || 0} · Amagues ${e.faroles || 0}`}
                         </div>
                       )}
                     </button>

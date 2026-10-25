@@ -73,7 +73,10 @@
   font-size: 15px;
   cursor: pointer;
 }
-.ao-volver { width: 44px; padding: 0; font-size: 22px; line-height: 1; }
+.ao-volver { width: 44px; height: 44px; padding: 0; font-size: 22px; line-height: 1; }
+/* Pase 625: el botón de volver es ahora una imagen (círculo de madera con flecha): sin el fondo ni el borde del botón de madera. */
+.ao-volver { background: none; border: 0; border-radius: 50%; box-shadow: none; }
+.ao-volver:active { box-shadow: none; }
 .ao-sfx { width: 44px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
 .ao-sfx-mudo { background: linear-gradient(160deg, #6b5a50, #43362f); color: #cdbfae; }
 .ao-volver:active, .ao-limpiar:active, .ao-sfx:active { transform: translateY(2px); box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.18), 0 1px 0 var(--ao-negro); }
