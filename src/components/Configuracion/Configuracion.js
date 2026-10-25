@@ -510,6 +510,86 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
     </div>
   );
 
+  // ---------- Pase 623: regalos de mates con mensaje (solo rol 'admin') ----------
+  // Se busca al jugador (mismo buscador que Sponsors), se escribe cuántos mates y el mensaje de agradecimiento; al jugador
+  // le sale el cartel "Regalo de TrucoChe" la próxima vez que entra al lobby.
+  const [regalos, setRegalos] = useState([]);
+  const [regaloBusqueda, setRegaloBusqueda] = useState('');
+  const [regaloResultado, setRegaloResultado] = useState(null); // { usuario, sugerencias } | null
+  const [regaloMates, setRegaloMates] = useState('100');
+  const [regaloMensaje, setRegaloMensaje] = useState('');
+  const [regaloOcupado, setRegaloOcupado] = useState(false);
+  const [regaloAviso, setRegaloAviso] = useState('');
+
+  const cargarRegalos = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/admin/regalos`, { headers: { 'Authorization': `Bearer ${token}` } });
+      const data = await res.json();
+      if (res.ok) setRegalos(data.regalos || []);
+    } catch (err) {
+      console.error('Error cargando regalos:', err);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    if (esAdmin) cargarRegalos();
+  }, [esAdmin, cargarRegalos]);
+
+  const buscarParaRegalo = async (texto) => {
+    const q = (texto ?? regaloBusqueda).trim();
+    if (!q || regaloOcupado) return;
+    setRegaloOcupado(true);
+    setRegaloAviso('');
+    try {
+      const res = await fetch(`${API_BASE}/admin/sponsors/buscar?q=${encodeURIComponent(q)}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) setRegaloResultado({ usuario: data.usuario || null, sugerencias: data.sugerencias || [] });
+      else setRegaloAviso(data.error || 'No se pudo buscar');
+    } catch (err) {
+      setRegaloAviso('No se pudo buscar. Revisá la conexión.');
+    } finally {
+      setRegaloOcupado(false);
+    }
+  };
+
+  const enviarRegalo = async (u) => {
+    if (!u || regaloOcupado) return;
+    const mates = parseInt(regaloMates, 10);
+    if (!Number.isInteger(mates) || mates < 1) { setRegaloAviso('Escribí cuántos mates querés regalar.'); return; }
+    if (!regaloMensaje.trim()) { setRegaloAviso('Escribí el mensaje de agradecimiento.'); return; }
+    const confirmado = await confirmarPopup({
+      titulo: 'Enviar regalo',
+      mensaje: `¿Regalarle ${mates} mates a ${u.username}? Le va a salir un cartel con tu mensaje.`,
+      textoSi: 'Enviar',
+    });
+    if (!confirmado) return;
+    setRegaloOcupado(true);
+    setRegaloAviso('');
+    try {
+      const res = await fetch(`${API_BASE}/admin/regalos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ usuario_id: u.id, mates, mensaje: regaloMensaje.trim() })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setRegaloAviso(`Listo: le regalaste ${mates} mates a ${u.username}.`);
+        setRegaloResultado(null);
+        setRegaloBusqueda('');
+        setRegaloMensaje('');
+        cargarRegalos();
+      } else {
+        setRegaloAviso(data.error || 'No se pudo enviar el regalo');
+      }
+    } catch (err) {
+      setRegaloAviso('No se pudo enviar. Revisá la conexión.');
+    } finally {
+      setRegaloOcupado(false);
+    }
+  };
+
   // ---------- Pase 563: sponsors de Cafecito (solo rol 'admin') ----------
   // Cuando llega una donación, el donante escribió en el mensaje su ID o su usuario: se busca acá, se ve a
   // quién encontró y recién entonces se otorga (anillo + banner + dorso 'Sponsor Criollo').
@@ -1232,6 +1312,95 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
 
       {/* Pase 611: Modo foto — mesa simulada para capturas (solo rol 'admin'). */}
       {esAdmin && <ModoFotoAdmin />}
+
+      {/* Pase 623: regalos de mates con mensaje — solo rol 'admin'. */}
+      {esAdmin && (
+        <PlacaMadera>
+          <div style={estilos.panelTitulo}>🎁 Regalar mates con mensaje (administración)</div>
+          <p style={estilos.hintBaraja}>Buscá al jugador por ID o nombre de usuario, escribí cuántos mates y el mensaje de agradecimiento. Le sale un cartel la próxima vez que entra al lobby.</p>
+          <div style={estilos.filaBusquedaSponsor}>
+            <input
+              id="regalo-busqueda"
+              style={estilos.inputSponsor}
+              type="text"
+              placeholder="ID o nombre de usuario"
+              value={regaloBusqueda}
+              maxLength={50}
+              onChange={(e) => { setRegaloBusqueda(e.target.value); setRegaloResultado(null); }}
+              onKeyDown={(e) => { if (e.key === 'Enter') buscarParaRegalo(); }}
+            />
+            <button style={estilos.btnRevisar} disabled={regaloOcupado || !regaloBusqueda.trim()} onClick={() => buscarParaRegalo()}>
+              Buscar
+            </button>
+          </div>
+          <div style={estilos.filaBusquedaSponsor}>
+            <input
+              id="regalo-mates"
+              style={{ ...estilos.inputSponsor, flex: '0 0 110px' }}
+              type="number"
+              min="1"
+              max="1000"
+              placeholder="Mates"
+              value={regaloMates}
+              onChange={(e) => setRegaloMates(e.target.value)}
+            />
+            <input
+              id="regalo-mensaje"
+              style={estilos.inputSponsor}
+              type="text"
+              placeholder="Mensaje (ej.: Gracias por la idea de los rangos)"
+              value={regaloMensaje}
+              maxLength={200}
+              onChange={(e) => setRegaloMensaje(e.target.value)}
+            />
+          </div>
+
+          {regaloResultado && regaloResultado.usuario && (
+            <div style={estilos.filaDenuncia}>
+              <div style={estilos.denunciaTexto}>
+                Encontrado: <strong>{regaloResultado.usuario.username}</strong> (ID {regaloResultado.usuario.id})
+              </div>
+              <button style={estilos.btnRevisar} disabled={regaloOcupado} onClick={() => enviarRegalo(regaloResultado.usuario)}>
+                {regaloOcupado ? 'Enviando...' : 'Enviar regalo'}
+              </button>
+            </div>
+          )}
+          {regaloResultado && !regaloResultado.usuario && (
+            <div>
+              <p style={estilos.hintBaraja}>No hay ningún usuario con ese ID o nombre exacto.</p>
+              {regaloResultado.sugerencias.length > 0 && (
+                <div style={estilos.listaDenuncias}>
+                  {regaloResultado.sugerencias.map(u => (
+                    <div key={u.id} style={estilos.filaDenuncia}>
+                      <div style={estilos.denunciaTexto}>¿Será <strong>{u.username}</strong>? (ID {u.id})</div>
+                      <button style={estilos.btnRevisar} onClick={() => { setRegaloBusqueda(u.username); buscarParaRegalo(u.username); }}>
+                        Elegir
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          {regaloAviso && <p style={estilos.hintBaraja}>{regaloAviso}</p>}
+
+          <div style={{ ...estilos.panelTitulo, marginTop: 14 }}>Últimos regalos ({regalos.length})</div>
+          {regalos.length === 0 ? (
+            <p style={estilos.hintBaraja}>Todavía no enviaste regalos desde el panel.</p>
+          ) : (
+            <div style={estilos.listaDenuncias}>
+              {regalos.slice(0, 10).map(g => (
+                <div key={g.id} style={estilos.filaDenuncia}>
+                  <div style={estilos.denunciaTexto}>
+                    <strong>{g.username}</strong> · +{g.mates} mates · {g.visto ? 'ya lo vio' : 'todavía no lo vio'}
+                    <div style={estilos.denunciaFecha}>{`“${g.mensaje}” · ${new Date(g.creado_en).toLocaleDateString()}`}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </PlacaMadera>
+      )}
 
       {/* Pase 563: sponsors de Cafecito — solo rol 'admin'. Buscar al donante, ver a quién encontró y otorgar. */}
       {esAdmin && (
