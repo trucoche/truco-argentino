@@ -4,6 +4,7 @@ import PersonajeSelector from '../Lobby/PersonajeSelector';
 import ReportarModal from '../Reportar/ReportarModal';
 import SelectorPersonalizacion from '../Personalizacion/SelectorPersonalizacion';
 import ModoFotoAdmin from './ModoFotoAdmin';
+import { AdminResumen, AdminUsuarios, AdminAcciones } from './AdminHerramientas';
 import { API_URL as BASE_URL } from '../../config';
 
 const API_URL = `${BASE_URL}/api/auth`;
@@ -54,6 +55,8 @@ const PESTANAS_AJUSTES = [
 // Pase 626: las herramientas de administración (solo rol 'admin') van en su propia pestaña, con subpestañas como en la app.
 const PESTANA_ADMIN = { id: 'admin', texto: 'Admin' };
 const SUBPESTANAS_ADMIN = [
+  { id: 'resumen', texto: 'Resumen' },
+  { id: 'usuarios', texto: 'Jugadores' },
   { id: 'reportes', texto: 'Reportes' },
   { id: 'denuncias', texto: 'Denuncias' },
   { id: 'regalos', texto: 'Regalos' },
@@ -61,6 +64,7 @@ const SUBPESTANAS_ADMIN = [
   { id: 'suspendidos', texto: 'Suspendidos' },
   { id: 'censura', texto: 'Censura' },
   { id: 'foto', texto: 'Modo foto' },
+  { id: 'acciones', texto: 'Acciones' },
 ];
 
 export default function Configuracion({ token, usuario, onPersonajeCambiado, musicaVolumen, onCambiarMusicaVolumen, efectosVolumen = 1, onCambiarEfectosVolumen, onNavegar }) {
@@ -1353,6 +1357,10 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
 
       {/* Pase 611: Modo foto — mesa simulada para capturas (solo rol 'admin'). */}
       {esAdmin && pestana === 'admin' && subAdmin === 'foto' && <ModoFotoAdmin />}
+      {/* Pase 640: resumen del día, ficha de jugador y registro de acciones. */}
+      {esAdmin && pestana === 'admin' && subAdmin === 'resumen' && <AdminResumen token={token} />}
+      {esAdmin && pestana === 'admin' && subAdmin === 'usuarios' && <AdminUsuarios token={token} />}
+      {esAdmin && pestana === 'admin' && subAdmin === 'acciones' && <AdminAcciones token={token} />}
 
       {/* Pase 623: regalos de mates con mensaje — solo rol 'admin'. */}
       {esAdmin && pestana === 'admin' && subAdmin === 'regalos' && (

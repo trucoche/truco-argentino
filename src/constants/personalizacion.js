@@ -24,7 +24,7 @@ export const BANNERS = [
   { id: 'base', nombre: 'Madera clásica', imagen: BASE + '/banners/banner_base.png', proporcion: 480 / 230, margenInterior: { x: 0.075, y: 0.13 }, ...LIBRE },
   { id: 'cafecito', nombre: 'Sponsor Criollo', imagen: BASE + '/banners/banner_cafecito.png', proporcion: 480 / 230, margenInterior: { x: 0.075, y: 0.13 }, ...SPONSOR },
   { id: 'tester', nombre: 'Beta Tester', imagen: BASE + '/banners/banner_tester.png', proporcion: 480 / 230, margenInterior: { x: 0.075, y: 0.13 }, ...KIT },
-  { id: 'pionero', nombre: 'Sol de Mayo', imagen: BASE + '/banners/banner_pionero.webp', proporcion: 840 / 400, margenInterior: { x: 0.075, y: 0.13 }, leyenda: { titulo: 'SOL DE MAYO', sub: 'LIGA CRIOLLA' }, ...LIBRE, rangoMin: 8 },
+  { id: 'pionero', nombre: 'Sol de Mayo', imagen: BASE + '/banners/banner_palabra_gaucho.webp', proporcion: 1120 / 619, margenInterior: { x: 0.075, y: 0.13 }, ...LIBRE, rangoMin: 8 },
 ];
 
 export const MAZOS = [

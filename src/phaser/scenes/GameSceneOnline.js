@@ -3630,7 +3630,7 @@ _renderizarEstado(animarReparto) {
       // arriba (245→220) para que queden alineadas al centro geométrico
       // real del paño (la fila de botones ahora vive en una sola línea
       // más abajo, dentro del panel agrandado, así que hay más aire).
-      this._dibujarDueloCartas(e.jugadasRival, e.misJugadas, this._L ? this._L.dueloY : 220, this._L ? this._L.dueloEscala : 0.66, 60);
+      this._dibujarDueloCartas(e.jugadasRival, e.misJugadas, this._L ? this._L.dueloY : 220, this._L ? this._L.dueloEscala : 0.66, 60, !!e.esMano);
             // Pase siguiente (feedback del usuario: "deben nacer y apoyarse
             // directamente desde el marco de madera de la botonera
             // inferior, sin invadir la zona verde") — bajada 15px (490→505)
@@ -5114,7 +5114,7 @@ _dibujarFilaCartasReveladas(cartas, y) {
 // cartas (se está jugando en este momento), o hay un empate de valor
 // (parda), no hay ganador definido: se dibujan apenas superpuestas, sin
 // que ninguna tape más a la otra.
-_dibujarDueloCartas(cartasRivalArr, cartasMiasArr, yCentro, escala, depthBase) {
+_dibujarDueloCartas(cartasRivalArr, cartasMiasArr, yCentro, escala, depthBase, soyMano = false) {
     const cartasRival = cartasRivalArr || [];
     const cartasMias = cartasMiasArr || [];
     const cantidad = Math.max(cartasRival.length, cartasMias.length);
@@ -5273,6 +5273,10 @@ _dibujarDueloCartas(cartasRivalArr, cartasMiasArr, yCentro, escala, depthBase) {
       if (rankRival !== rankMia) {
         hayGanador = true;
         rivalGana = rankRival > rankMia;
+      } else {
+        // Pase 638: en la parda (mismo valor) gana la carta de quien es mano; se tapa igual que con un ganador.
+        hayGanador = true;
+        rivalGana = !soyMano;
       }
 
       // Con ganador definido: se solapan 25% (altoBase*0.75 entre centros).
