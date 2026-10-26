@@ -11,11 +11,13 @@ const KIT = { ...LIBRE, soloKit: true };   // Pase 523: exclusivo del Kit de Fun
 const SPONSOR = { ...LIBRE, soloSponsor: true };   // Pase 563: solo quien donó en Cafecito (usuario.es_sponsor)
 // Pase 628: set "Sol de Mayo": se desbloquea por el mayor rango alcanzado en la Liga (usuario.rango_max): dorso Gaucho (4), banner Caudillo (8), anillo Martín Fierro (10).
 
+// Pase 630: `escalaHeader` = cuánto se agranda el anillo cuando se dibuja ENCIMA del panel del rango en el header (el aro de madera del Sol de Mayo
+// es más chico que el lienzo por los laureles y dejaba ver el aro dorado de atrás). Solo lo usa el header; en el resto de las pantallas el anillo va solo.
 export const ANILLOS = [
   { id: 'rango', nombre: 'Anillo de rango', imagen: null, hueco: null, ...LIBRE },
   { id: 'cafecito', nombre: 'Sponsor Criollo', imagen: BASE + '/anillos/anillo_cafecito.png', hueco: 0.677, ...SPONSOR },
   { id: 'tester', nombre: 'Beta Tester', imagen: BASE + '/anillos/anillo_tester.png', hueco: 0.635, ...KIT },
-  { id: 'pionero', nombre: 'Sol de Mayo', imagen: BASE + '/anillos/anillo_pionero.webp', hueco: 0.547, ...LIBRE, rangoMin: 10 },
+  { id: 'pionero', nombre: 'Sol de Mayo', imagen: BASE + '/anillos/anillo_pionero.webp', hueco: 0.547, escalaHeader: 1.25, ...LIBRE, rangoMin: 10 },
 ];
 
 export const BANNERS = [
@@ -48,5 +50,5 @@ export const estaDisponible = (item, ctx) =>
 // Anillo a dibujar alrededor de un avatar: el elegido o el de su rango (`rangoAssets` = { anillo, hueco }).
 export const resolverAnillo = (anilloId, rangoAssets) => {
   const a = anilloPorId(anilloId);
-  return a.imagen && a.hueco ? { imagen: a.imagen, hueco: a.hueco } : { imagen: rangoAssets.anillo, hueco: rangoAssets.hueco };
+  return a.imagen && a.hueco ? { imagen: a.imagen, hueco: a.hueco, escala: a.escalaHeader || 1 } : { imagen: rangoAssets.anillo, hueco: rangoAssets.hueco, escala: 1 };
 };

@@ -443,6 +443,7 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
           token={token}
           saldoActual={usuario?.saldo}
           tieneFondo={!!usuario?.fondo_perfil_url}
+          usuario={usuario}
           onCerrar={() => setFondoModalAbierto(false)}
           onFondoActualizado={() => { if (onPerfilActualizado) onPerfilActualizado(); }}
         />

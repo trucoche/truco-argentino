@@ -50,7 +50,7 @@ function anilloEnHeader(usuario) {
   const sel = resolverAnillo(usuario && usuario.anillo_id, rUi);
   if (sel.imagen === rUi.anillo) return { estiloDisco: rUi.discoEstilo, anillo: null };
   const [cx, cy, D] = rUi.disco;
-  const O = Math.min(D / rUi.hueco, 234);
+  const O = Math.min(D / rUi.hueco, 234) * (sel.escala || 1);   // Pase 630: ver escalaHeader en constants/personalizacion.js
   const d = Math.max(O * sel.hueco + 2.25, D - 5 + 2.25);
   return {
     estiloDisco: {

@@ -1,7 +1,8 @@
 import React, { useState, useCallback } from 'react';
 import Cropper from 'react-easy-crop';
 import { API_URL as BASE_URL } from '../../config';
-import PopupMadera from '../Popup/PopupMadera';
+import PopupMadera, { confirmarPopup, mostrarAviso } from '../Popup/PopupMadera';
+import { BANNERS, estaDisponible } from '../../constants/personalizacion';
 
 const API_BASE = `${BASE_URL}/api`;
 
@@ -45,7 +46,10 @@ async function recortarImagen(imagenSrc, areaRecortadaPx) {
   return canvas.toDataURL('image/jpeg', 0.88);
 }
 
-export default function CambiarFondoModal({ token, saldoActual, onCerrar, onFondoActualizado, tieneFondo = false }) {
+// Pase 630: rango que desbloquea cada banner del set "Sol de Mayo" (ver rangoMin en constants/personalizacion.js).
+const NOMBRES_RANGO_SET = { 4: 'Gaucho', 8: 'Caudillo', 10: 'Martín Fierro' };
+
+export default function CambiarFondoModal({ token, saldoActual, onCerrar, onFondoActualizado, tieneFondo = false, usuario = null }) {
   const [archivoSrc, setArchivoSrc] = useState(null);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
@@ -95,6 +99,59 @@ export default function CambiarFondoModal({ token, saldoActual, onCerrar, onFond
       onCerrar();
     } catch (err) {
       console.error('Error eliminando fondo de perfil:', err);
+      setError('No se pudo conectar con el servidor');
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  // Pase 630: elegir uno de los banners del juego (gratis). Si tenía una foto propia, se reemplaza (con confirmación).
+  const kit = !!(usuario && usuario.kit_fundador);
+  const esSponsor = !!(usuario && usuario.es_sponsor);
+  const rangoId = (usuario && usuario.rango_max) || 0;
+  const bannerActual = tieneFondo ? null : ((usuario && usuario.banner_id) || 'base');
+
+  const elegirBanner = async (item) => {
+    if (enviando) return;
+    if (!estaDisponible(item, { kitFundador: kit, esSponsor, rangoId })) {
+      const motivo = item.soloKit ? 'Es parte del Kit de Beta Tester, que se regaló a quienes probaron TrucoChe en la etapa de pruebas.'
+        : item.soloSponsor ? 'Es un diseño exclusivo de quienes apoyan el proyecto.'
+        : `Se desbloquea al llegar al rango ${NOMBRES_RANGO_SET[item.rangoMin] || ''} en la Liga Criolla.`;
+      mostrarAviso({ titulo: 'Banner bloqueado', mensaje: motivo, botones: [{ texto: 'Entendido', tipo: 'dorado' }] });
+      return;
+    }
+    if (item.id === bannerActual) return;
+    if (tieneFondo) {
+      const ok = await confirmarPopup({
+        titulo: 'Reemplazar tu fondo',
+        mensaje: 'Vas a dejar tu foto y usar este banner. Si después querés volver a tu foto, tenés que subirla de nuevo y pagar ' + COSTO_FONDO + ' mates.',
+        textoSi: 'Usar banner',
+        textoNo: 'Cancelar',
+        tipoSi: 'celeste',
+      });
+      if (!ok) return;
+    }
+    setEnviando(true);
+    setError('');
+    try {
+      const res = await fetch(`${API_BASE}/usuarios/personalizacion`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ banner_id: item.id }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error || 'No se pudo cambiar el banner');
+        return;
+      }
+      if (tieneFondo) {
+        const r2 = await fetch(`${API_BASE}/usuarios/fondo-perfil`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+        if (!r2.ok) { setError('Se eligió el banner, pero no se pudo quitar tu foto. Probá con "Eliminar fondo".'); if (onFondoActualizado) onFondoActualizado(null); return; }
+      }
+      if (onFondoActualizado) onFondoActualizado(null);
+      onCerrar();
+    } catch (err) {
+      console.error('Error eligiendo banner:', err);
       setError('No se pudo conectar con el servidor');
     } finally {
       setEnviando(false);
@@ -164,6 +221,33 @@ export default function CambiarFondoModal({ token, saldoActual, onCerrar, onFond
       onCerrar={onCerrar}
       botones={botones}
     >
+      {!archivoSrc && (
+        <div style={estilos.bannersBloque}>
+          <div style={estilos.bannersTitulo}>Elegí un banner del juego <span style={estilos.gratis}>GRATIS</span></div>
+          <div style={estilos.bannersFila}>
+            {BANNERS.map((item) => {
+              const libre = estaDisponible(item, { kitFundador: kit, esSponsor, rangoId });
+              const activo = bannerActual === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => elegirBanner(item)}
+                  aria-pressed={activo}
+                  disabled={enviando}
+                  style={{ ...estilos.bannerTile, ...(activo ? estilos.bannerTileActivo : null), ...(!libre ? estilos.bannerTileBloqueado : null) }}
+                >
+                  <img src={item.imagen} alt="" style={{ width: 98, height: 98 / item.proporcion, objectFit: 'contain' }} />
+                  <div style={estilos.bannerNombre}>{item.nombre}</div>
+                  {activo && <span style={estilos.bannerTilde} aria-hidden="true">✓</span>}
+                  {!libre && <span style={estilos.bannerCandado} aria-hidden="true">🔒</span>}
+                </button>
+              );
+            })}
+          </div>
+          <div style={estilos.bannersSeparador}>o subí tu propia foto ({COSTO_FONDO} mates)</div>
+        </div>
+      )}
       {!archivoSrc ? (
         <label style={estilos.elegirArchivo}>
           <span style={estilos.elegirArchivoIcono}>🖼️</span>
@@ -216,6 +300,20 @@ export default function CambiarFondoModal({ token, saldoActual, onCerrar, onFond
 }
 
 const estilos = {
+  bannersBloque: { marginBottom: 12 },
+  bannersTitulo: { fontWeight: 800, fontSize: 14, color: C.chocolate, marginBottom: 6 },
+  gratis: { marginLeft: 6, padding: '1px 7px', borderRadius: 8, background: '#3FA34D', color: '#fff', fontSize: 11, fontWeight: 800, verticalAlign: 'middle' },
+  bannersFila: { display: 'flex', gap: 10, padding: '8px 6px 6px 2px', overflowX: 'auto' },
+  bannerTile: {
+    position: 'relative', flex: '0 0 112px', width: 112, boxSizing: 'border-box', display: 'flex', flexDirection: 'column', alignItems: 'center',
+    padding: '8px 6px', borderRadius: 12, border: '2px solid rgba(74,44,42,0.35)', background: 'rgba(255,255,255,0.35)', cursor: 'pointer', fontFamily: 'inherit',
+  },
+  bannerTileActivo: { borderColor: '#C9860E', background: '#FFE9B0', borderWidth: 3, padding: '7px 5px' },
+  bannerTileBloqueado: { opacity: 0.55 },
+  bannerNombre: { marginTop: 4, fontWeight: 800, fontSize: 11.5, color: C.chocolate },
+  bannerTilde: { position: 'absolute', top: -7, right: -7, width: 22, height: 22, borderRadius: 11, background: '#3FA34D', border: '2px solid #000', color: '#fff', fontSize: 12, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  bannerCandado: { position: 'absolute', top: 4, right: 6, fontSize: 15 },
+  bannersSeparador: { marginTop: 6, textAlign: 'center', fontWeight: 700, fontSize: 12, color: '#7a6660' },
   elegirArchivo: {
     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
     gap: 8, height: 200, border: `3px dashed ${C.chocolate}55`, borderRadius: 14,
