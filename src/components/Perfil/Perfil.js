@@ -744,13 +744,13 @@ const estilos = {
   statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 12 },
   // Pase 363: en la columna angosta las 4 fichas van en 2x2 y se reparten la altura de la tarjeta.
   statsGridAncho: { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gridAutoRows: '1fr', gap: 10, flex: 1 },
-  statTileCompacto: { padding: '10px 4px', display: 'flex', flexDirection: 'column', justifyContent: 'center' },
-  statLabelCompacto: { fontSize: 10, letterSpacing: 0, overflowWrap: 'anywhere' },
+  statTileCompacto: { padding: '16px 6px', display: 'flex', flexDirection: 'column', justifyContent: 'center' },
+  statLabelCompacto: { fontSize: 13, letterSpacing: 0.2, overflowWrap: 'anywhere' },
   statTile: {
     background: C.cremaSutil, border: `2px solid ${C.chocolate}22`, borderRadius: 14,
     padding: '14px 10px', textAlign: 'center'
   },
-  statValor: { fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 24, color: C.chocolate },
-  statLabel: { fontSize: 11.5, fontWeight: 700, color: '#8c8078', marginTop: 4, textTransform: 'uppercase', letterSpacing: 0.3 },
+  statValor: { fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 40, lineHeight: 1.1, color: C.chocolate },
+  statLabel: { fontSize: 13, fontWeight: 700, color: '#8c8078', marginTop: 4, textTransform: 'uppercase', letterSpacing: 0.3 },
 
 };

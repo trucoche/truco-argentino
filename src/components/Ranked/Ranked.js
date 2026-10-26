@@ -15,6 +15,9 @@ const ICONOS_MODO = {
   '3v3': { activo: '/assets/images/icono-modo-3v3-activo.png', inactivo: '/assets/images/icono-modo-3v3-inactivo.png' },
 };
 
+// Pase 634: pergamino de la app (#F4E2C2) en vez del casi blanco del kit.
+const PERGAMINO = '#F4E2C2';
+
 const C = {
   crema: '#FFF8ED', chocolate: '#4A2C2A', dorado: '#F5B041', doradoClaro: '#FFD668',
   verdeOscuro: '#1f7a3c', crimsonOscuro: '#c2352a',
@@ -248,7 +251,7 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
         </PlacaMadera>
 
         {/* B + C. Modalidad y búsqueda */}
-        <PlacaMadera style={{ display: 'flex', flexDirection: 'column', flex: '1 1 340px', minWidth: 0 }} interiorStyle={{ padding: 18, flex: 1 }}>
+        <PlacaMadera style={{ display: 'flex', flexDirection: 'column', flex: '1 1 340px', minWidth: 0 }} colorInterior={PERGAMINO} interiorStyle={{ padding: 18, flex: 1 }}>
           <div style={estilos.panelTitulo}>Elegí la modalidad</div>
           <div style={estilos.filaModos}>
             {MODOS.map((m) => (
@@ -295,7 +298,7 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
 
         {/* Pase 624: ventana alta → Rangos abierto en la página */}
         {nivelEspacio >= 1 && lineaRangos && (
-          <PlacaMadera style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }} interiorStyle={{ padding: 14 }}>
+          <PlacaMadera style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }} colorInterior={PERGAMINO} interiorStyle={{ padding: 14 }}>
             <div style={{ ...estilos.panelTitulo, marginBottom: 4 }}>Rangos y premios</div>
             {renderRangos()}
           </PlacaMadera>
@@ -304,11 +307,11 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
         {/* Pase 624: ventana muy alta → Temporada y Hitos abiertos también */}
         {nivelEspacio >= 2 && (
           <div style={estilos.fila}>
-            <PlacaMadera style={{ display: 'flex', flexDirection: 'column', flex: '1 1 300px', minWidth: 0 }} interiorStyle={{ padding: 14, flex: 1 }}>
+            <PlacaMadera style={{ display: 'flex', flexDirection: 'column', flex: '1 1 300px', minWidth: 0 }} colorInterior={PERGAMINO} interiorStyle={{ padding: 14, flex: 1 }}>
               <div style={{ ...estilos.panelTitulo, marginBottom: 8 }}>Tu temporada</div>
               {renderTemporada()}
             </PlacaMadera>
-            <PlacaMadera style={{ display: 'flex', flexDirection: 'column', flex: '1 1 300px', minWidth: 0 }} interiorStyle={{ padding: 14, flex: 1 }}>
+            <PlacaMadera style={{ display: 'flex', flexDirection: 'column', flex: '1 1 300px', minWidth: 0 }} colorInterior={PERGAMINO} interiorStyle={{ padding: 14, flex: 1 }}>
               <div style={{ ...estilos.panelTitulo, marginBottom: 8 }}>{`Hitos de la Liga · ${(resumen?.hitos ?? []).filter((h) => h.cobrado).length}/${resumen?.hitos?.length ?? 0}`}</div>
               {renderHitos()}
             </PlacaMadera>
@@ -326,6 +329,7 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
 
         <PopupMadera
           visible={!!popup}
+          colorInterior={PERGAMINO}
           titulo={popup === 'rangos' ? 'Rangos y premios' : popup === 'temporada' ? 'Tu temporada' : popup === 'partidas' ? 'Últimas partidas'
             : popup === 'hitos' ? `Hitos de la Liga · ${(resumen?.hitos ?? []).filter((h) => h.cobrado).length}/${resumen?.hitos?.length ?? 0}` : 'Cómo se suma'}
           anchoMax={popup === 'rangos' ? 1000 : popup === 'partidas' || popup === 'hitos' ? 760 : 520}
