@@ -6,7 +6,7 @@ import { API_URL as BASE_URL } from '../../config';
 import { rangoUi } from './rangosUi';
 import BannerPerfil from '../Personalizacion/BannerPerfil';
 import AvatarAnillo from '../Personalizacion/AvatarAnillo';
-import { resolverAnillo } from '../../constants/personalizacion';
+import { resolverAnillo, ANILLOS, BANNERS, MAZOS } from '../../constants/personalizacion';
 import { PlacaMadera } from '../Popup/PopupMadera';
 import ZonaEditor from './ZonaEditor';
 import { textoZona } from './provincias';
@@ -111,6 +111,42 @@ function StatTile({ label, valor, color, compacto }) {
 // Pase 359: etiqueta corta del género elegido en Ajustes ('prefiero_no_decir' no se muestra).
 const ETIQUETA_GENERO = { masculino: 'Masculino', femenino: 'Femenino', neutro: 'Neutro' };
 
+// Pase 633: tarjeta con las tres piezas del set Sol de Mayo y el rango que desbloquea cada una (mismo criterio que la línea de tiempo de la Liga).
+const NOMBRES_RANGO_SET = { 4: 'Gaucho', 8: 'Caudillo', 10: 'Martín Fierro' };
+function SetSolDeMayo({ rangoMax }) {
+  const piezas = [
+    { id: 'mazo', etiqueta: 'Dorso de cartas', item: MAZOS.find((m) => m.id === 'pionero'), vista: (i) => <img src={i.dorso} alt="" style={{ height: 44, width: 44 * i.proporcionDorso, objectFit: 'contain' }} /> },
+    { id: 'banner', etiqueta: 'Banner del perfil', item: BANNERS.find((b) => b.id === 'pionero'), vista: (i) => <img src={i.imagen} alt="" style={{ width: 78, height: 78 / i.proporcion, objectFit: 'contain' }} /> },
+    { id: 'anillo', etiqueta: 'Anillo del avatar', item: ANILLOS.find((a) => a.id === 'pionero'), vista: (i) => <img src={i.imagen} alt="" style={{ width: 52, height: 52, objectFit: 'contain' }} /> },
+  ].filter((p) => p.item);
+  const listas = piezas.filter((p) => rangoMax >= p.item.rangoMin).length;
+  return (
+    <PlacaMadera>
+      <div style={estilos.setTitulo}>
+        <span style={{ ...estilos.panelTitle, marginBottom: 0 }}>Sol de Mayo</span>
+        <span style={estilos.setContador}>{listas}/{piezas.length}</span>
+      </div>
+      <div style={estilos.setLista}>
+        {piezas.map((p) => {
+          const libre = rangoMax >= p.item.rangoMin;
+          return (
+            <div key={p.id} style={{ ...estilos.setFila, ...(libre ? null : estilos.setFilaBloqueada) }}>
+              <div style={estilos.setThumb}>{p.vista(p.item)}</div>
+              <div style={estilos.setTextos}>
+                <div style={estilos.setNombre}>{p.etiqueta}</div>
+                <div style={libre ? estilos.setEstadoOk : estilos.setEstado}>
+                  {libre ? 'Desbloqueado ✓' : `🔒 Llegá a ${NOMBRES_RANGO_SET[p.item.rangoMin] || ''}`}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div style={estilos.setPie}>Se eligen en Ajustes → Perfil.</div>
+    </PlacaMadera>
+  );
+}
+
 export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado }) {
   const headers = {
     'Content-Type': 'application/json',
@@ -139,7 +175,7 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
   useEffect(() => {
     const el = layoutRef.current;
     if (!el || typeof ResizeObserver === 'undefined') return undefined;
-    const ro = new ResizeObserver(([entrada]) => setEsAncho(entrada.contentRect.width >= 660));
+    const ro = new ResizeObserver(([entrada]) => setEsAncho(entrada.contentRect.width >= 760));
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
@@ -416,7 +452,9 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
               (bajar la altura total de la página) y a pedido del usuario,
               que además va a ir reemplazando el emoji 🎖️ por logos
               propios de cada rango a futuro. */}
-          <PlacaMadera style={pos(2, 2, { alignSelf: 'start' })} colorInterior="#FFE9B0" interiorStyle={estilos.panelRangoInterior}>
+          {/* Pase 633: la tarjeta de rango y la del set Sol de Mayo comparten la celda de abajo de la columna lateral. */}
+          <div style={esAncho ? { gridColumn: 2, gridRow: 2, alignSelf: 'start', display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 } : { display: 'contents' }}>
+          <PlacaMadera colorInterior="#FFE9B0" interiorStyle={estilos.panelRangoInterior}>
             <img src={rangoAssets.logo} alt={usuario?.rango?.nombre || 'Rango'} style={estilos.rangoLogo} />
             <div style={estilos.rangoTitulo}>
               {usuario?.rango?.esTop500
@@ -435,6 +473,8 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
               </div>
             )}
           </PlacaMadera>
+          <SetSolDeMayo rangoMax={Math.max(Number(usuario?.rango_max) || 0, Number(usuario?.rango?.id) || 0, 1)} />
+          </div>
         </div>
       </div>
 
@@ -470,8 +510,19 @@ const estilos = {
   layout: { display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-start' },
   // Pase 363: versión ancha — grilla de 7:2 con 2 filas; los contenedores de columna desaparecen
   // (`display: contents`) para que las 4 tarjetas sean celdas directas de la grilla.
-  layoutGrilla: { display: 'grid', gridTemplateColumns: 'minmax(0, 7fr) minmax(220px, 2fr)', gap: 14, alignItems: 'stretch' },
+  layoutGrilla: { display: 'grid', gridTemplateColumns: 'minmax(0, 5fr) minmax(300px, 3fr)', gap: 14, alignItems: 'stretch' },
   contenidoPlano: { display: 'contents' },
+  setTitulo: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
+  setContador: { fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 15, color: '#B9770E' },
+  setLista: { display: 'flex', flexDirection: 'column', gap: 8 },
+  setFila: { display: 'flex', alignItems: 'center', gap: 10, padding: '6px 8px', borderRadius: 10, background: 'rgba(255,255,255,0.55)', border: '2px solid rgba(74,44,42,0.18)' },
+  setFilaBloqueada: { opacity: 0.6 },
+  setThumb: { flex: '0 0 84px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  setTextos: { minWidth: 0 },
+  setNombre: { fontWeight: 800, fontSize: 13, color: C.chocolate },
+  setEstado: { fontWeight: 700, fontSize: 12, color: '#7a6660' },
+  setEstadoOk: { fontWeight: 800, fontSize: 12, color: C.verdeOscuro },
+  setPie: { marginTop: 8, fontWeight: 700, fontSize: 11.5, color: '#7a6660' },
   // Pase siguiente: la columna lateral ahora solo tiene "Rendimiento"
   // (se quitó "Top jugadores", ver más abajo) y la principal solo tiene
   // "Logros" — la proporción pasa de 5:2 a 7:2, dándole más ancho a

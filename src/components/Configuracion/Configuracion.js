@@ -1075,6 +1075,13 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
         )}
       </PlacaMadera>
 
+        </>
+      )}
+
+      {/* Pase 632: la pestaña Admin es un bloque propio (antes quedaba DENTRO del bloque de la pestaña Cuenta y no se veía). */}
+      {esAdmin && pestana === 'admin' && (
+        <>
+
       {/* Pase 626: subpestañas de la pestaña Admin (con la cantidad de pendientes en Reportes y Denuncias). */}
       {esAdmin && pestana === 'admin' && (
         <div style={estilos.subPestanas} role="tablist">
@@ -1515,6 +1522,12 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
           )}
         </PlacaMadera>
       )}
+
+        </>
+      )}
+
+      {pestana === 'cuenta' && (
+        <>
 
       {/* Pase 495: "Sobre el proyecto" — apoyar a TrucoChe con un cafecito; va justo arriba de "Mi cuenta". */}
       <PlacaMadera>
