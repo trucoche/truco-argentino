@@ -54,8 +54,7 @@ const SECCIONES = [
       "Algunas ofertas, como el Pack Inauguración, son por tiempo limitado y se pueden comprar una sola vez por cuenta. Cuando la oferta termina, deja de estar disponible.",
       "Los mates se acreditan cuando Mercado Pago confirma el pago, lo que puede demorar unos minutos. Si pasado un tiempo razonable no ves tus mates, escribinos con el comprobante de pago.",
       "Si tuviste un problema con una compra (por ejemplo, un cobro duplicado o un error en la acreditación) o te arrepentís dentro de los 10 días corridos de haberla hecho y todavía no usaste esos mates, escribinos al correo de contacto del punto 18. Revisamos cada caso y, cuando corresponde, devolvemos el pago a través de Mercado Pago. Si se devuelve un pago, descontamos de tu cuenta los mates correspondientes.",
-      "Si un pago es desconocido o revertido por el emisor de la tarjeta o por Mercado Pago (contracargo), podemos descontar los mates acreditados por esa compra y suspender la cuenta hasta aclarar la situación.",
-      "Si sos menor de 18 años, tus compras tienen que contar con la autorización de tu madre, padre o tutor, que es quien debe pagar con su propio medio de pago.",
+      "Si el titular desconoce un pago ante su banco y este lo revierte (contracargo), podemos descontar los mates de esa compra y suspender la cuenta hasta aclarar la situación.",
       "Una vez acreditados, los mates se consideran entregados y consumibles dentro del juego. Esto no limita los derechos que te reconozca la normativa de defensa del consumidor vigente en Argentina, ni los casos de cobros duplicados o errores comprobables, que vamos a resolver con el criterio de corregir el error."
     ]
   },
