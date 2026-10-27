@@ -3,6 +3,11 @@ import { API_URL as BASE_URL } from '../../config';
 
 const API_URL = `${BASE_URL}/api/auth`;
 const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID;
+
+// Pase 651: google.accounts.id.initialize() se llama UNA sola vez por carga de la página (Google avisa en la consola si se repite y
+// solo usa la última). El callback apunta siempre al manejador de la pantalla montada en ese momento.
+let googleInicializado = false;
+let manejadorGoogleActual = null;
 const FACEBOOK_APP_ID = process.env.REACT_APP_FACEBOOK_APP_ID;
 
 const C = {
@@ -173,10 +178,14 @@ const iniciarSesionFacebook = () => {
     let intentos = 0;
     const intentar = () => {
       if (window.google && botonGoogleRef.current) {
-        window.google.accounts.id.initialize({
-          client_id: GOOGLE_CLIENT_ID,
-          callback: handleCredentialResponse
-        });
+        manejadorGoogleActual = handleCredentialResponse;
+        if (!googleInicializado) {
+          window.google.accounts.id.initialize({
+            client_id: GOOGLE_CLIENT_ID,
+            callback: (respuesta) => { if (manejadorGoogleActual) manejadorGoogleActual(respuesta); }
+          });
+          googleInicializado = true;
+        }
         window.google.accounts.id.renderButton(botonGoogleRef.current, {
           theme: 'outline',
           size: 'large',

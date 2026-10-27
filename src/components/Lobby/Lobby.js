@@ -188,7 +188,6 @@ export default function Lobby({ token, usuario, onPersonajeCambiado, onEntrarAPa
   };
 
 useEffect(() => {
-    console.log('DEBUG codigoInicial recibido:', codigoInicial);
     if (codigoInicial) setCodigoUnirse(codigoInicial);
   }, [codigoInicial]);
 
