@@ -308,10 +308,17 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
         {/* Pase 624: ventana muy alta → Temporada y Hitos abiertos también */}
         {nivelEspacio >= 2 && (
           <div style={estilos.fila}>
-            <PlacaMadera style={{ display: 'flex', flexDirection: 'column', flex: '1 1 300px', minWidth: 0 }} colorInterior={PERGAMINO} interiorStyle={{ padding: 14, flex: 1 }}>
-              <div style={{ ...estilos.panelTitulo, marginBottom: 8 }}>Tu temporada</div>
-              {renderTemporada()}
-            </PlacaMadera>
+            {/* Pase 643: Temporada más baja y, en el espacio que sobra debajo, las tarjetas de Partidas y Reglas (la página queda más corta) */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, flex: '1 1 300px', minWidth: 0 }}>
+              <PlacaMadera style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }} colorInterior={PERGAMINO} interiorStyle={{ padding: '10px 14px' }}>
+                <div style={{ ...estilos.panelTitulo, marginBottom: 6 }}>Tu temporada</div>
+                {renderTemporada()}
+              </PlacaMadera>
+              <div style={{ display: 'flex', gap: 14, flex: 1 }}>
+                <TileLiga chica icono="/assets/images/icono-rango.png" titulo="Partidas" sub={`${Math.min(10, historial?.partidas?.length ?? 0)} últimas`} onClick={() => setPopup('partidas')} />
+                <TileLiga chica icono="/assets/images/icono-misiones.png" titulo="Reglas" sub="Cómo sumás" onClick={() => setPopup('reglas')} />
+              </div>
+            </div>
             <PlacaMadera style={{ display: 'flex', flexDirection: 'column', flex: '1 1 300px', minWidth: 0 }} colorInterior={PERGAMINO} interiorStyle={{ padding: 14, flex: 1 }}>
               <div style={{ ...estilos.panelTitulo, marginBottom: 8 }}>{`Hitos de la Liga · ${(resumen?.hitos ?? []).filter((h) => h.cobrado).length}/${resumen?.hitos?.length ?? 0}`}</div>
               {renderHitos()}
@@ -323,9 +330,9 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
         <div style={estilos.tilesFila}>
           {(nivelEspacio < 1 || !lineaRangos) && <TileLiga icono={ui.logo} titulo="Rangos" sub="Premios" onClick={() => setPopup('rangos')} />}
           {nivelEspacio < 2 && <TileLiga icono="/assets/images/icono-rendimiento.png" titulo="Temporada" sub={`${resumen?.porcentajeVictorias ?? 0}% victorias`} onClick={() => setPopup('temporada')} />}
-          <TileLiga icono="/assets/images/icono-rango.png" titulo="Partidas" sub={`${Math.min(10, historial?.partidas?.length ?? 0)} últimas`} onClick={() => setPopup('partidas')} />
+          {nivelEspacio < 2 && <TileLiga icono="/assets/images/icono-rango.png" titulo="Partidas" sub={`${Math.min(10, historial?.partidas?.length ?? 0)} últimas`} onClick={() => setPopup('partidas')} />}
           {nivelEspacio < 2 && <TileLiga icono="/assets/images/icono-logros.png" titulo="Hitos" sub={`${(resumen?.hitos ?? []).filter((h) => h.cobrado).length}/${resumen?.hitos?.length ?? 0}`} onClick={() => setPopup('hitos')} />}
-          <TileLiga icono="/assets/images/icono-misiones.png" titulo="Reglas" sub="Cómo sumás" onClick={() => setPopup('reglas')} />
+          {nivelEspacio < 2 && <TileLiga icono="/assets/images/icono-misiones.png" titulo="Reglas" sub="Cómo sumás" onClick={() => setPopup('reglas')} />}
         </div>
 
         <PopupMadera
@@ -403,10 +410,10 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
 }
 
 // Pase 622: tarjeta chica del kit (cuero + filo de bronce) que abre un cartel.
-function TileLiga({ icono, titulo, sub, onClick }) {
+function TileLiga({ icono, titulo, sub, onClick, chica }) {
   return (
-    <button type="button" onClick={onClick} style={estilos.tile}>
-      <img src={icono} alt="" draggable={false} style={estilos.tileIcono} />
+    <button type="button" onClick={onClick} style={chica ? { ...estilos.tile, ...estilos.tileChica } : estilos.tile}>
+      <img src={icono} alt="" draggable={false} style={chica ? { ...estilos.tileIcono, ...estilos.tileIconoChico } : estilos.tileIcono} />
       <div style={estilos.tileTitulo}>{titulo}</div>
       <div style={estilos.tileSub}>{sub}</div>
     </button>
@@ -538,6 +545,8 @@ const estilos = {
     background: '#3B1A12', border: '3px solid #8C6239', borderRadius: 16, cursor: 'pointer', padding: '12px 8px', boxShadow: '0 4px 0 #000',
   },
   tileIcono: { width: 76, height: 76, objectFit: 'contain' },
+  tileChica: { flex: '1 1 0', maxWidth: 'none', minHeight: 0, minWidth: 0 },
+  tileIconoChico: { width: 56, height: 56 },
   tileTitulo: { fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 19, color: C.doradoClaro },
   tileSub: { fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 13, color: C.crema, opacity: 0.85 },
   miniSerie: { fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 12.5, color: C.crema, marginTop: 6 },
