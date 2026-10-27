@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { API_URL } from '../../config';
 import { PlacaMadera } from '../Popup/PopupMadera';
 
@@ -122,6 +122,18 @@ function formatearPrecio(n) {
   return '$' + n.toLocaleString('es-AR');
 }
 
+// Pase 653: cuenta regresiva del Pack de inauguración (el backend manda la fecha de cierre).
+function textoRestante(hastaMs, ahora) {
+  const ms = hastaMs - ahora;
+  if (!(ms > 0)) return null;
+  const d = Math.floor(ms / 86400000);
+  const h = Math.floor((ms % 86400000) / 3600000);
+  const m = Math.floor((ms % 3600000) / 60000);
+  if (d >= 1) return `Termina en ${d} d ${h} h`;
+  if (h >= 1) return `Termina en ${h} h ${m} min`;
+  return `Termina en ${Math.max(m, 1)} min`;
+}
+
 export default function Tienda({ usuario, token }) {
   // Pase 219: reemplaza el placeholder "todavía no está conectado el pago"
   // por la integración real con Mercado Pago (Checkout Pro) — el backend
@@ -132,6 +144,32 @@ export default function Tienda({ usuario, token }) {
   const [avisoVisible, setAvisoVisible] = useState(false);
   const [mensajeAviso, setMensajeAviso] = useState('');
   const [comprandoPackId, setComprandoPackId] = useState(null);
+
+  // Pase 653: el Pack de inauguración es de una sola compra por cuenta y vence en la fecha que fija el backend
+  // (PACK_INAUGURACION_HASTA). El backend manda { disponible, hasta }; sin respuesta, el pack no se muestra.
+  const [packInaug, setPackInaug] = useState({ disponible: false, hastaMs: 0 });
+  const [ahora, setAhora] = useState(() => Date.now());
+  useEffect(() => {
+    let cancelado = false;
+    (async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/pagos/pack-inauguracion`, { headers: { Authorization: `Bearer ${token}` } });
+        const data = await res.json();
+        if (!cancelado && res.ok) {
+          setPackInaug({ disponible: !!data.disponible, hastaMs: data.hasta ? new Date(data.hasta).getTime() : 0 });
+        }
+      } catch (err) {
+        console.error('Error consultando el pack de inauguración:', err);
+      }
+    })();
+    const t = setInterval(() => setAhora(Date.now()), 30000);
+    return () => { cancelado = true; clearInterval(t); };
+  }, [token]);
+  const inaugDisponible = packInaug.disponible && packInaug.hastaMs > ahora;
+  const packPorId = (id) => PACKS.find((p) => p.id === id);
+  // Con el pack: Inauguración | Mejor Valor | 500 / 200 | 100 | 50. Sin el pack: 500 | Mejor Valor | 200 / 100 | 50.
+  const packsFilaArriba = inaugDisponible ? PACKS.slice(0, 3) : [packPorId('pack-400'), packPorId('pack-800'), packPorId('pack-200')];
+  const packsFilaAbajo = inaugDisponible ? PACKS.slice(3, 6) : [packPorId('pack-100'), packPorId('pack-50')];
 
   const comprar = async (packId) => {
     if (comprandoPackId) return;
@@ -280,6 +318,8 @@ export default function Tienda({ usuario, token }) {
 
           {pack.bono > 0 ? (
             <div style={estilos.bonoTag}>+{pack.bono} de regalo</div>
+          ) : inauguracion && textoRestante(packInaug.hastaMs, ahora) ? (
+            <div style={estilos.notaEspecialTag}>{textoRestante(packInaug.hastaMs, ahora)}</div>
           ) : pack.notaEspecial ? (
             <div style={estilos.notaEspecialTag}>{pack.notaEspecial}</div>
           ) : null}
@@ -358,7 +398,7 @@ export default function Tienda({ usuario, token }) {
             no una sola tarjeta con dots". */}
         <div className="tc-filas" style={estilos.filas}>
           <div className="tc-fila" style={estilos.fila}>
-            {PACKS.slice(0, 3).map((pack) => renderPack(pack, 1))}
+            {packsFilaArriba.map((pack) => renderPack(pack, 1))}
           </div>
           {/* Ducentésimo trigésimo octavo pase: clase extra `tc-fila-inferior`
               (ver el CSS inyectado al final del archivo) — el usuario notó
@@ -367,8 +407,8 @@ export default function Tienda({ usuario, token }) {
               (`tc-card-normal`), el mismo gap de 14px en px absolutos pesa
               proporcionalmente más que en la fila de arriba (con tarjetas
               más grandes) — se achica un poco solo para esta fila. */}
-          <div className="tc-fila tc-fila-inferior" style={estilos.fila}>
-            {PACKS.slice(3, 6).map((pack) => renderPack(pack, 2))}
+          <div className={`tc-fila tc-fila-inferior${packsFilaAbajo.length === 2 ? ' tc-fila-dos' : ''}`} style={estilos.fila}>
+            {packsFilaAbajo.map((pack) => renderPack(pack, 2))}
           </div>
         </div>
       </PlacaMadera>
@@ -950,6 +990,11 @@ if (typeof document !== 'undefined' && !document.getElementById('tienda-grid-res
     .tc-fila { display: flex; gap: 14px; align-items: flex-end; }
     .tc-fila.tc-fila-inferior { gap: 10px; }
     .tc-card-normal { flex: 1 1 0; min-width: 0; }
+    /* Pase 653: sin el Pack de inauguración la fila de abajo queda con 2 tarjetas, centradas y del mismo ancho que las de 3. */
+    @media (min-width: 901px) {
+      .tc-fila.tc-fila-dos { justify-content: center; }
+      .tc-fila.tc-fila-dos .tc-card-normal { flex: 0 1 calc((100% - 20px) / 3); }
+    }
     .tc-card-secundario { flex: 1.09 1.09 0; min-width: 0; }
     .tc-card-hero {
       flex: 1.18 1.18 0; min-width: 0; position: relative; z-index: 2;
