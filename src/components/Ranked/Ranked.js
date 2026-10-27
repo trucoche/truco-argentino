@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { API_URL as BASE_URL } from '../../config';
 import { rangoUi } from '../Perfil/rangosUi';
 import PopupMadera, { PlacaMadera } from '../Popup/PopupMadera';
+import { ANILLOS, BANNERS, MAZOS } from '../../constants/personalizacion';
 
 // Pase 336: pantalla de la Liga Criolla (clasificatorio). Datos de GET /api/salas/ranked/resumen,
 // búsqueda con POST /api/salas/ranked (cola emparejada por rango; reglas fijas: 15 puntos, sin Flor).
@@ -414,6 +415,14 @@ function TileLiga({ icono, titulo, sub, onClick }) {
 
 // Pase 620: línea de tiempo de rangos. Se arrastra con el mouse o el dedo (y con la rueda/trackpad); al abrir queda centrada en el rango actual.
 const ANCHO_NODO = 132;
+
+// Pase 641: imagen de la pieza del set Sol de Mayo que se desbloquea en cada rango (dorso, banner o anillo).
+const MEDIDAS_PIEZA = { dorso: { w: 32, h: 44 }, banner: { w: 78, h: 43 }, anillo: { w: 46, h: 46 } };
+function imagenPieza(tipo) {
+  const lista = tipo === 'dorso' ? MAZOS : tipo === 'banner' ? BANNERS : tipo === 'anillo' ? ANILLOS : null;
+  const item = lista && lista.find((x) => x.id === 'pionero');
+  return item ? (tipo === 'dorso' ? item.dorso : item.imagen) : null;
+}
 function LineaRangos({ data }) {
   const ref = useRef(null);
   const arrastre = useRef(null);
@@ -454,6 +463,10 @@ function LineaRangos({ data }) {
             )}
             {r.cosmetico ? (
               <div style={{ ...estilos.nodoCosmetico, ...(r.cosmetico.disponible && r.alcanzado ? { borderStyle: 'solid', borderColor: C.verdeOscuro } : {}) }}>
+                {imagenPieza(r.cosmetico.tipo) && (
+                  <img src={imagenPieza(r.cosmetico.tipo)} alt="" draggable={false}
+                    style={{ ...(MEDIDAS_PIEZA[r.cosmetico.tipo] ? { width: MEDIDAS_PIEZA[r.cosmetico.tipo].w, height: MEDIDAS_PIEZA[r.cosmetico.tipo].h } : {}), objectFit: 'contain', marginBottom: 3, ...(r.alcanzado ? {} : { opacity: 0.55, filter: 'grayscale(0.6)' }) }} />
+                )}
                 <div style={estilos.nodoCosmeticoTexto}>{r.cosmetico.texto}</div>
                 <div style={estilos.nodoCosmeticoSub}>{r.cosmetico.disponible ? (r.alcanzado ? 'Desbloqueado' : 'Se desbloquea acá') : 'Próximamente'}</div>
               </div>
@@ -540,8 +553,8 @@ const estilos = {
   nodoNombre: { fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 16, color: C.chocolate },
   nodoMates: { padding: '2px 10px', borderRadius: 12, background: C.dorado, border: '2px solid #B9853F', fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 13, color: C.chocolate },
   nodoInicio: { padding: '2px 10px', border: '2px solid transparent', fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 13, color: '#6B4A34' },
-  nodoCosmetico: { width: ANCHO_NODO - 18, height: 56, boxSizing: 'border-box', borderRadius: 10, border: '2px dashed #A07A45', background: 'rgba(255,249,234,0.7)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 6px', textAlign: 'center' },
-  nodoCosmeticoVacio: { height: 56 },
+  nodoCosmetico: { width: ANCHO_NODO - 18, height: 112, boxSizing: 'border-box', borderRadius: 10, border: '2px dashed #A07A45', background: 'rgba(255,249,234,0.7)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 6px', textAlign: 'center' },
+  nodoCosmeticoVacio: { height: 112 },
   nodoCosmeticoTexto: { fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 12, color: C.chocolate, lineHeight: 1.15 },
   nodoCosmeticoSub: { fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 11, color: '#8A6A44', marginTop: 2 },
   nodoAqui: { background: C.chocolate, color: C.doradoClaro, borderRadius: 8, padding: '2px 10px', fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 11.5, letterSpacing: 0.5 },
