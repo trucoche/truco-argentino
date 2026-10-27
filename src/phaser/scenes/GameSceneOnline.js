@@ -2921,16 +2921,20 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
     const hayJugadores = jugadoresFinal && jugadoresFinal.length > 0;
     const ganadores = hayJugadores ? jugadoresFinal.filter(j => j.gano) : [];
     const perdedores = hayJugadores ? jugadoresFinal.filter(j => !j.gano) : [];
-    const todos = [...ganadores, ...perdedores];
+    // Pase 657: YO siempre a la derecha (y el rival a la izquierda), gane o pierda; antes los ganadores iban a la izquierda.
+    const soyGanador = ganadores.some(j => j.nombre === this.usuario?.username);
+    const izq = soyGanador ? perdedores : ganadores;
+    const der = soyGanador ? ganadores : perdedores;
+    const todos = [...izq, ...der];
     const total = todos.length;
     const tamano = total <= 2 ? 140 : total <= 4 ? 115 : 92;
     const gapIntra = total <= 2 ? 0 : total <= 4 ? 30 : 20;
     const gapEscudo = 96;
     const paso = tamano + gapIntra;
     const anchoGrupo = (n) => (n > 0 ? n * paso - gapIntra : 0);
-    const anchoFila = anchoGrupo(ganadores.length) + (ganadores.length && perdedores.length ? gapEscudo : 0) + anchoGrupo(perdedores.length);
+    const anchoFila = anchoGrupo(izq.length) + (izq.length && der.length ? gapEscudo : 0) + anchoGrupo(der.length);
     let cursorX = 400 - anchoFila / 2 + tamano / 2;
-    const cyAv = 212;
+    const cyAv = 224;   // Pase 657: un poco más abajo y más aire entre bloques
 
     const radio = tamano / 2;
     const radioFoto = radio * 0.72;
@@ -2952,7 +2956,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
       const esGanadorGrupo = j.gano;
       const cx = cursorX;
       cursorX += paso;
-      if (idx === ganadores.length - 1 && perdedores.length) {
+      if (idx === izq.length - 1 && der.length) {
         escudoX = cx + tamano / 2 + gapEscudo / 2;
         cursorX += gapEscudo - gapIntra;
       }
@@ -3116,8 +3120,9 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
 
     // 3) Escudo central con el marcador final
     if (total >= 2) {
-      const tantosGan = ganadores.length ? Number(ganadores[0].tantos) : NaN;
-      const tantosPer = perdedores.length ? Number(perdedores[0].tantos) : NaN;
+      // Pase 657: el marcador sigue el orden de la pantalla (izquierda - derecha); yo estoy a la derecha.
+      const tantosGan = izq.length ? Number(izq[0].tantos) : NaN;
+      const tantosPer = der.length ? Number(der[0].tantos) : NaN;
       if (this.textures.exists('escudoSinTexto')) {
         const esc = this.add.image(escudoX, cyAv, 'escudoSinTexto').setDisplaySize(96, 96).setDepth(904);
         this._sprites.push(esc);
@@ -3149,7 +3154,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
     // Pase 417: sin moneda ni frase "Derrota"/"¡Victoria!" (redundantes con el cartel): la botonera sube. Solo queda,
     // como texto simple, una frase que aporta información (campeón del torneo / abandono).
     const fraseInfo = (esCampeon || datos.motivo === 'abandono') ? frase : '';
-    let y = total ? yPillComun + 13 + 22 : 250;
+    let y = total ? yPillComun + 13 + 30 : 250;
     if (modo === 'neutro') {
       // Pase 415: "Sala cancelada" — medallon de madera con reloj de arena + mensaje en un pergamino
       // con borde de madera. No hubo partida: nada de moneda ni de revancha.
@@ -3218,7 +3223,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
       const fosforos = this.add.image(fx0 + PAD + ICONO / 2, cyF, 'fosforosPuntos').setDisplaySize(ICONO, ICONO).setDepth(905);
       tp.setPosition(fx0 + PAD + ICONO + 6, cyF);
       this._sprites.push(ficha, fosforos, tp);
-      y += ALTO_F + 10;
+      y += ALTO_F + 18;
     } else {
       y += modo === 'neutro' ? 0 : 6;
     }
@@ -3238,7 +3243,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
       });
       this.contRevancha = contRevancha;
       this.imgRevancha = imgRevancha;
-      y += altoBoton + 10;
+      y += altoBoton + 16;
     }
     const labelBoton = esTorneo ? 'Ver bracket' : 'Volver al lobby';   // Pase 415: en sala cancelada es el unico boton
     const volverAncho = this._medirAnchoTextoOverlay(labelBoton, '17px') + 60;
@@ -3286,7 +3291,8 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
       estrella(400 + cartelAncho / 2 - 22, 58, 12, 0);
       estrella(400 - cartelAncho / 2 + 26, 104, 9, 500);
       if (ganadores.length) {
-        const gx = 400 - anchoFila / 2 + tamano / 2;
+        const inicioFila = 400 - anchoFila / 2 + tamano / 2;
+        const gx = soyGanador ? inicioFila + izq.length * paso + gapEscudo - gapIntra : inicioFila;   // Pase 657: los ganadores quedan donde estén
         estrella(gx - tamano * 0.5, cyAv - tamano * 0.4, 10, 250);
         estrella(gx + tamano * 0.55, cyAv + tamano * 0.1, 8, 800);
         estrella(gx + tamano * 0.1, cyAv - tamano * 0.62, 7, 1200);
