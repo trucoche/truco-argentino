@@ -25,7 +25,7 @@ const num = (v) => (v == null ? '—' : Number(v).toLocaleString('es-AR'));
 
 const NOMBRES_ACCION = {
   suspender: 'Suspendió', reactivar: 'Levantó suspensión', regalo: 'Regaló mates', mates_sumar: 'Sumó mates', mates_restar: 'Restó mates',
-  puntos_rango: 'Fijó puntos de Liga', sponsor_otorgar: 'Dio sponsor', sponsor_quitar: 'Quitó sponsor', chat_limpiar: 'Limpió el chat', reporte_premio: 'Premió un reporte',
+  puntos_rango: 'Fijó puntos de Liga', sponsor_otorgar: 'Dio sponsor', sponsor_quitar: 'Quitó sponsor', chat_limpiar: 'Limpió el chat', reporte_premio: 'Premió un reporte', devolucion: 'Registró una devolución',
 };
 
 function Ficha({ etiqueta, valor, color }) {
@@ -321,6 +321,111 @@ export function AdminAcciones({ token }) {
               <div style={{ ...estilos.filaDetalle, whiteSpace: 'nowrap' }}>{fecha(a.creado_en)}</div>
             </div>
           ))}
+        </div>
+      ))}
+    </PlacaMadera>
+  );
+}
+
+// ---------- Pase 654: compras y devoluciones ----------
+// La plata se devuelve desde Mercado Pago (Actividad → la operación → "Devolver dinero"): vuelve al MISMO medio de pago, no hace
+// falta pedir alias ni CBU. Acá solo se registra la devolución en el juego (descuenta los mates de esa compra).
+const FILTROS_COMPRA = [
+  { id: '', texto: 'Todas' },
+  { id: 'aprobado', texto: 'Aprobadas' },
+  { id: 'devuelto', texto: 'Devueltas' },
+];
+const colorEstadoCompra = (e) => (e === 'aprobado' ? C.verde : e === 'devuelto' ? '#B9770E' : C.gris);
+
+export function AdminDevoluciones({ token }) {
+  const [q, setQ] = useState('');
+  const [estado, setEstado] = useState('');
+  const [pagos, setPagos] = useState(null);
+  const [pendientes, setPendientes] = useState(0);
+  const [error, setError] = useState('');
+  const [aviso, setAviso] = useState('');
+  const [cargando, setCargando] = useState(false);
+  const [abierta, setAbierta] = useState(null);
+  const [motivo, setMotivo] = useState('');
+
+  const cargar = useCallback(async (texto, est) => {
+    setCargando(true); setError('');
+    try {
+      const d = await pedir(token, `/pagos?q=${encodeURIComponent((texto || '').trim())}&estado=${est || ''}`);
+      setPagos(d.pagos); setPendientes(d.pendientesDescuento || 0);
+    } catch (e) { setError(e.message); }
+    finally { setCargando(false); }
+  }, [token]);
+
+  useEffect(() => { cargar('', ''); }, [cargar]);
+
+  const elegirFiltro = (id) => { setEstado(id); cargar(q, id); };
+
+  const registrar = async (p) => {
+    if (motivo.trim().length < 3) { setError('Escribí el motivo de la devolución'); return; }
+    const ok = await confirmarPopup({
+      titulo: 'Registrar devolución',
+      mensaje: `¿Ya devolviste el dinero desde Mercado Pago? Se van a descontar hasta ${num(p.monedas)} mates a ${p.username} (tiene ${num(p.saldo)}).`,
+      textoSi: 'Descontar mates',
+    });
+    if (!ok) return;
+    setCargando(true); setError(''); setAviso('');
+    try {
+      const d = await pedir(token, `/pagos/${p.id}/devolucion`, { method: 'POST', body: JSON.stringify({ motivo: motivo.trim() }) });
+      setAviso(d.mensaje); setAbierta(null); setMotivo('');
+      await cargar(q, estado);
+    } catch (e) { setError(e.message); setCargando(false); }
+  };
+
+  return (
+    <PlacaMadera>
+      <div style={estilos.titulo}>
+        <span>💳 Compras y devoluciones</span>
+        <button style={estilos.btn} disabled={cargando} onClick={() => cargar(q, estado)}>{cargando ? 'Actualizando…' : 'Actualizar'}</button>
+      </div>
+      <p style={estilos.pie}>
+        1) Devolvé el dinero en Mercado Pago (Actividad → la operación → Devolver dinero): vuelve al mismo medio de pago, no necesitás alias ni CBU.
+        {' '}2) Después registrá acá la devolución para descontar los mates de esa compra.
+      </p>
+      {pendientes > 0 && <p style={estilos.error}>{pendientes} compra{pendientes === 1 ? '' : 's'} devuelta{pendientes === 1 ? '' : 's'} en Mercado Pago con los mates sin descontar.</p>}
+      <div style={estilos.filaBusqueda}>
+        <input id="admin-compras-busqueda" style={estilos.input} type="text" placeholder="Usuario, email, ID o N.º de operación" value={q} maxLength={80}
+          onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') cargar(q, estado); }} />
+        <button style={estilos.btn} disabled={cargando} onClick={() => cargar(q, estado)}>Buscar</button>
+        {FILTROS_COMPRA.map((f) => (
+          <button key={f.id || 'todas'} style={estado === f.id ? estilos.btn : estilos.btnSec} onClick={() => elegirFiltro(f.id)}>{f.texto}</button>
+        ))}
+      </div>
+      {error && <p style={estilos.error}>{error}</p>}
+      {aviso && <p style={estilos.ok}>{aviso}</p>}
+      {pagos && (pagos.length === 0 ? <p style={estilos.pie}>No hay compras para mostrar.</p> : (
+        <div style={estilos.lista}>
+          {pagos.map((p) => {
+            const sinDescontar = (p.estado === 'aprobado' || p.estado === 'devuelto') && !p.mates_descontados_en;
+            return (
+              <div key={p.id} style={{ ...estilos.fila, flexDirection: 'column', alignItems: 'stretch' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'space-between', flexWrap: 'wrap' }}>
+                  <div style={estilos.filaTitulo}>#{p.id} · {p.username} · ${num(p.monto)}</div>
+                  <span style={{ ...estilos.pastilla, color: colorEstadoCompra(p.estado), borderColor: colorEstadoCompra(p.estado) }}>{p.estado}</span>
+                </div>
+                <div style={estilos.filaDetalle}>{p.pack_id} · {num(p.monedas)} mates · saldo actual {num(p.saldo)}</div>
+                <div style={estilos.filaDetalle}>Operación de Mercado Pago: {p.mp_payment_id || '—'}</div>
+                <div style={estilos.filaDetalle}>Email: {p.email || '—'} · Compra: {fecha(p.acreditado_en || p.creado_en)}</div>
+                {p.mates_descontados_en && <div style={estilos.filaDetalle}>Se descontaron {num(p.mates_descontados)} mates el {fecha(p.mates_descontados_en)}.</div>}
+                {p.estado === 'devuelto' && !p.mates_descontados_en && <div style={{ ...estilos.filaDetalle, color: C.rojo }}>Mercado Pago la devolvió y faltan descontar los mates.</div>}
+                {sinDescontar && abierta !== p.id && (
+                  <div style={{ marginTop: 6 }}><button style={estilos.btnSec} onClick={() => { setAbierta(p.id); setMotivo(''); setError(''); }}>Registrar devolución</button></div>
+                )}
+                {abierta === p.id && (
+                  <div style={{ ...estilos.filaBusqueda, marginBottom: 0 }}>
+                    <input id={`admin-devolucion-motivo-${p.id}`} style={estilos.input} type="text" placeholder="Motivo (obligatorio)" maxLength={200} value={motivo} onChange={(e) => setMotivo(e.target.value)} />
+                    <button style={estilos.btn} disabled={cargando} onClick={() => registrar(p)}>Descontar mates</button>
+                    <button style={estilos.btnSec} onClick={() => setAbierta(null)}>Cancelar</button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       ))}
     </PlacaMadera>

@@ -118,6 +118,10 @@ const PACKS = [
   { id: 'pack-50', monedas: 50, bono: 0, precio: 1500, precioOriginal: null, nombrePack: '50 Mates', tipoCartel: 'base', icono: '/assets/images/moneda-50.png' },
 ];
 
+// Pase 654: ayuda con una compra (devoluciones). La devolución, si corresponde, vuelve al MISMO medio de pago por Mercado Pago:
+// nunca se piden alias, CBU ni datos de tarjeta.
+const CORREO_SOPORTE = 'trucoargentino.dev@gmail.com';
+
 function formatearPrecio(n) {
   return '$' + n.toLocaleString('es-AR');
 }
@@ -144,6 +148,21 @@ export default function Tienda({ usuario, token }) {
   const [avisoVisible, setAvisoVisible] = useState(false);
   const [mensajeAviso, setMensajeAviso] = useState('');
   const [comprandoPackId, setComprandoPackId] = useState(null);
+  const [ayudaAbierta, setAyudaAbierta] = useState(false);
+
+  const escribirPorMail = () => {
+    const cuerpo = [
+      'Hola, necesito ayuda con una compra en TrucoChe.',
+      '',
+      `Usuario: ${usuario?.username || ''}`,
+      `Email de mi cuenta: ${usuario?.email || ''}`,
+      'N.º de operación de Mercado Pago:',
+      'Fecha de la compra:',
+      'Pack comprado:',
+      'Qué pasó:',
+    ].join('\n');
+    window.location.href = `mailto:${CORREO_SOPORTE}?subject=${encodeURIComponent('Consulta por una compra en TrucoChe')}&body=${encodeURIComponent(cuerpo)}`;
+  };
 
   // Pase 653: el Pack de inauguración es de una sola compra por cuenta y vence en la fecha que fija el backend
   // (PACK_INAUGURACION_HASTA). El backend manda { disponible, hasta }; sin respuesta, el pack no se muestra.
@@ -423,11 +442,50 @@ export default function Tienda({ usuario, token }) {
         <br />
         No representan dinero real y no se pueden retirar ni transferir.
       </div>
+
+      {/* Pase 654: ayuda con una compra / devoluciones. */}
+      <div style={{ textAlign: 'center' }}>
+        <button type="button" style={estilos.ayudaLink} onClick={() => setAyudaAbierta(true)}>¿Problema con una compra? Te ayudamos</button>
+      </div>
+      {ayudaAbierta && (
+        <div style={estilos.ayudaFondo} role="dialog" aria-modal="true" aria-label="Ayuda con una compra" onClick={() => setAyudaAbierta(false)}>
+          <div style={estilos.ayudaCaja} onClick={(e) => e.stopPropagation()}>
+            <div style={estilos.ayudaTitulo}>Ayuda con una compra</div>
+            <p style={estilos.ayudaTexto}>
+              Si tuviste un problema con una compra (un cobro duplicado, mates que no llegaron) o te arrepentiste y todavía no usaste esos mates, escribinos y lo revisamos.
+            </p>
+            <p style={{ ...estilos.ayudaTexto, fontWeight: 800 }}>Mandanos por mail:</p>
+            <ul style={estilos.ayudaLista}>
+              <li>Tu usuario de TrucoChe y el email de tu cuenta</li>
+              <li>El número de operación de Mercado Pago (está en tu comprobante o en Mercado Pago, en Actividad)</li>
+              <li>La fecha de la compra y el pack</li>
+              <li>Qué pasó</li>
+            </ul>
+            <p style={estilos.ayudaTexto}>
+              Si corresponde, te devolvemos el dinero por Mercado Pago al mismo medio con el que pagaste. No hace falta que nos pases alias, CBU ni datos de tu tarjeta, y nunca te los vamos a pedir.
+            </p>
+            <div style={estilos.ayudaBotones}>
+              <button type="button" style={estilos.ayudaBotonPrincipal} onClick={escribirPorMail}>Escribir por mail</button>
+              <button type="button" style={estilos.ayudaBotonSecundario} onClick={() => setAyudaAbierta(false)}>Cerrar</button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
 
 const estilos = {
+  // Pase 654: ayuda con una compra.
+  ayudaLink: { background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,248,237,0.8)', fontSize: 12, fontWeight: 700, textDecoration: 'underline', padding: '10px 12px', fontFamily: 'inherit' },
+  ayudaFondo: { position: 'fixed', inset: 0, background: 'rgba(20,12,8,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 },
+  ayudaCaja: { background: '#F4E2C2', border: '4px solid #4A2C2A', borderRadius: 16, padding: '18px 20px', maxWidth: 440, width: '100%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' },
+  ayudaTitulo: { fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 20, color: '#4A2C2A', marginBottom: 8 },
+  ayudaTexto: { fontSize: 13.5, fontWeight: 600, color: '#4A2C2A', lineHeight: 1.45, margin: '8px 0' },
+  ayudaLista: { fontSize: 13.5, fontWeight: 600, color: '#4A2C2A', lineHeight: 1.45, margin: '4px 0 8px', paddingLeft: 20 },
+  ayudaBotones: { display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap', marginTop: 12 },
+  ayudaBotonPrincipal: { fontWeight: 800, fontSize: 13, color: '#fff', background: '#10B981', border: '2px solid #065F46', borderRadius: 10, padding: '9px 16px', cursor: 'pointer', fontFamily: 'inherit' },
+  ayudaBotonSecundario: { fontWeight: 800, fontSize: 13, color: '#3B1F0E', background: '#E6CB93', border: '2px solid #8C6239', borderRadius: 10, padding: '9px 16px', cursor: 'pointer', fontFamily: 'inherit' },
   sectionTitle: { fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 16, color: C.crema, margin: '4px 0 2px 4px', display: 'flex', alignItems: 'center', gap: 8 },
   sectionTitleIcono: { width: 30, height: 30, objectFit: 'contain', flexShrink: 0 },
   // Mismo criterio que el subtítulo agregado en Ranking.js — la tienda

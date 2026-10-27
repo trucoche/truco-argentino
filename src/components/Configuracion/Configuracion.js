@@ -4,7 +4,7 @@ import PersonajeSelector from '../Lobby/PersonajeSelector';
 import ReportarModal from '../Reportar/ReportarModal';
 import SelectorPersonalizacion from '../Personalizacion/SelectorPersonalizacion';
 import ModoFotoAdmin from './ModoFotoAdmin';
-import { AdminResumen, AdminUsuarios, AdminAcciones } from './AdminHerramientas';
+import { AdminResumen, AdminUsuarios, AdminAcciones, AdminDevoluciones } from './AdminHerramientas';
 import { API_URL as BASE_URL } from '../../config';
 
 const API_URL = `${BASE_URL}/api/auth`;
@@ -60,6 +60,7 @@ const SUBPESTANAS_ADMIN = [
   { id: 'reportes', texto: 'Reportes' },
   { id: 'denuncias', texto: 'Denuncias' },
   { id: 'regalos', texto: 'Regalos' },
+  { id: 'compras', texto: 'Compras' },
   { id: 'sponsors', texto: 'Sponsors' },
   { id: 'suspendidos', texto: 'Suspendidos' },
   { id: 'censura', texto: 'Censura' },
@@ -1361,6 +1362,7 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
       {esAdmin && pestana === 'admin' && subAdmin === 'resumen' && <AdminResumen token={token} />}
       {esAdmin && pestana === 'admin' && subAdmin === 'usuarios' && <AdminUsuarios token={token} />}
       {esAdmin && pestana === 'admin' && subAdmin === 'acciones' && <AdminAcciones token={token} />}
+      {esAdmin && pestana === 'admin' && subAdmin === 'compras' && <AdminDevoluciones token={token} />}
 
       {/* Pase 623: regalos de mates con mensaje — solo rol 'admin'. */}
       {esAdmin && pestana === 'admin' && subAdmin === 'regalos' && (
