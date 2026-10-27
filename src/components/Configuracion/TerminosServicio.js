@@ -10,7 +10,7 @@ const C = {
   crema: '#FFF8ED', chocolate: '#4A2C2A',
 };
 
-const FECHA_ACTUALIZACION = '11/10/2026';
+const FECHA_ACTUALIZACION = '27/10/2026';
 
 const SECCIONES = [
   {
@@ -49,9 +49,13 @@ const SECCIONES = [
   {
     "titulo": "5. Compras y pagos",
     "lista": [
-      "Las compras de mates se pagan a través de Mercado Pago. No almacenamos los datos de tu tarjeta ni de tu medio de pago.",
+      "Las compras de mates se pagan a través de Mercado Pago, tanto en la versión web como en la aplicación móvil. No almacenamos los datos de tu tarjeta ni de tu medio de pago.",
       "Los precios se muestran en pesos argentinos e incluyen lo indicado en cada pack al momento de la compra.",
+      "Algunas ofertas, como el Pack Inauguración, son por tiempo limitado y se pueden comprar una sola vez por cuenta. Cuando la oferta termina, deja de estar disponible.",
       "Los mates se acreditan cuando Mercado Pago confirma el pago, lo que puede demorar unos minutos. Si pasado un tiempo razonable no ves tus mates, escribinos con el comprobante de pago.",
+      "Si tuviste un problema con una compra (por ejemplo, un cobro duplicado o un error en la acreditación) o te arrepentís dentro de los 10 días corridos de haberla hecho y todavía no usaste esos mates, escribinos al correo de contacto del punto 18. Revisamos cada caso y, cuando corresponde, devolvemos el pago a través de Mercado Pago. Si se devuelve un pago, descontamos de tu cuenta los mates correspondientes.",
+      "Si un pago es desconocido o revertido por el emisor de la tarjeta o por Mercado Pago (contracargo), podemos descontar los mates acreditados por esa compra y suspender la cuenta hasta aclarar la situación.",
+      "Si sos menor de 18 años, tus compras tienen que contar con la autorización de tu madre, padre o tutor, que es quien debe pagar con su propio medio de pago.",
       "Una vez acreditados, los mates se consideran entregados y consumibles dentro del juego. Esto no limita los derechos que te reconozca la normativa de defensa del consumidor vigente en Argentina, ni los casos de cobros duplicados o errores comprobables, que vamos a resolver con el criterio de corregir el error."
     ]
   },
