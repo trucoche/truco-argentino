@@ -168,8 +168,11 @@ export default function Tienda({ usuario, token }) {
   // (PACK_INAUGURACION_HASTA). El backend manda { disponible, hasta }; sin respuesta, el pack no se muestra.
   const [packInaug, setPackInaug] = useState({ disponible: false, hastaMs: 0 });
   const [ahora, setAhora] = useState(() => Date.now());
+  // Pase 655: las tarjetas se dibujan recién cuando el backend contestó (o pasaron 2,5 s), así no saltan de 5 a 6 ni repiten la entrada.
+  const [packInaugListo, setPackInaugListo] = useState(false);
   useEffect(() => {
     let cancelado = false;
+    const esperaMax = setTimeout(() => setPackInaugListo(true), 2500);
     (async () => {
       try {
         const res = await fetch(`${API_URL}/api/pagos/pack-inauguracion`, { headers: { Authorization: `Bearer ${token}` } });
@@ -179,16 +182,18 @@ export default function Tienda({ usuario, token }) {
         }
       } catch (err) {
         console.error('Error consultando el pack de inauguración:', err);
+      } finally {
+        if (!cancelado) setPackInaugListo(true);
       }
     })();
     const t = setInterval(() => setAhora(Date.now()), 30000);
-    return () => { cancelado = true; clearInterval(t); };
+    return () => { cancelado = true; clearInterval(t); clearTimeout(esperaMax); };
   }, [token]);
   const inaugDisponible = packInaug.disponible && packInaug.hastaMs > ahora;
   const packPorId = (id) => PACKS.find((p) => p.id === id);
   // Con el pack: Inauguración | Mejor Valor | 500 / 200 | 100 | 50. Sin el pack: 500 | Mejor Valor | 200 / 100 | 50.
-  const packsFilaArriba = inaugDisponible ? PACKS.slice(0, 3) : [packPorId('pack-400'), packPorId('pack-800'), packPorId('pack-200')];
-  const packsFilaAbajo = inaugDisponible ? PACKS.slice(3, 6) : [packPorId('pack-100'), packPorId('pack-50')];
+  const packsFilaArriba = !packInaugListo ? [] : inaugDisponible ? PACKS.slice(0, 3) : [packPorId('pack-400'), packPorId('pack-800'), packPorId('pack-200')];
+  const packsFilaAbajo = !packInaugListo ? [] : inaugDisponible ? PACKS.slice(3, 6) : [packPorId('pack-100'), packPorId('pack-50')];
 
   const comprar = async (packId) => {
     if (comprandoPackId) return;
@@ -259,7 +264,7 @@ export default function Tienda({ usuario, token }) {
   // abajo, y el punto 1 del brief del usuario: "esa información de
   // descuento debe estar integrada dentro del banner/tarjeta de la oferta
   // mediante etiquetas, ej. '-65%'").
-  const renderPack = (pack, fila) => {
+  const renderPack = (pack, fila, indice = 0) => {
     const total = pack.monedas + pack.bono;
     const destacado = pack.tag === 'mejorPrecio';
     const inauguracion = pack.tag === 'inauguracion';
@@ -269,7 +274,7 @@ export default function Tienda({ usuario, token }) {
       <div
         key={pack.id}
         className={`tc-card ${claseTamano} tc-card-${pack.id}`}
-        style={estilos.card}
+        style={{ ...estilos.card, animationDelay: `${0.06 + indice * 0.09}s` }}
       >
         {/* Badge extra pedido por el usuario ("debe tener un badge claro:
             Mejor Valor o Mejor precio por moneda") además del nombre que ya
@@ -288,6 +293,14 @@ export default function Tienda({ usuario, token }) {
           <div style={estilos.badgeInauguracion}>🔥 -{descuentoPct}% OFF</div>
         )}
         <img src={CARTELES[pack.tipoCartel]} alt="" style={estilos.cartelFondo} />
+        {/* Pase 655: destellos dorados en las ofertas (Mejor Valor e Inauguración). */}
+        {(destacado || inauguracion) && (
+          <>
+            <span className="tc-destello" aria-hidden="true" style={{ left: '10%', top: '24%', fontSize: 'clamp(12px, 5cqw, 20px)', animationDelay: `${indice * 0.15}s` }}>✦</span>
+            <span className="tc-destello" aria-hidden="true" style={{ left: '84%', top: '18%', fontSize: 'clamp(10px, 4cqw, 16px)', animationDelay: `${0.9 + indice * 0.15}s` }}>✦</span>
+            <span className="tc-destello" aria-hidden="true" style={{ left: '80%', top: '58%', fontSize: 'clamp(10px, 4.5cqw, 17px)', animationDelay: `${1.7 + indice * 0.15}s` }}>✦</span>
+          </>
+        )}
 
         {/* Centésimo trigésimo pase: el usuario pidió centrar mejor
             el texto del letrero en TODAS las tarjetas salvo la de
@@ -322,7 +335,8 @@ export default function Tienda({ usuario, token }) {
           <img
             src={pack.icono}
             alt=""
-            style={pack.id === 'pack-200' || pack.id === 'pack-100' ? estilos.iconoGrande : estilos.icono}
+            className="tc-icono-flota"
+            style={{ ...(pack.id === 'pack-200' || pack.id === 'pack-100' ? estilos.iconoGrande : estilos.icono), animationDelay: `${indice * 0.26}s` }}
           />
           {/* Centésimo vigésimo octavo pase: cantidad + "monedas"
               agrupados en su propio div, sin espacio entre ellos —
@@ -349,7 +363,7 @@ export default function Tienda({ usuario, token }) {
         </div>
 
         {/* Pase 550: botón de precio aparte, anclado abajo (ver `zonaPrecio`). */}
-        <div style={estilos.zonaPrecio}>
+        <div className={destacado || inauguracion ? 'tc-pulso' : undefined} style={estilos.zonaPrecio}>
             <button
               className="tc-precio-boton"
               style={{
@@ -417,7 +431,7 @@ export default function Tienda({ usuario, token }) {
             no una sola tarjeta con dots". */}
         <div className="tc-filas" style={estilos.filas}>
           <div className="tc-fila" style={estilos.fila}>
-            {packsFilaArriba.map((pack) => renderPack(pack, 1))}
+            {packsFilaArriba.map((pack, i) => renderPack(pack, 1, i))}
           </div>
           {/* Ducentésimo trigésimo octavo pase: clase extra `tc-fila-inferior`
               (ver el CSS inyectado al final del archivo) — el usuario notó
@@ -427,7 +441,7 @@ export default function Tienda({ usuario, token }) {
               proporcionalmente más que en la fila de arriba (con tarjetas
               más grandes) — se achica un poco solo para esta fila. */}
           <div className={`tc-fila tc-fila-inferior${packsFilaAbajo.length === 2 ? ' tc-fila-dos' : ''}`} style={estilos.fila}>
-            {packsFilaAbajo.map((pack) => renderPack(pack, 2))}
+            {packsFilaAbajo.map((pack, i) => renderPack(pack, 2, i + 3))}
           </div>
         </div>
       </PlacaMadera>
@@ -1048,6 +1062,19 @@ if (typeof document !== 'undefined' && !document.getElementById('tienda-grid-res
     .tc-fila { display: flex; gap: 14px; align-items: flex-end; }
     .tc-fila.tc-fila-inferior { gap: 10px; }
     .tc-card-normal { flex: 1 1 0; min-width: 0; }
+    /* Pase 655: movimiento sutil — entrada escalonada, ícono que flota, latido en el precio de las ofertas y destellos dorados. */
+    @keyframes tc-entrada { from { opacity: 0; transform: translateY(22px) scale(0.94); } to { opacity: 1; transform: none; } }
+    @keyframes tc-flota { 0%, 100% { transform: translateY(2px); } 50% { transform: translateY(-5px); } }
+    @keyframes tc-pulso { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+    @keyframes tc-destello { 0%, 55%, 100% { opacity: 0; transform: scale(0.4) rotate(0deg); } 70% { opacity: 1; transform: scale(1.1) rotate(45deg); } }
+    .tc-card { animation: tc-entrada 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+    .tc-icono-flota { animation: tc-flota 3.2s ease-in-out infinite; }
+    .tc-pulso { animation: tc-pulso 1.8s ease-in-out infinite; }
+    .tc-destello { position: absolute; z-index: 3; pointer-events: none; color: #FFE9A0; text-shadow: 0 0 6px rgba(255, 190, 40, 0.95); animation: tc-destello 3.2s ease-in-out infinite; opacity: 0; }
+    @media (prefers-reduced-motion: reduce) {
+      .tc-card, .tc-icono-flota, .tc-pulso, .tc-destello { animation: none; }
+      .tc-destello { display: none; }
+    }
     /* Pase 653: sin el Pack de inauguración la fila de abajo queda con 2 tarjetas, centradas y del mismo ancho que las de 3. */
     @media (min-width: 901px) {
       .tc-fila.tc-fila-dos { justify-content: center; }
