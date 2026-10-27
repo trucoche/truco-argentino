@@ -198,9 +198,10 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
             </div>
           </div>
   );
-  const renderHitos = () => (
+  // Pase 645: en la página (ventana alta) la lista de hitos muestra ~3 a la vista y el resto se desliza (`alto` = alto máximo en px).
+  const renderHitos = (alto) => (
     (resumen?.hitos?.length ?? 0) > 0 ? (
-          <div style={estilos.hitosGrid}>
+          <div style={alto ? { ...estilos.hitosGrid, maxHeight: alto, overflowY: 'auto', paddingRight: 6, scrollbarWidth: 'thin' } : estilos.hitosGrid}>
             {resumen.hitos.map((h) => (
               <div key={h.id} style={estilos.hitoFila}>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -321,7 +322,7 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
             </div>
             <PlacaMadera style={{ display: 'flex', flexDirection: 'column', flex: '1 1 300px', minWidth: 0 }} colorInterior={PERGAMINO} interiorStyle={{ padding: 14, flex: 1 }}>
               <div style={{ ...estilos.panelTitulo, marginBottom: 8 }}>{`Hitos de la Liga · ${(resumen?.hitos ?? []).filter((h) => h.cobrado).length}/${resumen?.hitos?.length ?? 0}`}</div>
-              {renderHitos()}
+              {renderHitos(205)}
             </PlacaMadera>
           </div>
         )}
@@ -545,7 +546,7 @@ const estilos = {
     background: '#3B1A12', border: '3px solid #8C6239', borderRadius: 16, cursor: 'pointer', padding: '12px 8px', boxShadow: '0 4px 0 #000',
   },
   tileIcono: { width: 76, height: 76, objectFit: 'contain' },
-  tileChica: { flex: '1 1 0', maxWidth: 'none', minHeight: 0, minWidth: 0 },
+  tileChica: { flex: '1 1 0', maxWidth: 'none', minHeight: 100, minWidth: 0 },
   tileIconoChico: { width: 56, height: 56 },
   tileTitulo: { fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 19, color: C.doradoClaro },
   tileSub: { fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 13, color: C.crema, opacity: 0.85 },
