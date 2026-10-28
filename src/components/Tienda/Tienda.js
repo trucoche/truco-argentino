@@ -110,7 +110,7 @@ const CARTELES = {
 // de madera) y `tipoCartel` (qué PNG de fondo usa cada tarjeta) a cada
 // pack.
 const PACKS = [
-  { id: 'pack-inauguracion', monedas: 100, bono: 0, precio: 990, precioOriginal: 2800, tag: 'inauguracion', nombrePack: 'Inauguración', tipoCartel: 'rojo', notaEspecial: null, icono: '/assets/images/moneda-inauguracion.png' },
+  { id: 'pack-inauguracion', monedas: 100, bono: 0, precio: 990, precioOriginal: 2800, tag: 'inauguracion', nombrePack: 'Inauguración', tipoCartel: 'rojo', notaEspecial: null, icono: '/assets/images/caja-inauguracion.png' },
   { id: 'pack-800', monedas: 800, bono: 200, precio: 16800, precioOriginal: 30000, tag: 'mejorPrecio', nombrePack: 'Mejor Valor', tipoCartel: 'verde', icono: '/assets/images/moneda-100.png' },
   { id: 'pack-400', monedas: 400, bono: 100, precio: 9500, precioOriginal: 15000, nombrePack: '500 Mates', tipoCartel: 'base', icono: '/assets/images/moneda-400.png' },
   { id: 'pack-200', monedas: 200, bono: 0, precio: 5000, precioOriginal: 6000, nombrePack: '200 Mates', tipoCartel: 'base', icono: '/assets/images/moneda-200.png' },

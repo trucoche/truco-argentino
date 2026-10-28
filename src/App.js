@@ -680,6 +680,7 @@ function AppInterna() {
               onMisionReclamada={actualizarPerfil}
               onIrARanked={() => setPantalla('ranked')}
               onIrAnotador={() => setPantalla('anotador')}
+              onIrATienda={() => setPantalla('tienda')}
               codigoInicial={codigoParaUnirse}
               // Pase siguiente: el banner de torneo ahora lo dibuja el
               // propio Lobby (comparte fila con "Jugar ya") — mismos
@@ -718,7 +719,6 @@ function AppInterna() {
                 setCodigoSalaActual(codigoSala);
                 setPantalla('juego');
               }}
-              onIrATienda={() => setPantalla('tienda')}
             />
           )}
 

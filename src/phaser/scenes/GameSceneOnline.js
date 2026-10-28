@@ -2869,10 +2869,10 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
       const jf = jugadoresFinal && jugadoresFinal.length ? jugadoresFinal : [];
       const nG = jf.filter(j => j.gano).length;
       const nP = jf.length - nG;
-      const tamF = jf.length <= 2 ? 120 : jf.length <= 4 ? 115 : 92;   // Pase 658: 1v1 un poco más chico para que entre el resumen
+      const tamF = jf.length <= 2 ? 104 : jf.length <= 4 ? 100 : 84;   // Pase 659: avatares un poco más chicos para dejar aire entre bloques
       const gapF = jf.length <= 2 ? 0 : jf.length <= 4 ? 30 : 20;
       const grupoF = (n) => (n > 0 ? n * (tamF + gapF) - gapF : 0);
-      const anchoF = grupoF(nG) + (nG && nP ? 96 : 0) + grupoF(nP);
+      const anchoF = grupoF(nG) + (nG && nP ? 120 : 0) + grupoF(nP);
       const cwF = this.scale.width;
       const chF = this.scale.height;
       const visibleW = Math.max(540, Math.min(760, anchoF * 1.15 + 120), 640 * cwF / chF);
@@ -2890,7 +2890,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
     fondoResultado.setDisplaySize(800, 600);
     if (this._L) this._cubrirEstatico(fondoResultado);
     this._sprites.push(fondoResultado);
-    const velo = this.add.rectangle(400, 300, 800, this._L ? this._L.H8 + 4 : 600, 0x14140f, 0.45).setDepth(900);
+    const velo = this.add.rectangle(400, 300, 800, this._L ? this._L.H8 + 4 : 600, 0x14140f, 0.52).setDepth(900);
     this._sprites.push(velo);
 
     // ─────────────────────────────────────────────────────────────────
@@ -2910,7 +2910,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
     // 1) Cartel de caoba con el resultado
     const textoCartel = modo === 'victoria' ? '¡GANASTE!' : (modo === 'derrota' ? 'PERDISTE' : 'Sala cancelada');
     this._actualizarBannerEsperaTitulo(textoCartel, null, detalle, {
-      y: 70, depth: 903,
+      y: 58, depth: 903,
       color: modo === 'derrota' ? '#E4573D' : '#FFD98A',
       tamano: 30,
     });
@@ -2921,20 +2921,22 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
     const hayJugadores = jugadoresFinal && jugadoresFinal.length > 0;
     const ganadores = hayJugadores ? jugadoresFinal.filter(j => j.gano) : [];
     const perdedores = hayJugadores ? jugadoresFinal.filter(j => !j.gano) : [];
-    // Pase 657: YO siempre a la derecha (y el rival a la izquierda), gane o pierda; antes los ganadores iban a la izquierda.
-    const soyGanador = ganadores.some(j => j.nombre === this.usuario?.username);
-    const izq = soyGanador ? perdedores : ganadores;
-    const der = soyGanador ? ganadores : perdedores;
+    // Pase 659: YO (o mi equipo) siempre a la IZQUIERDA y el rival a la DERECHA, gane o pierda; solo cambian los
+    // indicadores (halo, "Ganador"/"Derrotado"). Un espectador ve a los ganadores a la izquierda.
+    const soyPerdedor = perdedores.some(j => j.nombre === this.usuario?.username);
+    const izqGanadores = !soyPerdedor;
+    const izq = izqGanadores ? ganadores : perdedores;
+    const der = izqGanadores ? perdedores : ganadores;
     const todos = [...izq, ...der];
     const total = todos.length;
-    const tamano = total <= 2 ? 120 : total <= 4 ? 115 : 92;   // Pase 658
+    const tamano = total <= 2 ? 104 : total <= 4 ? 100 : 84;   // Pase 659
     const gapIntra = total <= 2 ? 0 : total <= 4 ? 30 : 20;
-    const gapEscudo = 96;
+    const gapEscudo = 120;   // Pase 659: más aire entre los marcos de avatar y el escudo del marcador
     const paso = tamano + gapIntra;
     const anchoGrupo = (n) => (n > 0 ? n * paso - gapIntra : 0);
     const anchoFila = anchoGrupo(izq.length) + (izq.length && der.length ? gapEscudo : 0) + anchoGrupo(der.length);
     let cursorX = 400 - anchoFila / 2 + tamano / 2;
-    const cyAv = 190;   // Pase 658: el cartel sube y el 1v1 queda más compacto para dejar lugar al resumen
+    const cyAv = 184;   // Pase 659: cartel más arriba y avatares más chicos: 22 px de aire bajo el cartel
 
     const radio = tamano / 2;
     const radioFoto = radio * 0.72;
@@ -2983,24 +2985,24 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
           [0.72, 0xB42828, 0.19],
           [0.60, 0xB42828, 0.25],
         ] : [
-          [1.30, 0xFFC94A, 0.10],
-          [1.10, 0xFFD668, 0.16],
-          [0.92, 0xFFE08A, 0.22],
-          [0.76, 0xFFEBB0, 0.30],
-          [0.60, 0xFFF3CC, 0.42],
+          [1.30, 0xFFC94A, 0.05],
+          [1.10, 0xFFD668, 0.08],
+          [0.92, 0xFFE08A, 0.12],
+          [0.76, 0xFFEBB0, 0.17],
+          [0.60, 0xFFF3CC, 0.24],
         ];
         anillosHalo.forEach(([k, col, al]) => {
           halo.fillStyle(col, al);
           halo.fillCircle(0, 0, tamanoAro * k);
         });
-        if (haloDerrota) halo.lineStyle(2, 0xB42828, 0.45); else halo.lineStyle(3, 0xFFF3CC, 0.9);
+        if (haloDerrota) halo.lineStyle(2, 0xB42828, 0.45); else halo.lineStyle(2, 0xFFF3CC, 0.55);
         halo.strokeCircle(0, 0, tamanoAro * 0.62);
         halo.setPosition(cx, cyAv);
         this._sprites.push(halo);
         this._tweensFinal.push(this.tweens.add({ targets: halo, alpha: haloDerrota ? 0.45 : 0.7, scale: haloDerrota ? 1.12 : 1.1, duration: haloDerrota ? 1300 : 1000, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' }));
         // Destello exterior que se expande y se apaga, en bucle
         const onda = this.add.graphics().setDepth(901.9);
-        if (haloDerrota) onda.lineStyle(3, 0xB42828, 0.6); else onda.lineStyle(4, 0xFFE08A, 1);
+        if (haloDerrota) onda.lineStyle(3, 0xB42828, 0.6); else onda.lineStyle(3, 0xFFE08A, 0.7);
         onda.strokeCircle(0, 0, tamanoAro * 0.62);
         onda.setPosition(cx, cyAv);
         this._sprites.push(onda);
@@ -3154,7 +3156,8 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
     // Pase 417: sin moneda ni frase "Derrota"/"¡Victoria!" (redundantes con el cartel): la botonera sube. Solo queda,
     // como texto simple, una frase que aporta información (campeón del torneo / abandono).
     const fraseInfo = (esCampeon || datos.motivo === 'abandono') ? frase : '';
-    let y = total ? yPillComun + 13 + 14 : 250;
+    const GAP_MOD = 22;   // Pase 659: aire constante entre módulos (20–28 px)
+    let y = total ? yPillComun + 13 + GAP_MOD : 250;
     if (modo === 'neutro') {
       // Pase 415: "Sala cancelada" — medallon de madera con reloj de arena + mensaje en un pergamino
       // con borde de madera. No hubo partida: nada de moneda ni de revancha.
@@ -3216,46 +3219,55 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
       else if (ev.tipo === 'serie-perdida') { evTitulo = 'Serie perdida'; evSub = 'Volvés al 75 % de tu barra.'; }
     }
     const ocultarPuntosEv = !!ev && (ev.tipo === 'clasificacion-en-curso' || ev.tipo === 'serie-en-curso');
-    const partesFicha = [];
-    if (datos.ranked && puntosRank !== null && !ocultarPuntosEv) partesFicha.push(`${puntosRank > 0 ? '+' : ''}${puntosRank} Puntos`);
-    if (evTitulo) partesFicha.push(evTitulo);
-    if (partesFicha.length) {
-      const textoP = partesFicha.join('  ·  ');
-      const colorP = (partesFicha.length === 1 && !evTitulo)
-        ? (puntosRank > 0 ? '#1f7a3c' : (puntosRank < 0 ? '#8c2a2a' : '#7a6660'))
-        : '#4A2C1C';
-      const tp = this.add.text(0, 0, textoP, { fontFamily: 'Fredoka, Arial', fontSize: '16px', fontStyle: '700', color: colorP }).setOrigin(0, 0.5).setDepth(905);
-      const ICONO = 26, PAD = 16, ALTO_F = 36;
-      const wF = PAD * 2 + ICONO + 6 + tp.width;
-      const fx0 = 400 - wF / 2;
-      const ficha = this.add.graphics().setDepth(904);
-      ficha.fillStyle(0x4A2C2A, 0.28);
-      ficha.fillRoundedRect(fx0, y, wF, ALTO_F, 11);
-      ficha.fillStyle(0xEAD9B5, 1);
-      ficha.fillRoundedRect(fx0 + 1.5, y + 3, wF - 3, ALTO_F - 5, 9);
-      ficha.fillStyle(0xB89A6A, 0.45);
-      ficha.fillRoundedRect(fx0 + 1.5, y + 3, wF - 3, 6, 9);
-      ficha.lineStyle(2, 0x6b4a34, 1);
-      ficha.strokeRoundedRect(fx0, y, wF, ALTO_F, 11);
-      const cyF = y + ALTO_F / 2 + 1;
-      const fosforos = this.add.image(fx0 + PAD + ICONO / 2, cyF, 'fosforosPuntos').setDisplaySize(ICONO, ICONO).setDepth(905);
-      tp.setPosition(fx0 + PAD + ICONO + 6, cyF);
-      this._sprites.push(ficha, fosforos, tp);
-      y += ALTO_F + 8;
-      if (evSub) {
-        const ts = this.add.text(400, y, evSub, {
-          fontFamily: 'Nunito, Arial', fontSize: '12px', fontStyle: '800', color: '#F1D9A8', align: 'center',
-          stroke: '#000000', strokeThickness: 3, wordWrap: { width: 620 },
-        }).setOrigin(0.5, 0).setDepth(905);
-        this._sprites.push(ts);
-        y += Math.ceil(ts.height) + 6;
+    const textoPuntos = (datos.ranked && puntosRank !== null && !ocultarPuntosEv) ? `${puntosRank > 0 ? '+' : ''}${puntosRank} Puntos` : null;
+    if (textoPuntos || evTitulo) {
+      // Pase 659: puntos + leyenda de rango dentro de UNA placa definida (padding interno de 16 px).
+      const PAD = 16, ICONO = 26, GAP_IN = 6;
+      const items = [];
+      if (textoPuntos) {
+        const colorP = puntosRank > 0 ? '#1f7a3c' : (puntosRank < 0 ? '#8c2a2a' : '#7a6660');
+        const tp = this.add.text(0, 0, textoPuntos, { fontFamily: 'Fredoka, Arial', fontSize: '19px', fontStyle: '700', color: colorP }).setOrigin(0, 0.5).setDepth(906);
+        items.push({ tipo: 'puntos', obj: tp, w: ICONO + 6 + tp.width, h: 28 });
       }
-      y += 6;
-    } else {
-      y += modo === 'neutro' ? 0 : 6;
+      if (evTitulo) {
+        const tt = this.add.text(0, 0, evTitulo, { fontFamily: 'Fredoka, Arial', fontSize: '15px', fontStyle: '700', color: '#4A2C1C', align: 'center', wordWrap: { width: 480 } }).setOrigin(0.5, 0).setDepth(906);
+        items.push({ tipo: 'texto', obj: tt, w: tt.width, h: Math.ceil(tt.height) });
+      }
+      if (evSub) {
+        const ts = this.add.text(0, 0, evSub, { fontFamily: 'Nunito, Arial', fontSize: '12px', fontStyle: '800', color: '#6b4a34', align: 'center', wordWrap: { width: 480 } }).setOrigin(0.5, 0).setDepth(906);
+        items.push({ tipo: 'texto', obj: ts, w: ts.width, h: Math.ceil(ts.height) });
+      }
+      const anchoCont = Math.max(...items.map(i => i.w));
+      const altoCont = items.reduce((acc, i) => acc + i.h, 0) + GAP_IN * (items.length - 1);
+      const wP = Math.max(anchoCont + PAD * 2, 220), hP = altoCont + PAD * 2, xP = 400 - wP / 2;
+      const placaP = this.add.graphics().setDepth(904);
+      placaP.fillStyle(0x4A2C2A, 0.30);
+      placaP.fillRoundedRect(xP, y + 3, wP, hP, 14);
+      placaP.fillStyle(0xEAD9B5, 1);
+      placaP.fillRoundedRect(xP, y, wP, hP, 14);
+      placaP.fillStyle(0xB89A6A, 0.45);
+      placaP.fillRoundedRect(xP + 2, y + 2, wP - 4, 7, { tl: 12, tr: 12, bl: 2, br: 2 });
+      placaP.lineStyle(2, 0x6b4a34, 1);
+      placaP.strokeRoundedRect(xP, y, wP, hP, 14);
+      this._sprites.push(placaP);
+      let cyI = y + PAD;
+      items.forEach((it) => {
+        if (it.tipo === 'puntos') {
+          const x0 = 400 - it.w / 2;
+          const fosforos = this.add.image(x0 + ICONO / 2, cyI + it.h / 2, 'fosforosPuntos').setDisplaySize(ICONO, ICONO).setDepth(905);
+          it.obj.setPosition(x0 + ICONO + 6, cyI + it.h / 2);
+          this._sprites.push(fosforos, it.obj);
+        } else {
+          it.obj.setPosition(400, cyI);
+          this._sprites.push(it.obj);
+        }
+        cyI += it.h + GAP_IN;
+      });
+      y += hP + GAP_MOD;
     }
 
     // Pase 658: resumen de la partida (manos, duración y cómo jugué) en una franja, para aprovechar el espacio.
+    let resumenDibujado = false;
     const resumenFinal = recompensa && recompensa.resumen && Number(recompensa.resumen.manos) > 0 ? recompensa.resumen : null;
     if (resumenFinal && modo !== 'neutro') {
       const seg = resumenFinal.duracionSeg;
@@ -3264,7 +3276,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
         ['Manos', resumenFinal.manos || 0], ['Duración', durTexto], ['Trucos', resumenFinal.trucos || 0],
         ['Envidos', resumenFinal.envidos || 0], ['Al mazo', resumenFinal.mazos || 0], ['Amagues', resumenFinal.amagues || 0],
       ];
-      const wR = 560, hR = 52, xR = 400 - wR / 2, anchoCelda = wR / celdas.length;
+      const wR = 560, hR = 50, xR = 400 - wR / 2, anchoCelda = wR / celdas.length;
       const panelR = this.add.graphics().setDepth(904);
       panelR.fillStyle(0x140C08, 0.55);
       panelR.fillRoundedRect(xR, y, wR, hR, 12);
@@ -3275,15 +3287,17 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
       this._sprites.push(panelR);
       celdas.forEach(([etiqueta, valor], i) => {
         const cxC = xR + anchoCelda * (i + 0.5);
-        const tv = this.add.text(cxC, y + 19, String(valor), { fontFamily: 'Fredoka, Arial', fontSize: '19px', fontStyle: '700', color: '#FFF8ED', stroke: '#2C160E', strokeThickness: 3 }).setOrigin(0.5).setDepth(905);
-        const tl = this.add.text(cxC, y + 39, etiqueta, { fontFamily: 'Nunito, Arial', fontSize: '11px', fontStyle: '800', color: '#F1D9A8' }).setOrigin(0.5).setDepth(905);
+        const tv = this.add.text(cxC, y + 18, String(valor), { fontFamily: 'Fredoka, Arial', fontSize: '19px', fontStyle: '700', color: '#FFF8ED', stroke: '#2C160E', strokeThickness: 3 }).setOrigin(0.5).setDepth(905);
+        const tl = this.add.text(cxC, y + 37, etiqueta, { fontFamily: 'Nunito, Arial', fontSize: '11px', fontStyle: '800', color: '#F1D9A8' }).setOrigin(0.5).setDepth(905);
         this._sprites.push(tv, tl);
       });
-      y += hR + 12;
+      y += hR + 24;   // Pase 659: mínimo 24 px entre la barra de datos y "Pedir revancha"
+      resumenDibujado = true;
     }
 
+    if (!resumenDibujado && modo !== 'neutro') y += 2;   // sin barra de datos: 22 + 2 = 24 px antes de los botones
     // 6) Botonera vertical en cápsulas 3D
-    const altoBoton = 44;
+    const altoBoton = 42;
     if (!esTorneo && modo !== 'neutro') {
       const revanchaTexto = 'Pedir revancha';
       const revanchaAncho = this._medirAnchoTextoOverlay(revanchaTexto, '17px') + 60;
@@ -3297,7 +3311,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
       });
       this.contRevancha = contRevancha;
       this.imgRevancha = imgRevancha;
-      y += altoBoton + 16;
+      y += altoBoton + 12;   // Pase 659: 12 px exactos entre Revancha y Volver
     }
     const labelBoton = esTorneo ? 'Ver bracket' : 'Volver al lobby';   // Pase 415: en sala cancelada es el unico boton
     const volverAncho = this._medirAnchoTextoOverlay(labelBoton, '17px') + 60;
@@ -3323,6 +3337,36 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
       this._sprites.push(this.textoEsperaRevancha);
     }
 
+    // Pase 659: encuadre. Si el contenido no entra en la vista, la cámara se aleja lo justo (nunca se pisan módulos);
+    // el paño, el velo y la viñeta cubren toda la vista.
+    const cam659 = this.cameras.main;
+    const topC = 10;
+    const botC = ((!esTorneo && modo !== 'neutro') ? y + 18 : y) + 10;
+    const needH = botC - topC;
+    if (!this._L && this._zoomPrevFinal == null) this._zoomPrevFinal = cam659.zoom;
+    if (this.scale.height / needH < cam659.zoom) cam659.setZoom(this.scale.height / needH);
+    const vistaH659 = this.scale.height / cam659.zoom;
+    const vistaW659 = this.scale.width / cam659.zoom;
+    const centroY659 = Math.min(Math.max(300, botC - vistaH659 / 2), topC + vistaH659 / 2);
+    cam659.centerOn(400, centroY659);
+    this._topVistaFinal = centroY659 - vistaH659 / 2;
+    {
+      const srcF = fondoResultado.texture.getSourceImage();
+      const scF = Math.max((vistaW659 + 60) / srcF.width, (vistaH659 + 60) / srcF.height, 800 / srcF.width, 600 / srcF.height);
+      fondoResultado.setDisplaySize(srcF.width * scF, srcF.height * scF).setPosition(400, centroY659);
+      velo.setSize(Math.max(800, vistaW659 + 60), Math.max(600, vistaH659 + 60)).setPosition(400, centroY659);
+      // Viñeta suave en los bordes (verde oscuro)
+      const vg = this.add.graphics().setDepth(901);
+      const vx0 = 400 - vistaW659 / 2 - 30, vx1 = 400 + vistaW659 / 2 + 30;
+      const vy0 = centroY659 - vistaH659 / 2 - 30, vy1 = centroY659 + vistaH659 / 2 + 30;
+      const E = 120, C = 0x08150c, A = 0.42;
+      vg.fillGradientStyle(C, C, C, C, A, 0, A, 0); vg.fillRect(vx0, vy0, E, vy1 - vy0);
+      vg.fillGradientStyle(C, C, C, C, 0, A, 0, A); vg.fillRect(vx1 - E, vy0, E, vy1 - vy0);
+      vg.fillGradientStyle(C, C, C, C, A, A, 0, 0); vg.fillRect(vx0, vy0, vx1 - vx0, E);
+      vg.fillGradientStyle(C, C, C, C, 0, 0, A, A); vg.fillRect(vx0, vy1 - E, vx1 - vx0, E);
+      this._sprites.push(vg);
+    }
+
     // 7) Celebración: destellos junto al cartel y a los ganadores + papelitos
     if (modo === 'victoria') {
       const estrella = (ex, ey, tam, delay) => {
@@ -3342,17 +3386,17 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
         }));
       };
       const cartelAncho = cartel && cartel.getBounds ? cartel.getBounds().width : 300;
-      estrella(400 + cartelAncho / 2 - 22, 58, 12, 0);
-      estrella(400 - cartelAncho / 2 + 26, 104, 9, 500);
+      estrella(400 + cartelAncho / 2 - 22, 46, 12, 0);
+      estrella(400 - cartelAncho / 2 + 26, 92, 9, 500);
       if (ganadores.length) {
         const inicioFila = 400 - anchoFila / 2 + tamano / 2;
-        const gx = soyGanador ? inicioFila + izq.length * paso + gapEscudo - gapIntra : inicioFila;   // Pase 657: los ganadores quedan donde estén
+        const gx = izqGanadores ? inicioFila : inicioFila + izq.length * paso + gapEscudo - gapIntra;   // Pase 659: los ganadores quedan donde estén
         estrella(gx - tamano * 0.5, cyAv - tamano * 0.4, 10, 250);
         estrella(gx + tamano * 0.55, cyAv + tamano * 0.1, 8, 800);
         estrella(gx + tamano * 0.1, cyAv - tamano * 0.62, 7, 1200);
       }
       const colores = [0xFFB627, 0xFFD668, 0x4FB3E8, 0xFFFFFF, 0xE74C3C, 0x10B981];
-      const extraTopConfeti = this._L ? Math.max(0, (this._vistaEspera().h - 600) / 2) : 0;   // layout angosto: caen desde el borde de arriba de la ventana
+      const extraTopConfeti = Math.max(0, -(this._topVistaFinal || 0));   // layout angosto: caen desde el borde de arriba de la ventana
       for (let i = 0; i < 50; i++) {
         const cx0 = 20 + Math.random() * 760;
         const cy0 = -6 - extraTopConfeti;
@@ -6723,6 +6767,11 @@ rendirse() {
     if (this._tweenVeloCartas) { try { this._tweenVeloCartas.stop(); } catch (e) {} this._tweenVeloCartas = null; }
     this._sprites.forEach(s => { if (s && s.destroy) s.destroy(); });
     this._sprites = [];
+    // Pase 659: la pantalla final puede alejar la cámara para que entre todo; al salir vuelve al zoom de antes (layout ancho).
+    if (!this._L && this._zoomPrevFinal != null) {
+      try { this.cameras.main.setZoom(this._zoomPrevFinal); this.cameras.main.centerOn(400, 300); } catch (e) {}
+      this._zoomPrevFinal = null;
+    }
   }
 
   // Genera un "estado" de partida falso, con la misma forma que manda el
