@@ -35,7 +35,7 @@ function proximoEnfriamiento(n) {
   return siguiente >= 4 ? '24 horas' : siguiente === 3 ? '30 minutos' : siguiente === 2 ? '5 minutos' : '';
 }
 
-export default function Ranked({token, onEntrarAPartida, usuario }) {
+export default function Ranked({token, onEntrarAPartida, usuario, onIrATienda }) {
   const [resumen, setResumen] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [modo, setModo] = useState('1v1');
@@ -51,6 +51,7 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
   }, []);
   const [popup, setPopup] = useState(null);   // Pase 622: 'rangos' | 'temporada' | 'partidas' | 'hitos' | 'reglas' (tarjetas secundarias en popup)
   const [partidaAbierta, setPartidaAbierta] = useState(null);
+  const [eventoId, setEventoId] = useState(null);   // Pase 658: evento abierto en el cartel grande
   const [bloqueoFin, setBloqueoFin] = useState(0);   // Pase 613: hora (ms) en que termina el enfriamiento por abandonos
   const [ahora, setAhora] = useState(Date.now());
 
@@ -138,6 +139,8 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
   // Pase 624: con la ventana alta se muestra abierta la información principal; con la ventana chica quedan las tarjetas que abren carteles.
   const nivelEspacio = altoVentana >= 1240 ? 2 : altoVentana >= 1000 ? 1 : 0;
 
+  const eventoSel = lineaRangos ? (lineaRangos.eventos || []).find((x) => x.id === eventoId) || null : null;
+
   if (cargando) return <div style={estilos.cargando}>Cargando…</div>;
 
   // Pase 624: el contenido de Rangos / Temporada / Hitos se usa en el cartel y, si la ventana es alta, directamente en la página.
@@ -147,23 +150,6 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
               {`Arrastrá hacia los costados. Cada vez que llegás a un rango nuevo cobrás mates una sola vez (hasta ${lineaRangos.totalMates} en total).`}
             </div>
             <LineaRangos data={lineaRangos} />
-            {lineaRangos.eventos.length > 0 && (
-              <div style={estilos.eventosCaja}>
-                <div style={estilos.eventosTitulo}>Eventos de inauguración</div>
-                <div style={estilos.eventosGrid}>
-                  {lineaRangos.eventos.map((e) => (
-                    <div key={e.id} style={{ ...estilos.eventoFila, ...(e.abierto ? {} : { opacity: 0.55 }) }}>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={estilos.eventoNombre}>{e.titulo}</div>
-                        <div style={estilos.eventoTexto}>{e.texto}</div>
-                        {e.meta ? <div style={estilos.eventoProgreso}>{`${e.actual || 0}/${e.meta} partidas${e.premio ? ` · ${e.premio}` : ''}`}</div> : null}
-                      </div>
-                      <div style={estilos.eventoFecha}>{e.abierto ? `Hasta ${fechaCorta(e.hasta)}` : 'Cerrado'}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
   );
   const renderTemporada = () => (
@@ -227,6 +213,7 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
 
   return (
     <div style={estilos.pagina}>
+      <style>{CSS_EVENTOS}</style>
       <div style={estilos.columna}>
         {/* Fila 1: rango (angosta) + modalidad y búsqueda */}
         <div style={estilos.fila}>
@@ -298,6 +285,15 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
         </PlacaMadera>
         </div>
 
+        {/* Pase 658: tarjetitas de eventos (tocar una abre el cartel con toda la información) */}
+        {lineaRangos && (lineaRangos.eventos || []).length > 0 && (
+          <div style={estilos.eventosTira}>
+            {lineaRangos.eventos.map((e, i) => (
+              <EventoCard key={e.id} e={e} indice={i} onClick={() => { setEventoId(e.id); setPopup('evento'); }} />
+            ))}
+          </div>
+        )}
+
         {/* Pase 624: ventana alta → Rangos abierto en la página */}
         {nivelEspacio >= 1 && lineaRangos && (
           <PlacaMadera style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }} colorInterior={PERGAMINO} interiorStyle={{ padding: 14 }}>
@@ -339,16 +335,20 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
         <PopupMadera
           visible={!!popup}
           colorInterior={PERGAMINO}
-          titulo={popup === 'rangos' ? 'Rangos y premios' : popup === 'temporada' ? 'Tu temporada' : popup === 'partidas' ? 'Últimas partidas'
+          titulo={popup === 'evento' ? (eventoSel ? eventoSel.titulo : 'Evento') : popup === 'rangos' ? 'Rangos y premios' : popup === 'temporada' ? 'Tu temporada' : popup === 'partidas' ? 'Últimas partidas'
             : popup === 'hitos' ? `Hitos de la Liga · ${(resumen?.hitos ?? []).filter((h) => h.cobrado).length}/${resumen?.hitos?.length ?? 0}` : 'Cómo se suma'}
           anchoMax={popup === 'rangos' ? 1000 : popup === 'partidas' || popup === 'hitos' ? 760 : 520}
           scroll
           centrado={false}
           onCerrar={() => setPopup(null)}
-          botones={[{ texto: 'Cerrar', onClick: () => setPopup(null) }]}
+          botones={popup === 'evento' && eventoSel && eventoSel.accion === 'tienda' && eventoSel.abierto && onIrATienda
+            ? [{ texto: 'Ir a la Tienda', onClick: () => { setPopup(null); onIrATienda(); } }, { texto: 'Cerrar', onClick: () => setPopup(null) }]
+            : [{ texto: 'Cerrar', onClick: () => setPopup(null) }]}
         >
           {popup === 'rangos' && lineaRangos && renderRangos()}
           {popup === 'rangos' && !lineaRangos && <div style={estilos.notaStats}>No se pudo cargar la línea de rangos. Volvé a intentar en un momento.</div>}
+
+          {popup === 'evento' && eventoSel && <EventoDetalle e={eventoSel} />}
 
           {popup === 'temporada' && renderTemporada()}
 
@@ -406,6 +406,91 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
           )}
         </PopupMadera>
       </div>
+    </div>
+  );
+}
+
+// Pase 658: tarjetitas de eventos de la Liga (estilo "evento" de juegos móviles). Los textos vienen del backend
+// (GET /api/salas/ranked/rangos → eventos); acá solo se les da color e ícono.
+const EVENTO_ESTILO = {
+  temporada_inaugural: { fondo: 'linear-gradient(135deg, #1F5C3A, #143D27)', borde: '#E8B84A', color: '#E8B84A', icono: '/assets/images/icono-rendimiento.png', etiqueta: 'TEMPORADA' },
+  pionero: { fondo: 'linear-gradient(135deg, #1E4E7A, #12304D)', borde: '#9CD3F5', color: '#9CD3F5', icono: '/assets/images/icono-logros.png', etiqueta: 'PIONERO' },
+  pack_inauguracion: { fondo: 'linear-gradient(135deg, #8A3B12, #5E2408)', borde: '#F5B041', color: '#F5B041', icono: '/assets/images/moneda-inauguracion.png', etiqueta: 'OFERTA' },
+};
+const EVENTO_POR_DEFECTO = { fondo: 'linear-gradient(135deg, #4A3226, #2E1F17)', borde: '#C9A66B', color: '#C9A66B', icono: '/assets/images/icono-misiones.png', etiqueta: 'EVENTO' };
+
+const CSS_EVENTOS = `
+  @keyframes ev-flota { 0%, 100% { transform: translateY(2px); } 50% { transform: translateY(-4px); } }
+  @keyframes ev-brillo { 0% { transform: translateX(-130%) skewX(-20deg); } 55%, 100% { transform: translateX(260%) skewX(-20deg); } }
+  @keyframes ev-entrada { from { opacity: 0; transform: translateY(14px) scale(0.96); } to { opacity: 1; transform: none; } }
+  .ev-card { position: relative; overflow: hidden; cursor: pointer; transition: transform 0.15s ease, filter 0.15s ease; animation: ev-entrada 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+  .ev-card:hover { transform: translateY(-2px) scale(1.02); filter: brightness(1.08); }
+  .ev-card:active { transform: scale(0.98); }
+  .ev-card::after { content: ''; position: absolute; top: 0; bottom: 0; left: 0; width: 38%; background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.22), rgba(255,255,255,0)); animation: ev-brillo 4.2s ease-in-out infinite; pointer-events: none; }
+  .ev-icono { animation: ev-flota 3s ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce) { .ev-card, .ev-icono, .ev-card::after { animation: none; } .ev-card::after { display: none; } }
+`;
+
+function faltaEvento(iso, abierto) {
+  const ms = new Date(iso).getTime() - Date.now();
+  if (!abierto || !(ms > 0)) return 'Cerrado';
+  const d = Math.floor(ms / 86400000);
+  if (d >= 2) return `Faltan ${d} días`;
+  const h = Math.floor(ms / 3600000);
+  return h >= 1 ? `Faltan ${h} h` : 'Cierra hoy';
+}
+
+function EventoCard({ e, indice, onClick }) {
+  const est = EVENTO_ESTILO[e.id] || EVENTO_POR_DEFECTO;
+  const prog = e.meta ? Math.min(1, (e.actual || 0) / e.meta) : null;
+  return (
+    <button
+      type="button"
+      className="ev-card"
+      onClick={onClick}
+      aria-label={`Evento ${e.titulo}`}
+      style={{ ...estilos.eventoCard, background: est.fondo, borderColor: est.borde, animationDelay: `${indice * 0.09}s`, ...(e.abierto ? {} : { opacity: 0.55 }) }}
+    >
+      <img src={est.icono} alt="" draggable={false} className="ev-icono" style={{ ...estilos.eventoCardIcono, animationDelay: `${indice * 0.3}s` }} />
+      <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+        <div style={{ ...estilos.eventoCardEtiqueta, color: est.color }}>{est.etiqueta}</div>
+        <div style={estilos.eventoCardTitulo}>{e.titulo}</div>
+        <div style={estilos.eventoCardChip}>{faltaEvento(e.hasta, e.abierto)}</div>
+        {prog !== null && <div style={estilos.eventoCardBarra}><div style={{ ...estilos.eventoCardBarraRelleno, width: `${Math.round(prog * 100)}%` }} /></div>}
+      </div>
+    </button>
+  );
+}
+
+function EventoDetalle({ e }) {
+  const est = EVENTO_ESTILO[e.id] || EVENTO_POR_DEFECTO;
+  const prog = e.meta ? Math.min(1, (e.actual || 0) / e.meta) : null;
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ ...estilos.eventoHeroe, background: est.fondo, borderColor: est.borde }}>
+        <img src={est.icono} alt="" draggable={false} className="ev-icono" style={estilos.eventoHeroeIcono} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ ...estilos.eventoCardEtiqueta, color: est.color }}>{est.etiqueta}</div>
+          <div style={estilos.eventoHeroeTitulo}>{e.titulo}</div>
+          <div style={estilos.eventoCardChip}>{e.abierto ? `Hasta ${fechaCorta(e.hasta)} · ${faltaEvento(e.hasta, true)}` : 'Evento cerrado'}</div>
+        </div>
+      </div>
+      <div style={estilos.eventoDetalleTexto}>{e.texto}</div>
+      {prog !== null && (
+        <div>
+          <div style={estilos.eventoDetalleBarra}><div style={{ ...estilos.eventoDetalleBarraRelleno, width: `${Math.round(prog * 100)}%` }} /></div>
+          <div style={estilos.eventoProgreso}>{`${e.actual || 0}/${e.meta} partidas de Liga`}</div>
+        </div>
+      )}
+      {e.premio && <div style={estilos.eventoPremio}>{`Premio: ${e.premio}${e.premioDisponible === false ? ' (se suma pronto)' : ''}`}</div>}
+      {e.como && e.como.length > 0 && (
+        <div>
+          <div style={estilos.eventosTitulo}>Cómo participar</div>
+          <ul style={estilos.lista}>
+            {e.como.map((l) => <li key={l}>{l}</li>)}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
@@ -568,6 +653,21 @@ const estilos = {
   nodoCosmeticoTexto: { fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 12, color: C.chocolate, lineHeight: 1.15 },
   nodoCosmeticoSub: { fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 11, color: '#8A6A44', marginTop: 2 },
   nodoAqui: { background: C.chocolate, color: C.doradoClaro, borderRadius: 8, padding: '2px 10px', fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 11.5, letterSpacing: 0.5 },
+  eventosTira: { display: 'flex', flexWrap: 'wrap', gap: 12 },
+  eventoCard: { flex: '1 1 240px', maxWidth: 400, minHeight: 88, display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderRadius: 14, border: '2px solid', color: '#FFF8ED', fontFamily: "'Nunito', sans-serif", boxShadow: '0 4px 0 rgba(0,0,0,0.35)' },
+  eventoCardIcono: { width: 58, height: 58, objectFit: 'contain', flexShrink: 0 },
+  eventoCardEtiqueta: { fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 11, letterSpacing: 1.2 },
+  eventoCardTitulo: { fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 17, lineHeight: 1.15, color: '#FFF8ED', margin: '1px 0 5px' },
+  eventoCardChip: { display: 'inline-block', padding: '2px 9px', borderRadius: 8, background: C.dorado, border: '2px solid #B9853F', fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 12, color: C.chocolate },
+  eventoCardBarra: { height: 7, borderRadius: 5, background: 'rgba(0,0,0,0.4)', overflow: 'hidden', marginTop: 6 },
+  eventoCardBarraRelleno: { height: '100%', background: C.doradoClaro },
+  eventoHeroe: { display: 'flex', alignItems: 'center', gap: 16, padding: 16, borderRadius: 16, border: '2.5px solid' },
+  eventoHeroeIcono: { width: 84, height: 84, objectFit: 'contain', flexShrink: 0 },
+  eventoHeroeTitulo: { fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 24, lineHeight: 1.1, color: '#FFF8ED', margin: '2px 0 8px' },
+  eventoDetalleTexto: { fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 14, lineHeight: 1.4, color: '#4A3226' },
+  eventoDetalleBarra: { height: 14, borderRadius: 9, border: '2px solid #000', background: '#2a1c14', overflow: 'hidden' },
+  eventoDetalleBarraRelleno: { height: '100%', background: C.dorado },
+  eventoPremio: { fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 14, color: '#B9770E' },
   eventosCaja: { marginTop: 12 },
   eventosTitulo: { fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 16, color: C.chocolate, marginBottom: 8 },
   eventosGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 10 },

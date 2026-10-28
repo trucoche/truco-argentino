@@ -2869,7 +2869,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
       const jf = jugadoresFinal && jugadoresFinal.length ? jugadoresFinal : [];
       const nG = jf.filter(j => j.gano).length;
       const nP = jf.length - nG;
-      const tamF = jf.length <= 2 ? 140 : jf.length <= 4 ? 115 : 92;
+      const tamF = jf.length <= 2 ? 120 : jf.length <= 4 ? 115 : 92;   // Pase 658: 1v1 un poco más chico para que entre el resumen
       const gapF = jf.length <= 2 ? 0 : jf.length <= 4 ? 30 : 20;
       const grupoF = (n) => (n > 0 ? n * (tamF + gapF) - gapF : 0);
       const anchoF = grupoF(nG) + (nG && nP ? 96 : 0) + grupoF(nP);
@@ -2910,7 +2910,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
     // 1) Cartel de caoba con el resultado
     const textoCartel = modo === 'victoria' ? '¡GANASTE!' : (modo === 'derrota' ? 'PERDISTE' : 'Sala cancelada');
     this._actualizarBannerEsperaTitulo(textoCartel, null, detalle, {
-      y: 84, depth: 903,
+      y: 70, depth: 903,
       color: modo === 'derrota' ? '#E4573D' : '#FFD98A',
       tamano: 30,
     });
@@ -2927,14 +2927,14 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
     const der = soyGanador ? ganadores : perdedores;
     const todos = [...izq, ...der];
     const total = todos.length;
-    const tamano = total <= 2 ? 140 : total <= 4 ? 115 : 92;
+    const tamano = total <= 2 ? 120 : total <= 4 ? 115 : 92;   // Pase 658
     const gapIntra = total <= 2 ? 0 : total <= 4 ? 30 : 20;
     const gapEscudo = 96;
     const paso = tamano + gapIntra;
     const anchoGrupo = (n) => (n > 0 ? n * paso - gapIntra : 0);
     const anchoFila = anchoGrupo(izq.length) + (izq.length && der.length ? gapEscudo : 0) + anchoGrupo(der.length);
     let cursorX = 400 - anchoFila / 2 + tamano / 2;
-    const cyAv = 224;   // Pase 657: un poco más abajo y más aire entre bloques
+    const cyAv = 190;   // Pase 658: el cartel sube y el 1v1 queda más compacto para dejar lugar al resumen
 
     const radio = tamano / 2;
     const radioFoto = radio * 0.72;
@@ -2949,7 +2949,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
       const rf = rid ? RANGOS_UI[Number(rid)] : null;
       return Math.round((radioFoto * 2) / ((rf ? rf.hueco : 0.62) + 0.02));
     }), 0);
-    const yNombreComun = cyAv + aroRef / 2 + 22;
+    const yNombreComun = cyAv + aroRef / 2 + 18;
     const yPillComun = yNombreComun + ALTO_CARTEL / 2 + 6 + 13;
 
     todos.forEach((j, idx) => {
@@ -3154,7 +3154,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
     // Pase 417: sin moneda ni frase "Derrota"/"¡Victoria!" (redundantes con el cartel): la botonera sube. Solo queda,
     // como texto simple, una frase que aporta información (campeón del torneo / abandono).
     const fraseInfo = (esCampeon || datos.motivo === 'abandono') ? frase : '';
-    let y = total ? yPillComun + 13 + 30 : 250;
+    let y = total ? yPillComun + 13 + 14 : 250;
     if (modo === 'neutro') {
       // Pase 415: "Sala cancelada" — medallon de madera con reloj de arena + mensaje en un pergamino
       // con borde de madera. No hubo partida: nada de moneda ni de revancha.
@@ -3203,9 +3203,27 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
     // 5) Puntos de Liga Criolla (solo partidas ranked): ficha con el cuadro de fósforos
     const puntosRank = recompensa && recompensa.puntos != null && Number.isFinite(Number(recompensa.puntos))
       ? Number(recompensa.puntos) : null;
-    if (datos.ranked && puntosRank !== null) {
-      const textoP = `${puntosRank > 0 ? '+' : ''}${puntosRank} Puntos`;
-      const colorP = puntosRank > 0 ? '#1f7a3c' : (puntosRank < 0 ? '#8c2a2a' : '#7a6660');
+    // Pase 658: qué pasó con la clasificación / serie de ascenso (el backend manda `eventoRango`); sin esto "0 Puntos" parecía un error.
+    const ev = datos.ranked && recompensa && recompensa.eventoRango && typeof recompensa.eventoRango === 'object' ? recompensa.eventoRango : null;
+    const nomR = (r) => (r && r.nombre ? `${r.nombre}${r.division ? ' ' + r.division : ''}` : '');
+    let evTitulo = null, evSub = null;
+    if (ev) {
+      if (ev.tipo === 'clasificacion-en-curso') { evTitulo = `Clasificación ${ev.jugadas}/${ev.total}`; evSub = `Las primeras ${ev.total} partidas de Liga no mueven puntos: al terminar te asignamos tu rango.`; }
+      else if (ev.tipo === 'clasificado') { evTitulo = `¡Clasificado en ${nomR(ev.rango)}!`; evSub = `Completaste la clasificación con ${ev.victorias} de ${ev.total} victorias.`; }
+      else if (ev.tipo === 'serie-iniciada') { evTitulo = ev.objetivo ? `¡Serie de ascenso a ${ev.objetivo}!` : '¡Serie de ascenso!'; evSub = 'Llegaste al tope de tu rango: ganá la serie para subir.'; }
+      else if (ev.tipo === 'serie-en-curso') { evTitulo = `Serie de ascenso: ${ev.victorias} ✓ · ${ev.derrotas} ✕`; evSub = 'Los puntos se mueven cuando termina la serie.'; }
+      else if (ev.tipo === 'serie-ganada') { evTitulo = `¡Serie ganada! Subiste a ${nomR(ev.rango)}`; }
+      else if (ev.tipo === 'serie-perdida') { evTitulo = 'Serie perdida'; evSub = 'Volvés al 75 % de tu barra.'; }
+    }
+    const ocultarPuntosEv = !!ev && (ev.tipo === 'clasificacion-en-curso' || ev.tipo === 'serie-en-curso');
+    const partesFicha = [];
+    if (datos.ranked && puntosRank !== null && !ocultarPuntosEv) partesFicha.push(`${puntosRank > 0 ? '+' : ''}${puntosRank} Puntos`);
+    if (evTitulo) partesFicha.push(evTitulo);
+    if (partesFicha.length) {
+      const textoP = partesFicha.join('  ·  ');
+      const colorP = (partesFicha.length === 1 && !evTitulo)
+        ? (puntosRank > 0 ? '#1f7a3c' : (puntosRank < 0 ? '#8c2a2a' : '#7a6660'))
+        : '#4A2C1C';
       const tp = this.add.text(0, 0, textoP, { fontFamily: 'Fredoka, Arial', fontSize: '16px', fontStyle: '700', color: colorP }).setOrigin(0, 0.5).setDepth(905);
       const ICONO = 26, PAD = 16, ALTO_F = 36;
       const wF = PAD * 2 + ICONO + 6 + tp.width;
@@ -3223,13 +3241,49 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
       const fosforos = this.add.image(fx0 + PAD + ICONO / 2, cyF, 'fosforosPuntos').setDisplaySize(ICONO, ICONO).setDepth(905);
       tp.setPosition(fx0 + PAD + ICONO + 6, cyF);
       this._sprites.push(ficha, fosforos, tp);
-      y += ALTO_F + 18;
+      y += ALTO_F + 8;
+      if (evSub) {
+        const ts = this.add.text(400, y, evSub, {
+          fontFamily: 'Nunito, Arial', fontSize: '12px', fontStyle: '800', color: '#F1D9A8', align: 'center',
+          stroke: '#000000', strokeThickness: 3, wordWrap: { width: 620 },
+        }).setOrigin(0.5, 0).setDepth(905);
+        this._sprites.push(ts);
+        y += Math.ceil(ts.height) + 6;
+      }
+      y += 6;
     } else {
       y += modo === 'neutro' ? 0 : 6;
     }
 
+    // Pase 658: resumen de la partida (manos, duración y cómo jugué) en una franja, para aprovechar el espacio.
+    const resumenFinal = recompensa && recompensa.resumen && Number(recompensa.resumen.manos) > 0 ? recompensa.resumen : null;
+    if (resumenFinal && modo !== 'neutro') {
+      const seg = resumenFinal.duracionSeg;
+      const durTexto = (seg == null || !Number.isFinite(Number(seg))) ? '—' : `${Math.floor(Number(seg) / 60)}:${String(Math.round(Number(seg)) % 60).padStart(2, '0')}`;
+      const celdas = [
+        ['Manos', resumenFinal.manos || 0], ['Duración', durTexto], ['Trucos', resumenFinal.trucos || 0],
+        ['Envidos', resumenFinal.envidos || 0], ['Al mazo', resumenFinal.mazos || 0], ['Amagues', resumenFinal.amagues || 0],
+      ];
+      const wR = 560, hR = 52, xR = 400 - wR / 2, anchoCelda = wR / celdas.length;
+      const panelR = this.add.graphics().setDepth(904);
+      panelR.fillStyle(0x140C08, 0.55);
+      panelR.fillRoundedRect(xR, y, wR, hR, 12);
+      panelR.lineStyle(2, 0x8A6A3C, 1);
+      panelR.strokeRoundedRect(xR, y, wR, hR, 12);
+      panelR.lineStyle(1, 0x8A6A3C, 0.5);
+      for (let i = 1; i < celdas.length; i++) panelR.lineBetween(xR + anchoCelda * i, y + 9, xR + anchoCelda * i, y + hR - 9);
+      this._sprites.push(panelR);
+      celdas.forEach(([etiqueta, valor], i) => {
+        const cxC = xR + anchoCelda * (i + 0.5);
+        const tv = this.add.text(cxC, y + 19, String(valor), { fontFamily: 'Fredoka, Arial', fontSize: '19px', fontStyle: '700', color: '#FFF8ED', stroke: '#2C160E', strokeThickness: 3 }).setOrigin(0.5).setDepth(905);
+        const tl = this.add.text(cxC, y + 39, etiqueta, { fontFamily: 'Nunito, Arial', fontSize: '11px', fontStyle: '800', color: '#F1D9A8' }).setOrigin(0.5).setDepth(905);
+        this._sprites.push(tv, tl);
+      });
+      y += hR + 12;
+    }
+
     // 6) Botonera vertical en cápsulas 3D
-    const altoBoton = 46;
+    const altoBoton = 44;
     if (!esTorneo && modo !== 'neutro') {
       const revanchaTexto = 'Pedir revancha';
       const revanchaAncho = this._medirAnchoTextoOverlay(revanchaTexto, '17px') + 60;

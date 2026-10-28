@@ -718,6 +718,7 @@ function AppInterna() {
                 setCodigoSalaActual(codigoSala);
                 setPantalla('juego');
               }}
+              onIrATienda={() => setPantalla('tienda')}
             />
           )}
 
