@@ -8,7 +8,7 @@ import { API_URL as BASE_URL } from '../../config';
 const C = { crema: '#FFF8ED', chocolate: '#4A2C2A', dorado: '#F5B041', doradoClaro: '#FFD668' };
 
 export const EVENTO_ESTILO = {
-  temporada_inaugural: { fondo: 'linear-gradient(135deg, #1B3A6B, #10244A)', borde: '#9CD3F5', color: '#9CD3F5', icono: '/assets/images/evento-temporada-inaugural.png', etiqueta: 'TEMPORADA', completa: true },
+  temporada_inaugural: { fondo: 'linear-gradient(135deg, #1B3A6B, #10244A)', borde: '#9CD3F5', color: '#9CD3F5', icono: '/assets/images/evento-temporada-inaugural.png', etiqueta: 'TEMPORADA', completa: true, sol: true },
   pionero: { fondo: 'linear-gradient(135deg, #1E4E7A, #12304D)', borde: '#9CD3F5', color: '#9CD3F5', icono: '/assets/images/icono-logros.png', etiqueta: 'PIONERO' },
   pack_inauguracion: { fondo: 'linear-gradient(135deg, #8A3B12, #5E2408)', borde: '#F5B041', color: '#F5B041', icono: '/assets/images/caja-inauguracion.png', etiqueta: 'OFERTA' },
 };
@@ -25,7 +25,7 @@ export const CSS_EVENTOS = `
   .ev-icono { animation: ev-flota 3s ease-in-out infinite; }
   /* Pase 660: botón CUADRADO de evento (la Temporada Inaugural es una imagen con su propio marco; las demás llevan fondo de color). */
   @keyframes ev-destello { 0%, 55%, 100% { opacity: 0; transform: scale(0.4) rotate(0deg); } 70% { opacity: 1; transform: scale(1.1) rotate(45deg); } }
-  .ev-tile { position: relative; flex: 1 1 0; min-width: 0; max-width: 118px; aspect-ratio: 1 / 1; padding: 0; border: 0; background: none; cursor: pointer; font-family: 'Nunito', sans-serif; transition: transform 0.15s ease, filter 0.15s ease; animation: ev-entrada 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+  .ev-tile { position: relative; flex: 0 0 104px; width: 104px; height: 104px; padding: 0; border: 0; background: none; cursor: pointer; font-family: 'Nunito', sans-serif; transition: transform 0.15s ease, filter 0.15s ease; animation: ev-entrada 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
   .ev-tile:hover { transform: translateY(-2px) scale(1.05); filter: brightness(1.08); }
   .ev-tile:active { transform: scale(0.97); }
   .ev-tile-fondo { border: 2.5px solid; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 0 rgba(0,0,0,0.35); }
@@ -100,32 +100,40 @@ export function EventoCard({ e, indice = 0, onClick }) {
 export function EventoDetalle({ e }) {
   const est = EVENTO_ESTILO[e.id] || EVENTO_POR_DEFECTO;
   const prog = e.meta ? Math.min(1, (e.actual || 0) / e.meta) : null;
+  // Temporada Inaugural: rayos de sol dorados detrás del ícono y franjas celeste / blanco / celeste (la bandera) arriba y abajo.
+  const sol = !!est.sol;
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <div style={{ ...estilos.eventoHeroe, background: est.fondo, borderColor: est.borde }}>
+      <div style={{ ...estilos.eventoHeroe, background: sol ? `repeating-conic-gradient(from 0deg at 16% 50%, rgba(255, 214, 102, 0.20) 0deg 7.5deg, rgba(255, 214, 102, 0) 7.5deg 15deg), ${est.fondo}` : est.fondo, borderColor: est.borde, ...(sol ? { padding: '24px 16px' } : {}) }}>
+        {sol && <span aria-hidden="true" style={{ ...estilos.bandera, top: 0 }} />}
+        {sol && <span aria-hidden="true" style={{ ...estilos.bandera, bottom: 0 }} />}
         <img src={est.icono} alt="" draggable={false} className="ev-icono" style={estilos.eventoHeroeIcono} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ ...estilos.eventoCardEtiqueta, color: est.color }}>{est.etiqueta}</div>
           <div style={estilos.eventoHeroeTitulo}>{e.titulo}</div>
           <div style={estilos.eventoCardChip}>{e.abierto ? `Hasta ${fechaCorta(e.hasta)} · ${faltaEvento(e.hasta, true)}` : 'Evento cerrado'}</div>
         </div>
+        {e.abierto && <span className="ev-destello" aria-hidden="true" style={{ left: '9%', top: '16%' }}>✦</span>}
+        {e.abierto && <span className="ev-destello" aria-hidden="true" style={{ left: '88%', top: '30%', fontSize: 14, animationDelay: '1.2s' }}>✦</span>}
       </div>
-      <div style={estilos.eventoDetalleTexto}>{e.texto}</div>
-      {prog !== null && (
-        <div>
-          <div style={estilos.eventoDetalleBarra}><div style={{ ...estilos.eventoDetalleBarraRelleno, width: `${Math.round(prog * 100)}%` }} /></div>
-          <div style={estilos.eventoProgreso}>{`${e.actual || 0}/${e.meta} partidas de Liga`}</div>
-        </div>
-      )}
-      {e.premio && <div style={estilos.eventoPremio}>{`Premio: ${e.premio}${e.premioDisponible === false ? ' (se suma pronto)' : ''}`}</div>}
-      {e.como && e.como.length > 0 && (
-        <div>
-          <div style={estilos.eventosTitulo}>Cómo participar</div>
-          <ul style={estilos.lista}>
-            {e.como.map((l) => <li key={l}>{l}</li>)}
-          </ul>
-        </div>
-      )}
+      <div style={estilos.cuerpoPergamino}>
+        <div style={estilos.eventoDetalleTexto}>{e.texto}</div>
+        {prog !== null && (
+          <div>
+            <div style={estilos.eventoDetalleBarra}><div style={{ ...estilos.eventoDetalleBarraRelleno, width: `${Math.round(prog * 100)}%` }} /></div>
+            <div style={estilos.eventoProgreso}>{`${e.actual || 0}/${e.meta} partidas de Liga`}</div>
+          </div>
+        )}
+        {e.premio && <div style={estilos.eventoPremio}>{`Premio: ${e.premio}${e.premioDisponible === false ? ' (se suma pronto)' : ''}`}</div>}
+        {e.como && e.como.length > 0 && (
+          <div>
+            <div style={estilos.eventosTitulo}>Cómo participar</div>
+            <ul style={estilos.lista}>
+              {e.como.map((l) => <li key={l}>{l}</li>)}
+            </ul>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -140,7 +148,9 @@ const estilos = {
   eventoCardChip: { display: 'inline-block', padding: '2px 9px', borderRadius: 8, background: C.dorado, border: '2px solid #B9853F', fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 12, color: C.chocolate },
   eventoCardBarra: { height: 6, borderRadius: 5, background: 'rgba(0,0,0,0.4)', overflow: 'hidden', marginTop: 5 },
   eventoCardBarraRelleno: { height: '100%', background: C.doradoClaro },
-  eventoHeroe: { display: 'flex', alignItems: 'center', gap: 16, padding: 16, borderRadius: 16, border: '2.5px solid' },
+  cuerpoPergamino: { display: 'flex', flexDirection: 'column', gap: 12, padding: 14, borderRadius: 12, border: '2px solid #C9A66B', background: '#F3E4C0' },
+  bandera: { position: 'absolute', left: 0, right: 0, height: 9, background: 'linear-gradient(to bottom, #75AADB 0 33%, #FFFFFF 33% 66%, #75AADB 66% 100%)' },
+  eventoHeroe: { position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', gap: 16, padding: 16, borderRadius: 16, border: '2.5px solid' },
   eventoHeroeIcono: { width: 100, height: 100, objectFit: 'contain', flexShrink: 0 },
   eventoHeroeTitulo: { fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 24, lineHeight: 1.1, color: '#FFF8ED', margin: '2px 0 8px' },
   eventoDetalleTexto: { fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 14, lineHeight: 1.4, color: '#4A3226' },

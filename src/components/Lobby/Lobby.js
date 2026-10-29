@@ -121,7 +121,7 @@ function SwitchMadera({ id, valor, onCambio }) {
   );
 }
 
-function Hoja({ titulo, onCerrar, children, variante }) {
+function Hoja({ titulo, onCerrar, children, variante, ancho }) {
   const esRedes = variante === 'redes';
   useEffect(() => {
     const alTeclear = (e) => { if (e.key === 'Escape') onCerrar(); };
@@ -130,7 +130,7 @@ function Hoja({ titulo, onCerrar, children, variante }) {
   }, [onCerrar]);
   return (
     <div style={{ ...estilos.hojaCapa, ...(esRedes ? estilos.redesCapa : {}) }} onClick={onCerrar} role="dialog" aria-modal="true" aria-label={titulo}>
-      <div style={{ ...estilos.hojaCaja, ...(esRedes ? estilos.redesPlaca : {}) }} onClick={(e) => e.stopPropagation()}>
+      <div style={{ ...estilos.hojaCaja, ...(esRedes ? estilos.redesPlaca : {}), ...(ancho ? { maxWidth: ancho } : {}) }} onClick={(e) => e.stopPropagation()}>
         {esRedes && (
           <>
             <span aria-hidden="true" style={{ ...estilos.redesRemache, top: 8, left: 8 }} />
@@ -509,35 +509,29 @@ useEffect(() => {
           </button>
           </div>
           <div className="lobby3-col">
-          <button type="button" onClick={() => setHoja('sala')} aria-label="Crear o unirse a una sala" style={{ ...estilos.tarjetaModulo, ...estilos.fondoCrear, ...(conEventos ? estilos.tarjetaCompacta : { ...estilos.tarjetaFlex, ...estilos.tarjetaColumna }) }}>
+          <button type="button" onClick={() => setHoja('sala')} aria-label="Crear o unirse a una sala" style={{ ...estilos.tarjetaModulo, ...estilos.fondoCrear, ...estilos.tarjetaFlex, ...estilos.tarjetaColumna }}>
             <span style={estilos.tarjetaBisel} aria-hidden="true" />
-            <img src="/assets/images/icono-crear-sala.png" alt="" style={conEventos ? { ...estilos.iconoCompacto, transform: 'rotate(5deg)' } : { ...estilos.tarjetaIconoColumna, ...estilos.tarjetaIconoXL, transform: 'rotate(5deg)' }} />
-            <span style={conEventos ? estilos.tarjetaTextos : estilos.tarjetaTextosCentro}>
-              <span style={conEventos ? estilos.tituloCompacto : estilos.tarjetaTitulo}>Crear / Unirse</span>
-              <span style={conEventos ? estilos.subCompacto : estilos.tarjetaSub}>A una sala</span>
+            <img src="/assets/images/icono-crear-sala.png" alt="" style={{ ...estilos.tarjetaIconoColumna, ...estilos.tarjetaIconoXL, transform: 'rotate(5deg)' }} />
+            <span style={estilos.tarjetaTextosCentro}>
+              <span style={estilos.tarjetaTitulo}>Crear / Unirse</span>
+              <span style={estilos.tarjetaSub}>A una sala</span>
             </span>
           </button>
           {onIrAnotador && (
-            <button type="button" onClick={onIrAnotador} aria-label="Abrir el Anotador Criollo" style={{ ...estilos.tarjetaModulo, ...estilos.fondoAnotador, ...(conEventos ? estilos.tarjetaCompacta : { ...estilos.tarjetaFlex, ...estilos.tarjetaColumna }) }}>
+            <button type="button" onClick={onIrAnotador} aria-label="Abrir el Anotador Criollo" style={{ ...estilos.tarjetaModulo, ...estilos.fondoAnotador, ...estilos.tarjetaFlex, ...estilos.tarjetaColumna }}>
               <span style={estilos.tarjetaBisel} aria-hidden="true" />
-              <img src="/assets/images/icono-anotador.png" alt="" style={conEventos ? estilos.iconoCompacto : { ...estilos.tarjetaIconoColumna, ...estilos.tarjetaIconoXL }} />
-              <span style={conEventos ? estilos.tarjetaTextos : estilos.tarjetaTextosCentro}>
-                <span style={conEventos ? estilos.tituloCompacto : estilos.tarjetaTitulo}>Anotador Criollo</span>
-                <span style={conEventos ? estilos.subCompacto : estilos.tarjetaSub}>Sin conexión</span>
+              <img src="/assets/images/icono-anotador.png" alt="" style={{ ...estilos.tarjetaIconoColumna, ...estilos.tarjetaIconoXL }} />
+              <span style={estilos.tarjetaTextosCentro}>
+                <span style={estilos.tarjetaTitulo}>Anotador Criollo</span>
+                <span style={estilos.tarjetaSub}>Llevá la cuenta</span>
               </span>
             </button>
-          )}
-          {conEventos && (
-            <div className="lb-entrada" style={estilos.eventosColumna}>
-              {eventosLobby.map((ev, i) => (
-                <EventoCard key={ev.id} e={ev} indice={i} onClick={() => setEventoAbiertoId(ev.id)} />
-              ))}
-            </div>
           )}
           </div>
         </div>
 
-          <button type="button" className="lb-entrada lb-d6 lb-mates" onClick={() => { setAvisoRedes(''); setHoja('redes'); }} aria-label={`Mates gratis. Seguinos en redes y ganá hasta ${RECOMPENSA_SOCIAL_TOTAL} mates`} style={{ ...estilos.tarjetaModulo, ...estilos.fondoSocial, marginBottom: 16 }}>
+          <div className="lobby3-fila-inf">
+          <button type="button" className="lb-entrada lb-d6 lb-mates" onClick={() => { setAvisoRedes(''); setHoja('redes'); }} aria-label={`Mates gratis. Seguinos en redes y ganá hasta ${RECOMPENSA_SOCIAL_TOTAL} mates`} style={{ ...estilos.tarjetaModulo, ...estilos.fondoSocial }}>
             <span style={estilos.tarjetaBisel} aria-hidden="true" />
             <img className="lb-pulso" src="/assets/images/regalo.png" alt="" style={{ ...estilos.tarjetaIcono, animationDelay: '300ms' }} />
             <span className="lb-mates-textos" style={estilos.tarjetaTextos}>
@@ -566,6 +560,14 @@ useEffect(() => {
               <MontoMonedas monto={RECOMPENSA_SOCIAL_TOTAL} tam={26} />
             </span>
           </button>
+          {conEventos && (
+            <div className="lb-entrada lb-eventos-fila" style={estilos.eventosColumna}>
+              {eventosLobby.map((ev, i) => (
+                <EventoCard key={ev.id} e={ev} indice={i} onClick={() => setEventoAbiertoId(ev.id)} />
+              ))}
+            </div>
+          )}
+          </div>
 
           <ReportarModal visible={reportarAbierto} onCerrar={() => setReportarAbierto(false)} token={token} pantalla="lobby" />
 
@@ -767,7 +769,7 @@ useEffect(() => {
       )}
 
       {eventoAbierto && (
-        <Hoja titulo={eventoAbierto.titulo} onCerrar={() => setEventoAbiertoId(null)}>
+        <Hoja titulo={eventoAbierto.titulo} ancho={520} onCerrar={() => setEventoAbiertoId(null)}>
           <EventoDetalle e={eventoAbierto} />
           {eventoAbierto.accion === 'tienda' && onIrATienda && (
             <button type="button" onClick={() => { setEventoAbiertoId(null); onIrATienda(); }} style={estilos.eventoBotonTienda}>Ir a la Tienda</button>
@@ -881,6 +883,9 @@ useEffect(() => {
 // Pase 531: grilla de 3 columnas del lobby (no hay media queries con estilos en línea, por eso va como CSS).
 const CSS_LOBBY_COLUMNAS = `
 .lobby3-grid { display: grid; grid-template-columns: 1fr 1.2fr 1fr; gap: 16px; align-items: stretch; margin-bottom: 16px; }
+.lobby3-fila-inf { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; margin-bottom: 16px; }
+.lobby3-fila-inf .lb-mates { flex: 1 1 520px; min-width: 0; }
+.lobby3-fila-inf .lb-eventos-fila { flex: 0 0 auto; margin: 0 auto; }
 .lobby3-col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 /* Pase 616: en escritorio el lobby ocupa el alto de la pantalla (header + márgenes ≈ 215 px) y el zócalo de salas toma lo que sobra. */
 @media (min-width: 900px) { .lobby3-wrap { min-height: calc(100vh - 215px); } }
@@ -934,11 +939,7 @@ const estilos = {
   // Pase 531: en las columnas laterales las tarjetas se estiran para igualar el alto de la columna central.
   tarjetaFlex: { height: 'auto', minHeight: 104, flex: 1 },
   // Pase 659: con eventos activos, Crear/Unirse y Anotador se achican (ícono a la izquierda, texto a la derecha) y debajo van las tarjetitas de eventos.
-  tarjetaCompacta: { height: 'auto', minHeight: 76, flex: '0 0 auto', padding: '8px 14px', gap: 12 },
-  iconoCompacto: { width: 60, height: 60, objectFit: 'contain', flex: '0 0 auto' },
-  tituloCompacto: { fontWeight: 700, fontSize: 19, color: '#FFF8E7', textShadow: '1px 1.5px 2px rgba(0,0,0,0.5)', lineHeight: 1.15 },
-  subCompacto: { fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 13.5, color: '#E0D0B0', lineHeight: 1.2 },
-  eventosColumna: { display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 14, flex: '1 1 auto', minHeight: 0, justifyContent: 'center', alignContent: 'center', alignItems: 'center' },
+  eventosColumna: { display: 'flex', flexDirection: 'row', gap: 12, alignItems: 'center', justifyContent: 'center' },
   eventoBotonTienda: { marginTop: 14, width: '100%', padding: '12px 16px', borderRadius: 14, border: '2px solid #B9853F', background: 'linear-gradient(180deg, #FFD668, #F5B041)', color: '#4A2C2A', fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 18, cursor: 'pointer', boxShadow: '0 3px 0 rgba(0,0,0,0.35)' },
   // Pase 603 (paridad con el nativo, Pase 592): Misiones / Crear-Unirse / Anotador con el ícono ARRIBA y los textos ABAJO, centrados.
   tarjetaColumna: { flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', gap: 8, padding: '12px 14px' },
