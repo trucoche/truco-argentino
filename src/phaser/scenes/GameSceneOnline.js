@@ -250,6 +250,8 @@ preload() {
     // reemplazo para la mesa de 3v3, que sigue con su asset de siempre.
     this.load.image('mesaRedonda', conVersion('assets/images/juego/mesa-truco-nueva.webp'));
     this.load.image('mesaRedonda3v3', conVersion('assets/images/juego/mesa-truco-3v3.webp'));
+    // Pase 667: la mesa 1v1 de la app (redonda vista desde arriba, con patas) para el layout del celular.
+    this.load.image('mesa1v1App', conVersion('assets/images/juego/mesa-1v1-app.webp'));
     // Pase 394: la misma mesa SIN la marca "TC" (que va como imagen aparte) — la usa el layout angosto, que estira el paño.
     this.load.image('mesaRedondaLimpia', conVersion('assets/images/juego/mesa-truco-nueva-sin-marca.webp'));
     this.load.image('marcaTcMesa', conVersion('assets/images/juego/marca-tc-mesa.png'));
@@ -1386,7 +1388,7 @@ _crearElementosDeTexto() {
       tableW, u, CORTE_A, CORTE_B, CORTE_C, PIES_Y: PIES_FINAL, altoTopNat, altoBotNat: altoBotNat + piesExtra, E, tableTop: tableTop + yOff, tableBottom: tableBottom + yOff,
       rivalY: rivalY + yOff, kRival, nombreY: nombreY + yOff, sT,
       feltCY: feltCY + yOff, feltRY, dueloY: feltCY + yOff, dueloEscala, kBoton: 1.15 + 0.15 * f,
-      kSeat: 1.35, perspCY: feltCY + yOff, perspRY: feltRY,
+      f, kSeat: 1.35, perspCY: feltCY + yOff, perspRY: feltRY,
       eq2: { cyOld: 250, cy: feltCY + yOff, gy: (137 * sT + E / 2) / 130 },
       eq3,
       indicadoresX: 62, manoIndY: panelTop - 26 + yOff, turnoX: 650, turnoY: panelTop - 26 + yOff,
@@ -1450,7 +1452,8 @@ _crearElementosDeTexto() {
   }
 
   _ajustarMesaSegunAsientos(cantidadAsientos) {
-  const modo = cantidadAsientos === 5 ? '3v3' : 'normal';
+  // Pase 667: en el celular (layout angosto) el 1v1 usa la mesa de la app ('app1v1'); 2v2 y 3v3 siguen como estaban.
+  const modo = cantidadAsientos === 5 ? '3v3' : (cantidadAsientos === 2 && this._L && this.textures.exists('mesa1v1App') ? 'app1v1' : 'normal');
   if (modo === this._mesaModoActual) return;
   this._mesaModoActual = modo;
   // Pase 440: en 3v3 no va el halo cálido de atrás de la mesa (se leía como un haz de luz
@@ -1475,6 +1478,35 @@ _crearElementosDeTexto() {
   // Pase 442: la mesa de 3v3 sube 40 px de diseño (asientos y zonas de cartas suben con ella) para dejar
   // aire entre las cartas tiradas y la mano propia.
   const ELEVACION_MESA_3V3 = 40;
+
+  // Pase 667: mesa 1v1 de la app en el celular. Una sola imagen (840x919: aro redondo, paño de 649x560 centrado en (420, 331) y patas),
+  // sin estirar. El borde de arriba queda donde estaba el de la mesa anterior (el mazo y el nombre del rival siguen apoyados igual),
+  // y se recalculan el centro y el alto del paño que ven las cartas jugadas (hasta donde llega la mano propia).
+  if (this._L && modo === 'app1v1') {
+    const L = this._L;
+    const s = L.tableW / 840;
+    const top = L.tableTop;
+    this.mesaImg
+      .setTexture('mesa1v1App')
+      .setCrop()
+      .setOrigin(0.5, 0)
+      .setScale(s)
+      .setPosition(400, top);
+    [this.mesaMedio, this.mesaPatas, this.mesaPies, this.marcaTcMesa].forEach(o => { if (o && o.scene) o.setVisible(false); });
+    const feltTop = top + 52 * s;
+    const feltBot = top + 611 * s;
+    const handH = 118 * L.kMano;
+    const handTop = L.manoY - 0.85 * handH - 19 * L.kMano;
+    const visBot = Math.min(feltBot, handTop + 20);
+    const centro = (feltTop + visBot) / 2;
+    L.feltCY = centro;
+    L.dueloY = centro;
+    L.perspCY = centro;
+    L.feltRY = (visBot - feltTop) / 2;
+    L.dueloEscala = Math.min(0.66 * 1.9 * L.f, 0.95 * (visBot - feltTop) / 234);
+    if (this.sombraMesa) this.sombraMesa.setPosition(400, top + 860 * s).setSize(620, 110);
+    return;
+  }
 
   // Pase 394: en layout angosto la mesa de 1v1 se arma partida en dos
   // (aro estirado + patas), ver _calcularLayoutAngosto.
@@ -1936,7 +1968,7 @@ _limpiarAvataresEspera() {
 // modo), así que acá solo se tocan al ocultar; al mostrar, se deja que
 // _renderizarEstado decida su visibilidad.
 _mostrarMarcadores(visible) {
-  [this.mesaMedio, this.mesaPatas, this.mesaPies, this.marcaTcMesa].forEach(o => { if (o && o.scene) o.setVisible(visible && this._mesaModoActual !== '3v3'); });
+  [this.mesaMedio, this.mesaPatas, this.mesaPies, this.marcaTcMesa].forEach(o => { if (o && o.scene) o.setVisible(visible && this._mesaModoActual !== '3v3' && this._mesaModoActual !== 'app1v1'); });
   [this.scoreBg, this.scoreText, this.labelPropio, this.fondoInfoRival, this.scoreTextRival]
     .forEach(o => { if (o && o.scene) o.setVisible(visible); });
   (this.zonasAnotador || []).forEach(z => { if (z && z.scene) { z.setVisible(visible); if (z.input) z.input.enabled = visible; } });
