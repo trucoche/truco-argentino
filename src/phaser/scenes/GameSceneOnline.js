@@ -2730,6 +2730,7 @@ _conectarSocket() {
       if (this.mesaImg) this.mesaImg.setVisible(true);
       if (this.sombraMesa) this.sombraMesa.setVisible(true);
       this._mostrarMarcadores(true);
+      try { const gc = document.getElementById('game-container'); if (gc) gc.removeAttribute('data-final'); } catch (e) {}
     });
     this.socket.off('jugador-desconectado').on('jugador-desconectado', (data) => {
       this._actualizarMensajeEstado(data.mensaje);
@@ -2856,11 +2857,9 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
     this._tweensFinal = [];
     this._finalGeneracion = (this._finalGeneracion || 0) + 1;
     const generacion = this._finalGeneracion;
-    const elementosMarcador = this._L ? [] : [
-      this.scoreBg, this.scoreText, this.labelPropio,
-      this.fondoInfoRival, this.scoreTextRival, this.labelRival, this.manoIconoRival, this.medallaManoRival,
-      ...(this._fosObjs ? this._fosObjs.todos : []),
-    ];
+    // Pase 664: la pantalla final ya no muestra el marcador (números o fósforos) ni el engranaje de ajustes arriba a la izquierda.
+    const elementosMarcador = [];
+    try { const gc = document.getElementById('game-container'); if (gc) gc.setAttribute('data-final', '1'); } catch (e) {}
     if (this._L) {
       this._modoCamaraAngosto('estatica');
       // Pase 546: la pantalla final se dibujaba para 760 de ancho de mundo y en 1v1 (fila de ~380) quedaba chica
@@ -3520,6 +3519,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
 
 _renderizarEstado(animarReparto) {
      this._limpiarSprites();
+    try { const gc = document.getElementById('game-container'); if (gc) gc.removeAttribute('data-final'); } catch (e) {}   // Pase 664: vuelve el engranaje de ajustes
     this._jugadaEnviada = false;   // Pase 414: llego un estado nuevo, se puede volver a jugar
     if (this._L) this._modoCamaraAngosto('juego');
 
@@ -4874,7 +4874,7 @@ const textoTantos = e.ultimoResultadoFlor.tantosGanador != null
   : '';
 
 if (this._cantoOcultarTimer) { this._cantoOcultarTimer.remove(); this._cantoOcultarTimer = null; }
-this._mostrarCanto(`${quien} ganó la Flor${textoTantos} — suma ${e.ultimoResultadoFlor.puntos} punto(s)`);
+this._mostrarCanto(`${quien === 'Vos' ? 'Ganaste' : quien + ' ganó'} la Flor${textoTantos} — +${e.ultimoResultadoFlor.puntos} punto(s)`);
   this._mostrandoResultadoFlor = true;
 
   this._cantoOcultarTimer = this.time.delayedCall(3200, () => {
@@ -4901,7 +4901,7 @@ this._mostrarCanto(`${quien} ganó la Flor${textoTantos} — suma ${e.ultimoResu
       const quien = e.ultimoResultadoEnvido.ganadorEsMio
         ? (Array.isArray(e.companeros) ? 'Tu equipo' : 'Vos')
         : (Array.isArray(e.companeros) ? 'El equipo rival' : 'El rival');
-      const texto = `${quien} ganó el envido con ${e.ultimoResultadoEnvido.puntosGanador} — +${e.ultimoResultadoEnvido.puntos} punto(s)`;
+      const texto = `${quien === 'Vos' ? 'Ganaste' : quien + ' ganó'} el envido con ${e.ultimoResultadoEnvido.puntosGanador} — +${e.ultimoResultadoEnvido.puntos} punto(s)`;
 
       if (this._cantoOcultarTimer) { this._cantoOcultarTimer.remove(); this._cantoOcultarTimer = null; }
       this._mostrarCanto(texto);

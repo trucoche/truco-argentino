@@ -28,13 +28,18 @@ import React from 'react';
 // propio relieve/contorno horneado.
 export default function ConfiguracionMesaBoton({ onAbrir }) {
   return (
-    <button
-      onClick={onAbrir}
-      style={estilos.boton}
-      title="Configuración de la partida"
-    >
-      <img src="/assets/images/boton-configuracion-madera.png" alt="Configuración" style={estilos.icono} />
-    </button>
+    <>
+      {/* Pase 664: con la pantalla final abierta (el juego marca #game-container[data-final]) el engranaje se oculta. */}
+      <style>{'#game-container[data-final="1"] ~ .cfg-mesa-btn { display: none !important; }'}</style>
+      <button
+        className="cfg-mesa-btn"
+        onClick={onAbrir}
+        style={estilos.boton}
+        title="Configuración de la partida"
+      >
+        <img src="/assets/images/boton-configuracion-madera.png" alt="Configuración" style={estilos.icono} />
+      </button>
+    </>
   );
 }
 

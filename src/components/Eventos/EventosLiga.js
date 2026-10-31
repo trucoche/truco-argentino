@@ -83,9 +83,9 @@ export function EventoCard({ e, indice = 0, onClick }) {
         alt=""
         draggable={false}
         className="ev-tile-img"
-        style={completa ? { inset: 0, width: '100%', height: '100%', animationDelay: `${indice * 0.3}s` } : { left: '12%', top: '17%', width: '76%', height: '62%', animationDelay: `${indice * 0.3}s` }}
+        style={completa ? { inset: 0, width: '100%', height: '100%', animationDelay: `${indice * 0.3}s` } : { left: '14%', top: '14%', width: '72%', height: '56%', animationDelay: `${indice * 0.3}s` }}
       />
-      <span style={estilos.tileChipCaja}><span style={estilos.eventoCardChip}>{faltaEvento(e.hasta, e.abierto)}</span></span>
+      <span style={estilos.tileChipCaja}><span style={estilos.tileChip}>{faltaEvento(e.hasta, e.abierto).replace('Faltan ', '')}</span></span>
       {e.abierto && (
         <>
           <span className="ev-destello" aria-hidden="true" style={{ left: '6%', top: '12%', animationDelay: `${d}s` }}>✦</span>
@@ -144,7 +144,9 @@ const estilos = {
   eventoCardEtiqueta: { fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 11, letterSpacing: 1.2 },
   eventoCardTitulo: { fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 16, lineHeight: 1.15, color: '#FFF8ED', margin: '1px 0 4px' },
   tileEtiqueta: { position: 'absolute', top: 5, left: 0, right: 0, textAlign: 'center', fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 10, letterSpacing: 1.1 },
-  tileChipCaja: { position: 'absolute', left: 0, right: 0, bottom: 3, display: 'flex', justifyContent: 'center', pointerEvents: 'none' },
+  // Pase 664: chip compacto ("32 días") igual en todos los botones de evento: ya no tapa la imagen del Pack.
+  tileChip: { display: 'inline-block', padding: '1px 7px', borderRadius: 7, background: C.dorado, border: '1.5px solid #B9853F', fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 11, lineHeight: '14px', color: C.chocolate },
+  tileChipCaja: { position: 'absolute', left: 0, right: 0, bottom: 4, display: 'flex', justifyContent: 'center', pointerEvents: 'none' },
   eventoCardChip: { display: 'inline-block', padding: '2px 9px', borderRadius: 8, background: C.dorado, border: '2px solid #B9853F', fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 12, color: C.chocolate },
   eventoCardBarra: { height: 6, borderRadius: 5, background: 'rgba(0,0,0,0.4)', overflow: 'hidden', marginTop: 5 },
   eventoCardBarraRelleno: { height: '100%', background: C.doradoClaro },
