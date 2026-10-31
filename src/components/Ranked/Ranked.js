@@ -329,7 +329,7 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
           scroll
           centrado={false}
           onCerrar={() => setPopup(null)}
-          botones={[{ texto: 'Cerrar', onClick: () => setPopup(null) }]}
+          botones={[{ texto: 'Cerrar', tipo: 'carmesi', onClick: () => setPopup(null) }]}
         >
           {popup === 'rangos' && lineaRangos && renderRangos()}
           {popup === 'rangos' && !lineaRangos && <div style={estilos.notaStats}>No se pudo cargar la línea de rangos. Volvé a intentar en un momento.</div>}

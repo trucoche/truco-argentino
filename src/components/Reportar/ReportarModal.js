@@ -76,7 +76,7 @@ export default function ReportarModal({ visible, onCerrar, token, pantalla = 'aj
         tamIcono={64}
         mensaje="Recibimos tu reporte. Lo vamos a revisar, gracias a esto TrucoChe mejora todos los días."
         onCerrar={onCerrar}
-        botones={[{ texto: 'Cerrar', tipo: 'dorado', onClick: onCerrar }]}
+        botones={[{ texto: 'Cerrar', tipo: 'carmesi', onClick: onCerrar }]}
       />
     );
   }
@@ -91,7 +91,7 @@ export default function ReportarModal({ visible, onCerrar, token, pantalla = 'aj
       onCerrar={onCerrar}
       botones={[
         { texto: enviando ? 'Enviando…' : 'Enviar', tipo: 'verde', onClick: enviar, disabled: !puedeEnviar },
-        { texto: 'Cancelar', tipo: 'neutro', onClick: onCerrar },
+        { texto: 'Cancelar', tipo: 'carmesi', onClick: onCerrar },
       ]}
     >
       <div style={estilos.chips}>

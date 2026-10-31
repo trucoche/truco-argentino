@@ -499,7 +499,7 @@ const estilos = {
   ayudaLista: { fontSize: 13.5, fontWeight: 600, color: '#4A2C2A', lineHeight: 1.45, margin: '4px 0 8px', paddingLeft: 20 },
   ayudaBotones: { display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap', marginTop: 12 },
   ayudaBotonPrincipal: { fontWeight: 800, fontSize: 13, color: '#fff', background: '#10B981', border: '2px solid #065F46', borderRadius: 10, padding: '9px 16px', cursor: 'pointer', fontFamily: 'inherit' },
-  ayudaBotonSecundario: { fontWeight: 800, fontSize: 13, color: '#3B1F0E', background: '#E6CB93', border: '2px solid #8C6239', borderRadius: 10, padding: '9px 16px', cursor: 'pointer', fontFamily: 'inherit' },
+  ayudaBotonSecundario: { fontWeight: 800, fontSize: 13, color: '#FFFFFF', background: '#C0392B', border: '2px solid #7B241C', borderRadius: 10, padding: '9px 16px', cursor: 'pointer', fontFamily: 'inherit' },
   sectionTitle: { fontFamily: "'Fredoka', sans-serif", fontWeight: 600, fontSize: 16, color: C.crema, margin: '4px 0 2px 4px', display: 'flex', alignItems: 'center', gap: 8 },
   sectionTitleIcono: { width: 30, height: 30, objectFit: 'contain', flexShrink: 0 },
   // Mismo criterio que el subtítulo agregado en Ranking.js — la tienda

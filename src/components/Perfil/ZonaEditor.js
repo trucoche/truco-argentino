@@ -71,7 +71,7 @@ export default function ZonaEditor({ token, usuario, onCerrar, onGuardado }) {
       onCerrar={onCerrar}
       botones={[
         { texto: guardando ? 'Guardando...' : 'Guardar', tipo: 'verde', onClick: guardar, disabled: guardando || !localidadValida },
-        { texto: 'Cancelar', tipo: 'neutro', onClick: onCerrar },
+        { texto: 'Cancelar', tipo: 'carmesi', onClick: onCerrar },
       ]}
     >
       <p style={estilos.ayuda}>Con tu zona aparecés en los rankings de tu provincia y de tu localidad.</p>

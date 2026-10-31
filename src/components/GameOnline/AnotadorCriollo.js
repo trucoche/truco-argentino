@@ -81,7 +81,7 @@ export default function AnotadorCriollo({ visible, onCerrar, yo = 0, rival = 0, 
       anchoMax={340}
       centrado={false}
       onCerrar={onCerrar}
-      botones={[{ texto: 'Cerrar', tipo: 'dorado', onClick: onCerrar }]}
+      botones={[{ texto: 'Cerrar', tipo: 'carmesi', onClick: onCerrar }]}
     >
       <Tablita nombre={esEquipos ? 'Nosotros' : 'Vos'} puntos={yo} buenas={buenas} />
       <Tablita nombre={esEquipos ? 'Ellos' : 'Rival'} puntos={rival} buenas={buenas} />

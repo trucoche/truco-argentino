@@ -299,7 +299,7 @@ export default function BracketView({ torneoId, usuario, token, onVolver, onEntr
         icono="/assets/images/trofeo.png"
         tamIcono={56}
         onCerrar={() => setSelectorAbierto(false)}
-        botones={[{ texto: 'Cerrar', tipo: 'neutro', onClick: () => setSelectorAbierto(false) }]}
+        botones={[{ texto: 'Cerrar', tipo: 'carmesi', onClick: () => setSelectorAbierto(false) }]}
       >
         <p style={{ margin: '0 0 10px', fontWeight: 800, fontSize: 14, color: '#2C160E', textAlign: 'center' }}>
           {Number(torneo.apuesta || 0) > 0

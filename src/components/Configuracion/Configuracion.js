@@ -1604,7 +1604,7 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
         onCerrar={() => setCafecitoAbierto(false)}
         botones={[
           { texto: 'Continuar a Cafecito ☕', tipo: 'celeste', onClick: () => { setCafecitoAbierto(false); abrirCafecito(); } },
-          { texto: 'Volver', tipo: 'neutro', onClick: () => setCafecitoAbierto(false) },
+          { texto: 'Volver', tipo: 'carmesi', onClick: () => setCafecitoAbierto(false) },
         ]}
       />
 

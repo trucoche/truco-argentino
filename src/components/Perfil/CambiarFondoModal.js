@@ -198,7 +198,7 @@ export default function CambiarFondoModal({ token, saldoActual, onCerrar, onFond
       tipo: 'carmesi', onClick: eliminarFondo, disabled: enviando,
     });
   }
-  botones.push({ texto: 'Cancelar', tipo: 'neutro', onClick: onCerrar });
+  botones.push({ texto: 'Cancelar', tipo: 'carmesi', onClick: onCerrar });
   botones.push({
     tipo: 'verde',
     disabled: deshabilitado,

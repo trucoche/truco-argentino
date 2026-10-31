@@ -51,7 +51,7 @@ export default function ConfiguracionMesaModal({
       anchoMax={340}
       centrado={false}
       onCerrar={onCerrar}
-      botones={[...(onRendirse ? [{ texto: 'Rendirme', tipo: 'carmesi', onClick: onRendirse }] : []), { texto: 'Cerrar', tipo: 'dorado', onClick: onCerrar }]}
+      botones={[...(onRendirse ? [{ texto: 'Rendirme', tipo: 'carmesi', onClick: onRendirse }] : []), { texto: 'Cerrar', tipo: onRendirse ? 'dorado' : 'carmesi', onClick: onCerrar }]}
     >
       <div style={estilos.fila}>
         <label style={estilos.label}>
