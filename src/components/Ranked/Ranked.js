@@ -119,7 +119,13 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
     try {
       const res = await fetch(`${API_SALAS}/ranked`, { method: 'POST', headers, body: JSON.stringify({ modo }) });
       const data = await res.json();
-      if (!res.ok) { setError(data.error || 'Error al buscar partida de Liga Criolla'); return; }
+      if (!res.ok) {
+        // Pase 666: si el servidor dice que sigo en enfriamiento, se usa la cuenta regresiva viva (que desaparece sola al terminar)
+        // en vez de dejar un cartel de error con el tiempo fijo, que quedaba en pantalla aunque la espera ya hubiera pasado.
+        if (data.bloqueoSegundos > 0) { setBloqueoFin(Date.now() + data.bloqueoSegundos * 1000); setAhora(Date.now()); return; }
+        setError(data.error || 'Error al buscar partida de Liga Criolla');
+        return;
+      }
       onEntrarAPartida(data.codigo);
     } catch (err) {
       console.error('Error buscando partida ranked:', err);
