@@ -200,6 +200,8 @@ useEffect(() => {
     const escena = gameRef.current?.scene.getScene('GameSceneOnline');
     const esPreview = String(codigoSala || '').startsWith('PREVIEW_');
     if (esPreview) { window.location.href = '/'; return; }
+    // Pase 680: con la pantalla final abierta la partida ya terminó: Volver va directo al lobby, sin preguntar.
+    if (escena?._pantallaFinalActiva) { manejarVolverLobby(escena._logrosDesbloqueadosPendientes || []); return; }
     const puede = !!escena?.puedeRendirse?.();
     const ranked = !!escena?._rankedSala;
     const aviso = (ranked

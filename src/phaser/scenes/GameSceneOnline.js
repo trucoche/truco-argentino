@@ -143,6 +143,7 @@ export default class GameSceneOnline extends Phaser.Scene {
     this._numeroRondaAnterior = undefined;
     this._mesaModoActual = null;
     this._geoEq = null;
+    this._pantallaFinalActiva = false;   // Pase 680: la pantalla final queda fija hasta tocar 'Volver al lobby'
     this._mesaAppExtra = null;
     // Pase 208 — pantalla de espera con avatares reales por jugador (pedido
     // del usuario, con una imagen de referencia armada con IA): se llenan
@@ -2875,6 +2876,11 @@ _conectarSocket() {
       }
       if (this.onEsEquipos) this.onEsEquipos(Array.isArray(this.estado.companeros));
       this._renderizarEstado(true);
+      // Pase 680: `?preview=2v2&final=1` (o `final=perdiste`) muestra la pantalla final con datos de ejemplo (para ajustar el layout sin jugar).
+      try {
+        const qf = new URLSearchParams(window.location.search).get('final');
+        if (qf) this.time.delayedCall(400, () => { try { this._mostrarPantallaFinalDePrueba(modo, qf); } catch (e2) { console.error('FINAL-PREVIEW', e2 && e2.stack); } });
+      } catch (err) { /* sin query */ }
       return;
     }
 
@@ -2910,6 +2916,11 @@ _conectarSocket() {
       const esRepartoNuevo = this._esRepartoNuevo(estado);
       this.estadoAnterior = this.estado;
       this.estado = estado;
+      // Pase 680: con la pantalla final abierta no se redibuja nada; solo si empieza una partida nueva en esta misma escena se vuelve a la mesa.
+      if (this._pantallaFinalActiva) {
+        if (estado && !estado.juegoTerminado && estado.rondaActiva) this._pantallaFinalActiva = false;
+        else return;
+      }
       this._actualizarMensajeEstado('');
 
       if (this.onEsEquipos) this.onEsEquipos(Array.isArray(estado.companeros));
@@ -3054,6 +3065,11 @@ _conectarSocket() {
       const esRepartoNuevo = this._esRepartoNuevo(estado);
       this.estadoAnterior = this.estado;
       this.estado = estado;
+      // Pase 680: con la pantalla final abierta no se redibuja nada; solo si empieza una partida nueva en esta misma escena se vuelve a la mesa.
+      if (this._pantallaFinalActiva) {
+        if (estado && !estado.juegoTerminado && estado.rondaActiva) this._pantallaFinalActiva = false;
+        else return;
+      }
       this._actualizarMensajeEstado('');
 
       if (this.onEsEquipos) this.onEsEquipos(Array.isArray(estado.companeros));
@@ -3070,6 +3086,20 @@ _conectarSocket() {
     });
   }
 
+// Pase 680: datos de ejemplo para ver la pantalla final sin jugar (solo en las mesas PREVIEW_*).
+_mostrarPantallaFinalDePrueba(modo, variante) {
+  const yo = (this.usuario && this.usuario.username) || 'catrielquintana';
+  const gano = variante !== 'perdiste';
+  const n = modo === '1v1' ? 1 : (modo === '3v3' ? 3 : 2);
+  const equipoYo = [{ nombre: yo, gano, tantos: gano ? 15 : 7 }];
+  for (let i = 1; i < n; i++) equipoYo.push({ nombre: `Compa${i}`, gano, tantos: gano ? 15 : 7 });
+  const equipoRival = [];
+  for (let i = 0; i < n; i++) equipoRival.push({ nombre: i === 0 ? 'pruebatesttruco' : `Rival${i}`, gano: !gano, tantos: gano ? 7 : 15 });
+  this._mostrarPantallaFinal(gano ? '¡Ganaste!' : 'Perdiste', false, false, null, [...equipoYo, ...equipoRival], '', gano,
+    { resumen: { manos: 10, duracionSeg: 1347, trucos: 0, envidos: 0, mazos: 0, amagues: 0 } },
+    { ranked: false, privada: false, puntosParaGanar: 15, motivo: 'abandono' });
+}
+
 _esRepartoNuevo(nuevoEstado) {
     const esPrimerEstadoRecibido = this._numeroRondaAnterior === undefined;
     const rondaAnterior = this._numeroRondaAnterior;
@@ -3084,6 +3114,9 @@ _esRepartoNuevo(nuevoEstado) {
 
 _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = null, jugadoresFinal = null, subtitulo = '', gano = false, recompensa = null, datosFinal = null) {
     this._limpiarSprites();
+    // Pase 680: mientras esté la pantalla final, ningún estado nuevo, reconexión, timer o cambio de tamaño vuelve a dibujar la mesa.
+    this._pantallaFinalActiva = true;
+    this._revanchaCerrada = false;
     this._ocultarCanto();
     this._destruirBannerEsperaTitulo();
     this._salaEnJuego = true;               // por si llega un 'jugador-unido' tardío: no redibujar la espera
@@ -3096,7 +3129,9 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
     const elementosMarcador = [];
     // Pase 669: en el celular 1v1 la pantalla final copia la proporción de la app: avatares grandes, nombres completos,
     // barra de datos más angosta, botones más grandes y bloques repartidos a lo alto de la pantalla.
-    const finalGrande = !!this._L && !!jugadoresFinal && jugadoresFinal.length === 2;
+    // Pase 680: 2v2 en el celular = grilla 2x2 como la app (equipo ganador/propio a la izquierda en columna, el otro a la derecha).
+    const grid2 = !!this._L && !!jugadoresFinal && jugadoresFinal.length === 4 && jugadoresFinal.filter(j => j.gano).length === 2;
+    const finalGrande = !!this._L && !!jugadoresFinal && (jugadoresFinal.length === 2 || grid2);
     let HnFinal = 600;
     try { const gc = document.getElementById('game-container'); if (gc) gc.setAttribute('data-final', '1'); } catch (e) {}
     if (this._L) {
@@ -3107,7 +3142,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
       const jf = jugadoresFinal && jugadoresFinal.length ? jugadoresFinal : [];
       const nG = jf.filter(j => j.gano).length;
       const nP = jf.length - nG;
-      const tamF = finalGrande ? 164 : (jf.length <= 2 ? 104 : jf.length <= 4 ? 100 : 84);   // Pase 659: avatares un poco más chicos para dejar aire entre bloques
+      const tamF = finalGrande ? (grid2 ? 120 : 164) : (jf.length <= 2 ? 104 : jf.length <= 4 ? 100 : 84);   // Pase 659: avatares un poco más chicos para dejar aire entre bloques
       const gapF = jf.length <= 2 ? 0 : jf.length <= 4 ? 30 : 20;
       const grupoF = (n) => (n > 0 ? n * (tamF + gapF) - gapF : 0);
       const anchoF = grupoF(nG) + (nG && nP ? 120 : 0) + grupoF(nP);
@@ -3115,7 +3150,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
       const chF = this.scale.height;
       // Pase 677: en el celular 1v1 los dos marcos de avatar ocupan casi todo el ancho (como la app): vista de ~522 de mundo
       // (antes ~656), con lo que todo el bloque (cartel, nombres, barra de datos y botones) se ve ~26 % más grande.
-      const visibleW = finalGrande
+      const visibleW = grid2 ? 540 : finalGrande
         ? Math.min(760, Math.max(Math.round(((tamF + 138) + tamF * 1.15) / 0.94), 640 * cwF / chF))
         : Math.max(540, Math.min(760, anchoF * 1.15 + 120), 640 * cwF / chF);
       const camF = this.cameras.main;
@@ -3172,14 +3207,14 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
     const der = izqGanadores ? perdedores : ganadores;
     const todos = [...izq, ...der];
     const total = todos.length;
-    const tamano = finalGrande ? 164 : (total <= 2 ? 104 : total <= 4 ? 100 : 84);   // Pase 659
+    const tamano = finalGrande ? (grid2 ? 120 : 164) : (total <= 2 ? 104 : total <= 4 ? 100 : 84);   // Pase 659
     const gapIntra = total <= 2 ? 0 : total <= 4 ? 30 : 20;
     const gapEscudo = finalGrande ? 138 : 120;   // Pase 659: más aire entre los marcos de avatar y el escudo del marcador
     const paso = tamano + gapIntra;
     const anchoGrupo = (n) => (n > 0 ? n * paso - gapIntra : 0);
     const anchoFila = anchoGrupo(izq.length) + (izq.length && der.length ? gapEscudo : 0) + anchoGrupo(der.length);
     let cursorX = 400 - anchoFila / 2 + tamano / 2;
-    const cyAv = finalGrande ? Math.max(216, Math.round(0.345 * HnFinal)) : 184;   // Pase 679: avatares un poco más abajo (el bloque de datos y botones queda más junto)   // Pase 659: cartel más arriba y avatares más chicos: 22 px de aire bajo el cartel
+    let cyAv = finalGrande ? Math.max(216, Math.round(0.345 * HnFinal)) : 184;   // Pase 679: avatares un poco más abajo (el bloque de datos y botones queda más junto)   // Pase 659: cartel más arriba y avatares más chicos: 22 px de aire bajo el cartel
 
     const radio = tamano / 2;
     const radioFoto = radio * 0.72;
@@ -3195,17 +3230,28 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
       const rf = rid ? RANGOS_UI[Number(rid)] : null;
       return Math.round((radioFoto * 2) / ((rf ? rf.hueco : 0.62) + 0.02));
     }), 0);
+    // Pase 680: grilla 2x2: dos filas bien separadas (aire entre una fila y la otra), columnas a ±GRID_DX del centro.
+    const GRID_DX = 132;
+    const rowGap = grid2 ? Math.max(225, Math.min(280, Math.round(0.215 * HnFinal))) : 0;
+    if (grid2) cyAv = 140 + aroRef / 2;
+    const cyAvBase = cyAv;
     const yNombreComun = cyAv + aroRef / 2 + 18;
     const yPillComun = yNombreComun + ALTO_CARTEL / 2 + 6 + PILL_MITAD;
+    const yPillUlt = yPillComun + rowGap;
+    const fNombre = grid2 ? '19px' : (finalGrande ? '21px' : (total <= 2 ? '16px' : '13px'));
 
     todos.forEach((j, idx) => {
       const esGanadorGrupo = j.gano;
-      const cx = cursorX;
+      let cx = cursorX;
       cursorX += paso;
       if (idx === izq.length - 1 && der.length) {
         escudoX = cx + tamano / 2 + gapEscudo / 2;
         cursorX += gapEscudo - gapIntra;
       }
+      // Pase 680: en la grilla 2x2 cada jugador va en su columna y su fila.
+      const fila = grid2 ? (idx === 1 || idx === 3 ? 1 : 0) : 0;
+      if (grid2) { cx = 400 + (der.includes(j) ? GRID_DX : -GRID_DX); escudoX = 400; }
+      const cyAv = grid2 ? cyAvBase + fila * rowGap : cyAvBase;
       const info = { ...infoSala(j.nombre), ...Object.fromEntries(Object.entries(j).filter(([k, v]) => v != null && k !== 'nombre' && k !== 'gano' && k !== 'tantos')) };
       const rangoFicha = info.rango_id ? RANGOS_UI[Number(info.rango_id)] : null;
       const hueco = rangoFicha ? rangoFicha.hueco : 0.62;
@@ -3293,18 +3339,18 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
       this._sprites.push(aro);
 
       // Etiqueta de nombre (madera fina) con copa si ganó
-      const maxNombre = finalGrande ? 250 : Math.max(70, tamano + gapIntra - 8);
+      const maxNombre = grid2 ? 122 : finalGrande ? 250 : Math.max(70, tamano + gapIntra - 8);
       let nombreMostrado = String(j.nombre || '');
-      const medida = this.add.text(0, 0, nombreMostrado, { fontFamily: 'Nunito, Arial', fontSize: finalGrande ? '21px' : (total <= 2 ? '16px' : '13px'), fontStyle: '800' });
+      const medida = this.add.text(0, 0, nombreMostrado, { fontFamily: 'Nunito, Arial', fontSize: fNombre, fontStyle: '800' });
       while (medida.width > maxNombre - 24 && nombreMostrado.length > 3) {
         nombreMostrado = nombreMostrado.slice(0, -2);
         medida.setText(nombreMostrado + '…');
       }
       const textoNombre = nombreMostrado.length < String(j.nombre || '').length ? nombreMostrado + '…' : nombreMostrado;
       medida.destroy();
-      const yNombre = yNombreComun;
+      const yNombre = yNombreComun + fila * rowGap;
       const etiqueta = this.add.text(0, 0, textoNombre, {
-        fontFamily: 'Nunito, Arial', fontSize: finalGrande ? '21px' : (total <= 2 ? '16px' : '13px'), fontStyle: '800', color: '#FFF8ED',
+        fontFamily: 'Nunito, Arial', fontSize: fNombre, fontStyle: '800', color: '#FFF8ED',
         stroke: '#2C160E', strokeThickness: 3,
       }).setOrigin(0, 0.5).setDepth(904);
       const icoTrofeo = esGanadorGrupo ? (finalGrande ? 26 : 22) : 0;
@@ -3329,7 +3375,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
       etiqueta.setPosition(xTxt, yNombre);
 
       // Píldora de estado: "✓ Ganador" (verde) / "Derrotado" (gris)
-      const yPill = yPillComun;
+      const yPill = yPillComun + fila * rowGap;
       const pillAlto = finalGrande ? 32 : 26;
       const estiloPill = { fontFamily: 'Fredoka, Arial', fontSize: finalGrande ? '17px' : '14px', fontStyle: '600' };
       const textoPill = esGanadorGrupo ? '✓ Ganador' : 'Derrotado';
@@ -3368,26 +3414,27 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
     if (total >= 2) {
       // Pase 657: el marcador sigue el orden de la pantalla (izquierda - derecha); yo estoy a la derecha.
       const tantosGan = izq.length ? Number(izq[0].tantos) : NaN;
-      const kS = finalGrande ? 1.2 : 1;
+      const kS = grid2 ? 0.95 : (finalGrande ? 1.2 : 1);
+      const cyEsc = cyAv + rowGap / 2;   // Pase 680: en la grilla, justo en el centro entre los 4 avatares
       const tantosPer = der.length ? Number(der[0].tantos) : NaN;
       if (this.textures.exists('escudoSinTexto')) {
-        const esc = this.add.image(escudoX, cyAv, 'escudoSinTexto').setDisplaySize(96 * kS, 96 * kS).setDepth(904);
+        const esc = this.add.image(escudoX, cyEsc, 'escudoSinTexto').setDisplaySize(96 * kS, 96 * kS).setDepth(904);
         this._sprites.push(esc);
       }
       if (Number.isFinite(tantosGan) && Number.isFinite(tantosPer)) {
         const marcador = `${tantosGan} - ${tantosPer}`;
-        const txtM = this.add.text(escudoX, cyAv + 1, marcador, {
+        const txtM = this.add.text(escudoX, cyEsc + 1, marcador, {
           fontFamily: 'Fredoka, Arial', fontSize: `${Math.round(19 * kS)}px`, fontStyle: '700', color: '#FFD98A',
           stroke: '#2C160E', strokeThickness: 4,
         }).setOrigin(0.5).setDepth(906);
         const anchoM = Math.max(txtM.width + 18, 60);
         const plaqueta = this.add.graphics().setDepth(905);
         plaqueta.fillStyle(0x000000, 0.45);
-        plaqueta.fillRoundedRect(escudoX - anchoM / 2, cyAv - 14 * kS + 3, anchoM, 30 * kS, 9);
+        plaqueta.fillRoundedRect(escudoX - anchoM / 2, cyEsc - 14 * kS + 3, anchoM, 30 * kS, 9);
         plaqueta.fillStyle(0x5C3317, 1);
-        plaqueta.fillRoundedRect(escudoX - anchoM / 2, cyAv - 14 * kS, anchoM, 30 * kS, 9);
+        plaqueta.fillRoundedRect(escudoX - anchoM / 2, cyEsc - 14 * kS, anchoM, 30 * kS, 9);
         plaqueta.lineStyle(2.5, 0x1a0f08, 1);
-        plaqueta.strokeRoundedRect(escudoX - anchoM / 2, cyAv - 14 * kS, anchoM, 30 * kS, 9);
+        plaqueta.strokeRoundedRect(escudoX - anchoM / 2, cyEsc - 14 * kS, anchoM, 30 * kS, 9);
         this._sprites.push(plaqueta, txtM);
       }
     }
@@ -3402,7 +3449,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
     // como texto simple, una frase que aporta información (campeón del torneo / abandono).
     const fraseInfo = (esCampeon || datos.motivo === 'abandono') ? frase : '';
     const GAP_MOD = 22;   // Pase 659: aire constante entre módulos (20–28 px)
-    let y = total ? yPillComun + 13 + GAP_MOD : 250;
+    let y = total ? yPillUlt + 13 + GAP_MOD : 250;
     if (modo === 'neutro') {
       // Pase 415: "Sala cancelada" — medallon de madera con reloj de arena + mensaje en un pergamino
       // con borde de madera. No hubo partida: nada de moneda ni de revancha.
@@ -3524,7 +3571,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
       ];
       // Pase 668: en el celular la barra no puede ser más ancha que lo que muestra la cámara (se cortaba en los costados).
       const visMundoR = this._L ? this.scale.width / this.cameras.main.zoom : 800;
-      const wR = Math.min(560, Math.floor(visMundoR * (finalGrande ? 0.92 : 0.92))), hR = finalGrande ? 62 : 50, xR = 400 - wR / 2, anchoCelda = wR / celdas.length;
+      const wR = Math.min(560, Math.floor(visMundoR * (finalGrande ? 0.92 : 0.92))), hR = grid2 ? 78 : (finalGrande ? 62 : 50), xR = 400 - wR / 2, anchoCelda = wR / celdas.length;
       const panelR = this.add.graphics().setDepth(904);
       panelR.fillStyle(0x140C08, 0.55);
       panelR.fillRoundedRect(xR, y, wR, hR, 12);
@@ -3535,8 +3582,8 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
       this._sprites.push(panelR);
       celdas.forEach(([etiqueta, valor], i) => {
         const cxC = xR + anchoCelda * (i + 0.5);
-        const tv = this.add.text(cxC, y + (finalGrande ? 21 : 18), String(valor), { fontFamily: 'Fredoka, Arial', fontSize: finalGrande ? '22px' : '19px', fontStyle: '700', color: '#FFF8ED', stroke: '#2C160E', strokeThickness: 3 }).setOrigin(0.5).setDepth(905);
-        const tl = this.add.text(cxC, y + (finalGrande ? 44 : 37), etiqueta, { fontFamily: 'Nunito, Arial', fontSize: finalGrande ? '13px' : '11px', fontStyle: '800', color: '#F1D9A8' }).setOrigin(0.5).setDepth(905);
+        const tv = this.add.text(cxC, y + (grid2 ? 27 : (finalGrande ? 21 : 18)), String(valor), { fontFamily: 'Fredoka, Arial', fontSize: grid2 ? '27px' : (finalGrande ? '22px' : '19px'), fontStyle: '700', color: '#FFF8ED', stroke: '#2C160E', strokeThickness: 3 }).setOrigin(0.5).setDepth(905);
+        const tl = this.add.text(cxC, y + (grid2 ? 56 : (finalGrande ? 44 : 37)), etiqueta, { fontFamily: 'Nunito, Arial', fontSize: grid2 ? '15px' : (finalGrande ? '13px' : '11px'), fontStyle: '800', color: '#F1D9A8' }).setOrigin(0.5).setDepth(905);
         this._sprites.push(tv, tl);
       });
       y += hR + 24;   // Pase 659: mínimo 24 px entre la barra de datos y "Pedir revancha"
@@ -3545,10 +3592,10 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
 
     if (!resumenDibujado && modo !== 'neutro') y += 2;   // sin barra de datos: 22 + 2 = 24 px antes de los botones
     // Pase 669: en el celular 1v1 la botonera baja hasta ~72 % del alto de la vista, como en la app.
-    if (finalGrande && modo !== 'neutro') y = Math.max(y, Math.round(0.69 * HnFinal));
+    if (finalGrande && modo !== 'neutro') y = Math.max(y, Math.round((grid2 ? 0.78 : 0.69) * HnFinal));
     // 6) Botonera vertical en cápsulas 3D
     // Pase 677: altura táctil de ~50 px reales (tope 66 de mundo); la letra y el ancho acompañan.
-    const altoBoton = finalGrande ? Math.max(54, Math.min(66, Math.ceil(50 / (this.cameras.main.zoom || 1)))) : 42;
+    const altoBoton = grid2 ? Math.max(60, Math.min(74, Math.ceil(56 / (this.cameras.main.zoom || 1)))) : (finalGrande ? Math.max(54, Math.min(66, Math.ceil(50 / (this.cameras.main.zoom || 1)))) : 42);
     const fBtn = finalGrande ? Math.round(altoBoton * 0.38) : 17;
     const anchoMinBoton = finalGrande ? Math.round(altoBoton * 4.8) : 0;
     if (!esTorneo && modo !== 'neutro') {
@@ -3643,7 +3690,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
       estrella(400 - cartelAncho / 2 + 26, 92, 9, 500);
       if (ganadores.length) {
         const inicioFila = 400 - anchoFila / 2 + tamano / 2;
-        const gx = izqGanadores ? inicioFila : inicioFila + izq.length * paso + gapEscudo - gapIntra;   // Pase 659: los ganadores quedan donde estén
+        const gx = grid2 ? 400 + (izqGanadores ? -GRID_DX : GRID_DX) : (izqGanadores ? inicioFila : inicioFila + izq.length * paso + gapEscudo - gapIntra);   // Pase 659: los ganadores quedan donde estén
         estrella(gx - tamano * 0.5, cyAv - tamano * 0.4, 10, 250);
         estrella(gx + tamano * 0.55, cyAv + tamano * 0.1, 8, 800);
         estrella(gx + tamano * 0.1, cyAv - tamano * 0.62, 7, 1200);
@@ -3725,6 +3772,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
   }
 
   _actualizarEstadoRevancha(confirmados, total) {
+    if (this._revanchaCerrada) return;   // Pase 680: vencido el tiempo no vuelve a aparecer "Esperando confirmación…"
     if (this.textoEsperaRevancha) {
       // Centésimo pase: por si este texto estaba mostrando la placa de
       // alerta de un intento anterior (no debería pasar en el flujo
@@ -3769,9 +3817,13 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
     if (this.contRevancha && this.contRevancha.input && this.contRevancha.input.enabled) {
       this.contRevancha.disableInteractive();
     }
+    // Pase 680: vencido el tiempo, el botón "Pedir revancha" queda apagado (gris) y no se puede volver a tocar; "Volver al lobby" sigue activo.
+    this._revanchaCerrada = true;
+    if (this.imgRevancha && this.imgRevancha.scene) this.imgRevancha.setTint(0x8a9e8a);
   }
 
 _renderizarEstado(animarReparto) {
+     if (this._pantallaFinalActiva) return;   // Pase 680
      this._limpiarSprites();
     try { const gc = document.getElementById('game-container'); if (gc) gc.removeAttribute('data-final'); gc.removeAttribute('data-espera'); } catch (e) {}   // Pase 664: vuelve el engranaje de ajustes
     this._jugadaEnviada = false;   // Pase 414: llego un estado nuevo, se puede volver a jugar
