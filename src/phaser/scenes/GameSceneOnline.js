@@ -1236,10 +1236,10 @@ _crearElementosDeTexto() {
     // igual, así que los dos puntos que ocultan `botonVolverEspera` más
     // abajo no necesitan tocarse.
     const textoVolverEspera = 'Volver al Lobby';
-    const anchoVolverEspera = this._medirAnchoTextoOverlay(textoVolverEspera, '19px') + 50;
+    const anchoVolverEspera = this._L ? Math.round(this._vistaEspera().w * 0.8) : this._medirAnchoTextoOverlay(textoVolverEspera, '19px') + 50;   // Pase 670: 80 % del ancho en celulares
     this.botonVolverEspera = this._crearBotonOverlay({
-      x: 400, y: 518, ancho: anchoVolverEspera, alto: 52, variante: 'rojo',
-      texto: textoVolverEspera, tamanoFuente: 19,
+      x: 400, y: 518, ancho: anchoVolverEspera, alto: this._L ? 66 : 52, variante: 'rojo',
+      texto: textoVolverEspera, tamanoFuente: this._L ? 25 : 19,
       onClick: () => {
         this.socket.emit('cancelar-espera', { codigoSala: this.codigoSala });
         if (this.onVolverLobby) this.onVolverLobby();
@@ -1284,7 +1284,7 @@ _crearElementosDeTexto() {
     const yOff = H - Hg;
     // Modo "estatico" (sala de espera / pantalla final): se muestra el mundo
     // 800x600 de siempre, centrado, con los fondos estirados a cubrir.
-    const zoom8 = cw / 760;   // sala de espera / pantalla final: 760 de ancho de mundo visible
+    const zoom8 = cw / Math.min(760, Math.max(540, 600 * cw / ch));   // Pase 670: sala de espera más cerca (540 de ancho de mundo en celulares largos)   // sala de espera / pantalla final: 760 de ancho de mundo visible
     const H8 = ch / zoom8;
 
     // Factor de tamaño de cartas segun cuanto alto hay: en ventanas angostas pero
@@ -2092,6 +2092,8 @@ _actualizarBannerEsperaTitulo(texto, modo = null, detalle = null, opts = {}) {
   }
 
   this._bannerEsperaTitulo = this.add.container(400, opts.y || 130, hijos).setDepth(opts.depth || 401);
+  // Pase 670: en el celular el cartel de la sala de espera crece hasta ~86 % del ancho visible.
+  if (opts.anchoMax) this._bannerEsperaTitulo.setScale(Math.max(1, Math.min(opts.escalaMax || 1.3, opts.anchoMax / ancho)));
   this._sprites.push(this._bannerEsperaTitulo);
 }
 
@@ -2101,10 +2103,24 @@ _actualizarBannerEsperaTitulo(texto, modo = null, detalle = null, opts = {}) {
 _crearCentroEspera() {
   if (this._centroEspera) return;
   const texto = this.add.text(400, 450, 'Buscando rival...', {
-    fontFamily: 'Fredoka, Arial', fontSize: '22px', fontStyle: '600', color: '#FFF8ED',
+    fontFamily: 'Fredoka, Arial', fontSize: `${this._L ? 30 : 22}px`, fontStyle: '600', color: '#FFF8ED',
     stroke: '#000000', strokeThickness: 4,
   }).setOrigin(0.5).setDepth(405);
-  this._centroEspera = { texto };
+  // Pase 670: contador de tiempo en espera (solo celular).
+  let tiempo = null, timer = null;
+  if (this._L) {
+    tiempo = this.add.text(400, 490, 'Tiempo en espera: 00:00', {
+      fontFamily: 'Nunito, Arial', fontSize: '19px', fontStyle: '800', color: '#F1D9A8', stroke: '#2C160E', strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(405);
+    const t0 = Date.now();
+    timer = this.time.addEvent({ delay: 1000, loop: true, callback: () => {
+      if (!tiempo || !tiempo.scene) return;
+      const seg = Math.floor((Date.now() - t0) / 1000);
+      tiempo.setText(`Tiempo en espera: ${String(Math.floor(seg / 60)).padStart(2, '0')}:${String(seg % 60).padStart(2, '0')}`);
+    } });
+    this._sprites.push(tiempo);
+  }
+  this._centroEspera = { texto, tiempo, timer };
   this._sprites.push(texto);
 }
 
@@ -2125,6 +2141,15 @@ _vistaEspera() {
 // Devuelve cuánto hay que sumarle al Y de diseño. En escritorio (vista de 600) es 0 salvo el corrimiento de la vista.
 _esperaDy(k, G) {
   const v = this._vistaEspera();
+  // Pase 670: en el celular 1v1 los 4 bloques (cartel, fila, estado, botón) se anclan a la vista: cartel bajo los botones
+  // de la esquina, fila al ~45 %, estado al ~70 % y el botón pegado abajo al alcance del pulgar.
+  if (this._L && G === 4) {
+    const diseno = [105, 290, 470, 540];
+    const obj1 = Math.max(v.yTop + v.h * 0.45, v.yTop + 340);
+    const obj2 = Math.max(v.yTop + v.h * 0.70, obj1 + 190);
+    const obj3 = Math.max(v.yTop + v.h - 64, obj2 + 70);
+    return [v.yTop + 170, obj1, obj2, obj3][k] - diseno[k];
+  }
   const extra = Math.max(0, v.h - 600);
   return (v.yTop < 0 ? v.yTop : 0) + (extra * (k + 1)) / (G + 1);
 }
@@ -2138,6 +2163,8 @@ _actualizarTextoBuscando() {
   t.setText(lleno ? 'Iniciando partida...' : (equipos ? `Buscando jugadores... (${unidos}/${this._capacidadSala})` : 'Buscando rival...'));
   // Pase 434: en 2v2/3v3 la grilla de dos filas ocupa más alto, el texto baja.
   t.setY((equipos ? 526 : 470) + this._esperaDy(equipos ? 4 : 2, equipos ? 6 : 4));
+  const tiempoEsp = this._centroEspera && this._centroEspera.tiempo;
+  if (tiempoEsp && tiempoEsp.scene) { tiempoEsp.setY(t.y + 42); tiempoEsp.setVisible(!lleno); }
 }
 
 // Destruye (no solo oculta) el título de la sala de espera — se llama en
@@ -2147,7 +2174,10 @@ _actualizarTextoBuscando() {
 // esta pantalla.
 _destruirBannerEsperaTitulo() {
   if (this._centroEspera) {
-    const { texto } = this._centroEspera;
+    const { texto, tiempo, timer } = this._centroEspera;
+    if (timer && timer.remove) timer.remove();
+    if (tiempo && tiempo.scene) tiempo.destroy();
+    this._sprites = this._sprites.filter(s => s !== tiempo);
     if (texto && texto.scene) texto.destroy();
     this._sprites = this._sprites.filter(s => s !== texto);
     this._centroEspera = null;
@@ -2185,7 +2215,7 @@ _redibujarFilaEspera() {
 
   // Pase 346: el modo ("1v1") va en una mini píldora dorada dentro del cartel.
   // Pase 436: en 2v2/3v3 el cartel sube (y=100, antes 130) para aprovechar la franja vacía de arriba.
-  this._actualizarBannerEsperaTitulo('Esperando jugadores', this._modoSala, this._textoDetalleSala(), this._capacidadSala > 2 ? { y: 64 + this._esperaDy(0, 6) } : { y: 105 + this._esperaDy(0, 4) });
+  this._actualizarBannerEsperaTitulo('Esperando jugadores', this._modoSala, this._textoDetalleSala(), this._capacidadSala > 2 ? { y: 64 + this._esperaDy(0, 6) } : { y: 105 + this._esperaDy(0, 4), anchoMax: this._L ? this._vistaEspera().w * 0.86 : 0, escalaMax: 1.3 });
   this._actualizarTextoBuscando();
 
   const total = this._capacidadSala;
@@ -2208,14 +2238,19 @@ _redibujarFilaEspera() {
   if (equipos) {
     this._dibujarGrillaEquiposEspera(total, pendientes);
   } else {
+    // Pase 670: yo SIEMPRE a la izquierda, el rival (o la búsqueda) a la derecha.
+    const listaEspera = (this._jugadoresSala || []).slice();
+    const miIdxEspera = listaEspera.findIndex(j => j && j.username === (this.usuario && this.usuario.username));
+    if (miIdxEspera > 0) listaEspera.unshift(listaEspera.splice(miIdxEspera, 1)[0]);
     for (let i = 0; i < total; i++) {
-      const jugador = this._jugadoresSala[i] || null;
+      const jugador = listaEspera[i] || null;
       const cx = inicioX + i * paso;
       this._dibujarTileEspera(cx, cy, tamano / 2, jugador, pendientes);
     }
   }
 
   // Pase 346: badge "VS" amarillo 3D, centrado entre los dos avatares (solo 1v1).
+  if (total === 2 && this._L && (this._jugadoresSala || []).length < total) this._dibujarOndasBusqueda(400, cy, 104);   // Pase 670
   if (total === 2) this._dibujarBadgeVsEspera(400, cy, 104);
 
   if (pendientes.length > 0) {
@@ -2587,6 +2622,19 @@ _dibujarRadarSiluetas(cx, cy, radioFoto) {
 
 // Pase 346: badge "VS" — placa dorada 3D (borde negro 3px, relieve inferior
 // ocre) con "VS" en Fredoka chocolate, levemente inclinada.
+// Pase 670: ondas de luz doradas que salen del escudo VS hacia los avatares mientras se busca rival.
+_dibujarOndasBusqueda(x, y, tam) {
+  [0, 800, 1600].forEach((delay) => {
+    const g = this.add.graphics().setDepth(409);
+    g.lineStyle(4, 0xF5C84A, 0.65);
+    g.strokeCircle(0, 0, tam * 0.42);
+    g.setPosition(x, y).setAlpha(0);
+    this._avataresEsperaSprites.push(g);
+    this._sprites.push(g);
+    this.tweens.add({ targets: g, scale: { from: 0.8, to: 3.6 }, alpha: { from: 0.7, to: 0 }, duration: 2400, delay, repeat: -1, ease: 'Cubic.easeOut' });
+  });
+}
+
 _dibujarBadgeVsEspera(x, y, tam = 88) {
   // Pase 374: escudo con espadas y "VS" (PNG del usuario). Si por algo la textura no cargó,
   // se cae al badge dibujado por código de antes.
