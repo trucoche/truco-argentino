@@ -2891,6 +2891,10 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
     const generacion = this._finalGeneracion;
     // Pase 664: la pantalla final ya no muestra el marcador (números o fósforos) ni el engranaje de ajustes arriba a la izquierda.
     const elementosMarcador = [];
+    // Pase 669: en el celular 1v1 la pantalla final copia la proporción de la app: avatares grandes, nombres completos,
+    // barra de datos más angosta, botones más grandes y bloques repartidos a lo alto de la pantalla.
+    const finalGrande = !!this._L && !!jugadoresFinal && jugadoresFinal.length === 2;
+    let HnFinal = 600;
     try { const gc = document.getElementById('game-container'); if (gc) gc.setAttribute('data-final', '1'); } catch (e) {}
     if (this._L) {
       this._modoCamaraAngosto('estatica');
@@ -2900,7 +2904,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
       const jf = jugadoresFinal && jugadoresFinal.length ? jugadoresFinal : [];
       const nG = jf.filter(j => j.gano).length;
       const nP = jf.length - nG;
-      const tamF = jf.length <= 2 ? 104 : jf.length <= 4 ? 100 : 84;   // Pase 659: avatares un poco más chicos para dejar aire entre bloques
+      const tamF = finalGrande ? 164 : (jf.length <= 2 ? 104 : jf.length <= 4 ? 100 : 84);   // Pase 659: avatares un poco más chicos para dejar aire entre bloques
       const gapF = jf.length <= 2 ? 0 : jf.length <= 4 ? 30 : 20;
       const grupoF = (n) => (n > 0 ? n * (tamF + gapF) - gapF : 0);
       const anchoF = grupoF(nG) + (nG && nP ? 120 : 0) + grupoF(nP);
@@ -2909,6 +2913,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
       const visibleW = Math.max(540, Math.min(760, anchoF * 1.15 + 120), 640 * cwF / chF);
       const camF = this.cameras.main;
       camF.setZoom(cwF / Math.min(760, visibleW));
+      HnFinal = chF / camF.zoom;
       camF.centerOn(400, 300);
       this._modoCamara = 'final';   // para que el próximo 'estatica' (sala de espera) vuelva a aplicar zoom8
     }
@@ -2960,14 +2965,14 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
     const der = izqGanadores ? perdedores : ganadores;
     const todos = [...izq, ...der];
     const total = todos.length;
-    const tamano = total <= 2 ? 104 : total <= 4 ? 100 : 84;   // Pase 659
+    const tamano = finalGrande ? 164 : (total <= 2 ? 104 : total <= 4 ? 100 : 84);   // Pase 659
     const gapIntra = total <= 2 ? 0 : total <= 4 ? 30 : 20;
-    const gapEscudo = 120;   // Pase 659: más aire entre los marcos de avatar y el escudo del marcador
+    const gapEscudo = finalGrande ? 138 : 120;   // Pase 659: más aire entre los marcos de avatar y el escudo del marcador
     const paso = tamano + gapIntra;
     const anchoGrupo = (n) => (n > 0 ? n * paso - gapIntra : 0);
     const anchoFila = anchoGrupo(izq.length) + (izq.length && der.length ? gapEscudo : 0) + anchoGrupo(der.length);
     let cursorX = 400 - anchoFila / 2 + tamano / 2;
-    const cyAv = 184;   // Pase 659: cartel más arriba y avatares más chicos: 22 px de aire bajo el cartel
+    const cyAv = finalGrande ? Math.max(216, Math.round(0.31 * HnFinal)) : 184;   // Pase 659: cartel más arriba y avatares más chicos: 22 px de aire bajo el cartel
 
     const radio = tamano / 2;
     const radioFoto = radio * 0.72;
@@ -2976,14 +2981,15 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
     let escudoX = 400;
     // Pase 414: todos los carteles de nombre y las pildoras Ganador/Derrotado van en la MISMA linea Y
     // (antes dependian del aro de rango de cada uno), con carteles de 36 px de alto.
-    const ALTO_CARTEL = 36;
+    const ALTO_CARTEL = finalGrande ? 42 : 36;
+    const PILL_MITAD = finalGrande ? 16 : 13;
     const aroRef = Math.max(...todos.map((j) => {
       const rid = j.rango_id != null ? j.rango_id : infoSala(j.nombre).rango_id;
       const rf = rid ? RANGOS_UI[Number(rid)] : null;
       return Math.round((radioFoto * 2) / ((rf ? rf.hueco : 0.62) + 0.02));
     }), 0);
     const yNombreComun = cyAv + aroRef / 2 + 18;
-    const yPillComun = yNombreComun + ALTO_CARTEL / 2 + 6 + 13;
+    const yPillComun = yNombreComun + ALTO_CARTEL / 2 + 6 + PILL_MITAD;
 
     todos.forEach((j, idx) => {
       const esGanadorGrupo = j.gano;
@@ -3080,9 +3086,9 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
       this._sprites.push(aro);
 
       // Etiqueta de nombre (madera fina) con copa si ganó
-      const maxNombre = Math.max(70, tamano + gapIntra - 8);
+      const maxNombre = finalGrande ? 250 : Math.max(70, tamano + gapIntra - 8);
       let nombreMostrado = String(j.nombre || '');
-      const medida = this.add.text(0, 0, nombreMostrado, { fontFamily: 'Nunito, Arial', fontSize: total <= 2 ? '16px' : '13px', fontStyle: '800' });
+      const medida = this.add.text(0, 0, nombreMostrado, { fontFamily: 'Nunito, Arial', fontSize: finalGrande ? '21px' : (total <= 2 ? '16px' : '13px'), fontStyle: '800' });
       while (medida.width > maxNombre - 24 && nombreMostrado.length > 3) {
         nombreMostrado = nombreMostrado.slice(0, -2);
         medida.setText(nombreMostrado + '…');
@@ -3091,10 +3097,10 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
       medida.destroy();
       const yNombre = yNombreComun;
       const etiqueta = this.add.text(0, 0, textoNombre, {
-        fontFamily: 'Nunito, Arial', fontSize: total <= 2 ? '16px' : '13px', fontStyle: '800', color: '#FFF8ED',
+        fontFamily: 'Nunito, Arial', fontSize: finalGrande ? '21px' : (total <= 2 ? '16px' : '13px'), fontStyle: '800', color: '#FFF8ED',
         stroke: '#2C160E', strokeThickness: 3,
       }).setOrigin(0, 0.5).setDepth(904);
-      const icoTrofeo = esGanadorGrupo ? 22 : 0;
+      const icoTrofeo = esGanadorGrupo ? (finalGrande ? 26 : 22) : 0;
       const anchoEtq = etiqueta.width + 24 + (icoTrofeo ? icoTrofeo + 4 : 0);
       const placa = this.add.graphics().setDepth(903);
       const hP = ALTO_CARTEL, mP = hP / 2;
@@ -3117,11 +3123,11 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
 
       // Píldora de estado: "✓ Ganador" (verde) / "Derrotado" (gris)
       const yPill = yPillComun;
-      const pillAlto = 26;
-      const estiloPill = { fontFamily: 'Fredoka, Arial', fontSize: '14px', fontStyle: '600' };
+      const pillAlto = finalGrande ? 32 : 26;
+      const estiloPill = { fontFamily: 'Fredoka, Arial', fontSize: finalGrande ? '17px' : '14px', fontStyle: '600' };
       const textoPill = esGanadorGrupo ? '✓ Ganador' : 'Derrotado';
       const medPill = this.add.text(0, 0, textoPill, estiloPill);
-      const anchoPill = Math.max(Math.ceil(medPill.width) + 30, 104);
+      const anchoPill = Math.max(Math.ceil(medPill.width) + 30, finalGrande ? 128 : 104);
       medPill.destroy();
       const pg = this.add.graphics().setDepth(903);
       const ppx = cx - anchoPill / 2, ppy = yPill - pillAlto / 2;
@@ -3155,25 +3161,26 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
     if (total >= 2) {
       // Pase 657: el marcador sigue el orden de la pantalla (izquierda - derecha); yo estoy a la derecha.
       const tantosGan = izq.length ? Number(izq[0].tantos) : NaN;
+      const kS = finalGrande ? 1.2 : 1;
       const tantosPer = der.length ? Number(der[0].tantos) : NaN;
       if (this.textures.exists('escudoSinTexto')) {
-        const esc = this.add.image(escudoX, cyAv, 'escudoSinTexto').setDisplaySize(96, 96).setDepth(904);
+        const esc = this.add.image(escudoX, cyAv, 'escudoSinTexto').setDisplaySize(96 * kS, 96 * kS).setDepth(904);
         this._sprites.push(esc);
       }
       if (Number.isFinite(tantosGan) && Number.isFinite(tantosPer)) {
         const marcador = `${tantosGan} - ${tantosPer}`;
         const txtM = this.add.text(escudoX, cyAv + 1, marcador, {
-          fontFamily: 'Fredoka, Arial', fontSize: '19px', fontStyle: '700', color: '#FFD98A',
+          fontFamily: 'Fredoka, Arial', fontSize: `${Math.round(19 * kS)}px`, fontStyle: '700', color: '#FFD98A',
           stroke: '#2C160E', strokeThickness: 4,
         }).setOrigin(0.5).setDepth(906);
         const anchoM = Math.max(txtM.width + 18, 60);
         const plaqueta = this.add.graphics().setDepth(905);
         plaqueta.fillStyle(0x000000, 0.45);
-        plaqueta.fillRoundedRect(escudoX - anchoM / 2, cyAv - 14 + 3, anchoM, 30, 9);
+        plaqueta.fillRoundedRect(escudoX - anchoM / 2, cyAv - 14 * kS + 3, anchoM, 30 * kS, 9);
         plaqueta.fillStyle(0x5C3317, 1);
-        plaqueta.fillRoundedRect(escudoX - anchoM / 2, cyAv - 14, anchoM, 30, 9);
+        plaqueta.fillRoundedRect(escudoX - anchoM / 2, cyAv - 14 * kS, anchoM, 30 * kS, 9);
         plaqueta.lineStyle(2.5, 0x1a0f08, 1);
-        plaqueta.strokeRoundedRect(escudoX - anchoM / 2, cyAv - 14, anchoM, 30, 9);
+        plaqueta.strokeRoundedRect(escudoX - anchoM / 2, cyAv - 14 * kS, anchoM, 30 * kS, 9);
         this._sprites.push(plaqueta, txtM);
       }
     }
@@ -3309,7 +3316,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
       ];
       // Pase 668: en el celular la barra no puede ser más ancha que lo que muestra la cámara (se cortaba en los costados).
       const visMundoR = this._L ? this.scale.width / this.cameras.main.zoom : 800;
-      const wR = Math.min(560, Math.floor(visMundoR * 0.92)), hR = 50, xR = 400 - wR / 2, anchoCelda = wR / celdas.length;
+      const wR = Math.min(560, Math.floor(visMundoR * (finalGrande ? 0.82 : 0.92))), hR = finalGrande ? 58 : 50, xR = 400 - wR / 2, anchoCelda = wR / celdas.length;
       const panelR = this.add.graphics().setDepth(904);
       panelR.fillStyle(0x140C08, 0.55);
       panelR.fillRoundedRect(xR, y, wR, hR, 12);
@@ -3320,8 +3327,8 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
       this._sprites.push(panelR);
       celdas.forEach(([etiqueta, valor], i) => {
         const cxC = xR + anchoCelda * (i + 0.5);
-        const tv = this.add.text(cxC, y + 18, String(valor), { fontFamily: 'Fredoka, Arial', fontSize: '19px', fontStyle: '700', color: '#FFF8ED', stroke: '#2C160E', strokeThickness: 3 }).setOrigin(0.5).setDepth(905);
-        const tl = this.add.text(cxC, y + 37, etiqueta, { fontFamily: 'Nunito, Arial', fontSize: '11px', fontStyle: '800', color: '#F1D9A8' }).setOrigin(0.5).setDepth(905);
+        const tv = this.add.text(cxC, y + (finalGrande ? 21 : 18), String(valor), { fontFamily: 'Fredoka, Arial', fontSize: finalGrande ? '22px' : '19px', fontStyle: '700', color: '#FFF8ED', stroke: '#2C160E', strokeThickness: 3 }).setOrigin(0.5).setDepth(905);
+        const tl = this.add.text(cxC, y + (finalGrande ? 44 : 37), etiqueta, { fontFamily: 'Nunito, Arial', fontSize: finalGrande ? '13px' : '11px', fontStyle: '800', color: '#F1D9A8' }).setOrigin(0.5).setDepth(905);
         this._sprites.push(tv, tl);
       });
       y += hR + 24;   // Pase 659: mínimo 24 px entre la barra de datos y "Pedir revancha"
@@ -3329,13 +3336,16 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
     }
 
     if (!resumenDibujado && modo !== 'neutro') y += 2;   // sin barra de datos: 22 + 2 = 24 px antes de los botones
+    // Pase 669: en el celular 1v1 la botonera baja hasta ~72 % del alto de la vista, como en la app.
+    if (finalGrande && modo !== 'neutro') y = Math.max(y, Math.round(0.72 * HnFinal));
     // 6) Botonera vertical en cápsulas 3D
-    const altoBoton = 42;
+    const altoBoton = finalGrande ? 52 : 42;
+    const fBtn = finalGrande ? 20 : 17;
     if (!esTorneo && modo !== 'neutro') {
       const revanchaTexto = 'Pedir revancha';
-      const revanchaAncho = this._medirAnchoTextoOverlay(revanchaTexto, '17px') + 60;
+      const revanchaAncho = Math.max(this._medirAnchoTextoOverlay(revanchaTexto, `${fBtn}px`) + 60, finalGrande ? 250 : 0);
       const { contenedor: contRevancha, img: imgRevancha } = this._crearBotonOverlay({
-        x: 400, y: y + altoBoton / 2, ancho: revanchaAncho, alto: altoBoton, variante: 'esmeralda', texto: revanchaTexto, tamanoFuente: 17,
+        x: 400, y: y + altoBoton / 2, ancho: revanchaAncho, alto: altoBoton, variante: 'esmeralda', texto: revanchaTexto, tamanoFuente: fBtn,
         onClick: () => {
           this.socket.emit('pedir-revancha', { codigoSala: this.codigoSala });
           contRevancha.disableInteractive();
@@ -3347,9 +3357,9 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
       y += altoBoton + 12;   // Pase 659: 12 px exactos entre Revancha y Volver
     }
     const labelBoton = esTorneo ? 'Ver bracket' : 'Volver al lobby';   // Pase 415: en sala cancelada es el unico boton
-    const volverAncho = this._medirAnchoTextoOverlay(labelBoton, '17px') + 60;
+    const volverAncho = Math.max(this._medirAnchoTextoOverlay(labelBoton, `${fBtn}px`) + 60, finalGrande ? 250 : 0);
     this._crearBotonOverlay({
-      x: 400, y: y + altoBoton / 2, ancho: volverAncho, alto: altoBoton, variante: 'oro', texto: labelBoton, tamanoFuente: 17,
+      x: 400, y: y + altoBoton / 2, ancho: volverAncho, alto: altoBoton, variante: 'oro', texto: labelBoton, tamanoFuente: fBtn,
       onClick: () => {
         if (esTorneo && this.onVerBracket) {
           this.onVerBracket(torneoId);
@@ -3380,7 +3390,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
     if (this.scale.height / needH < cam659.zoom) cam659.setZoom(this.scale.height / needH);
     const vistaH659 = this.scale.height / cam659.zoom;
     const vistaW659 = this.scale.width / cam659.zoom;
-    const centroY659 = Math.min(Math.max(300, botC - vistaH659 / 2), topC + vistaH659 / 2);
+    const centroY659 = finalGrande ? Math.max(0, botC - vistaH659) + vistaH659 / 2 : Math.min(Math.max(300, botC - vistaH659 / 2), topC + vistaH659 / 2);
     cam659.centerOn(400, centroY659);
     this._topVistaFinal = centroY659 - vistaH659 / 2;
     {
