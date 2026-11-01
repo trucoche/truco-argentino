@@ -762,10 +762,23 @@ _crearElementosDeTexto() {
     // "la tira de remaches no tape las cartas en mano", resuelto en
     // conjunto con el +10px de `_dibujarManoJugador`).
     const altoBotonera = this._L ? this._L.panelH : 130;
-    const anchoBotonera = Math.round(altoBotonera * (700 / 193));
+    const anchoBotonera = this._L ? this._L.panelW : Math.round(altoBotonera * (700 / 193));
     // Pase 409: en escritorio la placa sube 10px (borde superior en Y=490) para que la botonera tenga más aire.
     const yBotonera = this._L ? this._L.panelCY : 490 + altoBotonera / 2;
-    this.add.image(400, yBotonera, 'panelBotonera').setDisplaySize(anchoBotonera, altoBotonera).setDepth(150);
+    if (this._L) {
+      // Pase 675: el panel crece en alto sin deformar los remaches: arriba (franja con remaches) y abajo (marco) se dibujan 1:1 y solo se estira el medio de madera.
+      const Lp = this._L, x0 = 400 - Lp.panelW / 2, y0 = Math.round(Lp.panelTop);
+      const T = 40, B = 36, SH = 193;
+      const rebanada = (sy, sh, dy, dh) => {
+        const k = dh / sh;
+        this.add.image(x0, dy - sy * k, 'panelBotonera').setOrigin(0, 0).setScale(1, k).setCrop(0, sy, 700, sh).setDepth(150);
+      };
+      rebanada(0, T, y0, T);
+      rebanada(T, SH - T - B, y0 + T, Lp.panelH - T - B + 1);
+      rebanada(SH - B, B, y0 + Lp.panelH - B, B);
+    } else {
+      this.add.image(400, yBotonera, 'panelBotonera').setDisplaySize(anchoBotonera, altoBotonera).setDepth(150);
+    }
     // Nonagésimo primer pase: guardada como propiedad de la escena para que
     // `_dibujarBotonesCanto` pueda repartir los botones dentro del ancho
     // real de ESTA placa (más angosta que el canvas completo) en vez de un
@@ -1304,11 +1317,11 @@ _crearElementosDeTexto() {
 
     // Botonera + mano (abajo, pegadas al borde inferior)
     const panelW = 700;
-    const panelH = Math.round(panelW * 193 / 700);
+    const panelH = 262;   // Pase 675: panel de botonera más alto (estilo app): antes 193 (proporción del PNG); ahora se estira solo la franja del medio
     const panelTop = Hg - panelH;
     const panelCY = Hg - panelH / 2;
     // Pase 402: la carta de la mano nunca es mas alta que la botonera de madera. Pase 546: +15% (tope 1.95 / 1.2x la botonera) — pedido: las cartas se veían chicas en el celular.
-    const kMano = Math.min(1.95 * f, 1.2 * panelH / 118);
+    const kMano = Math.min(2.3 * f, 1.2 * panelH / 118);   // Pase 675: cartas de la mano +18% (tope 1.95 -> 2.3)
     const manoY = panelTop - 6;
 
     // Mesa: la imagen se parte en TRES franjas y solo la del medio se
@@ -1396,11 +1409,11 @@ _crearElementosDeTexto() {
       panelW, panelH, panelTop: panelTop + yOff, panelCY: panelCY + yOff, kMano, manoY: manoY + yOff,
       tableW, u, CORTE_A, CORTE_B, CORTE_C, PIES_Y: PIES_FINAL, altoTopNat, altoBotNat: altoBotNat + piesExtra, E, tableTop: tableTop + yOff, tableBottom: tableBottom + yOff,
       rivalY: rivalY + yOff, kRival, nombreY: nombreY + yOff, sT,
-      feltCY: feltCY + yOff, feltRY, dueloY: feltCY + yOff, dueloEscala, kBoton: 1.15 + 0.15 * f,
+      feltCY: feltCY + yOff, feltRY, dueloY: feltCY + yOff, dueloEscala, kBoton: 1.6 + 0.2 * f,
       f, kSeat: 1.35, perspCY: feltCY + yOff, perspRY: feltRY,
       eq2: { cyOld: 250, cy: feltCY + yOff, gy: (137 * sT + E / 2) / 130 },
       eq3,
-      indicadoresX: 62, manoIndY: panelTop - 26 + yOff, turnoX: 650, turnoY: panelTop - 26 + yOff,
+      indicadoresX: 62, manoIndY: panelTop - 26 + yOff, turnoX: 650, turnoY: panelTop - 14 + yOff,
     };
   }
 
@@ -1493,16 +1506,17 @@ _crearElementosDeTexto() {
   // y se recalculan el centro y el alto del paño que ven las cartas jugadas (hasta donde llega la mano propia).
   if (this._L && modo === 'app1v1') {
     const L = this._L;
-    const s = L.tableW / 840;
-    // Pase 673: la mesa sube 70 (con el mazo y el nombre del rival) para achicar el aire bajo la cabecera y dejar ver las patas hasta la botonera.
-    const SUBIR_MESA = 70;
-    if (!L._subidaMesa) {
-      L._subidaMesa = SUBIR_MESA;
-      L.rivalY -= SUBIR_MESA;
-      L.nombreY -= SUBIR_MESA;
+    // Pase 675: el mazo y el nombre del rival quedan pegados a la cabecera (nombre a ~26 bajo ella): la mesa sube lo que haga falta
+    // (antes eran 70 fijos y en celulares largos quedaba aire vacío) y se agranda hasta apoyar en la botonera.
+    if (L._subidaMesa === undefined) {
+      const delta = Math.round(L.nombreY - (L.HDR + 26));
+      L._subidaMesa = delta;
+      L.rivalY -= delta;
+      L.nombreY -= delta;
       if (this.nombreRivalAngosto && this.nombreRivalAngosto.scene) this.nombreRivalAngosto.setY(L.nombreY);
     }
-    const top = L.tableTop - SUBIR_MESA;
+    const top = L.tableTop - L._subidaMesa;
+    const s = Math.max(0.8, Math.min(0.92, (L.panelTop + 20 - top) / 919));
     this.mesaImg
       .setTexture('mesa1v1App')
       .setCrop()
@@ -6420,7 +6434,7 @@ _dibujarBotonesCanto(e) {
   // estos PNG (aspecto ~2.0-2.1, ver abajo) y los deformaba (puntas
   // "aplastadas") — se mantiene la altura fija (ALTO_BOTON_FIJO), pero el
   // ancho vuelve a salir del aspecto real de cada archivo.
-  const ALTO_BOTON_FIJO = 44;
+  const ALTO_BOTON_FIJO = this._L ? 52 : 44;   // Pase 675: botones más altos en el celular (altura táctil ~48-52 px)
 
   // Ducentésimo sexagésimo noveno pase: el usuario reportó que los botones
   // se ven "aplastados" (las puntas redondeadas de la píldora pierden su
@@ -6716,17 +6730,18 @@ _dibujarBotonesCanto(e) {
     // Pase 408: la pirámide de 2 filas se usa SIEMPRE (también en escritorio), nunca una sola fila larga.
     if (hayEnvido && itemsFila.length > 3) {
       const ids = ['envido', 'real-envido', 'falta-envido'];
-      const K2 = this._L ? 1.22 : 1;
-      const altoArriba = this._L ? 34 : 32, altoAbajo = this._L ? 44 : 38;
+      const K2 = 1;   // Pase 675: el agrandado del celular ahora viene de kBoton
+      const altoArriba = this._L ? 34 : 32, altoAbajo = this._L ? 52 : 38;
       const filaArriba = itemsFila.filter(it => ids.includes(it.id))
         .map(it => { const sp = specImagen(it.id, it.onClick); const c = CLAVE_IMAGEN_BOTON[it.id]; return { ...sp, alto: altoArriba, ancho: this._anchoBotonImagen(c, altoArriba) }; });
       const filaAbajo = itemsFila.filter(it => !ids.includes(it.id))
-        .map(it => { const sp = specImagen(it.id, it.onClick); const esTruco = it.id !== 'ir-al-mazo'; const h = esTruco ? Math.round(altoAbajo * 1.3) : altoAbajo; const c = CLAVE_IMAGEN_BOTON[it.id]; return { ...sp, alto: h, ancho: this._anchoBotonImagen(c, h) * F_ANCHO_EQ }; });
+        .map(it => { const sp = specImagen(it.id, it.onClick); const esTruco = it.id !== 'ir-al-mazo'; const h = esTruco ? Math.round(altoAbajo * (this._L ? 1.15 : 1.3)) : altoAbajo; const c = CLAVE_IMAGEN_BOTON[it.id]; return { ...sp, alto: h, ancho: this._anchoBotonImagen(c, h) * F_ANCHO_EQ }; });
       const kk = kB0 * K2;
       const sep = 8 * kk;
-      const hA = altoArriba * kk, hB = Math.round(altoAbajo * 1.3) * kk;
-      let yTop = Y_FILA_UNICA + 10 - (hB + sep) / 2;
-      let yBot = Y_FILA_UNICA + 10 + (hA + sep) / 2;
+      const hA = altoArriba * kk, hB = Math.round(altoAbajo * (this._L ? 1.15 : 1.3)) * kk;
+      const dyP = this._L ? 3 : 10;
+      let yTop = Y_FILA_UNICA + dyP - (hB + sep) / 2;
+      let yBot = Y_FILA_UNICA + dyP + (hA + sep) / 2;
       if (!this._L) {
         // Escritorio: la zona útil de la placa va de Y≈511 a 598 (el mundo termina en 600).
         const sepD = 5, tope = 511;
