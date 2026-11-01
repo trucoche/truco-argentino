@@ -1076,8 +1076,8 @@ _crearElementosDeTexto() {
     // "Sos mano" que pedía la placa alta — mover el texto de vuelta no se
     // pidió.
     this.turnoText = this.add.text(this._L ? this._L.turnoX : 690, this._L ? this._L.turnoY : 500, '', {
-      font: 'bold 15px Arial', fill: '#F0D9A0', stroke: '#2a1c14', strokeThickness: 3
-    }).setOrigin(0.5).setDepth(200);
+      font: this._L ? 'bold 26px Arial' : 'bold 15px Arial', fill: '#F0D9A0', stroke: '#2a1c14', strokeThickness: this._L ? 4 : 3
+    }).setOrigin(0.5).setDepth(this._L ? 210 : 200);   // Pase 679: en el celular, más grande y sobre la franja del panel
 
     this.timerText = this.add.text(400, 45, '', {
       font: 'bold 14px Arial', fill: '#ff8888', stroke: '#000000', strokeThickness: 2
@@ -1522,7 +1522,7 @@ _crearElementosDeTexto() {
     const top = Gtop - 16 * s;
     const extra = Math.max(0, apoyo - (top + 999 * s));
     const FA = 850, FB = 905;
-    this.mesaImg.setTexture('mesaEquiposApp').setCrop(0, 0, 800, FA).setOrigin(0.5, 0).setScale(s).setPosition(400, top);
+    this.mesaImg.setTexture('mesaEquiposApp').setCrop(0, 0, 800, FA + 1).setOrigin(0.5, 0).setScale(s).setPosition(400, top);
     if (!this._mesaAppExtra) {
       const dep = this.mesaImg.depth;
       this._mesaAppExtra = [this.add.image(400, 0, 'mesaEquiposApp').setOrigin(0.5, 0).setDepth(dep), this.add.image(400, 0, 'mesaEquiposApp').setOrigin(0.5, 0).setDepth(dep)];
@@ -1531,7 +1531,7 @@ _crearElementosDeTexto() {
       this._mesaAppExtra.forEach(o => o.setVisible(this.mesaImg.visible));
     }
     const kB = ((FB - FA) * s + extra) / ((FB - FA) * s);
-    this._mesaAppExtra[0].setTexture('mesaEquiposApp').setCrop(0, FA, 800, FB - FA).setScale(s, s * kB).setPosition(400, top + FA * s - FA * s * kB);
+    this._mesaAppExtra[0].setTexture('mesaEquiposApp').setCrop(0, FA, 800, FB - FA + 1).setScale(s, s * kB).setPosition(400, top + FA * s - FA * s * kB);
     this._mesaAppExtra[1].setTexture('mesaEquiposApp').setCrop(0, FB, 800, 1000 - FB).setScale(s).setPosition(400, top + extra);
     [this.mesaMedio, this.mesaPatas, this.mesaPies, this.marcaTcMesa].forEach(o => { if (o && o.scene) o.setVisible(false); });
     const pt = (xi, yi) => ({ x: Math.round(400 + (xi - 400) * s), y: Math.round(top + yi * s) });
@@ -1553,8 +1553,8 @@ _crearElementosDeTexto() {
     // mano propia como en la app: más chica que en 1v1 (queda aire entre mi carta jugada y la mano) y "Tu turno" sobre el borde de arriba de la mano
     L.kMano = 1.9;
     L.turnoX = 400;
-    L.turnoY = L.manoY - 0.85 * 118 * L.kMano - 19 * L.kMano - 8;
-    if (this.sombraMesa) this.sombraMesa.setPosition(400, top + 999 * s + extra - 10).setSize(560 * s, 50);
+    L.turnoY = L.panelTop + 15;   // Pase 679: sobre la franja de remaches, debajo de la mano
+    if (this.sombraMesa) this.sombraMesa.setPosition(400, top + 999 * s + extra - 10).setSize(560 * s, 50).setAlpha(0);   // Pase 679
     return;
   }
 
@@ -1598,15 +1598,15 @@ _crearElementosDeTexto() {
     const visBot = Math.min(feltBot, handTop + 20);
     // Pase 678: "Tu turno" centrado sobre el borde de arriba de la mano (antes quedaba sobre la tercera carta)
     L.turnoX = 400;
-    L.turnoY = handTop - 16;
-    if (this.turnoText && this.turnoText.scene) this.turnoText.setPosition(L.turnoX, L.turnoY).setFontSize(24);
+    L.turnoY = L.panelTop + 15;   // Pase 679: centrado sobre la franja de remaches, debajo de la mano (como en la app)
+    if (this.turnoText && this.turnoText.scene) this.turnoText.setPosition(L.turnoX, L.turnoY).setDepth(210);
     const centro = (feltTop + visBot) / 2;
     L.feltCY = centro;
     L.dueloY = centro;
     L.perspCY = centro;
     L.feltRY = (visBot - feltTop) / 2;
     L.dueloEscala = Math.min(0.66 * 1.9 * L.f, 0.95 * (visBot - feltTop) / 234);
-    if (this.sombraMesa) this.sombraMesa.setPosition(400, top + 919 * s + extra - 10).setSize(660 * s, 56);   // Pase 676: la sombra queda en el piso, bajo las patas
+    if (this.sombraMesa) this.sombraMesa.setPosition(400, top + 919 * s + extra - 10).setSize(660 * s, 56).setAlpha(0);   // Pase 679: sin sombra de mesa en el celular
     return;
   }
 
@@ -3179,7 +3179,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
     const anchoGrupo = (n) => (n > 0 ? n * paso - gapIntra : 0);
     const anchoFila = anchoGrupo(izq.length) + (izq.length && der.length ? gapEscudo : 0) + anchoGrupo(der.length);
     let cursorX = 400 - anchoFila / 2 + tamano / 2;
-    const cyAv = finalGrande ? Math.max(216, Math.round(0.31 * HnFinal)) : 184;   // Pase 659: cartel más arriba y avatares más chicos: 22 px de aire bajo el cartel
+    const cyAv = finalGrande ? Math.max(216, Math.round(0.345 * HnFinal)) : 184;   // Pase 679: avatares un poco más abajo (el bloque de datos y botones queda más junto)   // Pase 659: cartel más arriba y avatares más chicos: 22 px de aire bajo el cartel
 
     const radio = tamano / 2;
     const radioFoto = radio * 0.72;
@@ -3511,6 +3511,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
       y += hP + GAP_MOD;
     }
 
+    if (finalGrande) y += 30;   // Pase 679: respira entre los nombres y la barra de datos
     // Pase 658: resumen de la partida (manos, duración y cómo jugué) en una franja, para aprovechar el espacio.
     let resumenDibujado = false;
     const resumenFinal = recompensa && recompensa.resumen && Number(recompensa.resumen.manos) > 0 ? recompensa.resumen : null;
@@ -3544,7 +3545,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
 
     if (!resumenDibujado && modo !== 'neutro') y += 2;   // sin barra de datos: 22 + 2 = 24 px antes de los botones
     // Pase 669: en el celular 1v1 la botonera baja hasta ~72 % del alto de la vista, como en la app.
-    if (finalGrande && modo !== 'neutro') y = Math.max(y, Math.round(0.72 * HnFinal));
+    if (finalGrande && modo !== 'neutro') y = Math.max(y, Math.round(0.69 * HnFinal));
     // 6) Botonera vertical en cápsulas 3D
     // Pase 677: altura táctil de ~50 px reales (tope 66 de mundo); la letra y el ancho acompañan.
     const altoBoton = finalGrande ? Math.max(54, Math.min(66, Math.ceil(50 / (this.cameras.main.zoom || 1)))) : 42;
@@ -3844,10 +3845,10 @@ _renderizarEstado(animarReparto) {
     if (relojEsMio && !Array.isArray(e.companeros)) {
       const padX = 6, padY = 3;
       this._anilloRect = {
-        x: this.turnoText.x - this.turnoText.width / 2 - padX,
-        y: this.turnoText.y - this.turnoText.height / 2 - padY,
-        w: this.turnoText.width + padX * 2,
-        h: this.turnoText.height + padY * 2,
+        x: this.turnoText.x - this.turnoText.displayWidth / 2 - padX,
+        y: this.turnoText.y - this.turnoText.displayHeight / 2 - padY,
+        w: this.turnoText.displayWidth + padX * 2,
+        h: this.turnoText.displayHeight + padY * 2,
         r: 8,
       };
     }
@@ -4989,13 +4990,13 @@ _dibujarManoJugador(cartas, yBase, jugable, animar = false) {
     // tamaño con setDisplaySize: mesa 690 de ancho -> carta de 1.2*86 = 103 (~15%
     // del ancho de la mesa); en el layout angosto la ancla es kMano (<= alto de la botonera).
     const kM = this._L ? this._L.kMano : 1.2;
-    const anchoCarta = 86 * kM;
     const altoCarta  = 118 * kM;
+    const anchoCarta = this._L ? altoCarta * 2 / 3 : 86 * kM;   // Pase 679: en el celular la mano tiene la misma proporción (2:3) que las cartas jugadas, sin achatar
     const cantidad   = cartas.length;
 
-    const anguloTotalMax = 26;
+    const anguloTotalMax = this._L ? 36 : 26;   // Pase 679: abanico más abierto en el celular
     const anguloPorCarta = cantidad > 1 ? anguloTotalMax / (cantidad - 1) : 0;
-    const espaciadoX = 70 * kM;
+    const espaciadoX = this._L ? anchoCarta * 0.9 : 70 * kM;   // Pase 679: cada carta tapa solo ~10% de la anterior (el índice de arriba a la izquierda queda a la vista)
     // 19 (antes 25) — la carta del medio invadía bastante el centro del
     // tapete al levantarse; se acortó el "bulto" del abanico para que la
     // mano se sienta anclada más cerca de la botonera y no tan metida en la
@@ -5024,7 +5025,7 @@ _dibujarManoJugador(cartas, yBase, jugable, animar = false) {
       // pase): sin esto, la mano quedaba "flotando" sin ningún punto de
       // apoyo visual sobre el paño (feedback del usuario). No se animan por
       // separado durante el reparto — nacen ya con el resto de la carta.
-      if (!animar) {
+      if (!animar && !this._L) {   // Pase 679: en el celular la mano va limpia, sin sombras debajo
         // Origin de la carta es (0.5, 0.85) — el borde inferior real ya
         // está muy cerca del punto de anclaje (yBase), a solo altoCarta*0.15
         // por debajo. La sombra se centra justo ahí (no más abajo, como en
@@ -5830,7 +5831,7 @@ _volarCartaJugada(img, sombra, carta, destX, destY, anchoF, altoF, rot, sombraAl
 // oliva (equipo propio) o borgoña (rivales). En su turno se dora y recibe un resplandor dorado que
 // respira (reemplaza al cartel flotante "Tu turno" en equipos). Devuelve la geometría para el anillo
 // de tiempo y la zona clickeable.
-_dibujarPlacaNombre(cx, yNombre, nombre, kS, { turno = false, acento = 0x7F8F38, mano = false, rival = false } = {}) {
+_dibujarPlacaNombre(cx, yNombre, nombre, kS, { turno = false, acento = 0x7F8F38, mano = false, rival = false, depthExtra = 0 } = {}) {
   const fsN = Math.round(12 * kS);
   let nombreCorto = String(nombre || '');
   if (nombreCorto.length > 14) nombreCorto = nombreCorto.slice(0, 13) + '…';
@@ -5839,7 +5840,7 @@ _dibujarPlacaNombre(cx, yNombre, nombre, kS, { turno = false, acento = 0x7F8F38,
     fontFamily: 'Nunito, Arial', fontSize: `${fsN}px`, fontStyle: '800',
     // Pase 447: nombre en verde oliva (mi equipo) o bronce rojizo (rivales); en turno se oscurece un poco para leerse sobre el dorado.
     color: rival ? (turno ? '#7A2E12' : '#8A3A1E') : (turno ? '#4F5A0E' : '#5D6B14'),
-  }).setOrigin(0.5).setDepth(50);
+  }).setOrigin(0.5).setDepth(50 + depthExtra);
   const padXp = 10 * kS, extraMano = iconoMano ? 15 * kS : 0;
   const pw = Math.ceil(nombreTxt.width + padXp * 2 + extraMano);
   const ph = Math.ceil(fsN + 11 * kS);
@@ -5847,7 +5848,7 @@ _dibujarPlacaNombre(cx, yNombre, nombre, kS, { turno = false, acento = 0x7F8F38,
   const px0 = cx - pw / 2, py0 = yNombre - ph / 2;
   nombreTxt.setX(px0 + padXp + nombreTxt.width / 2);
   // Pase 450: sin resplandor ni animación de luz; el turno se marca solo con el dorado liso de la placa.
-  const placa = this.add.graphics().setDepth(49);
+  const placa = this.add.graphics().setDepth(49 + depthExtra);
   placa.fillStyle(0x000000, 0.35);
   placa.fillRoundedRect(px0, py0 + 2, pw, ph, 7);
   placa.fillStyle(turno ? 0xB9791A : (rival ? 0x3A1F0F : 0x8A5B2F), 1);   // Pase 447: madera clara (equipo) / oscura (rivales)
@@ -5865,7 +5866,7 @@ _dibujarPlacaNombre(cx, yNombre, nombre, kS, { turno = false, acento = 0x7F8F38,
   // rivales: bronce con centro rojo apagado.
   const sw = 12 * kS, sh = 15 * kS;
   [px0 - 3 * kS, px0 + pw + 3 * kS].forEach(sx => {
-    const esc = this.add.graphics().setDepth(51);
+    const esc = this.add.graphics().setDepth(51 + depthExtra);
     const forma = (k) => {
       const w = sw * k / 2, h = sh * k / 2;
       return [
@@ -5886,7 +5887,7 @@ _dibujarPlacaNombre(cx, yNombre, nombre, kS, { turno = false, acento = 0x7F8F38,
     this._sprites.push(esc);
   });
   if (iconoMano) {
-    const ic = this.add.image(px0 + pw - padXp - 3 * kS, yNombre, 'medalla_mano').setDisplaySize(14 * kS, 14 * kS).setDepth(51);
+    const ic = this.add.image(px0 + pw - padXp - 3 * kS, yNombre, 'medalla_mano').setDisplaySize(14 * kS, 14 * kS).setDepth(51 + depthExtra);
     this._sprites.push(ic);
   }
   this._sprites.push(nombreTxt);
@@ -5899,7 +5900,7 @@ _dibujarPlacaTurnoPropia() {
   const kS = this._L ? this._L.kSeat : 1;
   const cx = this._L ? this._L.turnoX : 690;
   const cy = this._L ? this._L.turnoY : 500;
-  const r = this._dibujarPlacaNombre(cx, cy, (this.usuario && this.usuario.username) || 'Vos', kS, { turno: true, acento: 0x7F8F38 });
+  const r = this._dibujarPlacaNombre(cx, cy, (this.usuario && this.usuario.username) || 'Vos', kS, { turno: true, acento: 0x7F8F38, depthExtra: this._L ? 160 : 0 });
   this._anilloRect = { x: r.px0 - 2, y: r.py0 - 2, w: r.pw + 4, h: r.ph + 4, r: 8 };
 }
 
@@ -6588,7 +6589,7 @@ _dibujarBotonesCanto(e) {
     const anchoNatural = (specs.reduce((acc, s) => acc + s.ancho, 0) + gap * (specs.length - 1)) * kB;
     // Pase 678: en equipos del celular la fila se corre a la izquierda para no pisar el botón de señas (esquina inferior derecha).
     const filaConSena = esEq && !!this._L;
-    const anchoDisponible = filaConSena ? 593 : this.anchoBotonera - 40 - (esEq && !this._L ? 111 : 0);
+    const anchoDisponible = filaConSena ? 580 : this.anchoBotonera - 40 - (esEq && !this._L ? 111 : 0);
     // Freno de emergencia: la única fila donde el ancho nativo de verdad no
     // entra es la fusionada de 5 (Truco+Envido+RealEnvido+FaltaEnvido+
     // IrAlMazo, gap 8 — ver pase 97). Si no entra, se achica TODA la fila
@@ -6601,7 +6602,7 @@ _dibujarBotonesCanto(e) {
     const factor = anchoNatural > anchoDisponible ? anchoDisponible / anchoNatural : 1;
     const gapFinal = gap * factor * kB;
     const anchoTotal = anchoNatural * factor;
-    let cursorX = (filaConSena ? 380 : CENTRO_X) - anchoTotal / 2;
+    let cursorX = (filaConSena ? 368 : CENTRO_X) - anchoTotal / 2;
     specs.forEach((s) => {
       const anchoFinal = s.ancho * factor * kB;
       const altoFinal = s.alto * factor * kB;
@@ -6976,9 +6977,10 @@ _dibujarBotonCartasEquipo(e) {
   this._crearTexturasBotonSena();
   const kB0 = this._L ? this._L.kBoton : 1;
   // Pase 678 (celular): botón de señas redondo en la esquina inferior derecha del panel, como en la app (la fila de botones le deja lugar).
-  const d = this._L ? Math.round(40 * kB0) : Math.round(44 * kB0);
-  const x = this._L ? 400 + this._L.panelW / 2 - 30 : 400 + this._anchoPanelBotonera / 2 - 46 * kB0;
-  const y = this._L ? this._L.panelTop + this._L.panelH - 47 : this.yCentroBotonera + 8;
+  // Pase 679: en el celular el botón va DENTRO de la madera, en la esquina superior derecha, justo bajo la franja de remaches.
+  const d = this._L ? Math.round(32 * kB0) : Math.round(44 * kB0);
+  const x = this._L ? 400 + this._L.panelW / 2 - Math.round(d / 2) - 14 : 400 + this._anchoPanelBotonera / 2 - 46 * kB0;
+  const y = this._L ? this._L.panelTop + 42 + Math.round(d / 2) : this.yCentroBotonera + 8;
   const activo = !!e.compartiendoMiMano;
   const r = d / 2;
 
