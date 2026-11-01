@@ -18,6 +18,15 @@ function leerMarcadorEstilo() {
   try { return localStorage.getItem(CLAVE_MARCADOR_ESTILO) === 'fosforos' ? 'fosforos' : 'numeros'; } catch (e) { return 'numeros'; }
 }
 
+
+// Pase 683: celular (pantalla táctil, lado corto < 500 px) girado en horizontal.
+function esCelularApaisado() {
+  if (typeof window === 'undefined') return false;
+  const w = window.innerWidth, h = window.innerHeight;
+  if (w <= h || Math.min(w, h) >= 500) return false;
+  try { return !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches); } catch (e) { return false; }
+}
+
 export default function GameOnlinePhaser({
   token, usuario, codigoSala, onVolverLobby, onRevancha, onVerBracket,
   musicaVolumen, onCambiarMusicaVolumen,
@@ -43,6 +52,12 @@ export default function GameOnlinePhaser({
   // recrear el juego cuando la ventana cruza el umbral (o cambia mucho de
   // proporcion, por ejemplo al girar el celular).
   const [angosto, setAngosto] = useState(() => esLayoutAngosto());
+  // Pase 683: celular girado (horizontal). En horizontal el layout de escritorio pide un canvas de 1100x825 × la densidad de pantalla
+  // (~3300x2475 px en un celular): destruir y recrear el juego con eso colgó el teléfono. En su lugar, la mesa no se recrea y se
+  // muestra un aviso para volver a vertical.
+  const [apaisado, setApaisado] = useState(() => esCelularApaisado());
+  const apaisadoRef = useRef(apaisado);
+  apaisadoRef.current = apaisado;
   const [claveLayout, setClaveLayout] = useState(0);
   const relacionInicialRef = useRef(typeof window !== 'undefined' ? window.innerHeight / window.innerWidth : 1);
   const codigoSalaRef = useRef(codigoSala);
@@ -126,7 +141,7 @@ export default function GameOnlinePhaser({
   }, []);
 
 useEffect(() => {
-    if (!gameRef.current) {
+    if (!gameRef.current && !esCelularApaisado()) {
       const angostoAhora = esLayoutAngosto();
       relacionInicialRef.current = window.innerHeight / window.innerWidth;
       gameRef.current = new Phaser.Game(crearConfigOnline(angostoAhora));
@@ -181,6 +196,11 @@ useEffect(() => {
     const alCambiarTamano = () => {
       clearTimeout(timer);
       timer = setTimeout(() => {
+        // Pase 683: celular en horizontal → solo aviso, no se recrea el juego (ver `apaisado`).
+        const horizontal = esCelularApaisado();
+        setApaisado(horizontal);
+        if (horizontal) return;
+        if (!gameRef.current) { setAngosto(esLayoutAngosto()); setClaveLayout(k => k + 1); return; }   // el juego no llegó a crearse (se abrió en horizontal)
         const ahora = esLayoutAngosto();
         const relacion = window.innerHeight / window.innerWidth;
         const cambioMucho = ahora && Math.abs(relacion - relacionInicialRef.current) / relacionInicialRef.current > 0.2;
@@ -191,7 +211,8 @@ useEffect(() => {
       }, 300);
     };
     window.addEventListener('resize', alCambiarTamano);
-    return () => { clearTimeout(timer); window.removeEventListener('resize', alCambiarTamano); };
+    window.addEventListener('orientationchange', alCambiarTamano);
+    return () => { clearTimeout(timer); window.removeEventListener('resize', alCambiarTamano); window.removeEventListener('orientationchange', alCambiarTamano); };
   }, [angosto]);
 
 useEffect(() => {
@@ -283,6 +304,15 @@ useEffect(() => {
     <div style={estilosPagina.fondoPagina}>
       <div style={angosto ? estilosPagina.contenedorJuegoAngosto : estilosPagina.contenedorJuego}>
         <div id="game-container" style={{ width: '100%', height: '100%' }} />
+        {apaisado && (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 3000, background: '#1d130c', color: '#FFF3DC', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, padding: 20, textAlign: 'center', fontFamily: 'Fredoka, Nunito, Arial, sans-serif' }}>
+            <div style={{ width: 34, height: 58, border: '4px solid #FFD98A', borderRadius: 8, position: 'relative' }}>
+              <div style={{ position: 'absolute', left: '50%', bottom: 5, width: 8, height: 8, marginLeft: -4, borderRadius: '50%', background: '#FFD98A' }} />
+            </div>
+            <div style={{ fontSize: 20, fontWeight: 700 }}>Girá el celular en vertical</div>
+            <div style={{ fontSize: 14, opacity: 0.8, maxWidth: 280 }}>La mesa se juega en vertical. Tu partida sigue en curso.</div>
+          </div>
+        )}
         {fotoLimpia && (
           // Salida escondida del Modo foto: esquina superior izquierda, invisible.
           <div onClick={() => { window.location.href = '/'; }} style={{ position: 'absolute', top: 0, left: 0, width: 56, height: 56, zIndex: 90, cursor: 'default' }} />
