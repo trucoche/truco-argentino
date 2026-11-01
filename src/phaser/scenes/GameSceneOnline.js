@@ -142,6 +142,8 @@ export default class GameSceneOnline extends Phaser.Scene {
     this._sprites   = [];
     this._numeroRondaAnterior = undefined;
     this._mesaModoActual = null;
+    this._geoEq = null;
+    this._mesaAppExtra = null;
     // Pase 208 — pantalla de espera con avatares reales por jugador (pedido
     // del usuario, con una imagen de referencia armada con IA): se llenan
     // desde el evento 'jugador-unido' (ver _conectarSocket), que ahora manda
@@ -252,6 +254,7 @@ preload() {
     this.load.image('mesaRedonda3v3', conVersion('assets/images/juego/mesa-truco-3v3.webp'));
     // Pase 667: la mesa 1v1 de la app (redonda vista desde arriba, con patas) para el layout del celular.
     this.load.image('mesa1v1App', conVersion('assets/images/juego/mesa-1v1-app.webp'));
+    this.load.image('mesaEquiposApp', conVersion('assets/images/juego/mesa-equipos-app.webp'));   // Pase 678: mesa vertical de la app para 2v2 y 3v3 (800x1000)
     // Pase 394: la misma mesa SIN la marca "TC" (que va como imagen aparte) — la usa el layout angosto, que estira el paño.
     this.load.image('mesaRedondaLimpia', conVersion('assets/images/juego/mesa-truco-nueva-sin-marca.webp'));
     this.load.image('marcaTcMesa', conVersion('assets/images/juego/marca-tc-mesa.png'));
@@ -1475,7 +1478,10 @@ _crearElementosDeTexto() {
 
   _ajustarMesaSegunAsientos(cantidadAsientos) {
   // Pase 667: en el celular (layout angosto) el 1v1 usa la mesa de la app ('app1v1'); 2v2 y 3v3 siguen como estaban.
-  const modo = cantidadAsientos === 5 ? '3v3' : (cantidadAsientos === 2 && this._L && this.textures.exists('mesa1v1App') ? 'app1v1' : 'normal');
+  // Pase 678: en el celular, 2v2 (3 asientos) y 3v3 (5) usan la mesa vertical de la app ('eqApp').
+  const eqApp = !!this._L && this.textures.exists('mesaEquiposApp') && (cantidadAsientos === 3 || cantidadAsientos === 5);
+  const modo = eqApp ? 'eqApp' : (cantidadAsientos === 5 ? '3v3' : (cantidadAsientos === 2 && this._L && this.textures.exists('mesa1v1App') ? 'app1v1' : 'normal'));
+  if (modo !== 'eqApp') this._geoEq = null;
   if (modo === this._mesaModoActual) return;
   this._mesaModoActual = modo;
   // Pase 440: en 3v3 no va el halo cálido de atrás de la mesa (se leía como un haz de luz
@@ -1504,6 +1510,54 @@ _crearElementosDeTexto() {
   // Pase 667: mesa 1v1 de la app en el celular. Una sola imagen (840x919: aro redondo, paño de 649x560 centrado en (420, 331) y patas),
   // sin estirar. El borde de arriba queda donde estaba el de la mesa anterior (el mazo y el nombre del rival siguen apoyados igual),
   // y se recalculan el centro y el alto del paño que ven las cartas jugadas (hasta donde llega la mano propia).
+  // Pase 678: mesa vertical de la app (800x1000: aro ovalado alto, paño al centro y patas con tablas). Una sola imagen que sube
+  // pegada a la cabecera y apoya en la botonera; si sobra alto, solo se estiran las tablas lisas de las patas (filas 850-905).
+  // Se arma `this._geoEq` con los puestos de cada asiento (mazos), las zonas de las cartas jugadas y la fila propia.
+  if (this._L && modo === 'eqApp') {
+    const L = this._L;
+    const dos = cantidadAsientos === 3;
+    const Gtop = L.HDR + 70;                 // borde de arriba del aro
+    const apoyo = L.panelTop + 6;            // las patas llegan a la franja de remaches
+    const s = Math.max(0.78, Math.min(0.94, (apoyo - Gtop) / 983));   // tope 0.94: los mazos de los costados tienen que verse enteros
+    const top = Gtop - 16 * s;
+    const extra = Math.max(0, apoyo - (top + 999 * s));
+    const FA = 850, FB = 905;
+    this.mesaImg.setTexture('mesaEquiposApp').setCrop(0, 0, 800, FA).setOrigin(0.5, 0).setScale(s).setPosition(400, top);
+    if (!this._mesaAppExtra) {
+      const dep = this.mesaImg.depth;
+      this._mesaAppExtra = [this.add.image(400, 0, 'mesaEquiposApp').setOrigin(0.5, 0).setDepth(dep), this.add.image(400, 0, 'mesaEquiposApp').setOrigin(0.5, 0).setDepth(dep)];
+      const visOrig = this.mesaImg.setVisible.bind(this.mesaImg);
+      this.mesaImg.setVisible = (v) => { visOrig(v); this._mesaAppExtra.forEach(o => { if (o && o.scene) o.setVisible(v); }); return this.mesaImg; };
+      this._mesaAppExtra.forEach(o => o.setVisible(this.mesaImg.visible));
+    }
+    const kB = ((FB - FA) * s + extra) / ((FB - FA) * s);
+    this._mesaAppExtra[0].setTexture('mesaEquiposApp').setCrop(0, FA, 800, FB - FA).setScale(s, s * kB).setPosition(400, top + FA * s - FA * s * kB);
+    this._mesaAppExtra[1].setTexture('mesaEquiposApp').setCrop(0, FB, 800, 1000 - FB).setScale(s).setPosition(400, top + extra);
+    [this.mesaMedio, this.mesaPatas, this.mesaPies, this.marcaTcMesa].forEach(o => { if (o && o.scene) o.setVisible(false); });
+    const pt = (xi, yi) => ({ x: Math.round(400 + (xi - 400) * s), y: Math.round(top + yi * s) });
+    const xLado = Math.round(Math.min(338 * s, 312));   // mazos de los costados: pegados al aro, pero enteros dentro de la vista (40..760)
+    const yDeckTop = L.HDR + 80;
+    const zona = (xi, yi, sx, rot) => ({ ...pt(xi, yi), sx, rot });
+    const G = { s, top, extra };
+    if (dos) {
+      G.seat = { 270: { x: 400, y: yDeckTop }, 180: { ...pt(62, 410), x: 400 - xLado }, 0: { ...pt(738, 410), x: 400 + xLado } };
+      G.zona = { 270: zona(400, 176, 1, 2), 180: zona(272, 410, -1, -6), 0: zona(528, 410, 1, 6) };
+    } else {
+      G.seat = { 270: { x: 400, y: yDeckTop }, 210: { ...pt(62, 300), x: 400 - xLado }, 330: { ...pt(738, 300), x: 400 + xLado }, 150: { ...pt(62, 575), x: 400 - xLado }, 30: { ...pt(738, 575), x: 400 + xLado } };
+      G.zona = { 270: zona(400, 160, 1, 0), 210: zona(262, 300, -1, -8), 330: zona(538, 300, 1, 8), 150: zona(262, 470, -1, -12), 30: zona(538, 470, 1, 12) };
+    }
+    G.miY = pt(400, 600).y;
+    G.feltCY = pt(400, 400).y;
+    G.feltRY = 330 * s;
+    this._geoEq = G;
+    // mano propia como en la app: más chica que en 1v1 (queda aire entre mi carta jugada y la mano) y "Tu turno" sobre el borde de arriba de la mano
+    L.kMano = 1.9;
+    L.turnoX = 400;
+    L.turnoY = L.manoY - 0.85 * 118 * L.kMano - 19 * L.kMano - 8;
+    if (this.sombraMesa) this.sombraMesa.setPosition(400, top + 999 * s + extra - 10).setSize(560 * s, 50);
+    return;
+  }
+
   if (this._L && modo === 'app1v1') {
     const L = this._L;
     // Pase 675: el mazo y el nombre del rival quedan pegados a la cabecera (nombre a ~26 bajo ella): la mesa sube lo que haga falta
@@ -1542,6 +1596,10 @@ _crearElementosDeTexto() {
     const handH = 118 * L.kMano;
     const handTop = L.manoY - 0.85 * handH - 19 * L.kMano;
     const visBot = Math.min(feltBot, handTop + 20);
+    // Pase 678: "Tu turno" centrado sobre el borde de arriba de la mano (antes quedaba sobre la tercera carta)
+    L.turnoX = 400;
+    L.turnoY = handTop - 16;
+    if (this.turnoText && this.turnoText.scene) this.turnoText.setPosition(L.turnoX, L.turnoY).setFontSize(24);
     const centro = (feltTop + visBot) / 2;
     L.feltCY = centro;
     L.dueloY = centro;
@@ -2012,7 +2070,7 @@ _limpiarAvataresEspera() {
 // modo), así que acá solo se tocan al ocultar; al mostrar, se deja que
 // _renderizarEstado decida su visibilidad.
 _mostrarMarcadores(visible) {
-  [this.mesaMedio, this.mesaPatas, this.mesaPies, this.marcaTcMesa].forEach(o => { if (o && o.scene) o.setVisible(visible && this._mesaModoActual !== '3v3' && this._mesaModoActual !== 'app1v1'); });
+  [this.mesaMedio, this.mesaPatas, this.mesaPies, this.marcaTcMesa].forEach(o => { if (o && o.scene) o.setVisible(visible && this._mesaModoActual !== '3v3' && this._mesaModoActual !== 'app1v1' && this._mesaModoActual !== 'eqApp'); });
   [this.scoreBg, this.scoreText, this.labelPropio, this.fondoInfoRival, this.scoreTextRival]
     .forEach(o => { if (o && o.scene) o.setVisible(visible); });
   (this._cabeceraObjs || []).forEach(o => { if (o && o.scene) o.setVisible(visible); });   // Pase 672
@@ -3982,6 +4040,13 @@ _renderizarEquipos(e, animarReparto, hayCantoSinResolver) {
     const radioY = esTresVTres ? 235 : 100;
 
     this._ajustarMesaSegunAsientos(totalAsientos);
+    const G = this._geoEq;   // Pase 678: mesa vertical de la app (celular)
+    if (G) {
+      this._eqMap = null;
+      this._centroMesaYActual = G.feltCY;
+      this._L.perspCY = G.feltCY;
+      this._L.perspRY = G.feltRY;
+    }
 
     const asientos = this._calcularAsientos(e.companeros, e.rivales);
     asientos.forEach(({ jugador, angulo, tipo }) => {
@@ -4074,6 +4139,10 @@ _renderizarEquipos(e, animarReparto, hayCantoSinResolver) {
         // rivales de los costados quedan a y=215, la misma altura que sus cartas jugadas.
         if (tipo === 'companero') py -= 60; else py -= 35;   // Pase 446: mazo lateral a la altura de su carta jugada (y=215)
       }
+      if (G) {
+        const pg = G.seat[Math.round(((angulo % 360) + 360) % 360)];
+        if (pg) { px = pg.x; py = pg.y; }
+      }
       this._dibujarJugador(jugador, px, py, angulo, tipo);
     });
 
@@ -4084,7 +4153,7 @@ _renderizarEquipos(e, animarReparto, hayCantoSinResolver) {
     // "carta rival" para enfrentar en este mismo lugar (las de compañeros/
     // rivales viven junto a cada asiento, ver _dibujarJugador), así que
     // sigue siendo una fila simple, sin DueloCartas.
-    this._dibujarFilaCartas(e.misJugadas, this._yEq(esTresVTres ? 276 : 269), false, false, (this._L ? 0.60 * 1.4 : 0.60) * 0.85, false, 30, esTresVTres ? 0 : -3);   // Pase 443: 2v2 sube 15% (340 -> 299) y cartas -15%
+    this._dibujarFilaCartas(e.misJugadas, G ? G.miY : this._yEq(esTresVTres ? 276 : 269), false, false, (this._L ? 0.60 * 1.4 : 0.60) * 0.85, false, 30, esTresVTres ? 0 : -3);   // Pase 443: 2v2 sube 15% (340 -> 299) y cartas -15%
     // Pase siguiente: mismo ajuste que en 1v1 (ver el otro call site,
     // dentro del bloque no-equipos de _renderizarEstado) — la mano
     // propia comparte la misma barra de botonera en cualquier modo.
@@ -4772,6 +4841,11 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
         };
         const z = ZONAS_3V3[Math.round(((angulo % 360) + 360) % 360)];
         if (z) { baseX = z.x; baseY = z.y; dirX = z.sx; dirY = z.sy; rotZona = z.rot * (Math.PI / 180); }
+      }
+      if (this._geoEq) {
+        // Pase 678: zonas sobre el paño de la mesa vertical (cerca de cada asiento).
+        const zg = this._geoEq.zona[Math.round(((angulo % 360) + 360) % 360)];
+        if (zg) { baseX = zg.x; baseY = zg.y; dirX = zg.sx; dirY = 0; rotZona = zg.rot * (Math.PI / 180); }
       }
       // Pase 215 — bug real encontrado: "únicamente se ven las primeras
       // cartas jugadas, las que le siguen no se ven" en 2v2. Los datos ya
@@ -5769,6 +5843,7 @@ _dibujarPlacaNombre(cx, yNombre, nombre, kS, { turno = false, acento = 0x7F8F38,
   const padXp = 10 * kS, extraMano = iconoMano ? 15 * kS : 0;
   const pw = Math.ceil(nombreTxt.width + padXp * 2 + extraMano);
   const ph = Math.ceil(fsN + 11 * kS);
+  if (this._L) cx = Math.min(756 - pw / 2 - 4 * kS, Math.max(44 + pw / 2 + 4 * kS, cx));   // Pase 678: la placa no se sale de la vista (el mundo visible va de 40 a 760)
   const px0 = cx - pw / 2, py0 = yNombre - ph / 2;
   nombreTxt.setX(px0 + padXp + nombreTxt.width / 2);
   // Pase 450: sin resplandor ni animación de luz; el turno se marca solo con el dorado liso de la placa.
@@ -6128,7 +6203,25 @@ _calcularPerspectiva(y) {
 // de "placa más vistosa" que ya se le dio al marco del avatar en el pase
 // 266 (`marcoAvatar`: 3 círculos concéntricos), pero en versión chica para
 // las puntas de un banner rectangular en vez de un círculo entero.
+_textoPanelCanto(texto) {
+  // Pase 678 (equipos en el celular): la pregunta del canto va escrita en el panel de madera, justo arriba de los botones (como en la app).
+  let t = String(texto || '');
+  const m = t.match(/^(.+): ¿Querés\?$/);
+  if (m) {
+    const n = m[1].toLowerCase();
+    const cap = n.replace(/(^|\s)(\S)/g, (_, a, b) => a + b.toUpperCase()).replace(' Al ', ' al ');
+    t = `¿Querés ${n.includes('flor') ? 'la' : 'el'} ${cap}?`;
+  }
+  const txt = this.add.text(400, this._L.panelTop + 56, t, {
+    fontFamily: 'Fredoka, Nunito, Arial', fontSize: '22px', fontStyle: '700', color: '#FFF3DC',
+    stroke: '#2a1008', strokeThickness: 4, align: 'center', wordWrap: { width: 560 },
+  }).setOrigin(0.5).setDepth(210);
+  this._sprites.push(txt);
+  return txt;
+}
+
 _crearBannerTexto(x, y, texto, depth = 200, { tamanoFuente = 14, colorTexto = '#4A2C2A', anchoWrap = 620, strokeTexto = null, conRemaches = false, iconoAnimado = false } = {}) {
+  if (this._L && this._geoEq && y === 491 && !iconoAnimado) return this._textoPanelCanto(texto);   // Pase 678
   const label = this.add.text(0, 0, texto, {
     fontFamily: 'Nunito, Arial', fontSize: `${tamanoFuente}px`, fontStyle: 'bold', color: colorTexto,
     align: 'center', wordWrap: { width: anchoWrap },
@@ -6493,7 +6586,9 @@ _dibujarBotonesCanto(e) {
   const centrarFila = (specs, y, gap = GAP, extraK = 1) => {
     const kB = kB0 * extraK;   // Pase 396: escala extra opcional por fila (botonera en dos filas)
     const anchoNatural = (specs.reduce((acc, s) => acc + s.ancho, 0) + gap * (specs.length - 1)) * kB;
-    const anchoDisponible = this.anchoBotonera - 40 - (esEq && !this._L ? 111 : 0);
+    // Pase 678: en equipos del celular la fila se corre a la izquierda para no pisar el botón de señas (esquina inferior derecha).
+    const filaConSena = esEq && !!this._L;
+    const anchoDisponible = filaConSena ? 593 : this.anchoBotonera - 40 - (esEq && !this._L ? 111 : 0);
     // Freno de emergencia: la única fila donde el ancho nativo de verdad no
     // entra es la fusionada de 5 (Truco+Envido+RealEnvido+FaltaEnvido+
     // IrAlMazo, gap 8 — ver pase 97). Si no entra, se achica TODA la fila
@@ -6506,7 +6601,7 @@ _dibujarBotonesCanto(e) {
     const factor = anchoNatural > anchoDisponible ? anchoDisponible / anchoNatural : 1;
     const gapFinal = gap * factor * kB;
     const anchoTotal = anchoNatural * factor;
-    let cursorX = CENTRO_X - anchoTotal / 2;
+    let cursorX = (filaConSena ? 380 : CENTRO_X) - anchoTotal / 2;
     specs.forEach((s) => {
       const anchoFinal = s.ancho * factor * kB;
       const altoFinal = s.alto * factor * kB;
@@ -6880,9 +6975,10 @@ _dibujarBotonCartasEquipo(e) {
   if (!this._anchoPanelBotonera) return;
   this._crearTexturasBotonSena();
   const kB0 = this._L ? this._L.kBoton : 1;
-  const d = Math.round(44 * kB0);
-  const x = 400 + this._anchoPanelBotonera / 2 - 46 * kB0;
-  const y = this.yCentroBotonera + (this._L ? 14 : 8);
+  // Pase 678 (celular): botón de señas redondo en la esquina inferior derecha del panel, como en la app (la fila de botones le deja lugar).
+  const d = this._L ? Math.round(40 * kB0) : Math.round(44 * kB0);
+  const x = this._L ? 400 + this._L.panelW / 2 - 30 : 400 + this._anchoPanelBotonera / 2 - 46 * kB0;
+  const y = this._L ? this._L.panelTop + this._L.panelH - 47 : this.yCentroBotonera + 8;
   const activo = !!e.compartiendoMiMano;
   const r = d / 2;
 
