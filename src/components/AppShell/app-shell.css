@@ -761,3 +761,16 @@
 
 /* Pase 322: placeholder del campo "Código de sala" en café grisáceo, negrita legible. */
 .ts-input-codigo::placeholder { color: #8D7B68; font-weight: 700; opacity: 1; }
+
+
+/* Pase 681: el nombre vive en un <span> interno con puntos suspensivos (en un contenedor flex el texto se recortaba por ambos lados). */
+.ts-nombre-int {
+  display: block;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
+}
+.ts-tarjeta-perfil-nombre, .ts-banner-texto { min-width: 0; }

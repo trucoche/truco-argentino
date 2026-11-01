@@ -73,6 +73,14 @@ function anilloEnHeader(usuario) {
   };
 }
 
+
+// Pase 681: nombres largos en la cabecera — la letra baja de 15 a 12 px según el largo y, si aun así no entra, se corta con "…".
+function tamNombre(texto, min, max) {
+  const n = String(texto || '').length;
+  if (n <= 11) return max;
+  return Math.max(min, Math.round((max * 11 / n) * 10) / 10);
+}
+
 export default function AppShell({
   usuario,
   token,
@@ -162,7 +170,7 @@ export default function AppShell({
                 />
               </div>
               {anilloHeader.anillo && <img src={anilloHeader.anillo.imagen} alt="" style={anilloHeader.anillo.estilo} />}
-              <div className="ts-tarjeta-perfil-nombre">{usuario?.username}</div>
+              <div className="ts-tarjeta-perfil-nombre"><span className="ts-nombre-int" style={{ fontSize: `${tamNombre(usuario?.username, 12, 15)}px` }}>{usuario?.username}</span></div>
               {/* Octogésimo octavo pase: el saldo se muestra siempre redondeado
                   a entero (pedido explícito del usuario) — defensivo del lado
                   del cliente, además del fix de fondo en el backend
@@ -335,7 +343,7 @@ export default function AppShell({
               backgroundRepeat: 'no-repeat',
             }}
           />
-          <span className="ts-banner-texto">{bannerTexto}</span>
+          <span className="ts-banner-texto"><span className="ts-nombre-int" style={{ fontSize: `${tamNombre(bannerTexto, 12, 15)}px` }}>{bannerTexto}</span></span>
         </button>
       )}
 

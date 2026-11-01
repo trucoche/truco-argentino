@@ -1,4 +1,5 @@
 import React from 'react';
+import { useLadoChat } from '../../utils/ladoChat';
 import PopupMadera from '../Popup/PopupMadera';
 
 const C = {
@@ -34,8 +35,10 @@ const C = {
 export default function ConfiguracionMesaModal({
   visible, onCerrar, musicaVolumen, onCambiarMusicaVolumen, vocesVolumen, onCambiarVocesVolumen, efectosVolumen = 1, onCambiarEfectosVolumen,
   marcadorEstilo = 'numeros', onCambiarMarcadorEstilo,
+  angosto = false,   // Pase 681: en el celular se ofrece el lado del botón de chat
   onRendirse,   // Pase 613: solo en partidas 1v1 en curso
 }) {
+  const [ladoChat, setLadoChat] = useLadoChat();
   if (!visible) return null;
 
   // Pase 325: pop-up de madera unificado (cinta, placa con 4 tachas, botón píldora 3D, X en chip).
@@ -153,6 +156,30 @@ export default function ConfiguracionMesaModal({
           })}
         </div>
       </div>
+
+      {/* Pase 681: lado del botón de chat (y del botón de señas en 2v2 / 3v3), como en la app. Solo se ve en el celular. */}
+      {angosto && (
+        <div style={estilos.fila}>
+          <label style={estilos.label}>Botón de chat y señas</label>
+          <div style={estilos.segmento} role="radiogroup" aria-label="Lado del botón de chat">
+            {[['izquierda', 'Izquierda'], ['derecha', 'Derecha']].map(([valor, texto]) => {
+              const activo = ladoChat === valor;
+              return (
+                <button
+                  key={valor}
+                  type="button"
+                  role="radio"
+                  aria-checked={activo}
+                  onClick={() => setLadoChat(valor)}
+                  style={{ ...estilos.segmentoBoton, ...(activo ? estilos.segmentoActivo : null) }}
+                >
+                  {texto}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <p style={estilos.notaFutura}>Más opciones de partida, próximamente.</p>
     </PopupMadera>

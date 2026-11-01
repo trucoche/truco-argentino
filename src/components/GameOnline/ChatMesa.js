@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { getSocket } from '../../services/socket';
 import PerfilRivalModal from '../PerfilRival/PerfilRivalModal';
 import { API_URL as BASE_URL } from '../../config';
+import { useLadoChat } from '../../utils/ladoChat';
 
 const API_BASE = `${BASE_URL}/api`;
 
@@ -19,6 +20,7 @@ function carpetaBaraja() {
 }
 
 export default function ChatMesa({ angosto = false, codigoSala, esEquipos, personaje = 'gaucho', token, usuarioActual }) {
+  const [ladoChat] = useLadoChat();   // Pase 681: en el celular el botón va del lado elegido en Configuración
   const [mensajes, setMensajes] = useState([]);
   // Centésimo quinto pase: usuarios bloqueados, para ocultar sus mensajes
   // (y stickers) del chat de la mesa sin tocar nada del socket — el
@@ -155,7 +157,7 @@ export default function ChatMesa({ angosto = false, codigoSala, esEquipos, perso
         <button
           onClick={() => { setAbierto(true); setHayNuevoMientrasCerrado(false); }}
           className="chat-mesa-btn"
-          style={angosto ? { ...estilos.botonAbrir, right: 8, width: 44, height: 44, top: 'calc(16.1vw + 36px)' } : estilos.botonAbrir}
+          style={angosto ? { ...estilos.botonAbrir, right: ladoChat === 'derecha' ? 8 : 'auto', left: ladoChat === 'izquierda' ? 8 : 'auto', width: 44, height: 44, top: 'calc(16.1vw + 36px)' } : estilos.botonAbrir}
           title="Chat"
           aria-label="Chat"
         >

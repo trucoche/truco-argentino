@@ -6,6 +6,7 @@ import ChatMesa from './ChatMesa';
 import AudioMesaBoton from './AudioMesaBoton';
 import ConfiguracionMesaBoton from './ConfiguracionMesaBoton';
 import ConfiguracionMesaModal from './ConfiguracionMesaModal';
+import { getSocket } from '../../services/socket';
 import PerfilRivalModal from '../PerfilRival/PerfilRivalModal';
 import AnotadorCriollo from './AnotadorCriollo';
 import { getConfigFoto } from '../../constants/modoFoto';
@@ -78,6 +79,22 @@ export default function GameOnlinePhaser({
     if (onLogrosDesbloqueados) onLogrosDesbloqueados(logros || []);
     if (onVolverLobby) onVolverLobby();
   };
+
+  // Pase 681: al SALIR de la mesa con la partida en curso (Atrás → "Salir igual") la web comparte el socket con el lobby y el
+  // chat, así que el servidor nunca se enteraba y la partida seguía. Se avisa explícitamente: arranca el reloj de gracia del
+  // equipo y la partida queda en pausa hasta que vuelva (o pierde por abandono). Va ANTES del efecto que crea el juego para
+  // que su limpieza corra primero y todavía exista la escena.
+  useEffect(() => () => {
+    try {
+      const sala = codigoSalaRef.current;
+      const escena = gameRef.current?.scene.getScene('GameSceneOnline');
+      if (!escena || !sala || String(sala).startsWith('PREVIEW_')) return;
+      const e = escena.estado;
+      if (e && e.rondaActiva && !e.juegoTerminado && !escena._pantallaFinalActiva) {
+        getSocket().emit('salir-de-mesa', { codigoSala: sala });
+      }
+    } catch (err) { /* sin socket */ }
+  }, []);
 
 useEffect(() => {
     if (!gameRef.current) {
@@ -258,6 +275,7 @@ useEffect(() => {
           onCambiarEfectosVolumen={onCambiarEfectosVolumen}
           marcadorEstilo={marcadorEstilo}
           onCambiarMarcadorEstilo={cambiarMarcadorEstilo}
+          angosto={angosto}
           onRendirse={puedeRendirse ? rendirme : undefined}
         />
         <AnotadorCriollo

@@ -143,6 +143,8 @@ export default class GameSceneOnline extends Phaser.Scene {
     this._numeroRondaAnterior = undefined;
     this._mesaModoActual = null;
     this._geoEq = null;
+    this._pausa = null;
+    this._revanchaCanceladaMensaje = null;
     this._pantallaFinalActiva = false;   // Pase 680: la pantalla final queda fija hasta tocar 'Volver al lobby'
     this._mesaAppExtra = null;
     // Pase 208 — pantalla de espera con avatares reales por jugador (pedido
@@ -1275,6 +1277,9 @@ _crearElementosDeTexto() {
 
     this._conectarSocket();
 
+    // Pase 681: si el jugador cambia el lado del chat en Configuración, el botón de señas y la botonera se reacomodan al instante.
+    this._onLadoChat = () => { try { if (this.estado && !this._pantallaFinalActiva && this.sys && this.sys.isActive()) this._renderizarEstado(false); } catch (err) { /* escena cerrada */ } };
+    window.addEventListener('tc-lado-chat', this._onLadoChat);
     this.events.once('shutdown', this._limpiarSocketListeners, this);
     this.events.once('destroy', this._limpiarSocketListeners, this);
   }
@@ -1554,7 +1559,7 @@ _crearElementosDeTexto() {
     // mano propia como en la app: más chica que en 1v1 (queda aire entre mi carta jugada y la mano) y "Tu turno" sobre el borde de arriba de la mano
     L.kMano = 1.9;
     L.turnoX = 400;
-    L.turnoY = L.panelTop + 15;   // Pase 679: sobre la franja de remaches, debajo de la mano
+    L.turnoY = L.panelTop - 23;   // Pase 681: en el arco que dejan las cartas en abanico, justo bajo la carta del medio
     if (this.sombraMesa) this.sombraMesa.setPosition(400, top + 999 * s + extra - 10).setSize(560 * s, 50).setAlpha(0);   // Pase 679
     return;
   }
@@ -1599,7 +1604,7 @@ _crearElementosDeTexto() {
     const visBot = Math.min(feltBot, handTop + 20);
     // Pase 678: "Tu turno" centrado sobre el borde de arriba de la mano (antes quedaba sobre la tercera carta)
     L.turnoX = 400;
-    L.turnoY = L.panelTop + 15;   // Pase 679: centrado sobre la franja de remaches, debajo de la mano (como en la app)
+    L.turnoY = L.panelTop - 23;   // Pase 681: centrado en el arco que forma el abanico, justo bajo la carta del medio (no sobre los remaches)
     if (this.turnoText && this.turnoText.scene) this.turnoText.setPosition(L.turnoX, L.turnoY).setDepth(210);
     const centro = (feltTop + visBot) / 2;
     L.feltCY = centro;
@@ -2875,6 +2880,13 @@ _conectarSocket() {
         this.estado = this._crearEstadoMockPorModo(modo);
       }
       if (this.onEsEquipos) this.onEsEquipos(Array.isArray(this.estado.companeros));
+      // Pase 681: `&canto=truco|retruco|envido|real|flor` simula un canto pendiente de respuesta (para ver las filas de Quiero / No quiero).
+      try {
+        const qc = new URLSearchParams(window.location.search).get('canto');
+        if (qc === 'truco' || qc === 'retruco') this.estado.truco = { ...this.estado.truco, nivel: qc, pendienteDeRespuesta: true, resuelto: false };
+        if (qc === 'envido' || qc === 'real') this.estado.envido = { ...this.estado.envido, tipo: qc === 'real' ? 'real-envido' : 'envido', pendienteDeRespuesta: true, resuelto: false };
+        if (qc === 'flor') this.estado.flor = { ...this.estado.flor, nivel: 'flor', pendienteDeRespuesta: true, resuelto: false };
+      } catch (err) { /* sin query */ }
       this._renderizarEstado(true);
       // Pase 680: `?preview=2v2&final=1` (o `final=perdiste`) muestra la pantalla final con datos de ejemplo (para ajustar el layout sin jugar).
       try {
@@ -2999,6 +3011,7 @@ _conectarSocket() {
       this._mostrarPantallaFinal(data.mensaje);
     });
       this.socket.off('juego-terminado').on('juego-terminado', (data) => {
+        if (this._pantallaFinalActiva) return;   // Pase 681: el servidor lo reenvía al volver a la mesa; si ya está la pantalla final, no se redibuja
         const gano = data.ganador === 'yo';
         if (gano) { try { this.sound.play('ganar', { volume: 0.8 * (this.efectosVolumen ?? 1) }); } catch (e) {} }
 
@@ -3049,7 +3062,17 @@ _conectarSocket() {
       if (this.onRevancha) this.onRevancha(data.codigoSala);
     });
     this.socket.off('revancha-cancelada').on('revancha-cancelada', (data) => {
+      this._revanchaCanceladaMensaje = data.mensaje;   // Pase 681: si la pantalla final todavía no se dibujó (reconexión), se aplica al dibujarla
       this._mostrarAlertaRevancha(data.mensaje);
+    });
+    // Pase 681: partida en pausa porque alguien se cayó o salió de la mesa (el servidor frena el reloj y no acepta jugadas).
+    this.socket.off('pausa-estado').on('pausa-estado', (data) => {
+      // El servidor manda `restanteMs` (no depende de que los relojes coincidan): se convierte a un límite en el reloj local.
+      const ahora = Date.now();
+      this._pausa = data && data.activa
+        ? { ...data, desconectados: (data.desconectados || []).map(d => ({ ...d, deadline: (typeof d.restanteMs === 'number') ? ahora + d.restanteMs : d.deadline })) }
+        : null;
+      this._actualizarPlacaPausa();
     });
     
     this.socket.off('turno-timer').on('turno-timer', (data) => {
@@ -3086,6 +3109,40 @@ _conectarSocket() {
     });
   }
 
+// Pase 681: placa de "Reconectando…" en el centro de la mesa mientras la partida está en pausa por un jugador caído.
+_actualizarPlacaPausa() {
+  const p = this._pausa;
+  if (!p || !p.activa || !p.desconectados || !p.desconectados.length || this._pantallaFinalActiva) {
+    if (this._placaPausa) { this._placaPausa.forEach(o => { if (o && o.scene) o.destroy(); }); this._placaPausa = null; }
+    if (this._timerPausa) { this._timerPausa.remove(false); this._timerPausa = null; }
+    return;
+  }
+  const L = this._L;
+  const cy = L ? (this._geoEq ? this._geoEq.feltCY : L.feltCY) : 300;
+  const cx = 400;
+  const nombres = p.desconectados.map(d => d.username);
+  const textoNombres = nombres.length === 1 ? nombres[0] : `${nombres.slice(0, 2).join(' y ')}${nombres.length > 2 ? '…' : ''}`;
+  if (!this._placaPausa) {
+    const fondo = this.add.graphics().setDepth(960);
+    const t1 = this.add.text(cx, cy - 16, '', { fontFamily: 'Nunito, Arial', fontSize: '22px', fontStyle: '800', color: '#FFF8ED', stroke: '#2C160E', strokeThickness: 4, align: 'center', wordWrap: { width: 460 } }).setOrigin(0.5).setDepth(961);
+    const t2 = this.add.text(cx, cy + 22, '', { fontFamily: 'Fredoka, Arial', fontSize: '26px', fontStyle: '700', color: '#FFD98A', stroke: '#2C160E', strokeThickness: 4, align: 'center' }).setOrigin(0.5).setDepth(961);
+    this._placaPausa = [fondo, t1, t2];
+    this._timerPausa = this.time.addEvent({ delay: 400, loop: true, callback: () => this._actualizarPlacaPausa() });
+  }
+  const [fondo, t1, t2] = this._placaPausa;
+  const hasta = Math.min(...p.desconectados.map(d => d.deadline || Infinity));
+  const seg = Number.isFinite(hasta) ? Math.max(0, Math.ceil((hasta - Date.now()) / 1000)) : null;
+  t1.setText(`${textoNombres} se desconectó\nReconectando…`);
+  t2.setText(seg === null ? '' : `${seg} s`);
+  t1.setPosition(cx, cy - 18); t2.setPosition(cx, cy + 34);
+  const w = 500, h = 130;
+  fondo.clear();
+  fondo.fillStyle(0x000000, 0.45); fondo.fillRoundedRect(cx - w / 2, cy - h / 2 + 4 - 6, w, h, 16);
+  fondo.fillStyle(0x4A2C1A, 0.96); fondo.fillRoundedRect(cx - w / 2, cy - h / 2 - 6, w, h, 16);
+  fondo.lineStyle(3, 0x1a0f08, 1); fondo.strokeRoundedRect(cx - w / 2, cy - h / 2 - 6, w, h, 16);
+  fondo.lineStyle(2, 0xC9A25A, 0.9); fondo.strokeRoundedRect(cx - w / 2 + 5, cy - h / 2 - 1, w - 10, h - 10, 12);
+}
+
 // Pase 680: datos de ejemplo para ver la pantalla final sin jugar (solo en las mesas PREVIEW_*).
 _mostrarPantallaFinalDePrueba(modo, variante) {
   const yo = (this.usuario && this.usuario.username) || 'catrielquintana';
@@ -3117,6 +3174,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
     // Pase 680: mientras esté la pantalla final, ningún estado nuevo, reconexión, timer o cambio de tamaño vuelve a dibujar la mesa.
     this._pantallaFinalActiva = true;
     this._revanchaCerrada = false;
+    this._pausa = null; this._actualizarPlacaPausa();
     this._ocultarCanto();
     this._destruirBannerEsperaTitulo();
     this._salaEnJuego = true;               // por si llega un 'jugador-unido' tardío: no redibujar la espera
@@ -3667,6 +3725,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
       this._sprites.push(vg);
     }
 
+    if (this._revanchaCanceladaMensaje && !esTorneo && modo !== 'neutro') this._mostrarAlertaRevancha(this._revanchaCanceladaMensaje);   // Pase 681
     // 7) Celebración: destellos junto al cartel y a los ganadores + papelitos
     if (modo === 'victoria') {
       const estrella = (ex, ey, tam, delay) => {
@@ -4912,7 +4971,8 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
       // Pase 217 — con 10px, en 2v2 costaba distinguir bien cuál carta se
       // había jugado; se sube a 14px, término medio entre el 16 (mucho
       // hueco) y el 10 (demasiado pegadas).
-      const pasoApilado = 14;
+      const kJug = this._geoEq ? 1.18 : 1;   // Pase 681: en la mesa vertical del celular las cartas jugadas son ~18 % más grandes (sobra lugar en el paño)
+      const pasoApilado = 14 * kJug;
 
       // Igual que _dibujarFilaCartas: pre-escalamos con el canvas de alta
       // calidad (mismo criterio que la mano y el dorso) al tamaño BASE, antes
@@ -4928,8 +4988,8 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
       // sube de 52x78 a 58x87 (misma proporción 2:3, ~1.12x), un ajuste
       // fino, no otro salto grande.
       const factorJugada = this._factorEscalaTextura();
-      const anchoBaseJugadaR = Math.round(58 * kS * factorJugada);
-      const altoBaseJugadaR = Math.round(87 * kS * factorJugada);
+      const anchoBaseJugadaR = Math.round(58 * kJug * kS * factorJugada);
+      const altoBaseJugadaR = Math.round(87 * kJug * kS * factorJugada);
 
       jugadas.forEach((carta, idx) => {
         const esUltima = idx === jugadas.length - 1;
@@ -6099,7 +6159,7 @@ _calcularPerspectiva(y) {
 
   _crearBoton({ x, y, ancho, alto = 44, texto, colorFondo, colorTexto, imagen = null,
               colorBorde = 0x4A2C2A, grosorBorde = 3, radio = 12, tamanoFuente = 15,
-              onClick, deshabilitado = false }) {
+              onClick, deshabilitado = false, escalaTexto = null }) {
   const contenedor = this.add.container(x, y).setDepth(200);
   const hijos = [];
 
@@ -6118,6 +6178,13 @@ _calcularPerspectiva(y) {
       partes.push(this.add.text(0, yTxt + Math.max(1, fs * 0.07), def.txt, { ...estiloTxt, color: '#fff4d6' }).setOrigin(0.5).setAlpha(0.7));
     }
     partes.push(this.add.text(0, yTxt, def.txt, { ...estiloTxt, color: P.texto, stroke: '#2c160e', strokeThickness: P.grabado ? 1 : Math.max(2, fs * 0.17) }).setOrigin(0.5));
+    if (this._L) {
+      // Pase 681: en las filas de 3-4 botones el texto largo ("CONTRAFLOR AL RESTO") se achica para entrar dentro del botón.
+      const tPrin = partes[partes.length - 1];
+      const wMax = ancho - alto * 0.65;
+      const sc = escalaTexto != null ? escalaTexto : (tPrin.width > wMax && wMax > 10 ? wMax / tPrin.width : 1);
+      if (sc < 1) partes.forEach(o => { if (o !== gRus) o.setScale(sc); });
+    }
     if (deshabilitado) partes.forEach(o => o.setAlpha(0.4));
     hijos.push(...partes);
   } else if (imagen === 'Tengo') {
@@ -6590,6 +6657,27 @@ _crearBotonOverlay({ x, y, ancho, alto = 44, texto, variante = 'dorado', tamanoF
   return { contenedor, img, label };
 }
 
+// Pase 681: lado elegido para el botón de chat (y de señas) en el celular; mismo valor que usa ChatMesa.
+_ladoChat() {
+  try { return localStorage.getItem('tc_lado_chat') === 'izquierda' ? 'izquierda' : 'derecha'; } catch (err) { return 'derecha'; }
+}
+
+// Pase 681: geometría de la botonera del celular (igual idea que la app: una grilla de ancho fijo dentro de la madera).
+// `x0..x1` = zona de los botones; en equipos se reserva a un costado el lugar del botón de señas (círculo `d`).
+_geoBotonera(esEq) {
+  const L = this._L;
+  const kB0 = L.kBoton;
+  const interior = L.panelW - 84;
+  const izq = 400 - interior / 2, der = 400 + interior / 2;
+  if (!esEq) return { x0: izq, x1: der, d: 0, xSena: 0 };
+  const d = Math.round(48 * kB0);
+  const hueco = d + 14;
+  const lado = this._ladoChat();
+  return lado === 'izquierda'
+    ? { x0: izq + hueco, x1: der, d, xSena: izq + d / 2 }
+    : { x0: izq, x1: der - hueco, d, xSena: der - d / 2 };
+}
+
 _dibujarBotonesCanto(e) {
   const CENTRO_X = 400;
   const GAP = 30;
@@ -6636,8 +6724,45 @@ _dibujarBotonesCanto(e) {
   // Pase 394: en layout angosto los botones crecen (la botonera es mas ancha).
   const kB0 = this._L ? this._L.kBoton : 1;
   const kB = kB0;
-  const centrarFila = (specs, y, gap = GAP, extraK = 1) => {
+  const centrarFila = (specs, y, gap = GAP, extraK = 1, extraK_dividida = false) => {
     const kB = kB0 * extraK;   // Pase 396: escala extra opcional por fila (botonera en dos filas)
+    if (this._L) {
+      // Pase 681 (celular): todos los botones de una fila miden lo mismo y reparten el ancho de la zona (como la app), con el
+      // mismo alto en todas las filas; el botón de señas (equipos) ocupa su lugar fijo a un costado.
+      const geo = this._geoBotonera(esEq);
+      // 4 o más botones en una fila quedarían con el texto diminuto: se parten en dos filas de igual cantidad (como la app).
+      if (specs.length >= 4 && !extraK_dividida) {
+        const mitad = Math.ceil(specs.length / 2);
+        const alto = specs[0].alto * kB;
+        const dy = alto / 2 + 5;
+        centrarFila(specs.slice(0, mitad), y - dy, gap, extraK, true);
+        centrarFila(specs.slice(mitad), y + dy, gap, extraK, true);
+        return;
+      }
+      const n = specs.length;
+      const sep = 10;
+      const zonaW = geo.x1 - geo.x0;
+      let bw = (zonaW - sep * (n - 1)) / n;
+      if (n <= 2) bw = Math.min(bw, (zonaW - sep) / 2);   // 1 o 2 botones: nunca más anchos que la mitad de la zona (quedan centrados)
+      const total = bw * n + sep * (n - 1);
+      let cx0 = (geo.x0 + geo.x1) / 2 - total / 2 + bw / 2;
+      // Todos los textos de la fila con el mismo tamaño: el del botón con el texto más largo, achicado lo justo para entrar.
+      let escalaFila = 1;
+      specs.forEach((s) => {
+        const def = s.imagen === 'Tengo' ? { txt: String(s.texto || '').toUpperCase() } : BOTON_RUSTICO[s.imagen];
+        if (!def) return;
+        const fsT = s.alto * kB * RATIO_FUENTE_RUSTICO;
+        const med = this.add.text(0, 0, def.txt, { fontFamily: 'Nunito, Arial', fontSize: `${fsT.toFixed(1)}px`, fontStyle: 'bold' });
+        const wT = med.width; med.destroy();
+        const disp = bw - s.alto * kB * 0.65;
+        if (wT > disp && disp > 10) escalaFila = Math.min(escalaFila, disp / wT);
+      });
+      specs.forEach((s) => {
+        this._crearBoton({ ...s, ancho: bw, alto: s.alto * kB, x: cx0, y, escalaTexto: escalaFila });
+        cx0 += bw + sep;
+      });
+      return;
+    }
     const anchoNatural = (specs.reduce((acc, s) => acc + s.ancho, 0) + gap * (specs.length - 1)) * kB;
     // Pase 678: en equipos del celular la fila se corre a la izquierda para no pisar el botón de señas (esquina inferior derecha).
     const filaConSena = esEq && !!this._L;
@@ -6678,7 +6803,7 @@ _dibujarBotonesCanto(e) {
   const specImagen = (idSemantico, onClick, opciones = {}) => {
     const clave = CLAVE_IMAGEN_BOTON[idSemantico];
     // Pase 406: la placa del Truco (y Retruco/Vale Cuatro) es 1.3x más grande — jerarquía visual.
-    const altoB = (BOTON_RUSTICO[clave] && BOTON_RUSTICO[clave].v === 'oro') ? Math.round(ALTO_BOTON_FIJO * 1.3) : ALTO_BOTON_FIJO;
+    const altoB = (!this._L && BOTON_RUSTICO[clave] && BOTON_RUSTICO[clave].v === 'oro') ? Math.round(ALTO_BOTON_FIJO * 1.3) : ALTO_BOTON_FIJO;   // Pase 681: en el celular Truco mide lo mismo que el resto
     return { alto: altoB, imagen: clave, ancho: this._anchoBotonImagen(clave, altoB), onClick, ...opciones };
   };
 
@@ -6906,14 +7031,14 @@ _dibujarBotonesCanto(e) {
     if (hayEnvido && itemsFila.length > 3) {
       const ids = ['envido', 'real-envido', 'falta-envido'];
       const K2 = 1;   // Pase 675: el agrandado del celular ahora viene de kBoton
-      const altoArriba = this._L ? 34 : 32, altoAbajo = this._L ? 52 : 38;
+      const altoArriba = this._L ? 38 : 32, altoAbajo = this._L ? 52 : 38;
       const filaArriba = itemsFila.filter(it => ids.includes(it.id))
         .map(it => { const sp = specImagen(it.id, it.onClick); const c = CLAVE_IMAGEN_BOTON[it.id]; return { ...sp, alto: altoArriba, ancho: this._anchoBotonImagen(c, altoArriba) }; });
       const filaAbajo = itemsFila.filter(it => !ids.includes(it.id))
-        .map(it => { const sp = specImagen(it.id, it.onClick); const esTruco = it.id !== 'ir-al-mazo'; const h = esTruco ? Math.round(altoAbajo * (this._L ? 1.15 : 1.3)) : altoAbajo; const c = CLAVE_IMAGEN_BOTON[it.id]; return { ...sp, alto: h, ancho: this._anchoBotonImagen(c, h) * F_ANCHO_EQ }; });
+        .map(it => { const sp = specImagen(it.id, it.onClick); const esTruco = it.id !== 'ir-al-mazo'; const h = esTruco ? Math.round(altoAbajo * (this._L ? 1 : 1.3)) : altoAbajo; const c = CLAVE_IMAGEN_BOTON[it.id]; return { ...sp, alto: h, ancho: this._anchoBotonImagen(c, h) * F_ANCHO_EQ }; });
       const kk = kB0 * K2;
       const sep = 8 * kk;
-      const hA = altoArriba * kk, hB = Math.round(altoAbajo * (this._L ? 1.15 : 1.3)) * kk;
+      const hA = altoArriba * kk, hB = Math.round(altoAbajo * (this._L ? 1 : 1.3)) * kk;
       const dyP = this._L ? 3 : 10;
       let yTop = Y_FILA_UNICA + dyP - (hB + sep) / 2;
       let yBot = Y_FILA_UNICA + dyP + (hA + sep) / 2;
@@ -7030,9 +7155,10 @@ _dibujarBotonCartasEquipo(e) {
   const kB0 = this._L ? this._L.kBoton : 1;
   // Pase 678 (celular): botón de señas redondo en la esquina inferior derecha del panel, como en la app (la fila de botones le deja lugar).
   // Pase 679: en el celular el botón va DENTRO de la madera, en la esquina superior derecha, justo bajo la franja de remaches.
-  const d = this._L ? Math.round(32 * kB0) : Math.round(44 * kB0);
-  const x = this._L ? 400 + this._L.panelW / 2 - Math.round(d / 2) - 14 : 400 + this._anchoPanelBotonera / 2 - 46 * kB0;
-  const y = this._L ? this._L.panelTop + 42 + Math.round(d / 2) : this.yCentroBotonera + 8;
+  const geoS = this._L ? this._geoBotonera(true) : null;
+  const d = this._L ? geoS.d : Math.round(44 * kB0);
+  const x = this._L ? geoS.xSena : 400 + this._anchoPanelBotonera / 2 - 46 * kB0;   // Pase 681: del lado elegido para el chat
+  const y = this._L ? this.yCentroBotonera + 3 : this.yCentroBotonera + 8;
   const activo = !!e.compartiendoMiMano;
   const r = d / 2;
 
@@ -7194,6 +7320,7 @@ rendirse() {
   }
 
   _limpiarSocketListeners() {
+    if (this._onLadoChat) { window.removeEventListener('tc-lado-chat', this._onLadoChat); this._onLadoChat = null; }
     if (!this.socket) return;
     if (this._onConnectSala) { this.socket.off('connect', this._onConnectSala); this._onConnectSala = null; }
     if (this._onDisconnectSala) { this.socket.off('disconnect', this._onDisconnectSala); this._onDisconnectSala = null; }
@@ -7201,7 +7328,7 @@ rendirse() {
     [
       'estado-juego', 'jugador-unido', 'partida-iniciada', 'jugador-desconectado',
       'error-sala', 'error-jugada', 'sala-cancelada', 'juego-terminado',
-      'revancha-estado', 'revancha-lista', 'revancha-cancelada', 'turno-timer', 'info-sala', 'jugador-reconectado'
+      'revancha-estado', 'revancha-lista', 'revancha-cancelada', 'turno-timer', 'info-sala', 'jugador-reconectado', 'pausa-estado'
     ].forEach(evento => this.socket.off(evento));
   }
 }
