@@ -3369,9 +3369,9 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
     if (ev) {
       if (ev.tipo === 'clasificacion-en-curso') { evTitulo = `Clasificación ${ev.jugadas}/${ev.total}`; evSub = `Las primeras ${ev.total} partidas de Liga no mueven puntos: al terminar te asignamos tu rango.`; }
       else if (ev.tipo === 'clasificado') { evTitulo = `¡Clasificado en ${nomR(ev.rango)}!`; evSub = `Completaste la clasificación con ${ev.victorias} de ${ev.total} victorias.`; }
-      else if (ev.tipo === 'serie-iniciada') { evTitulo = ev.objetivo ? `¡Serie de ascenso a ${ev.objetivo}!` : '¡Serie de ascenso!'; evSub = 'Llegaste al tope de tu rango: ganá la serie para subir.'; }
-      else if (ev.tipo === 'serie-en-curso') { evTitulo = `Serie de ascenso: ${ev.victorias} ✓ · ${ev.derrotas} ✕`; evSub = 'Los puntos se mueven cuando termina la serie.'; }
-      else if (ev.tipo === 'serie-ganada') { evTitulo = `¡Serie ganada! Subiste a ${nomR(ev.rango)}`; }
+      else if (ev.tipo === 'serie-iniciada') { evTitulo = ev.objetivo ? `¡Podés subir a ${ev.objetivo}!` : '¡Podés subir de rango!'; evSub = 'Ganá 2 de tus próximas 3 partidas de Liga para ascender.'; }
+      else if (ev.tipo === 'serie-en-curso') { const faltanV = Math.max(1, 2 - (Number(ev.victorias) || 0)); evTitulo = `Para subir de rango: ${ev.victorias} ✓ · ${ev.derrotas} ✕`; evSub = `Te ${faltanV === 1 ? 'falta 1 victoria' : 'faltan ' + faltanV + ' victorias'} para ascender.`; }
+      else if (ev.tipo === 'serie-ganada') { evTitulo = `¡Subiste de rango a ${nomR(ev.rango)}!`; }
       else if (ev.tipo === 'serie-perdida') { evTitulo = 'Serie perdida'; evSub = 'Volvés al 75 % de tu barra.'; }
     }
     const ocultarPuntosEv = !!ev && (ev.tipo === 'clasificacion-en-curso' || ev.tipo === 'serie-en-curso');
