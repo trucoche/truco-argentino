@@ -97,7 +97,9 @@ function nombreDeRonda(cruces, numRonda) {
 
 // ---------- Pantalla ----------
 
-export default function BracketView({ torneoId, usuario, token, onVolver, onEntrarAPartida, onAnotarme }) {
+// Pase 684: `datosSimulados = { torneo, partidos }` (galería de pantallas del admin) dibuja la sala / el bracket con datos de ejemplo,
+// sin pedir nada al servidor ni refrescar cada 4 s.
+export default function BracketView({ torneoId, usuario, token, onVolver, onEntrarAPartida, onAnotarme, datosSimulados = null }) {
   const [torneo, setTorneo] = useState(null);
   const [partidos, setPartidos] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -112,6 +114,10 @@ export default function BracketView({ torneoId, usuario, token, onVolver, onEntr
 
   const abrirSelectorAmigos = async () => {
     setSelectorAbierto(true);
+    if (datosSimulados) {
+      setAmigos(['Chiqui', 'El Colo', 'Don Facundo', 'Tano', 'Pocho'].map((n, i) => ({ id: 9000 + i, username: n })));
+      return;
+    }
     setCargandoAmigos(true);
     try {
       const res = await fetch(`${BASE_URL}/api/usuarios/amigos`, { headers });
@@ -139,6 +145,7 @@ export default function BracketView({ torneoId, usuario, token, onVolver, onEntr
 
   const invitarAmigo = async (amigo) => {
     if (invitandoId) return;
+    if (datosSimulados) { mostrarToast('Simulación: no se envía ninguna invitación', 'exito', 2500); setSelectorAbierto(false); return; }
     setInvitandoId(amigo.id);
     try {
       const res = await fetch(`${API_URL}/${torneoId}/invitar-cupo`, {
@@ -162,6 +169,13 @@ export default function BracketView({ torneoId, usuario, token, onVolver, onEntr
   };
 
   const cargar = useCallback(async () => {
+    if (datosSimulados) {
+      setTorneo(datosSimulados.torneo);
+      setPartidos(datosSimulados.partidos);
+      setError('');
+      setCargando(false);
+      return;
+    }
     try {
       const [resTorneo, resBracket] = await Promise.all([
         fetch(`${API_URL}/${torneoId}`, { headers }),
@@ -185,13 +199,14 @@ export default function BracketView({ torneoId, usuario, token, onVolver, onEntr
       setCargando(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [torneoId, token]);
+  }, [torneoId, token, datosSimulados]);
 
   useEffect(() => {
     cargar();
+    if (datosSimulados) return undefined;
     const intervalo = setInterval(cargar, 4000);
     return () => clearInterval(intervalo);
-  }, [cargar]);
+  }, [cargar, datosSimulados]);
 
   // Pase 203: BracketView vive DENTRO del AppShell (header con menú e info del usuario, ver App.js).
   if (cargando) return <PantallaCarga />;

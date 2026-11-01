@@ -4,6 +4,7 @@ import PersonajeSelector from '../Lobby/PersonajeSelector';
 import ReportarModal from '../Reportar/ReportarModal';
 import SelectorPersonalizacion from '../Personalizacion/SelectorPersonalizacion';
 import ModoFotoAdmin from './ModoFotoAdmin';
+import GaleriaAdmin from './GaleriaAdmin';
 import { AdminResumen, AdminUsuarios, AdminAcciones, AdminDevoluciones } from './AdminHerramientas';
 import { API_URL as BASE_URL } from '../../config';
 
@@ -65,6 +66,7 @@ const SUBPESTANAS_ADMIN = [
   { id: 'suspendidos', texto: 'Suspendidos' },
   { id: 'censura', texto: 'Censura' },
   { id: 'foto', texto: 'Modo foto' },
+  { id: 'galeria', texto: 'Galería' },
   { id: 'acciones', texto: 'Acciones' },
 ];
 
@@ -1358,6 +1360,7 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
 
       {/* Pase 611: Modo foto — mesa simulada para capturas (solo rol 'admin'). */}
       {esAdmin && pestana === 'admin' && subAdmin === 'foto' && <ModoFotoAdmin />}
+      {esAdmin && pestana === 'admin' && subAdmin === 'galeria' && <GaleriaAdmin />}
       {/* Pase 640: resumen del día, ficha de jugador y registro de acciones. */}
       {esAdmin && pestana === 'admin' && subAdmin === 'resumen' && <AdminResumen token={token} />}
       {esAdmin && pestana === 'admin' && subAdmin === 'usuarios' && <AdminUsuarios token={token} />}

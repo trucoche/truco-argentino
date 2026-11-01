@@ -2861,6 +2861,29 @@ _conectarSocket() {
     // mesa sin crear salas de verdad.
     if (this.codigoSala?.startsWith?.('PREVIEW_')) {
       const modo = this.codigoSala.replace('PREVIEW_', '').toLowerCase();
+      // Pase 684: `&espera=N` muestra la SALA DE ESPERA con N jugadores ya sentados (N = 1..capacidad-1; `espera=0` = solo yo) para revisar su diseño
+      // sin crear salas (galería de pantallas del admin).
+      try {
+        const qe = new URLSearchParams(window.location.search).get('espera');
+        if (qe !== null) {
+          const cap = modo === '1v1' ? 2 : (modo === '3v3' ? 6 : 4);
+          const yoNombre = (this.usuario && this.usuario.username) || 'catrielquintana';
+          const otros = ['pruebatesttruco', 'Chiqui', 'El Colo', 'Don Facundo', 'Tano'];
+          const personajes = ['gaucho', 'gaucha'];
+          const n = Math.max(1, Math.min(cap, (parseInt(qe, 10) || 0) + 1));
+          const lista = [{ username: yoNombre, equipo: 'A', personaje: 'gaucho' }];
+          for (let i = 1; i < n; i++) lista.push({ username: otros[i - 1], equipo: i % 2 === 0 ? 'A' : 'B', personaje: personajes[i % 2] });
+          this._jugadoresSala = lista;
+          this._modoSala = modo;
+          this._capacidadSala = cap;
+          this._puntosSala = 15;
+          this._rankedSala = new URLSearchParams(window.location.search).get('ranked') === '1';
+          this._privadaSala = false;
+          this._torneoSala = false;
+          this._redibujarFilaEspera();
+          return;
+        }
+      } catch (err) { console.error('ESPERA-PREVIEW', err && err.stack); }
       // Pase 210: bandera "ya arrancó" + destrucción completa (no solo
       // ocultar) de todo lo de la sala de espera — mismo criterio que el
       // handler real de 'partida-iniciada' más abajo, ver comentario ahí.
