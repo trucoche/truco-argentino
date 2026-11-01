@@ -170,7 +170,7 @@ export default function AppShell({
                 />
               </div>
               {anilloHeader.anillo && <img src={anilloHeader.anillo.imagen} alt="" style={anilloHeader.anillo.estilo} />}
-              <div className="ts-tarjeta-perfil-nombre"><span className="ts-nombre-int" style={{ fontSize: `${tamNombre(usuario?.username, 12, 15)}px` }}>{usuario?.username}</span></div>
+              <div className="ts-tarjeta-perfil-nombre"><span className="ts-nombre-int" style={{ fontSize: `${tamNombre(usuario?.username, 13, 15)}px` }}>{usuario?.username}</span></div>
               {/* Octogésimo octavo pase: el saldo se muestra siempre redondeado
                   a entero (pedido explícito del usuario) — defensivo del lado
                   del cliente, además del fix de fondo en el backend

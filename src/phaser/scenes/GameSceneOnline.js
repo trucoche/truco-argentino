@@ -1546,7 +1546,9 @@ _crearElementosDeTexto() {
     const zona = (xi, yi, sx, rot) => ({ ...pt(xi, yi), sx, rot });
     const G = { s, top, extra };
     if (dos) {
-      G.seat = { 270: { x: 400, y: yDeckTop }, 180: { ...pt(62, 410), x: 400 - xLado }, 0: { ...pt(738, 410), x: 400 + xLado } };
+      // Pase 682: el remache medio de los costados del aro (y = 575 de la imagen) queda a la altura de la base de los mazos laterales:
+    // el centro del mazo va 60 px de imagen más arriba que ese remache (la base del abanico queda justo en él).
+    G.seat = { 270: { x: 400, y: yDeckTop }, 180: { ...pt(62, 515), x: 400 - xLado }, 0: { ...pt(738, 515), x: 400 + xLado } };
       G.zona = { 270: zona(400, 176, 1, 2), 180: zona(272, 410, -1, -6), 0: zona(528, 410, 1, 6) };
     } else {
       G.seat = { 270: { x: 400, y: yDeckTop }, 210: { ...pt(62, 300), x: 400 - xLado }, 330: { ...pt(738, 300), x: 400 + xLado }, 150: { ...pt(62, 575), x: 400 - xLado }, 30: { ...pt(738, 575), x: 400 + xLado } };
@@ -3189,7 +3191,10 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
     // barra de datos más angosta, botones más grandes y bloques repartidos a lo alto de la pantalla.
     // Pase 680: 2v2 en el celular = grilla 2x2 como la app (equipo ganador/propio a la izquierda en columna, el otro a la derecha).
     const grid2 = !!this._L && !!jugadoresFinal && jugadoresFinal.length === 4 && jugadoresFinal.filter(j => j.gano).length === 2;
-    const finalGrande = !!this._L && !!jugadoresFinal && (jugadoresFinal.length === 2 || grid2);
+    // Pase 682: 3v3 en el celular = dos filas de tres (ganadores arriba, derrotados abajo) con el escudo del marcador en el centro.
+    const grid3 = !!this._L && !!jugadoresFinal && jugadoresFinal.length === 6 && jugadoresFinal.filter(j => j.gano).length === 3;
+    const gridN = grid2 || grid3;
+    const finalGrande = !!this._L && !!jugadoresFinal && (jugadoresFinal.length === 2 || gridN);
     let HnFinal = 600;
     try { const gc = document.getElementById('game-container'); if (gc) gc.setAttribute('data-final', '1'); } catch (e) {}
     if (this._L) {
@@ -3200,7 +3205,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
       const jf = jugadoresFinal && jugadoresFinal.length ? jugadoresFinal : [];
       const nG = jf.filter(j => j.gano).length;
       const nP = jf.length - nG;
-      const tamF = finalGrande ? (grid2 ? 120 : 164) : (jf.length <= 2 ? 104 : jf.length <= 4 ? 100 : 84);   // Pase 659: avatares un poco más chicos para dejar aire entre bloques
+      const tamF = finalGrande ? (grid3 ? 116 : grid2 ? 120 : 164) : (jf.length <= 2 ? 104 : jf.length <= 4 ? 100 : 84);   // Pase 659: avatares un poco más chicos para dejar aire entre bloques
       const gapF = jf.length <= 2 ? 0 : jf.length <= 4 ? 30 : 20;
       const grupoF = (n) => (n > 0 ? n * (tamF + gapF) - gapF : 0);
       const anchoF = grupoF(nG) + (nG && nP ? 120 : 0) + grupoF(nP);
@@ -3208,7 +3213,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
       const chF = this.scale.height;
       // Pase 677: en el celular 1v1 los dos marcos de avatar ocupan casi todo el ancho (como la app): vista de ~522 de mundo
       // (antes ~656), con lo que todo el bloque (cartel, nombres, barra de datos y botones) se ve ~26 % más grande.
-      const visibleW = grid2 ? 540 : finalGrande
+      const visibleW = grid3 ? 500 : grid2 ? 540 : finalGrande
         ? Math.min(760, Math.max(Math.round(((tamF + 138) + tamF * 1.15) / 0.94), 640 * cwF / chF))
         : Math.max(540, Math.min(760, anchoF * 1.15 + 120), 640 * cwF / chF);
       const camF = this.cameras.main;
@@ -3265,7 +3270,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
     const der = izqGanadores ? perdedores : ganadores;
     const todos = [...izq, ...der];
     const total = todos.length;
-    const tamano = finalGrande ? (grid2 ? 120 : 164) : (total <= 2 ? 104 : total <= 4 ? 100 : 84);   // Pase 659
+    const tamano = finalGrande ? (grid3 ? 116 : grid2 ? 120 : 164) : (total <= 2 ? 104 : total <= 4 ? 100 : 84);   // Pase 659
     const gapIntra = total <= 2 ? 0 : total <= 4 ? 30 : 20;
     const gapEscudo = finalGrande ? 138 : 120;   // Pase 659: más aire entre los marcos de avatar y el escudo del marcador
     const paso = tamano + gapIntra;
@@ -3290,13 +3295,15 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
     }), 0);
     // Pase 680: grilla 2x2: dos filas bien separadas (aire entre una fila y la otra), columnas a ±GRID_DX del centro.
     const GRID_DX = 132;
-    const rowGap = grid2 ? Math.max(225, Math.min(280, Math.round(0.215 * HnFinal))) : 0;
+    const rowGap = grid3 ? Math.round(aroRef + 200) : (grid2 ? Math.max(225, Math.min(280, Math.round(0.215 * HnFinal))) : 0);   // Pase 682: en 3v3 el escudo cabe entre las dos filas (la columna del medio queda justo encima/debajo de él)
+    const COL_DX3 = 150;
     if (grid2) cyAv = 140 + aroRef / 2;
+    if (grid3) cyAv = 128 + aroRef / 2;
     const cyAvBase = cyAv;
     const yNombreComun = cyAv + aroRef / 2 + 18;
     const yPillComun = yNombreComun + ALTO_CARTEL / 2 + 6 + PILL_MITAD;
     const yPillUlt = yPillComun + rowGap;
-    const fNombre = grid2 ? '19px' : (finalGrande ? '21px' : (total <= 2 ? '16px' : '13px'));
+    const fNombre = grid3 ? '17px' : grid2 ? '19px' : (finalGrande ? '21px' : (total <= 2 ? '16px' : '13px'));
 
     todos.forEach((j, idx) => {
       const esGanadorGrupo = j.gano;
@@ -3307,9 +3314,17 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
         cursorX += gapEscudo - gapIntra;
       }
       // Pase 680: en la grilla 2x2 cada jugador va en su columna y su fila.
-      const fila = grid2 ? (idx === 1 || idx === 3 ? 1 : 0) : 0;
+      let fila = grid2 ? (idx === 1 || idx === 3 ? 1 : 0) : 0;
       if (grid2) { cx = 400 + (der.includes(j) ? GRID_DX : -GRID_DX); escudoX = 400; }
-      const cyAv = grid2 ? cyAvBase + fila * rowGap : cyAvBase;
+      if (grid3) {
+        // Pase 682: ganadores en la fila de arriba, derrotados en la de abajo; tres columnas centradas.
+        const grupo3 = j.gano ? ganadores : perdedores;
+        const k3 = Math.max(0, grupo3.indexOf(j));
+        fila = j.gano ? 0 : 1;
+        cx = 400 + (k3 - 1) * COL_DX3;
+        escudoX = 400;
+      }
+      const cyAv = gridN ? cyAvBase + fila * rowGap : cyAvBase;
       const info = { ...infoSala(j.nombre), ...Object.fromEntries(Object.entries(j).filter(([k, v]) => v != null && k !== 'nombre' && k !== 'gano' && k !== 'tantos')) };
       const rangoFicha = info.rango_id ? RANGOS_UI[Number(info.rango_id)] : null;
       const hueco = rangoFicha ? rangoFicha.hueco : 0.62;
@@ -3397,7 +3412,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
       this._sprites.push(aro);
 
       // Etiqueta de nombre (madera fina) con copa si ganó
-      const maxNombre = grid2 ? 122 : finalGrande ? 250 : Math.max(70, tamano + gapIntra - 8);
+      const maxNombre = grid3 ? 116 : grid2 ? 122 : finalGrande ? 250 : Math.max(70, tamano + gapIntra - 8);
       let nombreMostrado = String(j.nombre || '');
       const medida = this.add.text(0, 0, nombreMostrado, { fontFamily: 'Nunito, Arial', fontSize: fNombre, fontStyle: '800' });
       while (medida.width > maxNombre - 24 && nombreMostrado.length > 3) {
@@ -3472,8 +3487,8 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
     if (total >= 2) {
       // Pase 657: el marcador sigue el orden de la pantalla (izquierda - derecha); yo estoy a la derecha.
       const tantosGan = izq.length ? Number(izq[0].tantos) : NaN;
-      const kS = grid2 ? 0.95 : (finalGrande ? 1.2 : 1);
-      const cyEsc = cyAv + rowGap / 2;   // Pase 680: en la grilla, justo en el centro entre los 4 avatares
+      const kS = gridN ? 0.95 : (finalGrande ? 1.2 : 1);
+      const cyEsc = grid3 ? cyAv + (rowGap + 77) / 2 : cyAv + rowGap / 2;   // Pase 682 (3v3): centro del hueco libre entre las pastillas de arriba y los avatares de abajo   // Pase 680: en la grilla, justo en el centro entre los 4 avatares
       const tantosPer = der.length ? Number(der[0].tantos) : NaN;
       if (this.textures.exists('escudoSinTexto')) {
         const esc = this.add.image(escudoX, cyEsc, 'escudoSinTexto').setDisplaySize(96 * kS, 96 * kS).setDepth(904);
@@ -3629,7 +3644,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
       ];
       // Pase 668: en el celular la barra no puede ser más ancha que lo que muestra la cámara (se cortaba en los costados).
       const visMundoR = this._L ? this.scale.width / this.cameras.main.zoom : 800;
-      const wR = Math.min(560, Math.floor(visMundoR * (finalGrande ? 0.92 : 0.92))), hR = grid2 ? 78 : (finalGrande ? 62 : 50), xR = 400 - wR / 2, anchoCelda = wR / celdas.length;
+      const wR = Math.min(560, Math.floor(visMundoR * (finalGrande ? 0.92 : 0.92))), hR = gridN ? 78 : (finalGrande ? 62 : 50), xR = 400 - wR / 2, anchoCelda = wR / celdas.length;
       const panelR = this.add.graphics().setDepth(904);
       panelR.fillStyle(0x140C08, 0.55);
       panelR.fillRoundedRect(xR, y, wR, hR, 12);
@@ -3640,8 +3655,8 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
       this._sprites.push(panelR);
       celdas.forEach(([etiqueta, valor], i) => {
         const cxC = xR + anchoCelda * (i + 0.5);
-        const tv = this.add.text(cxC, y + (grid2 ? 27 : (finalGrande ? 21 : 18)), String(valor), { fontFamily: 'Fredoka, Arial', fontSize: grid2 ? '27px' : (finalGrande ? '22px' : '19px'), fontStyle: '700', color: '#FFF8ED', stroke: '#2C160E', strokeThickness: 3 }).setOrigin(0.5).setDepth(905);
-        const tl = this.add.text(cxC, y + (grid2 ? 56 : (finalGrande ? 44 : 37)), etiqueta, { fontFamily: 'Nunito, Arial', fontSize: grid2 ? '15px' : (finalGrande ? '13px' : '11px'), fontStyle: '800', color: '#F1D9A8' }).setOrigin(0.5).setDepth(905);
+        const tv = this.add.text(cxC, y + (gridN ? 27 : (finalGrande ? 21 : 18)), String(valor), { fontFamily: 'Fredoka, Arial', fontSize: gridN ? '27px' : (finalGrande ? '22px' : '19px'), fontStyle: '700', color: '#FFF8ED', stroke: '#2C160E', strokeThickness: 3 }).setOrigin(0.5).setDepth(905);
+        const tl = this.add.text(cxC, y + (gridN ? 56 : (finalGrande ? 44 : 37)), etiqueta, { fontFamily: 'Nunito, Arial', fontSize: gridN ? '15px' : (finalGrande ? '13px' : '11px'), fontStyle: '800', color: '#F1D9A8' }).setOrigin(0.5).setDepth(905);
         this._sprites.push(tv, tl);
       });
       y += hR + 24;   // Pase 659: mínimo 24 px entre la barra de datos y "Pedir revancha"
@@ -3650,10 +3665,10 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
 
     if (!resumenDibujado && modo !== 'neutro') y += 2;   // sin barra de datos: 22 + 2 = 24 px antes de los botones
     // Pase 669: en el celular 1v1 la botonera baja hasta ~72 % del alto de la vista, como en la app.
-    if (finalGrande && modo !== 'neutro') y = Math.max(y, Math.round((grid2 ? 0.78 : 0.69) * HnFinal));
+    if (finalGrande && modo !== 'neutro') y = Math.max(y, Math.round((gridN ? 0.78 : 0.69) * HnFinal));
     // 6) Botonera vertical en cápsulas 3D
     // Pase 677: altura táctil de ~50 px reales (tope 66 de mundo); la letra y el ancho acompañan.
-    const altoBoton = grid2 ? Math.max(60, Math.min(74, Math.ceil(56 / (this.cameras.main.zoom || 1)))) : (finalGrande ? Math.max(54, Math.min(66, Math.ceil(50 / (this.cameras.main.zoom || 1)))) : 42);
+    const altoBoton = gridN ? Math.max(60, Math.min(74, Math.ceil(56 / (this.cameras.main.zoom || 1)))) : (finalGrande ? Math.max(54, Math.min(66, Math.ceil(50 / (this.cameras.main.zoom || 1)))) : 42);
     const fBtn = finalGrande ? Math.round(altoBoton * 0.38) : 17;
     const anchoMinBoton = finalGrande ? Math.round(altoBoton * 4.8) : 0;
     if (!esTorneo && modo !== 'neutro') {
@@ -3749,7 +3764,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
       estrella(400 - cartelAncho / 2 + 26, 92, 9, 500);
       if (ganadores.length) {
         const inicioFila = 400 - anchoFila / 2 + tamano / 2;
-        const gx = grid2 ? 400 + (izqGanadores ? -GRID_DX : GRID_DX) : (izqGanadores ? inicioFila : inicioFila + izq.length * paso + gapEscudo - gapIntra);   // Pase 659: los ganadores quedan donde estén
+        const gx = grid3 ? 400 : grid2 ? 400 + (izqGanadores ? -GRID_DX : GRID_DX) : (izqGanadores ? inicioFila : inicioFila + izq.length * paso + gapEscudo - gapIntra);   // Pase 659: los ganadores quedan donde estén
         estrella(gx - tamano * 0.5, cyAv - tamano * 0.4, 10, 250);
         estrella(gx + tamano * 0.55, cyAv + tamano * 0.1, 8, 800);
         estrella(gx + tamano * 0.1, cyAv - tamano * 0.62, 7, 1200);
@@ -4971,7 +4986,7 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
       // Pase 217 — con 10px, en 2v2 costaba distinguir bien cuál carta se
       // había jugado; se sube a 14px, término medio entre el 16 (mucho
       // hueco) y el 10 (demasiado pegadas).
-      const kJug = this._geoEq ? 1.18 : 1;   // Pase 681: en la mesa vertical del celular las cartas jugadas son ~18 % más grandes (sobra lugar en el paño)
+      const kJug = this._geoEq ? 1.32 : 1;   // Pase 682: +12 % más (1.18 → 1.32)   // Pase 681: en la mesa vertical del celular las cartas jugadas son ~18 % más grandes (sobra lugar en el paño)
       const pasoApilado = 14 * kJug;
 
       // Igual que _dibujarFilaCartas: pre-escalamos con el canvas de alta
@@ -6332,16 +6347,19 @@ _textoPanelCanto(texto) {
     const cap = n.replace(/(^|\s)(\S)/g, (_, a, b) => a + b.toUpperCase()).replace(' Al ', ' al ');
     t = `¿Querés ${n.includes('flor') ? 'la' : 'el'} ${cap}?`;
   }
-  const txt = this.add.text(400, this._L.panelTop + 56, t, {
-    fontFamily: 'Fredoka, Nunito, Arial', fontSize: '22px', fontStyle: '700', color: '#FFF3DC',
-    stroke: '#2a1008', strokeThickness: 4, align: 'center', wordWrap: { width: 560 },
+  const GE = this._geoEtiquetaPanel();
+  this._etiquetaPanel = true;
+  const txt = this.add.text(400, GE.yEtiqueta, t, {
+    fontFamily: 'Fredoka, Nunito, Arial', fontSize: '18px', fontStyle: '700', color: '#FFF3DC',
+    stroke: '#2a1008', strokeThickness: 3, align: 'center', wordWrap: { width: 560 },
   }).setOrigin(0.5).setDepth(210);
   this._sprites.push(txt);
+  this._txtEtiquetaPanel = txt;
   return txt;
 }
 
 _crearBannerTexto(x, y, texto, depth = 200, { tamanoFuente = 14, colorTexto = '#4A2C2A', anchoWrap = 620, strokeTexto = null, conRemaches = false, iconoAnimado = false } = {}) {
-  if (this._L && this._geoEq && y === 491 && !iconoAnimado) return this._textoPanelCanto(texto);   // Pase 678
+  if (this._L && (y === 491 || y === 479) && !iconoAnimado) return this._textoPanelCanto(texto);   // Pase 678
   const label = this.add.text(0, 0, texto, {
     fontFamily: 'Nunito, Arial', fontSize: `${tamanoFuente}px`, fontStyle: 'bold', color: colorTexto,
     align: 'center', wordWrap: { width: anchoWrap },
@@ -6678,7 +6696,32 @@ _geoBotonera(esEq) {
     : { x0: izq, x1: der - hueco, d, xSena: der - d / 2 };
 }
 
+// Pase 682: reparto vertical de la botonera del celular. La grilla de botones queda SIEMPRE centrada en el panel (con o sin la
+// pregunta del canto: no se corre nada al aparecer o desaparecer el texto). Cuando hay dos filas, miden lo justo para dejar libre
+// arriba el margen donde va la pregunta ("¿Querés el Truco?"), que siempre se escribe en el mismo lugar.
+_geoEtiquetaPanel() {
+  const L = this._L;
+  const interior = L.panelH - 48;
+  return { interior, yEtiqueta: this.yCentroBotonera - interior / 2 + 14, kFila: 0.76 };
+}
+
 _dibujarBotonesCanto(e) {
+  this._etiquetaPanel = false; this._txtEtiquetaPanel = null; this._filasPanel = false; this._senaPartes = null;
+  this._dibujarBotonesCantoInterno(e);
+  if (!this._L) return;
+  // Sin botones de acción (no es mi turno / espero una respuesta) el botón de señas pasa al lado opuesto al del chat para que el
+  // panel vacío no quede cargado de un solo costado; con botones, vuelve al lado del chat y la grilla se reparte al otro.
+  if (!this._filasPanel && this._senaPartes) {
+    const dx = 800 - 2 * this._geoBotonera(true).xSena;
+    this._senaPartes.forEach((o) => { if (o && o.scene) o.x += dx; });
+  }
+  if (this._txtEtiquetaPanel && this._txtEtiquetaPanel.scene && !this._filasPanel) {
+    // Solo texto (esperando respuesta, sin botones): queda centrado en el panel.
+    this._txtEtiquetaPanel.setY(this.yCentroBotonera);
+  }
+}
+
+_dibujarBotonesCantoInterno(e) {
   const CENTRO_X = 400;
   const GAP = 30;
   // Pase 443: en equipos va el botón circular de cartas a la derecha de la botonera; las filas
@@ -6730,13 +6773,21 @@ _dibujarBotonesCanto(e) {
       // Pase 681 (celular): todos los botones de una fila miden lo mismo y reparten el ancho de la zona (como la app), con el
       // mismo alto en todas las filas; el botón de señas (equipos) ocupa su lugar fijo a un costado.
       const geo = this._geoBotonera(esEq);
+      this._filasPanel = true;
+      // Con la pregunta del canto arriba, las filas son un poco más bajas y se centran bajo ella (ver _geoEtiquetaPanel).
+      let kBf = kB;
+      if (!extraK_dividida && (Math.abs(y - this.yCentroBotonera) > 1 || specs.length >= 4)) {
+        const GE = this._geoEtiquetaPanel();
+        kBf = kB * GE.kFila;
+        y = this.yCentroBotonera + (y - this.yCentroBotonera) * GE.kFila;
+      }
       // 4 o más botones en una fila quedarían con el texto diminuto: se parten en dos filas de igual cantidad (como la app).
       if (specs.length >= 4 && !extraK_dividida) {
         const mitad = Math.ceil(specs.length / 2);
-        const alto = specs[0].alto * kB;
+        const alto = specs[0].alto * kBf;
         const dy = alto / 2 + 5;
-        centrarFila(specs.slice(0, mitad), y - dy, gap, extraK, true);
-        centrarFila(specs.slice(mitad), y + dy, gap, extraK, true);
+        centrarFila(specs.slice(0, mitad), y - dy, gap, extraK * (kBf / kB), true);
+        centrarFila(specs.slice(mitad), y + dy, gap, extraK * (kBf / kB), true);
         return;
       }
       const n = specs.length;
@@ -6751,14 +6802,14 @@ _dibujarBotonesCanto(e) {
       specs.forEach((s) => {
         const def = s.imagen === 'Tengo' ? { txt: String(s.texto || '').toUpperCase() } : BOTON_RUSTICO[s.imagen];
         if (!def) return;
-        const fsT = s.alto * kB * RATIO_FUENTE_RUSTICO;
+        const fsT = s.alto * kBf * RATIO_FUENTE_RUSTICO;
         const med = this.add.text(0, 0, def.txt, { fontFamily: 'Nunito, Arial', fontSize: `${fsT.toFixed(1)}px`, fontStyle: 'bold' });
         const wT = med.width; med.destroy();
-        const disp = bw - s.alto * kB * 0.65;
+        const disp = bw - s.alto * kBf * 0.65;
         if (wT > disp && disp > 10) escalaFila = Math.min(escalaFila, disp / wT);
       });
       specs.forEach((s) => {
-        this._crearBoton({ ...s, ancho: bw, alto: s.alto * kB, x: cx0, y, escalaTexto: escalaFila });
+        this._crearBoton({ ...s, ancho: bw, alto: s.alto * kBf, x: cx0, y, escalaTexto: escalaFila });
         cx0 += bw + sep;
       });
       return;
@@ -7173,6 +7224,7 @@ _dibujarBotonCartasEquipo(e) {
   const zona = this.add.zone(x, y, d, d).setDepth(203).setInteractive({ useHandCursor: true });
   zona.on('pointerdown', () => this._alternarCompartirMano());
   this._sprites.push(g, velo, zona);
+  this._senaPartes = [g, velo, zona];
 
   const restante = (this._cartasCooldownHasta || 0) - Date.now();
   if (restante > 0) this._animarVeloCartas(restante);

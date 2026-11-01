@@ -96,6 +96,35 @@ export default function GameOnlinePhaser({
     } catch (err) { /* sin socket */ }
   }, []);
 
+  // Pase 682: presencia de la mesa. El socket de la web es compartido con el lobby y no se corta al minimizar el navegador o cambiar de
+  // pestaña, así que el cliente avisa al servidor si la mesa está visible (latido cada 4 s + cambios de visibilidad + cierre de página).
+  // El servidor, sin latidos o con la mesa oculta, la trata como una desconexión (pausa y reloj de reconexión).
+  useEffect(() => {
+    const sala = codigoSalaRef.current;
+    if (!sala || String(sala).startsWith('PREVIEW_')) return undefined;
+    const enviar = (visibleForzado) => {
+      try {
+        const visible = typeof visibleForzado === 'boolean' ? visibleForzado : document.visibilityState !== 'hidden';
+        getSocket().emit('presencia-mesa', { codigoSala: sala, visible });
+      } catch (err) { /* sin socket */ }
+    };
+    enviar();
+    const id = setInterval(() => enviar(), 4000);
+    const alCambiarVisibilidad = () => enviar();
+    const alCerrar = () => enviar(false);
+    document.addEventListener('visibilitychange', alCambiarVisibilidad);
+    window.addEventListener('pagehide', alCerrar);
+    window.addEventListener('beforeunload', alCerrar);
+    window.addEventListener('online', alCambiarVisibilidad);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', alCambiarVisibilidad);
+      window.removeEventListener('pagehide', alCerrar);
+      window.removeEventListener('beforeunload', alCerrar);
+      window.removeEventListener('online', alCambiarVisibilidad);
+    };
+  }, []);
+
 useEffect(() => {
     if (!gameRef.current) {
       const angostoAhora = esLayoutAngosto();
