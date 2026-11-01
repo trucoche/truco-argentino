@@ -3055,7 +3055,11 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
       const anchoF = grupoF(nG) + (nG && nP ? 120 : 0) + grupoF(nP);
       const cwF = this.scale.width;
       const chF = this.scale.height;
-      const visibleW = Math.max(540, Math.min(760, anchoF * 1.15 + 120), 640 * cwF / chF);
+      // Pase 677: en el celular 1v1 los dos marcos de avatar ocupan casi todo el ancho (como la app): vista de ~522 de mundo
+      // (antes ~656), con lo que todo el bloque (cartel, nombres, barra de datos y botones) se ve ~26 % más grande.
+      const visibleW = finalGrande
+        ? Math.min(760, Math.max(Math.round(((tamF + 138) + tamF * 1.15) / 0.94), 640 * cwF / chF))
+        : Math.max(540, Math.min(760, anchoF * 1.15 + 120), 640 * cwF / chF);
       const camF = this.cameras.main;
       camF.setZoom(cwF / Math.min(760, visibleW));
       HnFinal = chF / camF.zoom;
@@ -3461,7 +3465,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
       ];
       // Pase 668: en el celular la barra no puede ser más ancha que lo que muestra la cámara (se cortaba en los costados).
       const visMundoR = this._L ? this.scale.width / this.cameras.main.zoom : 800;
-      const wR = Math.min(560, Math.floor(visMundoR * (finalGrande ? 0.82 : 0.92))), hR = finalGrande ? 58 : 50, xR = 400 - wR / 2, anchoCelda = wR / celdas.length;
+      const wR = Math.min(560, Math.floor(visMundoR * (finalGrande ? 0.92 : 0.92))), hR = finalGrande ? 62 : 50, xR = 400 - wR / 2, anchoCelda = wR / celdas.length;
       const panelR = this.add.graphics().setDepth(904);
       panelR.fillStyle(0x140C08, 0.55);
       panelR.fillRoundedRect(xR, y, wR, hR, 12);
@@ -3484,11 +3488,13 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
     // Pase 669: en el celular 1v1 la botonera baja hasta ~72 % del alto de la vista, como en la app.
     if (finalGrande && modo !== 'neutro') y = Math.max(y, Math.round(0.72 * HnFinal));
     // 6) Botonera vertical en cápsulas 3D
-    const altoBoton = finalGrande ? 52 : 42;
-    const fBtn = finalGrande ? 20 : 17;
+    // Pase 677: altura táctil de ~50 px reales (tope 66 de mundo); la letra y el ancho acompañan.
+    const altoBoton = finalGrande ? Math.max(54, Math.min(66, Math.ceil(50 / (this.cameras.main.zoom || 1)))) : 42;
+    const fBtn = finalGrande ? Math.round(altoBoton * 0.38) : 17;
+    const anchoMinBoton = finalGrande ? Math.round(altoBoton * 4.8) : 0;
     if (!esTorneo && modo !== 'neutro') {
       const revanchaTexto = 'Pedir revancha';
-      const revanchaAncho = Math.max(this._medirAnchoTextoOverlay(revanchaTexto, `${fBtn}px`) + 60, finalGrande ? 250 : 0);
+      const revanchaAncho = Math.max(this._medirAnchoTextoOverlay(revanchaTexto, `${fBtn}px`) + 60, anchoMinBoton);
       const { contenedor: contRevancha, img: imgRevancha } = this._crearBotonOverlay({
         x: 400, y: y + altoBoton / 2, ancho: revanchaAncho, alto: altoBoton, variante: 'esmeralda', texto: revanchaTexto, tamanoFuente: fBtn,
         onClick: () => {
@@ -3502,7 +3508,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
       y += altoBoton + 12;   // Pase 659: 12 px exactos entre Revancha y Volver
     }
     const labelBoton = esTorneo ? 'Ver bracket' : 'Volver al lobby';   // Pase 415: en sala cancelada es el unico boton
-    const volverAncho = Math.max(this._medirAnchoTextoOverlay(labelBoton, `${fBtn}px`) + 60, finalGrande ? 250 : 0);
+    const volverAncho = Math.max(this._medirAnchoTextoOverlay(labelBoton, `${fBtn}px`) + 60, anchoMinBoton);
     this._crearBotonOverlay({
       x: 400, y: y + altoBoton / 2, ancho: volverAncho, alto: altoBoton, variante: 'oro', texto: labelBoton, tamanoFuente: fBtn,
       onClick: () => {
