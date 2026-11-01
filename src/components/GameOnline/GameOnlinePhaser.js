@@ -89,6 +89,8 @@ useEffect(() => {
           escena.onVerPerfil = setPerfilAbierto;
           escena.onAbrirAnotador = () => setAnotadorAbierto(true);
           escena.onPuntos = setPuntosMesa;
+          escena.onAbrirConfiguracion = () => setMostrarConfiguracion(true);
+          escena.onSalir = () => salirRef.current && salirRef.current();
         }
       });
 
@@ -102,6 +104,8 @@ useEffect(() => {
         escenaInmediata.onVerPerfil = setPerfilAbierto;
         escenaInmediata.onAbrirAnotador = () => setAnotadorAbierto(true);
         escenaInmediata.onPuntos = setPuntosMesa;
+        escenaInmediata.onAbrirConfiguracion = () => setMostrarConfiguracion(true);
+        escenaInmediata.onSalir = () => salirRef.current && salirRef.current();
       }
     }
 
@@ -153,6 +157,8 @@ useEffect(() => {
           escena.onVerPerfil = setPerfilAbierto;
           escena.onAbrirAnotador = () => setAnotadorAbierto(true);
           escena.onPuntos = setPuntosMesa;
+          escena.onAbrirConfiguracion = () => setMostrarConfiguracion(true);
+          escena.onSalir = () => salirRef.current && salirRef.current();
         });
       }
     }
@@ -180,6 +186,33 @@ useEffect(() => {
   // Pase 613: "Rendirme" (solo 1v1 en curso): derrota normal, sin puntos de más ni castigo.
   const puedeRendirse = mostrarConfiguracion && !String(codigoSala || '').startsWith('PREVIEW_')
     && !!gameRef.current?.scene.getScene('GameSceneOnline')?.puedeRendirse?.();
+  // Pase 672: botón Volver de la cabecera (igual que la app): avisa qué pasa al salir de una partida en curso.
+  const salirRef = useRef(null);
+  salirRef.current = async () => {
+    const escena = gameRef.current?.scene.getScene('GameSceneOnline');
+    const esPreview = String(codigoSala || '').startsWith('PREVIEW_');
+    if (esPreview) { window.location.href = '/'; return; }
+    const puede = !!escena?.puedeRendirse?.();
+    const ranked = !!escena?._rankedSala;
+    const aviso = (ranked
+      ? 'Si salís y no volvés en 45 segundos, perdés la partida, restás puntos de más y, si lo repetís, no vas a poder buscar Liga por un rato.'
+      : 'Si salís y no volvés en 45 segundos, perdés la partida.') + ' Podés volver desde "Mi partida".';
+    if (puede) {
+      const rendirse = await confirmarPopup({
+        titulo: '¿Salir de la partida?',
+        mensaje: aviso + ' Si querés irte sin castigo, rendite.',
+        textoSi: 'Rendirme', textoNo: 'Seguir jugando', cinta: 'roja', tipoSi: 'carmesi',
+      });
+      if (rendirse) escena.rendirse?.();
+      return;
+    }
+    const salir = await confirmarPopup({
+      titulo: '¿Salir de la partida?', mensaje: aviso,
+      textoSi: 'Salir igual', textoNo: 'Seguir jugando', cinta: 'roja', tipoSi: 'carmesi',
+    });
+    if (salir) manejarVolverLobby([]);
+  };
+
   const rendirme = async () => {
     setMostrarConfiguracion(false);
     const ok = await confirmarPopup({
@@ -198,12 +231,12 @@ useEffect(() => {
           // Salida escondida del Modo foto: esquina superior izquierda, invisible.
           <div onClick={() => { window.location.href = '/'; }} style={{ position: 'absolute', top: 0, left: 0, width: 56, height: 56, zIndex: 90, cursor: 'default' }} />
         )}
-        {!fotoLimpia && <ChatMesa codigoSala={codigoSala} esEquipos={esEquipos} personaje={usuario?.personaje || 'gaucho'} token={token} usuarioActual={usuario?.username} />}
+        {!fotoLimpia && <ChatMesa angosto={angosto} codigoSala={codigoSala} esEquipos={esEquipos} personaje={usuario?.personaje || 'gaucho'} token={token} usuarioActual={usuario?.username} />}
         {/* Pase 443: el botón de mostrar/esconder cartas ahora se dibuja dentro de la botonera (GameSceneOnline.js, _dibujarBotonCartasEquipo). */}
         {audioInfo.privada && !fotoLimpia && (
           <AudioMesaBoton audioRoomUrl={audioInfo.audioRoomUrl} nombreUsuario={usuario?.username} />
         )}
-        {!fotoLimpia && <ConfiguracionMesaBoton onAbrir={() => setMostrarConfiguracion(true)} />}
+        {!fotoLimpia && !angosto && <ConfiguracionMesaBoton onAbrir={() => setMostrarConfiguracion(true)} />}
         <ConfiguracionMesaModal
           visible={mostrarConfiguracion}
           onCerrar={() => setMostrarConfiguracion(false)}

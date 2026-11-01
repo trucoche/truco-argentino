@@ -307,6 +307,9 @@ preload() {
     // reemplaza al circulito de "es mano" que iba ahí, que ahora se usa nomás
     // para el indicador propio (manoIconoPropio) y para equipos.
     this.load.image('icono_rival', conVersion('assets/images/juego/ui-botones/icono-rival.png'));
+    // Pase 672: botón Volver y engranaje de la cabecera de la mesa.
+    this.load.image('botonVolverMesa', conVersion('assets/images/boton-volver.webp'));
+    this.load.image('botonConfigMesa', conVersion('assets/images/boton-configuracion-madera.png'));
 
     // Botones de canto/respuesta rediseñados (Fase 2): una imagen entera
     // por botón, con el texto ya horneado adentro por el diseñador en
@@ -660,7 +663,7 @@ _crearElementosDeTexto() {
     // borde superior queda en Y=12 y el borde derecho de la placa "Vos"
     // (ver más abajo) + el margen entre ambas dejan el borde izquierdo de
     // ESTA en X=130 — ninguna placa toca ya el borde de la pantalla.
-    this.PLACA_RIVAL_CX = this._L ? this._L.placaRivalX : 178;
+    this.PLACA_RIVAL_CX = this._L ? this._L.placaRivalX : 240;   // Pase 672: +62 en escritorio (lugar para el botón Volver)
     this.PLACA_RIVAL_CY = this._L ? this._L.hudY : 36;
     const kpH = this._L ? this._L.kp : 1;   // Pase 394: escala del HUD en layout angosto
     const placaAncho = this._L ? this._L.placaW : 96;
@@ -815,7 +818,7 @@ _crearElementosDeTexto() {
     // rival (ver comentario junto a `PLACA_RIVAL_CX/CY` más arriba) — deja
     // ~12px de aire contra el borde superior e izquierdo real de la
     // pantalla (borde de esta placa: X=12, Y=12).
-    const marcadorX = this._L ? this._L.placaVosX : 60;
+    const marcadorX = this._L ? this._L.placaVosX : 122;   // Pase 672
     const marcadorY = this._L ? this._L.hudY : 36;
 
     // Trigésimo octavo pase: causa real de "se ve semi transparente" — el
@@ -1251,6 +1254,7 @@ _crearElementosDeTexto() {
 
     this._crearTexturaDorsoMini();
     this._crearTexturaDorsoGrande();
+    this._crearCabeceraMesa();
 
     this._conectarSocket();
 
@@ -1297,8 +1301,6 @@ _crearElementosDeTexto() {
     const placaH = Math.round(60 * kp);   // Pase 450/451: placa más alta para nombre (13px) + puntaje (28px)
     // Pase 396: marcador VOS | RIVAL centrado arriba del mazo del rival (igual que el nativo)
     const hudYBase = 100;
-    const placaVosX = 400 - 8 - placaW / 2;
-    const placaRivalX = 400 + 8 + placaW / 2;
 
     // Botonera + mano (abajo, pegadas al borde inferior)
     const panelW = 700;
@@ -1374,6 +1376,11 @@ _crearElementosDeTexto() {
     // Pase 401: el marcador queda anclado ~220 sobre el borde alto de la mesa (justo arriba del nombre/mazo del rival) (no se despega en ventanas altas)
     const hudYFinal = piesExtra > 0 ? tableTop - 220 : Math.max(hudYBase, tableTop - 220);   // Pase 546: con patas alargadas el marcador sube hasta HUD_ABS_OBJETIVO (sin el piso de 100)
     const hudBottom = hudYFinal + placaH / 2;
+    // Pase 672: cabecera como la de la app: botón Volver a la izquierda, anotadores al lado y engranaje a la derecha.
+    const HDR = 116;
+    const hdrCY = 58;
+    const hdrVosX = 40 + 100 + placaW / 2 + 4;
+    const hdrRivalX = hdrVosX + placaW + 12;
 
     // eq3 se calcula en el espacio del grupo (0..Hg) y luego se desplaza
     const eq3 = (() => {
@@ -1385,7 +1392,7 @@ _crearElementosDeTexto() {
 
     return {
       zoom, H, zoom8, H8, WN, yOff,
-      kp, placaW, placaH, hudY: hudYFinal + yOff, placaVosX, placaRivalX,
+      kp, placaW, placaH, hudY: hdrCY, placaVosX: hdrVosX, placaRivalX: hdrRivalX, HDR,
       panelW, panelH, panelTop: panelTop + yOff, panelCY: panelCY + yOff, kMano, manoY: manoY + yOff,
       tableW, u, CORTE_A, CORTE_B, CORTE_C, PIES_Y: PIES_FINAL, altoTopNat, altoBotNat: altoBotNat + piesExtra, E, tableTop: tableTop + yOff, tableBottom: tableBottom + yOff,
       rivalY: rivalY + yOff, kRival, nombreY: nombreY + yOff, sT,
@@ -1973,11 +1980,63 @@ _mostrarMarcadores(visible) {
   [this.mesaMedio, this.mesaPatas, this.mesaPies, this.marcaTcMesa].forEach(o => { if (o && o.scene) o.setVisible(visible && this._mesaModoActual !== '3v3' && this._mesaModoActual !== 'app1v1'); });
   [this.scoreBg, this.scoreText, this.labelPropio, this.fondoInfoRival, this.scoreTextRival]
     .forEach(o => { if (o && o.scene) o.setVisible(visible); });
+  (this._cabeceraObjs || []).forEach(o => { if (o && o.scene) o.setVisible(visible); });   // Pase 672
   (this.zonasAnotador || []).forEach(z => { if (z && z.scene) { z.setVisible(visible); if (z.input) z.input.enabled = visible; } });
   this._aplicarMarcadorEstilo();
   if (!visible) {
     [this.labelRival, this.manoIconoRival, this.medallaManoRival, this.nombreRivalAngosto].forEach(o => { if (o && o.scene) o.setVisible(false); });
   }
+}
+
+// Pase 672: cabecera de la mesa (como la app). En celular: barra crema con botón Volver, anotadores (ya movidos por el
+// layout), engranaje y el ping bajo la barra. En escritorio: solo botón Volver (arriba a la izquierda) y el ping.
+// Todo se muestra/oculta junto con los marcadores (solo durante la partida).
+_crearCabeceraMesa() {
+  const L = this._L;
+  const objs = [];
+  const px = L ? 88 : 36, py = L ? 58 : 36, tam = L ? 66 : 48;
+  if (L) {
+    const HDR = L.HDR || 116;
+    const barra = this.add.graphics().setDepth(995);
+    barra.fillStyle(0x000000, 0.35); barra.fillRect(-200, HDR - 2, 1200, 8);
+    barra.fillStyle(0xF3E7CF, 1); barra.fillRect(-200, 0, 1200, HDR);
+    barra.fillStyle(0xFFFFFF, 0.4); barra.fillRect(-200, 0, 1200, 8);
+    barra.lineStyle(4, 0x5C3317, 1); barra.lineBetween(-200, HDR, 1000, HDR);
+    objs.push(barra);
+    const engranaje = this.add.image(714, py, 'botonConfigMesa').setDisplaySize(tam, tam).setDepth(1003);
+    engranaje.setInteractive({ useHandCursor: true });
+    engranaje.on('pointerdown', () => { if (this.onAbrirConfiguracion) this.onAbrirConfiguracion(); });
+    objs.push(engranaje);
+  }
+  const volver = this.add.image(px, py, 'botonVolverMesa').setDisplaySize(tam, tam).setDepth(1003);
+  volver.setInteractive({ useHandCursor: true });
+  volver.on('pointerdown', () => { if (this.onSalir) this.onSalir(); });
+  objs.push(volver);
+
+  // Ping (semáforo): punto de color + ms. Celular: bajo la barra a la derecha; escritorio: arriba a la derecha, bajo el chat.
+  const xp = L ? 745 : 790, yp = L ? (L.HDR || 116) + 28 : 76;
+  this.pingTexto = this.add.text(xp, yp, '', { font: `bold ${L ? 20 : 15}px Arial`, fill: '#FFF8ED', stroke: '#2a1c14', strokeThickness: 3 }).setOrigin(1, 0.5).setDepth(1003);
+  this.pingPunto = this.add.circle(xp - 60, yp, L ? 8 : 6, 0x999999).setStrokeStyle(2, 0x2a1c14).setDepth(1003);
+  objs.push(this.pingTexto, this.pingPunto);
+
+  objs.forEach(o => o.setVisible(false));
+  this._cabeceraObjs = objs;
+  this.time.addEvent({ delay: 4000, loop: true, callback: () => this._medirPing() });
+  this.time.delayedCall(1500, () => this._medirPing());
+}
+
+_medirPing() {
+  const s = this.socket;
+  if (!s || !s.connected) return;
+  const t0 = Date.now();
+  s.timeout(3000).emit('medir-ping', (err) => this._actualizarPing(err ? -1 : Date.now() - t0));
+}
+
+_actualizarPing(ms) {
+  if (!this.pingTexto || !this.pingTexto.scene) return;
+  const color = ms < 0 ? 0xE74C3C : ms <= 120 ? 0x2ECC71 : ms <= 250 ? 0xF1C40F : 0xE74C3C;
+  this.pingTexto.setText(ms < 0 ? 'sin señal' : `${ms} ms`);
+  this.pingPunto.setFillStyle(color).setPosition(this.pingTexto.x - this.pingTexto.width - 14, this.pingTexto.y);
 }
 
 // Pase 210: título de la sala de espera ("2v2 — esperando jugadores"),

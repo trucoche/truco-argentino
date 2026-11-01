@@ -18,7 +18,7 @@ function carpetaBaraja() {
   }
 }
 
-export default function ChatMesa({ codigoSala, esEquipos, personaje = 'gaucho', token, usuarioActual }) {
+export default function ChatMesa({ angosto = false, codigoSala, esEquipos, personaje = 'gaucho', token, usuarioActual }) {
   const [mensajes, setMensajes] = useState([]);
   // Centésimo quinto pase: usuarios bloqueados, para ocultar sus mensajes
   // (y stickers) del chat de la mesa sin tocar nada del socket — el
@@ -155,7 +155,7 @@ export default function ChatMesa({ codigoSala, esEquipos, personaje = 'gaucho', 
         <button
           onClick={() => { setAbierto(true); setHayNuevoMientrasCerrado(false); }}
           className="chat-mesa-btn"
-          style={estilos.botonAbrir}
+          style={angosto ? { ...estilos.botonAbrir, top: 'auto', bottom: 'calc(26.8vw + 12px)' } : estilos.botonAbrir}
           title="Chat"
           aria-label="Chat"
         >
@@ -188,7 +188,7 @@ export default function ChatMesa({ codigoSala, esEquipos, personaje = 'gaucho', 
         que ya usan Lobby/Torneos/Ranking, con la paleta nueva (más
         terracota, sampleada del PNG de la botonera) en vez de la madera
         casi negra vieja. */}
-    <div style={estilos.marcoExterior}>
+    <div style={angosto ? { ...estilos.marcoExterior, top: 'calc(16.1vw + 12px)' } : estilos.marcoExterior}>
     <span style={{ ...estilos.remache, top: 4, left: 4 }} />
     <span style={{ ...estilos.remache, top: 4, right: 4 }} />
     <span style={{ ...estilos.remache, bottom: 4, left: 4 }} />
