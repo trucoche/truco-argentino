@@ -30,7 +30,7 @@ export default function ConfiguracionMesaBoton({ onAbrir }) {
   return (
     <>
       {/* Pase 664: con la pantalla final abierta (el juego marca #game-container[data-final]) el engranaje se oculta. */}
-      <style>{'#game-container[data-final="1"] ~ .cfg-mesa-btn { display: none !important; }'}</style>
+      <style>{'#game-container[data-final="1"] ~ .cfg-mesa-btn, #game-container[data-espera="1"] ~ .cfg-mesa-btn, #game-container[data-espera="1"] ~ .chat-mesa-btn { display: none !important; }'}</style>
       <button
         className="cfg-mesa-btn"
         onClick={onAbrir}

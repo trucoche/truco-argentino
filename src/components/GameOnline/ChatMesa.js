@@ -154,6 +154,7 @@ export default function ChatMesa({ codigoSala, esEquipos, personaje = 'gaucho', 
       <>
         <button
           onClick={() => { setAbierto(true); setHayNuevoMientrasCerrado(false); }}
+          className="chat-mesa-btn"
           style={estilos.botonAbrir}
           title="Chat"
           aria-label="Chat"

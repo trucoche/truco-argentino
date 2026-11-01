@@ -1169,6 +1169,8 @@ _crearElementosDeTexto() {
     // más arriba), porque sus posiciones se recalculan en coordenadas
     // absolutas según cuántos asientos tenga la sala.
     this.panelEspera = this.add.container(400, 300).setDepth(400);
+    // Pase 671: en la sala de espera no se muestran el chat ni el engranaje (vuelven al arrancar la partida).
+    try { const gcE = document.getElementById('game-container'); if (gcE) gcE.setAttribute('data-espera', '1'); } catch (e) {}
 
     // Pase 209: título agrandado (20→28px) junto con el resto de la
     // pantalla de espera.
@@ -2173,6 +2175,7 @@ _actualizarTextoBuscando() {
 // de "no dejar nada de la sala de espera en la partida" que el resto de
 // esta pantalla.
 _destruirBannerEsperaTitulo() {
+  try { const gcE = document.getElementById('game-container'); if (gcE) gcE.removeAttribute('data-espera'); } catch (e) {}
   if (this._centroEspera) {
     const { texto, tiempo, timer } = this._centroEspera;
     if (timer && timer.remove) timer.remove();
@@ -2810,7 +2813,7 @@ _conectarSocket() {
       if (this.mesaImg) this.mesaImg.setVisible(true);
       if (this.sombraMesa) this.sombraMesa.setVisible(true);
       this._mostrarMarcadores(true);
-      try { const gc = document.getElementById('game-container'); if (gc) gc.removeAttribute('data-final'); } catch (e) {}
+      try { const gc = document.getElementById('game-container'); if (gc) gc.removeAttribute('data-final'); gc.removeAttribute('data-espera'); } catch (e) {}
     });
     this.socket.off('jugador-desconectado').on('jugador-desconectado', (data) => {
       this._actualizarMensajeEstado(data.mensaje);
@@ -3611,7 +3614,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
 
 _renderizarEstado(animarReparto) {
      this._limpiarSprites();
-    try { const gc = document.getElementById('game-container'); if (gc) gc.removeAttribute('data-final'); } catch (e) {}   // Pase 664: vuelve el engranaje de ajustes
+    try { const gc = document.getElementById('game-container'); if (gc) gc.removeAttribute('data-final'); gc.removeAttribute('data-espera'); } catch (e) {}   // Pase 664: vuelve el engranaje de ajustes
     this._jugadaEnviada = false;   // Pase 414: llego un estado nuevo, se puede volver a jugar
     if (this._L) this._modoCamaraAngosto('juego');
 
