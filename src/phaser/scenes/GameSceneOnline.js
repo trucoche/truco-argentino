@@ -3307,7 +3307,9 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
         ['Manos', resumenFinal.manos || 0], ['Duración', durTexto], ['Trucos', resumenFinal.trucos || 0],
         ['Envidos', resumenFinal.envidos || 0], ['Al mazo', resumenFinal.mazos || 0], ['Amagues', resumenFinal.amagues || 0],
       ];
-      const wR = 560, hR = 50, xR = 400 - wR / 2, anchoCelda = wR / celdas.length;
+      // Pase 668: en el celular la barra no puede ser más ancha que lo que muestra la cámara (se cortaba en los costados).
+      const visMundoR = this._L ? this.scale.width / this.cameras.main.zoom : 800;
+      const wR = Math.min(560, Math.floor(visMundoR * 0.92)), hR = 50, xR = 400 - wR / 2, anchoCelda = wR / celdas.length;
       const panelR = this.add.graphics().setDepth(904);
       panelR.fillStyle(0x140C08, 0.55);
       panelR.fillRoundedRect(xR, y, wR, hR, 12);
