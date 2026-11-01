@@ -29,6 +29,14 @@ export default function GameOnlinePhaser({
   onLogrosDesbloqueados,
 }) {
   const gameRef = useRef(null);
+  // Pase 673: la pantalla del juego no se desplaza (sin esto el navegador podía correr la página unos píxeles).
+  useEffect(() => {
+    const prev = [document.documentElement.style.overflow, document.body.style.overflow, document.body.style.overscrollBehavior];
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
+    document.body.style.overscrollBehavior = 'none';
+    return () => { document.documentElement.style.overflow = prev[0]; document.body.style.overflow = prev[1]; document.body.style.overscrollBehavior = prev[2]; };
+  }, []);
   // Pase 394: layout vertical en ventanas angostas (<700px). `angosto` decide el
   // estilo del contenedor y la config del canvas; `claveLayout` fuerza a
   // recrear el juego cuando la ventana cruza el umbral (o cambia mucho de
@@ -287,8 +295,11 @@ const estilosPagina = {
   // real en cada momento, así que el contenedor nunca se pasa del marco
   // visible ni salta al aparecer/ocultarse la barra.
   fondoPagina: {
-    width: '100vw',
-    height: '100dvh',
+    // Pase 673: fijo y del tamaño real de lo visible (algunos navegadores del celular miden 100dvh con la barra de
+    // direcciones escondida: el juego quedaba más alto que la pantalla y la cabecera se cortaba arriba).
+    position: 'fixed', top: 0, left: 0,
+    width: '100%',
+    height: '100%',
     // Pase 414: madera caoba rustica vertical (la misma del Anotador de Asado) en vez del marron liso.
     background: 'radial-gradient(120% 90% at 50% 0%, rgba(255,255,255,0.07), transparent 60%), repeating-linear-gradient(90deg, rgba(0,0,0,0.18) 0 2px, transparent 2px 46px), linear-gradient(180deg, #5a3b28, #2d1b14)',
     display: 'flex',
@@ -338,7 +349,7 @@ const estilosPagina = {
   contenedorJuegoAngosto: {
     position: 'relative',
     width: '100%',
-    height: 'min(100dvh, calc(100vw * 4))',
+    height: 'min(100%, calc(100vw * 4))',
   },
   contenedorJuego: {
     position: 'relative',

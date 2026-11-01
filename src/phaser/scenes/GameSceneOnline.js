@@ -1494,7 +1494,15 @@ _crearElementosDeTexto() {
   if (this._L && modo === 'app1v1') {
     const L = this._L;
     const s = L.tableW / 840;
-    const top = L.tableTop;
+    // Pase 673: la mesa sube 70 (con el mazo y el nombre del rival) para achicar el aire bajo la cabecera y dejar ver las patas hasta la botonera.
+    const SUBIR_MESA = 70;
+    if (!L._subidaMesa) {
+      L._subidaMesa = SUBIR_MESA;
+      L.rivalY -= SUBIR_MESA;
+      L.nombreY -= SUBIR_MESA;
+      if (this.nombreRivalAngosto && this.nombreRivalAngosto.scene) this.nombreRivalAngosto.setY(L.nombreY);
+    }
+    const top = L.tableTop - SUBIR_MESA;
     this.mesaImg
       .setTexture('mesa1v1App')
       .setCrop()
@@ -4942,7 +4950,7 @@ _dibujarManoJugador(cartas, yBase, jugable, animar = false) {
       // que ya mueve a `img` (animación de reparto, hover al jugar) — así
       // los dos quedan siempre pegados, sin código de sincronización aparte.
       // Pase 414: cartas bloqueadas (fuera de turno / canto sin resolver) a 0.75 de opacidad y sin interaccion.
-      const alfaCarta = jugable ? 1 : 0.75;
+      const alfaCarta = 1;   // Pase 673: la mano siempre opaca (antes 0.75 cuando no se podía jugar)
       const borde = this._dibujarBordeSticker(
         animar ? 400 : destinoX, animar ? 300 : destinoY,
         anchoCarta, altoCarta, animar ? 0 : radCarta, 0.5, 0.85, 10 + i - 0.5

@@ -90,8 +90,10 @@ export function esLayoutAngosto() {
 
 export function crearConfigOnline(angosto) {
   if (!angosto) return gameConfigOnline;
-  const ancho = window.innerWidth;
-  const alto = Math.min(window.innerHeight, ancho * RELACION_ALTO_MAX);
+  // Pase 673: el canvas toma el tamaño real del contenedor (no window.innerHeight, que cambia con la barra del navegador).
+  const cont = typeof document !== 'undefined' ? document.getElementById('game-container') : null;
+  const ancho = (cont && cont.clientWidth) || window.innerWidth;
+  const alto = Math.min((cont && cont.clientHeight) || window.innerHeight, ancho * RELACION_ALTO_MAX);
   return {
     ...gameConfigOnline,
     width: Math.round(ancho * DPR),
