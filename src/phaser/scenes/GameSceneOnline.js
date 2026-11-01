@@ -1322,7 +1322,7 @@ _crearElementosDeTexto() {
     const panelCY = Hg - panelH / 2;
     // Pase 402: la carta de la mano nunca es mas alta que la botonera de madera. Pase 546: +15% (tope 1.95 / 1.2x la botonera) — pedido: las cartas se veían chicas en el celular.
     const kMano = Math.min(2.3 * f, 1.2 * panelH / 118);   // Pase 675: cartas de la mano +18% (tope 1.95 -> 2.3)
-    const manoY = panelTop - 6;
+    const manoY = panelTop - 40;   // Pase 676: la mano apoya sobre la franja de remaches (antes -6: el borde de abajo quedaba tapado por el panel)
 
     // Mesa: la imagen se parte en TRES franjas y solo la del medio se
     // estira (un corte fino en el punto mas ancho del paño; la marca "TC"
@@ -1516,13 +1516,26 @@ _crearElementosDeTexto() {
       if (this.nombreRivalAngosto && this.nombreRivalAngosto.scene) this.nombreRivalAngosto.setY(L.nombreY);
     }
     const top = L.tableTop - L._subidaMesa;
-    const s = Math.max(0.8, Math.min(0.92, (L.panelTop + 20 - top) / 919));
+    const apoyo = L.panelTop + 6;   // Pase 676: las patas llegan hasta la franja de remaches (no queda la mesa flotando)
+    const s = Math.max(0.8, Math.min(0.92, (apoyo - top) / 919));
+    const extra = Math.max(0, apoyo - top - 919 * s);   // lo que falta para llegar: se estira solo la madera lisa de las patas (filas 850-895)
+    const FA = 850, FB = 895;
     this.mesaImg
       .setTexture('mesa1v1App')
-      .setCrop()
+      .setCrop(0, 0, 840, FA)
       .setOrigin(0.5, 0)
       .setScale(s)
       .setPosition(400, top);
+    if (!this._mesaAppExtra) {
+      const dep = this.mesaImg.depth;
+      this._mesaAppExtra = [this.add.image(400, 0, 'mesa1v1App').setOrigin(0.5, 0).setDepth(dep), this.add.image(400, 0, 'mesa1v1App').setOrigin(0.5, 0).setDepth(dep)];
+      const visOrig = this.mesaImg.setVisible.bind(this.mesaImg);
+      this.mesaImg.setVisible = (v) => { visOrig(v); this._mesaAppExtra.forEach(o => { if (o && o.scene) o.setVisible(v); }); return this.mesaImg; };
+      this._mesaAppExtra.forEach(o => o.setVisible(this.mesaImg.visible));
+    }
+    const kB = ((FB - FA) * s + extra) / ((FB - FA) * s);
+    this._mesaAppExtra[0].setCrop(0, FA, 840, FB - FA).setScale(s, s * kB).setPosition(400, top + FA * s - FA * s * kB);
+    this._mesaAppExtra[1].setCrop(0, FB, 840, 919 - FB).setScale(s).setPosition(400, top + FB * s + extra - FB * s);
     [this.mesaMedio, this.mesaPatas, this.mesaPies, this.marcaTcMesa].forEach(o => { if (o && o.scene) o.setVisible(false); });
     const feltTop = top + 52 * s;
     const feltBot = top + 611 * s;
@@ -1535,7 +1548,7 @@ _crearElementosDeTexto() {
     L.perspCY = centro;
     L.feltRY = (visBot - feltTop) / 2;
     L.dueloEscala = Math.min(0.66 * 1.9 * L.f, 0.95 * (visBot - feltTop) / 234);
-    if (this.sombraMesa) this.sombraMesa.setPosition(400, top + 860 * s).setSize(620, 110);
+    if (this.sombraMesa) this.sombraMesa.setPosition(400, top + 919 * s + extra - 10).setSize(660 * s, 56);   // Pase 676: la sombra queda en el piso, bajo las patas
     return;
   }
 
@@ -3854,6 +3867,7 @@ _renderizarEstado(animarReparto) {
       if (this.nombreRivalAngosto) {
         const nr = e.nombreRival || '';
         this.nombreRivalAngosto.setText(nr.length > 18 ? nr.slice(0, 17) + '…' : nr).setVisible(!!nr);
+        this._posicionarMedallaRival();
       }
 
       // Pase siguiente: anillo de tiempo (paridad con el nativo, pase
@@ -4219,8 +4233,9 @@ _cxPlacaFosforos(k) {
   const g = this._geoPlacas;
   const wF = this._anchoPlacaFosforos();
   if (this._L) {
-    const d = (wF - g.vos.w) / 2;
-    return k === 'vos' ? g.vos.cx - d : g.rival.cx + d;
+    // Pase 676: el borde izquierdo de VOS queda fijo (a la derecha del botón Volver) y las dos placas crecen hacia la derecha.
+    const izq = g.vos.cx - g.vos.w / 2;
+    return k === 'vos' ? izq + wF / 2 : izq + wF + 12 + wF / 2;
   }
   return k === 'vos' ? 12 + wF / 2 : 12 + wF + 14 + wF / 2;
 }
@@ -5253,6 +5268,12 @@ _posicionarMedallaRival() {
   const m = this.medallaManoRival;
   if (!ic || !ic.scene || !m || !m.scene) return;
   const kpH = ic.displayWidth / 17 || 1;
+  const nr = this.nombreRivalAngosto;
+  if (this._L && nr && nr.scene) {
+    // Pase 676 (paridad con la app): en el celular la medalla de mano del rival va al lado de su nombre, sobre sus cartas.
+    m.setDisplaySize(22, 22).setPosition(nr.x + nr.displayWidth / 2 + 16, nr.y);
+    return;
+  }
   m.setDisplaySize(18 * kpH, 18 * kpH).setPosition(ic.x + 2 * kpH, ic.y);   // Pase 599: el ícono de turno ya no se ve, la medalla ocupa su lugar
 }
 

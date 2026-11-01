@@ -155,7 +155,7 @@ export default function ChatMesa({ angosto = false, codigoSala, esEquipos, perso
         <button
           onClick={() => { setAbierto(true); setHayNuevoMientrasCerrado(false); }}
           className="chat-mesa-btn"
-          style={angosto ? { ...estilos.botonAbrir, top: 'auto', right: 6, width: 44, height: 44, bottom: 'calc(36.4vw + 6px)' } : estilos.botonAbrir}
+          style={angosto ? { ...estilos.botonAbrir, right: 8, width: 44, height: 44, top: 'calc(16.1vw + 36px)' } : estilos.botonAbrir}
           title="Chat"
           aria-label="Chat"
         >
