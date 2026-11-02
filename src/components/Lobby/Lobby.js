@@ -530,7 +530,7 @@ useEffect(() => {
           </div>
         </div>
 
-          <div className="lobby3-fila-inf">
+          <div className={`lobby3-fila-inf${conEventos ? ' lb-con-eventos' : ''}`}>
           <button type="button" className="lb-entrada lb-d6 lb-mates" onClick={() => { setAvisoRedes(''); setHoja('redes'); }} aria-label={`Mates gratis. Seguinos en redes y ganá hasta ${RECOMPENSA_SOCIAL_TOTAL} mates`} style={{ ...estilos.tarjetaModulo, ...estilos.fondoSocial }}>
             <span style={estilos.tarjetaBisel} aria-hidden="true" />
             <img className="lb-pulso" src="/assets/images/regalo.png" alt="" style={{ ...estilos.tarjetaIcono, animationDelay: '300ms' }} />
@@ -907,7 +907,18 @@ const CSS_LOBBY_COLUMNAS = `
 .lb-pendulo { animation: lbPendulo 1400ms ease-in-out infinite alternate; transform-origin: 50% 0; }
 .lb-latido { animation: lbLatido 2000ms ease-in-out infinite; }
 .lb-destello { position: absolute; top: -14px; bottom: -14px; left: -50px; width: 26px; background: rgba(255,255,255,0.5); transform: rotate(20deg); pointer-events: none; animation: lbDestello 5000ms ease-in-out infinite; }
-@media (max-width: 760px) {
+/* Pase 685: con las tarjetitas de eventos al lado (hasta 3), la tarjeta de Mates Gratis se achica en pantallas medianas para que el texto no pise a las redes. */
+@media (min-width: 900px) and (max-width: 1199px) {
+  .lb-con-eventos .lb-mates { gap: 8px !important; padding: 10px 12px !important; }
+  .lb-con-eventos .lb-mates > img { width: 64px !important; height: 64px !important; }
+  .lb-con-eventos .lb-mates-textos { flex: 0 1 auto !important; }
+  .lb-con-eventos .lb-mates-textos > span { white-space: nowrap; }
+  .lb-con-eventos .lb-mates-textos > span:first-child { font-size: 20px !important; }
+  .lb-con-eventos .lb-mates-textos > span:last-child { font-size: 13px !important; }
+  .lb-con-eventos .lb-mates-chips { gap: 6px !important; margin-left: auto; }
+  .lb-con-eventos .lb-mates-chips img { width: 50px !important; height: 50px !important; }
+}
+@media (max-width: 899px) {
   .lb-mates { flex-wrap: wrap; row-gap: 10px; padding: 12px 14px !important; }
   .lb-mates-textos { flex: 1 1 150px !important; }
   .lb-mates-chips { gap: 8px !important; }
