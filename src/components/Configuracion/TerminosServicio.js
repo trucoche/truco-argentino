@@ -10,7 +10,7 @@ const C = {
   crema: '#FFF8ED', chocolate: '#4A2C2A',
 };
 
-const FECHA_ACTUALIZACION = '27/10/2026';
+const FECHA_ACTUALIZACION = '03/11/2026';
 
 const SECCIONES = [
   {
@@ -49,12 +49,12 @@ const SECCIONES = [
   {
     "titulo": "5. Compras y pagos",
     "lista": [
-      "Las compras de mates se pagan a través de Mercado Pago, tanto en la versión web como en la aplicación móvil. No almacenamos los datos de tu tarjeta ni de tu medio de pago.",
-      "Los precios se muestran en pesos argentinos e incluyen lo indicado en cada pack al momento de la compra.",
+      "Las compras de mates se pagan a través de Mercado Pago en la versión web y a través de Google Play en la aplicación para Android. No almacenamos los datos de tu tarjeta ni de tu medio de pago: los procesa directamente cada proveedor.",
+      "Los precios se muestran en pesos argentinos e incluyen lo indicado en cada pack al momento de la compra. En las compras por Google Play, el precio final, los impuestos y la moneda los informa Google Play antes de confirmar.",
       "Algunas ofertas, como el Pack Inauguración, son por tiempo limitado y se pueden comprar una sola vez por cuenta. Cuando la oferta termina, deja de estar disponible.",
-      "Los mates se acreditan cuando Mercado Pago confirma el pago, lo que puede demorar unos minutos. Si pasado un tiempo razonable no ves tus mates, escribinos con el comprobante de pago.",
-      "Si tuviste un problema con una compra (por ejemplo, un cobro duplicado o un error en la acreditación) o te arrepentís dentro de los 10 días corridos de haberla hecho y todavía no usaste esos mates, escribinos al correo de contacto del punto 18. Revisamos cada caso y, cuando corresponde, devolvemos el pago a través de Mercado Pago. Si se devuelve un pago, descontamos de tu cuenta los mates correspondientes.",
-      "Si el titular desconoce un pago ante su banco y este lo revierte (contracargo), podemos descontar los mates de esa compra y suspender la cuenta hasta aclarar la situación.",
+      "Los mates se acreditan cuando Mercado Pago o Google Play confirman el pago, lo que puede demorar unos minutos. Si pasado un tiempo razonable no ves tus mates, escribinos con el comprobante de pago.",
+      "Si tuviste un problema con una compra (por ejemplo, un cobro duplicado o un error en la acreditación) o te arrepentís dentro de los 10 días corridos de haberla hecho y todavía no usaste esos mates, escribinos al correo de contacto del punto 18. Revisamos cada caso y, cuando corresponde, devolvemos el pago por el mismo medio con el que se hizo. En las compras hechas por Google Play, los reembolsos también se rigen por la política de reembolsos de Google Play, y podés pedirlos directamente a Google. Si se devuelve un pago, descontamos de tu cuenta los mates correspondientes.",
+      "Si el titular desconoce un pago ante su banco o ante el proveedor de pago y este lo revierte (contracargo o anulación), podemos descontar los mates de esa compra y suspender la cuenta hasta aclarar la situación.",
       "Una vez acreditados, los mates se consideran entregados y consumibles dentro del juego. Esto no limita los derechos que te reconozca la normativa de defensa del consumidor vigente en Argentina, ni los casos de cobros duplicados o errores comprobables, que vamos a resolver con el criterio de corregir el error."
     ]
   },
@@ -123,7 +123,7 @@ const SECCIONES = [
   {
     "titulo": "13. Servicios de terceros",
     "parrafos": [
-      "TrucoChe usa servicios de terceros, como Google y Facebook (inicio de sesión), Mercado Pago (pagos) y Daily.co (chat de voz). Su uso está sujeto además a los términos y políticas de cada proveedor, de los que no somos responsables. En la Política de Privacidad detallamos qué datos se comparten con cada uno."
+      "TrucoChe usa servicios de terceros, como Google y Facebook (inicio de sesión), Mercado Pago (pagos en la web), Google Play (pagos en la aplicación Android) y Daily.co (chat de voz). Su uso está sujeto además a los términos y políticas de cada proveedor, de los que no somos responsables. En la Política de Privacidad detallamos qué datos se comparten con cada uno."
     ]
   },
   {

@@ -328,8 +328,9 @@ export function AdminAcciones({ token }) {
 }
 
 // ---------- Pase 654: compras y devoluciones ----------
-// La plata se devuelve desde Mercado Pago (Actividad → la operación → "Devolver dinero"): vuelve al MISMO medio de pago, no hace
-// falta pedir alias ni CBU. Acá solo se registra la devolución en el juego (descuenta los mates de esa compra).
+// La plata se devuelve desde Mercado Pago (Actividad → la operación → "Devolver dinero") o, en las compras de la app Android, desde
+// Play Console (pedido → Reembolsar): vuelve al MISMO medio de pago, no hace falta pedir alias ni CBU. Acá solo se registra la
+// devolución en el juego (descuenta los mates de esa compra). Pase 687: las compras de Google Play también se listan acá.
 const FILTROS_COMPRA = [
   { id: '', texto: 'Todas' },
   { id: 'aprobado', texto: 'Aprobadas' },
@@ -365,13 +366,13 @@ export function AdminDevoluciones({ token }) {
     if (motivo.trim().length < 3) { setError('Escribí el motivo de la devolución'); return; }
     const ok = await confirmarPopup({
       titulo: 'Registrar devolución',
-      mensaje: `¿Ya devolviste el dinero desde Mercado Pago? Se van a descontar hasta ${num(p.monedas)} mates a ${p.username} (tiene ${num(p.saldo)}).`,
+      mensaje: `¿Ya devolviste el dinero desde ${p.medio === 'google' ? 'Google Play' : 'Mercado Pago'}? Se van a descontar hasta ${num(p.monedas)} mates a ${p.username} (tiene ${num(p.saldo)}).`,
       textoSi: 'Descontar mates',
     });
     if (!ok) return;
     setCargando(true); setError(''); setAviso('');
     try {
-      const d = await pedir(token, `/pagos/${p.id}/devolucion`, { method: 'POST', body: JSON.stringify({ motivo: motivo.trim() }) });
+      const d = await pedir(token, `/pagos/${p.medio === 'google' ? 'google/' : ''}${p.id}/devolucion`, { method: 'POST', body: JSON.stringify({ motivo: motivo.trim() }) });
       setAviso(d.mensaje); setAbierta(null); setMotivo('');
       await cargar(q, estado);
     } catch (e) { setError(e.message); setCargando(false); }
@@ -384,12 +385,12 @@ export function AdminDevoluciones({ token }) {
         <button style={estilos.btn} disabled={cargando} onClick={() => cargar(q, estado)}>{cargando ? 'Actualizando…' : 'Actualizar'}</button>
       </div>
       <p style={estilos.pie}>
-        1) Devolvé el dinero en Mercado Pago (Actividad → la operación → Devolver dinero): vuelve al mismo medio de pago, no necesitás alias ni CBU.
+        1) Devolvé el dinero: compras de la web en Mercado Pago (Actividad → la operación → Devolver dinero); compras de la app Android en Play Console (Informes de pedidos → el pedido → Reembolsar). Vuelve al mismo medio de pago, no necesitás alias ni CBU.
         {' '}2) Después registrá acá la devolución para descontar los mates de esa compra.
       </p>
-      {pendientes > 0 && <p style={estilos.error}>{pendientes} compra{pendientes === 1 ? '' : 's'} devuelta{pendientes === 1 ? '' : 's'} en Mercado Pago con los mates sin descontar.</p>}
+      {pendientes > 0 && <p style={estilos.error}>{pendientes} compra{pendientes === 1 ? '' : 's'} devuelta{pendientes === 1 ? '' : 's'} con los mates sin descontar.</p>}
       <div style={estilos.filaBusqueda}>
-        <input id="admin-compras-busqueda" style={estilos.input} type="text" placeholder="Usuario, email, ID o N.º de operación" value={q} maxLength={80}
+        <input id="admin-compras-busqueda" style={estilos.input} type="text" placeholder="Usuario, email, ID o N.º de operación / pedido" value={q} maxLength={80}
           onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') cargar(q, estado); }} />
         <button style={estilos.btn} disabled={cargando} onClick={() => cargar(q, estado)}>Buscar</button>
         {FILTROS_COMPRA.map((f) => (
@@ -403,22 +404,22 @@ export function AdminDevoluciones({ token }) {
           {pagos.map((p) => {
             const sinDescontar = (p.estado === 'aprobado' || p.estado === 'devuelto') && !p.mates_descontados_en;
             return (
-              <div key={p.id} style={{ ...estilos.fila, flexDirection: 'column', alignItems: 'stretch' }}>
+              <div key={p.clave || p.id} style={{ ...estilos.fila, flexDirection: 'column', alignItems: 'stretch' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'space-between', flexWrap: 'wrap' }}>
-                  <div style={estilos.filaTitulo}>#{p.id} · {p.username} · ${num(p.monto)}</div>
+                  <div style={estilos.filaTitulo}>#{p.id} · {p.username} · {p.monto != null ? `$${num(p.monto)}` : 'Google Play'}</div>
                   <span style={{ ...estilos.pastilla, color: colorEstadoCompra(p.estado), borderColor: colorEstadoCompra(p.estado) }}>{p.estado}</span>
                 </div>
                 <div style={estilos.filaDetalle}>{p.pack_id} · {num(p.monedas)} mates · saldo actual {num(p.saldo)}</div>
-                <div style={estilos.filaDetalle}>Operación de Mercado Pago: {p.mp_payment_id || '—'}</div>
+                <div style={estilos.filaDetalle}>{p.medio === 'google' ? 'Pedido de Google Play (app Android)' : 'Operación de Mercado Pago'}: {p.operacion || p.mp_payment_id || '—'}</div>
                 <div style={estilos.filaDetalle}>Email: {p.email || '—'} · Compra: {fecha(p.acreditado_en || p.creado_en)}</div>
                 {p.mates_descontados_en && <div style={estilos.filaDetalle}>Se descontaron {num(p.mates_descontados)} mates el {fecha(p.mates_descontados_en)}.</div>}
-                {p.estado === 'devuelto' && !p.mates_descontados_en && <div style={{ ...estilos.filaDetalle, color: C.rojo }}>Mercado Pago la devolvió y faltan descontar los mates.</div>}
-                {sinDescontar && abierta !== p.id && (
-                  <div style={{ marginTop: 6 }}><button style={estilos.btnSec} onClick={() => { setAbierta(p.id); setMotivo(''); setError(''); }}>Registrar devolución</button></div>
+                {p.estado === 'devuelto' && !p.mates_descontados_en && <div style={{ ...estilos.filaDetalle, color: C.rojo }}>{p.medio === 'google' ? 'Google Play' : 'Mercado Pago'} la devolvió y faltan descontar los mates.</div>}
+                {sinDescontar && abierta !== (p.clave || p.id) && (
+                  <div style={{ marginTop: 6 }}><button style={estilos.btnSec} onClick={() => { setAbierta(p.clave || p.id); setMotivo(''); setError(''); }}>Registrar devolución</button></div>
                 )}
-                {abierta === p.id && (
+                {abierta === (p.clave || p.id) && (
                   <div style={{ ...estilos.filaBusqueda, marginBottom: 0 }}>
-                    <input id={`admin-devolucion-motivo-${p.id}`} style={estilos.input} type="text" placeholder="Motivo (obligatorio)" maxLength={200} value={motivo} onChange={(e) => setMotivo(e.target.value)} />
+                    <input id={`admin-devolucion-motivo-${p.clave || p.id}`} style={estilos.input} type="text" placeholder="Motivo (obligatorio)" maxLength={200} value={motivo} onChange={(e) => setMotivo(e.target.value)} />
                     <button style={estilos.btn} disabled={cargando} onClick={() => registrar(p)}>Descontar mates</button>
                     <button style={estilos.btnSec} onClick={() => setAbierta(null)}>Cancelar</button>
                   </div>

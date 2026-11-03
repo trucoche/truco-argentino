@@ -24,7 +24,7 @@ const C = {
   crema: '#FFF8ED', chocolate: '#4A2C2A',
 };
 
-const FECHA_ACTUALIZACION = '11/10/2026';
+const FECHA_ACTUALIZACION = '03/11/2026';
 
 const SECCIONES = [
   {
@@ -119,7 +119,8 @@ const SECCIONES = [
       { proveedor: 'Google / Facebook', funcion: 'Inicio de sesión social', datos: 'Nombre, email, foto de perfil (si autorizás)' },
       { proveedor: 'Daily.co', funcion: 'Chat de voz en salas privadas', datos: 'Audio en tiempo real (no almacenado)' },
       { proveedor: 'Resend', funcion: 'Envío de emails transaccionales (ej. recuperación de contraseña)', datos: 'Dirección de email' },
-      { proveedor: 'Mercado Pago', funcion: 'Procesamiento de pagos para la compra de mates', datos: 'Datos de pago (procesados directamente por Mercado Pago, no almacenamos datos de tarjetas)' },
+      { proveedor: 'Mercado Pago', funcion: 'Procesamiento de pagos para la compra de mates en la versión web', datos: 'Datos de pago (procesados directamente por Mercado Pago, no almacenamos datos de tarjetas)' },
+      { proveedor: 'Google Play', funcion: 'Procesamiento de pagos para la compra de mates en la aplicación Android', datos: 'Datos de pago (procesados directamente por Google Play; recibimos solo la confirmación de la compra y su identificador, no datos de tarjetas)' },
     ],
     parrafos: [
       'También usamos proveedores de infraestructura (alojamiento de los servidores, de la base de datos y del sitio web), que procesan datos únicamente para que el servicio funcione.',
@@ -129,7 +130,7 @@ const SECCIONES = [
   {
     titulo: '5. Mates virtuales — aclaración importante',
     parrafos: [
-      'TrucoChe utiliza un sistema de mates virtuales propio, sin valor monetario fuera de la aplicación. Estos mates se pueden obtener de forma gratuita (bonos diarios, misiones, logros) y también mediante compra directa dentro de la app, a través de Mercado Pago.',
+      'TrucoChe utiliza un sistema de mates virtuales propio, sin valor monetario fuera de la aplicación. Estos mates se pueden obtener de forma gratuita (bonos diarios, misiones, logros) y también mediante compra directa dentro de la app, a través de Mercado Pago (versión web) o de Google Play (aplicación Android).',
       'TrucoChe no aloja ni administra apuestas de dinero real ni juegos de azar con dinero real. Cualquier actividad de dinero real entre usuarios que pudiera organizarse por fuera de la aplicación (por ejemplo, a través de grupos externos de mensajería) es completamente ajena a TrucoChe, no es operada, supervisada ni respaldada por nosotros, y no está cubierta por esta Política de Privacidad ni por los Términos de Servicio de la aplicación.',
     ],
   },
