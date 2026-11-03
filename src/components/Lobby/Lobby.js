@@ -408,16 +408,16 @@ useEffect(() => {
             const ui = rangoUi(r);
             const titulo = r ? (r.esTop500 ? r.nombre : `${r.nombre} ${r.division}`) : null;
             return (
-              <button type="button" onClick={onIrARanked} aria-label="Liga Criolla" style={{ ...estilos.tarjetaModulo, ...estilos.fondoLiga, ...estilos.tarjetaFlex, ...estilos.tarjetaColumna }}>
+              <button type="button" onClick={onIrARanked} aria-label="Liga Criolla" className="lb-m-liga" style={{ ...estilos.tarjetaModulo, ...estilos.fondoLiga, ...estilos.tarjetaFlex, ...estilos.tarjetaColumna }}>
                 <span style={estilos.tarjetaBisel} aria-hidden="true" />
-                <img className="lb-pulso" src={ui.logo} alt="" style={estilos.tarjetaIconoColumna} />
-                <span style={estilos.tarjetaTextosCentro}>
+                <img className="lb-pulso lb-m-ico" src={ui.logo} alt="" style={estilos.tarjetaIconoColumna} />
+                <span className="lb-m-textos" style={estilos.tarjetaTextosCentro}>
                   <span style={{ ...estilos.tarjetaTitulo, color: '#FFD700' }}>Liga Criolla</span>
                   {titulo
                     ? <span style={{ ...estilos.ligaPastilla, alignSelf: 'center' }}><span style={{ color: '#FFD700', fontWeight: 800 }}>{titulo}</span>{` · ${r.puntos} pts`}</span>
                     : <span style={estilos.tarjetaSub}>Competí y subí de rango</span>}
                   {titulo && !r.esTop500 && (
-                    <span style={estilos.ligaBarraPista} aria-hidden="true">
+                    <span className="lb-m-ocultar" style={estilos.ligaBarraPista} aria-hidden="true">
                       <span style={{ ...estilos.ligaBarraRelleno, width: `${Math.round(Math.max(0, Math.min(1, r.progreso || 0)) * 100)}%` }} />
                     </span>
                   )}
@@ -425,16 +425,16 @@ useEffect(() => {
               </button>
             );
           })()}
-          <button type="button" onClick={onBannerClick} aria-label="Torneos" style={{ ...estilos.tarjetaModulo, ...estilos.fondoTorneos, ...estilos.tarjetaFlex, ...estilos.tarjetaColumna }}>
+          <button type="button" onClick={onBannerClick} aria-label="Torneos" className="lb-m-torneos" style={{ ...estilos.tarjetaModulo, ...estilos.fondoTorneos, ...estilos.tarjetaFlex, ...estilos.tarjetaColumna }}>
             <span style={estilos.tarjetaBisel} aria-hidden="true" />
             {['top-left', 'top-right', 'bottom-left', 'bottom-right'].map((pos) => (
               <span key={pos} aria-hidden="true" style={{ ...estilos.tachuelaMini, [pos.startsWith('top') ? 'top' : 'bottom']: 5, [pos.endsWith('left') ? 'left' : 'right']: 5 }} />
             ))}
-            <span style={{ ...estilos.trofeoCaja, width: 104, height: 104 }}>
+            <span className="lb-m-trofeo" style={{ ...estilos.trofeoCaja, width: 104, height: 104 }}>
               <span style={estilos.trofeoResplandor} aria-hidden="true" />
               <img className="lb-flota" src="/assets/images/trofeo.png" alt="" style={{ ...estilos.trofeoImg, width: 104, height: 104, animationDelay: '500ms' }} />
             </span>
-            <span style={estilos.tarjetaTextosCentro}>
+            <span className="lb-m-textos" style={estilos.tarjetaTextosCentro}>
               <span style={estilos.tarjetaTitulo}>Torneos</span>
               {bannerTexto
                 ? <span style={estilos.torneoAbierto}>¡Hay un torneo abierto! Anotate</span>
@@ -443,24 +443,25 @@ useEffect(() => {
           </button>
           </div>
           <div className="lobby3-col lobby3-col-centro">
-          <div style={{ ...estilos.panelJugarYaExterior, flex: '0 0 auto', marginBottom: 8 }}>
+          <div className="lb-m-jugar" style={{ ...estilos.panelJugarYaExterior, flex: '0 0 auto', marginBottom: 8 }}>
             <span style={{ ...estilos.remache, top: 10, left: 10 }} />
             <span style={{ ...estilos.remache, top: 10, right: 10 }} />
             <span style={{ ...estilos.remache, bottom: 10, left: 10 }} />
             <span style={{ ...estilos.remache, bottom: 10, right: 10 }} />
-            <div style={estilos.panelJugarYa}>
-            <div style={{ ...estilos.panelTitleClaro, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div className="lb-m-jugar-in" style={estilos.panelJugarYa}>
+            <div className="lb-m-ocultar" style={{ ...estilos.panelTitleClaro, display: 'flex', alignItems: 'center', gap: 8 }}>
               <img src="/assets/images/icono-rayo.png" alt="" style={estilos.iconoRayo} />
               Jugar ya
             </div>
-            <div style={estilos.hintClaro}>Te emparejamos al instante en {modoRapido}, sin Flor.</div>
-            <div style={estilos.field}>
-              <label style={estilos.labelClaro}>Modo</label>
-              <div style={estilos.opcionesRow}>
+            <div className="lb-m-ocultar" style={estilos.hintClaro}>Te emparejamos al instante en {modoRapido}, sin Flor.</div>
+            <div className="lb-m-field" style={estilos.field}>
+              <label className="lb-m-ocultar" style={estilos.labelClaro}>Modo</label>
+              <div className="lb-m-modos" style={estilos.opcionesRow}>
                 {MODOS.map((m) => (
                   <button
                     key={m}
                     type="button"
+                    className="lb-m-modo"
                     onClick={() => setModoRapido(m)}
                     disabled={buscandoPartida}
                     style={{
@@ -472,6 +473,7 @@ useEffect(() => {
                     <img
                       src={modoRapido === m ? ICONOS_MODO_SELECTOR[m].activo : ICONOS_MODO_SELECTOR[m].inactivo}
                       alt=""
+                      className="lb-m-modo-ico"
                       style={{
                         ...estilos.iconoModoCompacto,
                         // Pase 322: los PNG inactivos ya vienen pintados en beige (#FFFBEB), sin filtro.
@@ -482,7 +484,7 @@ useEffect(() => {
                 ))}
               </div>
             </div>
-            <button onClick={handleJugarYa} disabled={buscandoPartida} className={buscandoPartida ? undefined : 'lb-latido'} style={estilos.btnJugarYa}>
+            <button onClick={handleJugarYa} disabled={buscandoPartida} className={buscandoPartida ? 'lb-m-btn' : 'lb-latido lb-m-btn'} style={estilos.btnJugarYa}>
               {!buscandoPartida && <span className="lb-destello" aria-hidden="true" />}
               {buscandoPartida ? 'Buscando...' : (
                 <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
@@ -493,10 +495,10 @@ useEffect(() => {
             </button>
             </div>
           </div>
-          <button type="button" onClick={() => setHoja('misiones')} aria-label="Misiones semanales" style={{ ...estilos.tarjetaModulo, ...estilos.fondoMisiones, ...estilos.tarjetaColumna, height: 'auto', minHeight: 150, flex: 1 }}>
+          <button type="button" onClick={() => setHoja('misiones')} aria-label="Misiones semanales" className="lb-m-misiones" style={{ ...estilos.tarjetaModulo, ...estilos.fondoMisiones, ...estilos.tarjetaColumna, height: 'auto', minHeight: 150, flex: 1 }}>
             <span style={estilos.tarjetaBisel} aria-hidden="true" />
-            <img className="lb-pendulo" src="/assets/images/icono-misiones.png" alt="" style={estilos.tarjetaIconoColumna} />
-            <span style={estilos.tarjetaTextosCentro}>
+            <img className="lb-pendulo lb-m-ico" src="/assets/images/icono-misiones.png" alt="" style={estilos.tarjetaIconoColumna} />
+            <span className="lb-m-textos" style={estilos.tarjetaTextosCentro}>
               <span style={{ ...estilos.tarjetaTitulo, color: '#3B1F0E' }}>Misiones semanales</span>
               <span style={{ ...estilos.tarjetaSub, color: '#6B4A34' }}>Reclamá mates</span>
               <span style={estilos.misionesBarraFila}>
@@ -509,19 +511,19 @@ useEffect(() => {
           </button>
           </div>
           <div className="lobby3-col">
-          <button type="button" onClick={() => setHoja('sala')} aria-label="Crear o unirse a una sala" style={{ ...estilos.tarjetaModulo, ...estilos.fondoCrear, ...estilos.tarjetaFlex, ...estilos.tarjetaColumna }}>
+          <button type="button" onClick={() => setHoja('sala')} aria-label="Crear o unirse a una sala" className="lb-m-crear" style={{ ...estilos.tarjetaModulo, ...estilos.fondoCrear, ...estilos.tarjetaFlex, ...estilos.tarjetaColumna }}>
             <span style={estilos.tarjetaBisel} aria-hidden="true" />
-            <img src="/assets/images/icono-crear-sala.png" alt="" style={{ ...estilos.tarjetaIconoColumna, ...estilos.tarjetaIconoXL, transform: 'rotate(5deg)' }} />
-            <span style={estilos.tarjetaTextosCentro}>
+            <img className="lb-m-ico" src="/assets/images/icono-crear-sala.png" alt="" style={{ ...estilos.tarjetaIconoColumna, ...estilos.tarjetaIconoXL, transform: 'rotate(5deg)' }} />
+            <span className="lb-m-textos" style={estilos.tarjetaTextosCentro}>
               <span style={estilos.tarjetaTitulo}>Crear / Unirse</span>
               <span style={estilos.tarjetaSub}>A una sala</span>
             </span>
           </button>
           {onIrAnotador && (
-            <button type="button" onClick={onIrAnotador} aria-label="Abrir el Anotador Criollo" style={{ ...estilos.tarjetaModulo, ...estilos.fondoAnotador, ...estilos.tarjetaFlex, ...estilos.tarjetaColumna }}>
+            <button type="button" onClick={onIrAnotador} aria-label="Abrir el Anotador Criollo" className="lb-m-anotador" style={{ ...estilos.tarjetaModulo, ...estilos.fondoAnotador, ...estilos.tarjetaFlex, ...estilos.tarjetaColumna }}>
               <span style={estilos.tarjetaBisel} aria-hidden="true" />
-              <img src="/assets/images/icono-anotador.png" alt="" style={{ ...estilos.tarjetaIconoColumna, ...estilos.tarjetaIconoXL }} />
-              <span style={estilos.tarjetaTextosCentro}>
+              <img className="lb-m-ico" src="/assets/images/icono-anotador.png" alt="" style={{ ...estilos.tarjetaIconoColumna, ...estilos.tarjetaIconoXL }} />
+              <span className="lb-m-textos" style={estilos.tarjetaTextosCentro}>
                 <span style={estilos.tarjetaTitulo}>Anotador Criollo</span>
                 <span style={estilos.tarjetaSub}>Llevá la cuenta</span>
               </span>
@@ -555,7 +557,7 @@ useEffect(() => {
                 </span>
               ))}
             </span>
-            <span style={estilos.socialBadge}>
+            <span className="lb-mates-badge" style={estilos.socialBadge}>
               <span style={estilos.socialBadgeEtiqueta}>Ganá hasta</span>
               <MontoMonedas monto={RECOMPENSA_SOCIAL_TOTAL} tam={26} />
             </span>
@@ -927,9 +929,61 @@ const CSS_LOBBY_COLUMNAS = `
 @media (prefers-reduced-motion: reduce) {
   .lobby3-col > *, .lb-entrada, .lb-flota, .lb-pulso, .lb-pendulo, .lb-latido, .lb-destello { animation: none !important; }
 }
+/* Pase 688: LOBBY CELULAR = lobby de la app. Solo < 900 px (la compu no cambia). Arriba: modos en círculos + "Jugar ya" en una fila; luego Liga y
+   Torneos (horizontales) con Misiones alta a la derecha; Anotador y Crear / Unirse; Mates Gratis con los eventos al lado; y las salas. */
 @media (max-width: 899px) {
-  .lobby3-grid { grid-template-columns: 1fr; }
-  .lobby3-col-centro { order: -1; }
+  .lobby3-grid { grid-template-columns: 1fr 1fr; grid-template-areas: "jugar jugar" "liga misiones" "torneos misiones" "anotador crear"; gap: 8px; margin-bottom: 8px; }
+  .lobby3-col, .lobby3-col-centro { display: contents; }
+  .lb-m-ocultar { display: none !important; }
+  .lb-m-jugar { grid-area: jugar; margin-bottom: 0 !important; padding: 6px !important; border-radius: 20px !important; box-shadow: inset 0 2px 0 rgba(255,255,255,0.10), 0 4px 0 #1b110d !important; }
+  .lb-m-jugar > span { display: none; }
+  .lb-m-jugar-in { display: flex; align-items: center; gap: 8px; padding: 0 !important; background: none !important; box-shadow: none !important; overflow: visible !important; }
+  .lb-m-field { margin: 0 !important; flex: 0 0 auto !important; }
+  .lb-m-modos { flex-wrap: nowrap !important; gap: 6px !important; }
+  .lb-m-modo { flex: 0 0 52px !important; width: 52px; height: 52px; min-width: 0 !important; padding: 0 !important; border-radius: 50% !important; font-size: 11px !important; gap: 0 !important; }
+  .lb-m-modo-ico { height: 22px !important; }
+  .lb-m-btn { flex: 1 1 0 !important; width: auto !important; min-width: 0; padding: 13px 8px !important; font-size: 19px !important; letter-spacing: 0.6px; text-transform: uppercase; box-shadow: 0 4px 0 #000 !important; border-width: 2.5px !important; }
+  .lb-m-btn img { height: 18px !important; }
+  .lb-m-liga { grid-area: liga; } .lb-m-torneos { grid-area: torneos; } .lb-m-misiones { grid-area: misiones; } .lb-m-anotador { grid-area: anotador; } .lb-m-crear { grid-area: crear; }
+  .lb-m-liga, .lb-m-torneos { flex-direction: row !important; justify-content: flex-start !important; text-align: left !important; gap: 8px !important; padding: 8px 10px !important; min-height: 64px !important; }
+  .lb-m-liga > .lb-m-ico, .lb-m-trofeo, .lb-m-trofeo > img { width: 44px !important; height: 44px !important; }
+  .lb-m-liga .lb-m-textos, .lb-m-torneos .lb-m-textos { align-items: flex-start !important; text-align: left !important; flex: 1 1 0 !important; width: auto !important; }
+  .lb-m-liga .lb-m-textos > span:first-child, .lb-m-torneos .lb-m-textos > span:first-child { font-size: 16px !important; }
+  .lb-m-liga .lb-m-textos > span:nth-child(2), .lb-m-torneos .lb-m-textos > span:nth-child(2) { font-size: 12px !important; line-height: 1.15 !important; align-self: flex-start !important; padding: 1px 6px !important; }
+  .lb-m-torneos .lb-m-textos > span:nth-child(2) { padding: 0 !important; }
+  .lb-m-misiones { min-height: 0 !important; padding: 10px 8px !important; gap: 4px !important; }
+  .lb-m-misiones > .lb-m-ico { width: 88px !important; height: 88px !important; }
+  .lb-m-anotador, .lb-m-crear { min-height: 0 !important; padding: 8px 6px !important; gap: 4px !important; }
+  .lb-m-anotador > .lb-m-ico, .lb-m-crear > .lb-m-ico { width: 64px !important; height: 64px !important; }
+  .lb-m-misiones .lb-m-textos > span:first-child, .lb-m-anotador .lb-m-textos > span:first-child, .lb-m-crear .lb-m-textos > span:first-child { font-size: 16px !important; }
+  .lb-m-misiones .lb-m-textos > span:nth-child(2), .lb-m-anotador .lb-m-textos > span:nth-child(2), .lb-m-crear .lb-m-textos > span:nth-child(2) { font-size: 12px !important; }
+  .lobby3-fila-inf { flex-wrap: nowrap !important; gap: 8px !important; align-items: center; margin-bottom: 8px; }
+  .lobby3-fila-inf .lb-mates { flex: 1 1 0 !important; min-width: 0; height: auto !important; display: flex !important; flex-wrap: wrap; align-items: center; gap: 4px 6px; padding: 8px 8px !important; }
+  .lb-mates::before { content: ''; order: 4; flex: 0 0 100%; height: 0; }
+  .lb-mates > img { order: 1; width: 24px !important; height: 24px !important; flex: 0 0 auto; }
+  .lb-mates .lb-mates-textos { display: contents !important; }
+  .lb-mates .lb-mates-textos > span:first-child { order: 2; flex: 1 1 0; min-width: 0; font-size: 13px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lb-mates .lb-mates-textos > span:last-child { order: 6; flex: 1 1 0; min-width: 0; font-size: 9.5px !important; line-height: 1.1; text-align: right; }
+  .lb-mates .lb-mates-chips { order: 5; flex: 0 0 auto; gap: 3px !important; }
+  .lb-mates .lb-mates-chips img { width: 24px !important; height: 24px !important; }
+  .lb-mates-badge { order: 3; flex: 0 0 auto; padding: 1px 6px 2px !important; font-size: 13px !important; border-radius: 10px !important; box-shadow: 0 2px 0 #A66F00 !important; }
+  .lb-mates-badge > span:first-child { display: none; }
+  .lb-mates-badge > span > span, .lb-mates-badge img { width: 16px !important; height: 16px !important; }
+  .lobby3-fila-inf .lb-eventos-fila { flex: 0 0 auto; margin: 0 !important; gap: 5px !important; }
+  .lb-eventos-fila .ev-tile { flex: 0 0 52px; width: 52px; height: 52px; }
+  .lb-eventos-fila .ev-tile-fondo { border-width: 2px; border-radius: 12px; box-shadow: 0 3px 0 rgba(0,0,0,0.35); }
+  .lb-eventos-fila .ev-tile-etiq { font-size: 6.5px !important; top: 3px !important; letter-spacing: 0.5px !important; }
+  .lb-eventos-fila .ev-tile-chip { font-size: 8.5px !important; padding: 0 3px !important; line-height: 11px !important; border-width: 1px !important; border-radius: 5px !important; }
+  .lb-eventos-fila .ev-destello { display: none; }
+}
+@media (max-width: 380px) {
+  .lb-eventos-fila .ev-tile { flex-basis: 46px; width: 46px; height: 46px; }
+  .lobby3-fila-inf .lb-eventos-fila { gap: 4px !important; }
+  .lobby3-fila-inf .lb-mates { gap: 4px 4px !important; padding: 8px 7px !important; }
+  .lb-mates > img { width: 20px !important; height: 20px !important; }
+  .lb-mates .lb-mates-textos > span:first-child { font-size: 12px !important; }
+  .lb-mates-badge { padding: 1px 5px 2px !important; font-size: 12px !important; }
+  .lb-mates-badge > span > span, .lb-mates-badge img { width: 14px !important; height: 14px !important; }
 }
 `;
 

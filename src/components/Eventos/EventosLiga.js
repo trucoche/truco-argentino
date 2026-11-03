@@ -77,7 +77,7 @@ export function EventoCard({ e, indice = 0, onClick }) {
       aria-label={`Evento ${e.titulo}`}
       style={{ animationDelay: `${indice * 0.09}s`, ...(completa ? {} : { background: est.fondo, borderColor: est.borde }), ...(e.abierto ? {} : { opacity: 0.55 }) }}
     >
-      {!completa && <span style={{ ...estilos.tileEtiqueta, color: est.color }}>{est.etiqueta}</span>}
+      {!completa && <span className="ev-tile-etiq" style={{ ...estilos.tileEtiqueta, color: est.color }}>{est.etiqueta}</span>}
       <img
         src={est.icono}
         alt=""
@@ -85,7 +85,7 @@ export function EventoCard({ e, indice = 0, onClick }) {
         className="ev-tile-img"
         style={completa ? { inset: 0, width: '100%', height: '100%', animationDelay: `${indice * 0.3}s` } : { left: '14%', top: '14%', width: '72%', height: '56%', animationDelay: `${indice * 0.3}s` }}
       />
-      <span style={estilos.tileChipCaja}><span style={estilos.tileChip}>{faltaEvento(e.hasta, e.abierto).replace('Faltan ', '')}</span></span>
+      <span style={estilos.tileChipCaja}><span className="ev-tile-chip" style={estilos.tileChip}>{faltaEvento(e.hasta, e.abierto).replace('Faltan ', '')}</span></span>
       {e.abierto && (
         <>
           <span className="ev-destello" aria-hidden="true" style={{ left: '6%', top: '12%', animationDelay: `${d}s` }}>✦</span>
