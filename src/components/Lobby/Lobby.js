@@ -437,7 +437,7 @@ useEffect(() => {
             <span className="lb-m-textos" style={estilos.tarjetaTextosCentro}>
               <span style={estilos.tarjetaTitulo}>Torneos</span>
               {bannerTexto
-                ? <span style={estilos.torneoAbierto}>¡Hay un torneo abierto! Anotate</span>
+                ? <span className="lb-m-pildora" style={estilos.torneoAbierto}><span className="lb-solo-pc">¡Hay un torneo abierto! Anotate</span><span className="lb-solo-cel">¡Torneo abierto!</span></span>
                 : <span style={{ ...estilos.tarjetaSub, color: '#E2C280' }}>Campeonatos y premios</span>}
             </span>
           </button>
@@ -903,6 +903,7 @@ const CSS_LOBBY_COLUMNAS = `
 .lobby3-col > :nth-child(2) { animation-delay: 120ms; }
 .lobby3-col-centro > :nth-child(1) { animation-delay: 60ms; }
 .lobby3-col-centro > :nth-child(2) { animation-delay: 180ms; }
+.lb-solo-cel { display: none; }
 .lb-d6 { animation-delay: 300ms; } .lb-d7 { animation-delay: 360ms; }
 .lb-flota { animation: lbFlota 1500ms ease-in-out infinite alternate; }
 .lb-pulso { animation: lbPulso 900ms ease-in-out infinite alternate; }
@@ -957,33 +958,39 @@ const CSS_LOBBY_COLUMNAS = `
   .lb-m-anotador > .lb-m-ico, .lb-m-crear > .lb-m-ico { width: 64px !important; height: 64px !important; }
   .lb-m-misiones .lb-m-textos > span:first-child, .lb-m-anotador .lb-m-textos > span:first-child, .lb-m-crear .lb-m-textos > span:first-child { font-size: 16px !important; }
   .lb-m-misiones .lb-m-textos > span:nth-child(2), .lb-m-anotador .lb-m-textos > span:nth-child(2), .lb-m-crear .lb-m-textos > span:nth-child(2) { font-size: 12px !important; }
-  .lobby3-fila-inf { flex-wrap: nowrap !important; gap: 8px !important; align-items: center; margin-bottom: 8px; }
-  .lobby3-fila-inf .lb-mates { flex: 1 1 0 !important; min-width: 0; height: auto !important; display: flex !important; flex-wrap: wrap; align-items: center; gap: 4px 6px; padding: 8px 8px !important; }
-  .lb-mates::before { content: ''; order: 4; flex: 0 0 100%; height: 0; }
-  .lb-mates > img { order: 1; width: 24px !important; height: 24px !important; flex: 0 0 auto; }
-  .lb-mates .lb-mates-textos { display: contents !important; }
-  .lb-mates .lb-mates-textos > span:first-child { order: 2; flex: 1 1 0; min-width: 0; font-size: 13px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .lb-mates .lb-mates-textos > span:last-child { order: 6; flex: 1 1 0; min-width: 0; font-size: 9.5px !important; line-height: 1.1; text-align: right; }
-  .lb-mates .lb-mates-chips { order: 5; flex: 0 0 auto; gap: 3px !important; }
-  .lb-mates .lb-mates-chips img { width: 24px !important; height: 24px !important; }
-  .lb-mates-badge { order: 3; flex: 0 0 auto; padding: 1px 6px 2px !important; font-size: 13px !important; border-radius: 10px !important; box-shadow: 0 2px 0 #A66F00 !important; }
+  .lb-solo-pc { display: none; } .lb-solo-cel { display: inline; }
+  .lb-m-torneos .lb-m-textos > span.lb-m-pildora { padding: 2px 8px !important; font-size: 11px !important; line-height: 1.2 !important; white-space: nowrap; max-width: 100%; box-sizing: border-box; }
+  .lb-m-misiones .lb-m-textos { width: 100%; }
+  .lobby3-fila-inf { flex-direction: column !important; flex-wrap: nowrap !important; gap: 8px !important; align-items: stretch; margin-bottom: 8px; }
+  .lobby3-fila-inf .lb-mates { flex: 0 0 auto !important; width: 100%; box-sizing: border-box; min-width: 0; height: auto !important; min-height: 0 !important; display: flex !important; flex-wrap: nowrap; align-items: center; gap: 8px !important; padding: 7px 10px !important; }
+  .lb-mates > img { width: 34px !important; height: 34px !important; flex: 0 0 auto; }
+  .lb-mates .lb-mates-textos { flex: 1 1 0 !important; min-width: 0; display: flex !important; flex-direction: column; gap: 0; align-items: flex-start; text-align: left; }
+  .lb-mates .lb-mates-textos > span:first-child { font-size: 16px !important; line-height: 1.1; white-space: nowrap; }
+  .lb-mates .lb-mates-textos > span:last-child { font-size: 11px !important; line-height: 1.15; white-space: nowrap; }
+  .lb-mates .lb-mates-chips { flex: 0 0 auto; gap: 2px !important; }
+  .lb-mates .lb-mates-chips img { width: 30px !important; height: 30px !important; }
+  .lb-mates-badge { flex: 0 0 auto; padding: 2px 7px 3px !important; font-size: 14px !important; border-radius: 10px !important; box-shadow: 0 2px 0 #A66F00 !important; }
   .lb-mates-badge > span:first-child { display: none; }
-  .lb-mates-badge > span > span, .lb-mates-badge img { width: 16px !important; height: 16px !important; }
-  .lobby3-fila-inf .lb-eventos-fila { flex: 0 0 auto; margin: 0 !important; gap: 5px !important; }
-  .lb-eventos-fila .ev-tile { flex: 0 0 52px; width: 52px; height: 52px; }
-  .lb-eventos-fila .ev-tile-fondo { border-width: 2px; border-radius: 12px; box-shadow: 0 3px 0 rgba(0,0,0,0.35); }
-  .lb-eventos-fila .ev-tile-etiq { font-size: 6.5px !important; top: 3px !important; letter-spacing: 0.5px !important; }
-  .lb-eventos-fila .ev-tile-chip { font-size: 8.5px !important; padding: 0 3px !important; line-height: 11px !important; border-width: 1px !important; border-radius: 5px !important; }
+  .lb-mates-badge > span > span, .lb-mates-badge img { width: 17px !important; height: 17px !important; }
+  .lobby3-fila-inf .lb-eventos-fila { display: flex; width: 100%; margin: 0 !important; gap: 8px !important; justify-content: center; }
+  .lb-eventos-fila .ev-tile { flex: 1 1 0; width: auto; max-width: 118px; min-width: 0; height: 68px; }
+  .lb-eventos-fila .ev-tile-fondo { border-width: 2px; border-radius: 14px; box-shadow: 0 3px 0 rgba(0,0,0,0.35); }
+  .lb-eventos-fila .ev-tile-etiq { font-size: 8px !important; top: 4px !important; letter-spacing: 0.6px !important; }
+  .lb-eventos-fila .ev-tile-chip { font-size: 10px !important; padding: 0 5px !important; line-height: 13px !important; border-width: 1px !important; border-radius: 6px !important; }
   .lb-eventos-fila .ev-destello { display: none; }
 }
 @media (max-width: 380px) {
-  .lb-eventos-fila .ev-tile { flex-basis: 46px; width: 46px; height: 46px; }
-  .lobby3-fila-inf .lb-eventos-fila { gap: 4px !important; }
-  .lobby3-fila-inf .lb-mates { gap: 4px 4px !important; padding: 8px 7px !important; }
-  .lb-mates > img { width: 20px !important; height: 20px !important; }
-  .lb-mates .lb-mates-textos > span:first-child { font-size: 12px !important; }
-  .lb-mates-badge { padding: 1px 5px 2px !important; font-size: 12px !important; }
-  .lb-mates-badge > span > span, .lb-mates-badge img { width: 14px !important; height: 14px !important; }
+  .lb-m-liga > .lb-m-ico, .lb-m-trofeo, .lb-m-trofeo > img { width: 38px !important; height: 38px !important; }
+  .lb-m-liga, .lb-m-torneos { gap: 6px !important; padding: 8px !important; }
+  .lb-m-torneos .lb-m-textos > span.lb-m-pildora { font-size: 10px !important; padding: 2px 6px !important; }
+  .lobby3-fila-inf .lb-mates { gap: 6px !important; padding: 7px 8px !important; }
+  .lb-mates > img { width: 30px !important; height: 30px !important; }
+  .lb-mates .lb-mates-textos > span:first-child { font-size: 15px !important; }
+  .lb-mates .lb-mates-textos > span:last-child { font-size: 10px !important; }
+  .lb-mates .lb-mates-chips img { width: 27px !important; height: 27px !important; }
+  .lb-mates-badge { padding: 2px 5px 3px !important; font-size: 13px !important; }
+  .lb-mates-badge > span > span, .lb-mates-badge img { width: 15px !important; height: 15px !important; }
+  .lb-eventos-fila .ev-tile { height: 62px; }
 }
 `;
 
@@ -1051,8 +1058,8 @@ const estilos = {
   trofeoCaja: { position: 'relative', width: 44, height: 44, flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center' },
   trofeoResplandor: { position: 'absolute', inset: 0, borderRadius: '50%', background: 'rgba(255,215,0,0.16)', boxShadow: '0 0 6px 2px rgba(255,215,0,0.55)' },
   trofeoImg: { position: 'relative', width: 44, height: 44, objectFit: 'contain' },
-  misionesBarraFila: { display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 },
-  misionesBarraPista: { flex: 1, height: 12, borderRadius: 5, background: 'rgba(110,75,40,0.22)', border: '1px solid #6E4B28', overflow: 'hidden', display: 'block' },
+  misionesBarraFila: { display: 'flex', alignItems: 'center', gap: 6, marginTop: 4, width: '100%', boxSizing: 'border-box' },
+  misionesBarraPista: { flex: 1, minWidth: 0, height: 12, borderRadius: 5, background: 'rgba(110,75,40,0.22)', border: '1px solid #6E4B28', overflow: 'hidden', display: 'block' },
   misionesBarraRelleno: { display: 'block', height: '100%', background: '#5E8C3A' },
   misionesBarraTexto: { fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 15, color: '#3B1F0E' },
   socialChips: { display: 'flex', gap: 14, flex: '0 0 auto' },

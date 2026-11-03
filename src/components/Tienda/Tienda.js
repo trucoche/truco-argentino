@@ -282,7 +282,7 @@ export default function Tienda({ usuario, token }) {
             flotando por ENCIMA del cartelito (top negativo) para no tocar
             ninguna de las zonas ya medidas a pixel. */}
         {destacado && (
-          <div style={estilos.badgeHero}>⭐ MEJOR PRECIO POR MATE</div>
+          <div className="tc-badge" style={estilos.badgeHero}>⭐ MEJOR PRECIO<span className="tc-solo-pc"> POR MATE</span></div>
         )}
         {/* Ducentésimo trigésimo tercer pase: cinta diagonal de descuento,
             SOLO en la tarjeta de Inauguración — reemplaza al banner de texto
@@ -290,15 +290,15 @@ export default function Tienda({ usuario, token }) {
             principal más abajo, ya no existe). */}
         {/* Pase 364: el listón diagonal pasa a ser una píldora flotante igual a la de Mejor Valor, en rojo. */}
         {inauguracion && descuentoPct != null && (
-          <div style={estilos.badgeInauguracion}>🔥 -{descuentoPct}% OFF</div>
+          <div className="tc-badge" style={estilos.badgeInauguracion}>🔥 -{descuentoPct}% OFF</div>
         )}
         <img src={CARTELES[pack.tipoCartel]} alt="" style={estilos.cartelFondo} />
         {/* Pase 655: destellos dorados en las ofertas (Mejor Valor e Inauguración). */}
         {(destacado || inauguracion) && (
           <>
-            <span className="tc-destello" aria-hidden="true" style={{ left: '10%', top: '24%', fontSize: 'clamp(12px, 5cqw, 20px)', animationDelay: `${indice * 0.15}s` }}>✦</span>
-            <span className="tc-destello" aria-hidden="true" style={{ left: '84%', top: '18%', fontSize: 'clamp(10px, 4cqw, 16px)', animationDelay: `${0.9 + indice * 0.15}s` }}>✦</span>
-            <span className="tc-destello" aria-hidden="true" style={{ left: '80%', top: '58%', fontSize: 'clamp(10px, 4.5cqw, 17px)', animationDelay: `${1.7 + indice * 0.15}s` }}>✦</span>
+            <span className="tc-destello" aria-hidden="true" style={{ left: '10%', top: '24%', fontSize: 'clamp(6px, 5cqw, 20px)', animationDelay: `${indice * 0.15}s` }}>✦</span>
+            <span className="tc-destello" aria-hidden="true" style={{ left: '84%', top: '18%', fontSize: 'clamp(5px, 4cqw, 16px)', animationDelay: `${0.9 + indice * 0.15}s` }}>✦</span>
+            <span className="tc-destello" aria-hidden="true" style={{ left: '80%', top: '58%', fontSize: 'clamp(5px, 4.5cqw, 17px)', animationDelay: `${1.7 + indice * 0.15}s` }}>✦</span>
           </>
         )}
 
@@ -388,14 +388,49 @@ export default function Tienda({ usuario, token }) {
     );
   };
 
+  // Pase 690: en el celular (< 900 px) los packs se muestran como una lista de filas compactas (ícono, cantidad, precio) en vez de las
+  // placas cuadradas: las 6 entran en pantalla SIN scroll. Las placas siguen igual en la compu (el CSS esconde una u otra según el ancho).
+  const packsLista = !packInaugListo ? [] : [packPorId('pack-800'), ...(inaugDisponible ? [packPorId('pack-inauguracion')] : []), packPorId('pack-400'), packPorId('pack-200'), packPorId('pack-100'), packPorId('pack-50')];
+  const renderFilaCompacta = (pack, indice) => {
+    const total = pack.monedas + pack.bono;
+    const destacado = pack.tag === 'mejorPrecio';
+    const inauguracion = pack.tag === 'inauguracion';
+    const tono = destacado ? 'verde' : inauguracion ? 'rojo' : 'base';
+    const descuentoPct = pack.precioOriginal ? Math.round((1 - pack.precio / pack.precioOriginal) * 100) : null;
+    const nota = pack.bono > 0 ? `+${pack.bono} de regalo` : (inauguracion && textoRestante(packInaug.hastaMs, ahora)) || pack.notaEspecial || null;
+    return (
+      <div key={pack.id} className={`tc-fp tc-fp-${tono}`} style={{ animationDelay: `${0.05 + indice * 0.07}s` }}>
+        {destacado && <span className="tc-fp-tag tc-fp-tag-verde">⭐ MEJOR VALOR</span>}
+        {inauguracion && <span className="tc-fp-tag tc-fp-tag-rojo">🔥 INAUGURACIÓN{descuentoPct != null ? ` · -${descuentoPct}%` : ''}</span>}
+        <img className="tc-fp-icono tc-icono-flota" src={pack.icono} alt="" style={{ animationDelay: `${indice * 0.26}s` }} />
+        <div className="tc-fp-datos">
+          <div className="tc-fp-cant"><b>{total.toLocaleString('es-AR')}</b> mates</div>
+          {nota && <div className={`tc-fp-nota${pack.bono > 0 ? '' : ' tc-fp-nota-roja'}`}>{nota}</div>}
+        </div>
+        <div className="tc-fp-precio">
+          {pack.precioOriginal != null && <span className="tc-fp-tachado">{formatearPrecio(pack.precioOriginal)}</span>}
+          <button
+            type="button"
+            className={`tc-precio-boton tc-fp-boton tc-fp-boton-${tono}`}
+            style={comprandoPackId === pack.id ? estilos.precioBotonDeshabilitado : undefined}
+            disabled={comprandoPackId === pack.id}
+            onClick={() => comprar(pack.id)}
+          >
+            {comprandoPackId === pack.id ? 'Redirigiendo…' : formatearPrecio(pack.precio)}
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <>
-      <div style={estilos.sectionTitle}>
+      <div className="tc-titulo" style={estilos.sectionTitle}>
         {/* Pase 366: la bolsita de monedas del pack de 100 reemplaza al 🛒. */}
         <img src="/assets/images/moneda-800.png" alt="" style={estilos.sectionTitleIcono} />
         Comprá mates
       </div>
-      <div style={estilos.sectionSubtitle}>Se acreditan al instante en tu cuenta</div>
+      <div className="tc-subtitulo" style={estilos.sectionSubtitle}>Se acreditan al instante en tu cuenta</div>
 
       {/* Ducentésimo trigésimo tercer pase: se retira el banner rojo de
           texto que iba acá ("🔥 Pack Inauguración: $990 en vez de $2.800 —
@@ -444,6 +479,9 @@ export default function Tienda({ usuario, token }) {
             {packsFilaAbajo.map((pack, i) => renderPack(pack, 2, i + 3))}
           </div>
         </div>
+        <div className="tc-lista">
+          {packsLista.map((pack, i) => renderFilaCompacta(pack, i))}
+        </div>
       </PlacaMadera>
 
       {/* Ducentésimo trigésimo octavo pase: "el texto legal sigue siendo
@@ -451,14 +489,14 @@ export default function Tienda({ usuario, token }) {
           más cortas (en el guion medio, un corte natural de la oración) en
           vez de un solo párrafo largo, y se achica/atenúa un poco más
           (ver `estilos.notaPie`). */}
-      <div style={estilos.notaPie}>
+      <div className="tc-nota" style={estilos.notaPie}>
         Los mates son de uso exclusivo dentro de TrucoChe (mesas, torneos y futuros cosméticos)
         <br />
         No representan dinero real y no se pueden retirar ni transferir.
       </div>
 
       {/* Pase 654: ayuda con una compra / devoluciones. */}
-      <div style={{ textAlign: 'center' }}>
+      <div className="tc-ayuda" style={{ textAlign: 'center' }}>
         <button type="button" style={estilos.ayudaLink} onClick={() => setAyudaAbierta(true)}>¿Problema con una compra? Te ayudamos</button>
       </div>
       {ayudaAbierta && (
@@ -687,7 +725,7 @@ const estilos = {
     position: 'absolute', top: '18%', height: '10%', left: '29%', width: '42%',
     zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
     textAlign: 'center', fontFamily: "'Fredoka', sans-serif", fontWeight: 700,
-    fontSize: 'clamp(13px, 5.4cqw, 24px)', lineHeight: 1.05, letterSpacing: 0.1, overflow: 'hidden',
+    fontSize: 'clamp(7px, 5.4cqw, 24px)', lineHeight: 1.05, letterSpacing: 0.1, overflow: 'hidden',
     paddingTop: '2.6cqw', paddingLeft: 4, whiteSpace: 'nowrap',
   },
   // Centésimo trigésimo pase: SOLO la tarjeta de Inauguración — el usuario
@@ -700,7 +738,7 @@ const estilos = {
   // abajo de lo ideal al agrandar el texto) — `paddingTop` 5→3 (sube 2px
   // respecto del pase anterior); el corrimiento a la derecha ya lo hereda
   // de `zonaNombre` (`paddingLeft:4`, no se pisa acá).
-  zonaNombreTextoGrande: { fontSize: 'clamp(14px, 5.8cqw, 26px)', paddingTop: '1cqw' },
+  zonaNombreTextoGrande: { fontSize: 'clamp(8px, 5.8cqw, 26px)', paddingTop: '1cqw' },
   // Zona grande de madera clara (el panel principal) — ilustración,
   // cantidad y precio, todo apilado y centrado. Mismo criterio que arriba:
   // porcentajes calculados sobre el PNG, dejando el marco de madera oscura
@@ -846,11 +884,11 @@ const estilos = {
   // de los valores" ya que sobraba lugar — cantidad 22→24, etiqueta 12→13
   // (ver también `precioOriginal`/`precioBoton` más abajo).
   cantidad: {
-    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 'clamp(20px, 9cqw, 38px)', color: '#2A130A', lineHeight: 1,
+    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 'clamp(10px, 9cqw, 38px)', color: '#2A130A', lineHeight: 1,
     textShadow: '0 1px 0 rgba(255,246,223,0.9)',
   },
   cantidadLabel: {
-    fontSize: 'clamp(10px, 4cqw, 16px)', fontWeight: 800, color: '#5B4636', textTransform: 'uppercase',
+    fontSize: 'clamp(5px, 4cqw, 16px)', fontWeight: 800, color: '#5B4636', textTransform: 'uppercase',
     letterSpacing: '0.14em', lineHeight: 1.1,
   },
   // Centésimo vigésimo octavo pase: `marginTop` sacado — ahora el espacio
@@ -858,14 +896,14 @@ const estilos = {
   // `zonaContenido` (el padre), no un margen propio (hubiera duplicado el
   // espacio).
   bonoTag: {
-    fontSize: 'clamp(10px, 3.9cqw, 15px)', fontWeight: 800, color: '#0F4F2A', background: '#C6EBC9',
+    fontSize: 'clamp(5px, 3.9cqw, 15px)', fontWeight: 800, color: '#0F4F2A', background: '#C6EBC9',
     border: '1.5px solid #3E9A56', borderRadius: 999, padding: '0.5cqw 2.8cqw', lineHeight: 1.25, whiteSpace: 'nowrap',
     flex: '0 0 auto',
   },
   // Centésimo vigésimo octavo pase: `marginTop` sacado, mismo motivo que
   // `bonoTag` de arriba — el espacio ya lo pone el `gap` del padre.
   notaEspecialTag: {
-    fontSize: 'clamp(10px, 3.9cqw, 15px)', fontWeight: 800, color: '#7A1F17', background: '#FFD9D4',
+    fontSize: 'clamp(5px, 3.9cqw, 15px)', fontWeight: 800, color: '#7A1F17', background: '#FFD9D4',
     border: '1.5px solid #D9695C', borderRadius: 999, padding: '0.5cqw 2.8cqw', lineHeight: 1.25, whiteSpace: 'nowrap',
     flex: '0 0 auto',
   },
@@ -934,7 +972,7 @@ const estilos = {
   // un poco chico" — 15→16.5px.
   // Pase 550: el tachado se leía casi invisible (gris claro sobre pergamino). Ahora es rojo oscuro, más grueso y más grande.
   precioOriginal: {
-    fontSize: 'clamp(11px, 4.6cqw, 17px)', fontWeight: 800, color: '#8A2E22', lineHeight: 1.15,
+    fontSize: 'clamp(6px, 4.6cqw, 17px)', fontWeight: 800, color: '#8A2E22', lineHeight: 1.15,
     textDecoration: 'line-through', textDecorationThickness: '2px', textDecorationColor: '#B3261E',
     flex: '0 0 auto',
   },
@@ -979,7 +1017,7 @@ const estilos = {
   // Pase 364: botón plano cel-shaded (igual al del Lobby/Torneos): relleno liso, contorno negro 2px y sombra
   // inferior dura; reemplaza las imágenes boton-amarillo/verde/rojo.png. El color sigue el de cada tarjeta.
   precioBoton: {
-    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 'clamp(15px, 6cqw, 24px)',
+    fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 'clamp(8px, 6cqw, 24px)',
     border: '2px solid #000', borderRadius: 999, padding: '1.9cqw 8.5cqw', marginBottom: 0,
     cursor: 'pointer', boxSizing: 'border-box', lineHeight: 1.2, pointerEvents: 'auto',
   },
@@ -1094,13 +1132,36 @@ if (typeof document !== 'undefined' && !document.getElementById('tienda-grid-res
        que escalen fluido en cualquier ancho intermedio, se sube el punto de
        corte (680 a 900px) para que la vista de lista apilada de abajo (que
        ya funciona bien) entre en juego antes de esa zona angosta. */
+    /* Pase 690: celular (< 900 px) = lista de 6 filas compactas, sin scroll. Cada fila: ícono, cantidad (+ regalo / aviso) y el precio como botón.
+       Las placas de madera (.tc-filas) quedan solo para la compu. */
+    .tc-lista { display: none; }
     @media (max-width: 900px) {
-      .tc-filas { gap: 14px; }
-      .tc-fila { flex-direction: column; align-items: stretch; gap: 14px; }
-      .tc-card-normal, .tc-card-secundario, .tc-card-hero { flex: 1 1 auto; width: 100%; }
-      .tc-card-pack-800 { order: -2; }
-      .tc-card-pack-inauguracion { order: -1; }
-      .tc-fila.tc-fila-inferior { gap: 14px; }
+      .tc-filas { display: none !important; }
+      .tc-lista { --fp: clamp(44px, calc((100dvh - 378px) / 6 - 10px), 62px); display: flex; flex-direction: column; gap: 10px; padding-top: 6px; }
+      .tc-fp { position: relative; display: flex; align-items: center; gap: 10px; height: var(--fp, 56px); padding: 0 10px 0 8px; border-radius: 14px; box-sizing: border-box; border: 3px solid #6B4423; background: linear-gradient(180deg, #F8EACD, #EBD5A8); box-shadow: 0 3px 0 rgba(0,0,0,0.38), inset 0 0 0 1px rgba(255,255,255,0.45); animation: tc-entrada 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+      .tc-fp-verde { border-color: #1f7a3c; background: linear-gradient(180deg, #E4F6E4, #BFE6C4); box-shadow: 0 3px 0 rgba(0,0,0,0.38), 0 0 12px rgba(255,182,39,0.55), inset 0 0 0 1px rgba(255,255,255,0.5); }
+      .tc-fp-rojo { border-color: #B3261E; background: linear-gradient(180deg, #FFE9E4, #F8C6BD); box-shadow: 0 3px 0 rgba(0,0,0,0.38), inset 0 0 0 1px rgba(255,255,255,0.5); }
+      .tc-fp-tag { position: absolute; top: -11px; left: 12px; z-index: 2; white-space: nowrap; font-family: 'Fredoka', sans-serif; font-weight: 800; font-size: 10px; letter-spacing: 0.2px; line-height: 1; padding: 3px 8px; border-radius: 999px; box-shadow: 0 2px 0 rgba(0,0,0,0.3); }
+      .tc-fp-tag-verde { background: linear-gradient(180deg, #FFD668, #FFB627); color: #4A2C2A; border: 1.5px solid #C9860E; }
+      .tc-fp-tag-rojo { background: linear-gradient(180deg, #FF7A6B, #E8483A); color: #fff; border: 1.5px solid #c2352a; text-shadow: 0 1px 0 #7a1f17; }
+      .tc-fp-icono { width: calc(var(--fp, 56px) - 10px); height: calc(var(--fp, 56px) - 10px); object-fit: contain; flex: 0 0 auto; filter: drop-shadow(0 2px 1px rgba(0,0,0,0.35)); }
+      .tc-fp-datos { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 2px; font-family: 'Fredoka', sans-serif; color: #2A130A; }
+      .tc-fp-cant { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: #5B4636; line-height: 1; white-space: nowrap; }
+      .tc-fp-cant b { font-size: 22px; letter-spacing: 0; text-transform: none; color: #2A130A; }
+      .tc-fp-nota { align-self: flex-start; font-family: 'Nunito', sans-serif; font-size: 10px; font-weight: 800; line-height: 1.2; color: #0F4F2A; background: #C6EBC9; border: 1.5px solid #3E9A56; border-radius: 999px; padding: 0 7px; white-space: nowrap; }
+      .tc-fp-nota-roja { color: #7A1F17; background: #FFD9D4; border-color: #D9695C; }
+      .tc-fp-precio { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 92px; }
+      .tc-fp-tachado { font-size: 10.5px; font-weight: 800; line-height: 1; color: #8A2E22; text-decoration: line-through; text-decoration-thickness: 1.5px; text-decoration-color: #B3261E; }
+      .tc-fp-boton { font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 16px; line-height: 1.1; padding: 6px 12px; min-width: 92px; border: 2px solid #000; border-radius: 999px; cursor: pointer; box-sizing: border-box; }
+      .tc-fp-boton-base { background: #F5B041; color: #2C160E; text-shadow: 0 1px 0 rgba(255,240,205,0.85); box-shadow: 0 3px 0 #B9770E, 0 4px 0 #000; }
+      .tc-fp-boton-verde { background: #10B981; color: #fff; text-shadow: -1px -1px 0 #0B3B20, 1px -1px 0 #0B3B20, -1px 1px 0 #0B3B20, 1px 1px 0 #0B3B20; box-shadow: 0 3px 0 #065F46, 0 4px 0 #000; }
+      .tc-fp-boton-rojo { background: #E74C3C; color: #fff; text-shadow: -1px -1px 0 #5A130D, 1px -1px 0 #5A130D, -1px 1px 0 #5A130D, 1px 1px 0 #5A130D; box-shadow: 0 3px 0 #78281F, 0 4px 0 #000; }
+      div:has(> .tc-filas) { padding: 20px 12px 14px !important; }
+      .tc-titulo { margin: 0 0 0 4px !important; font-size: 15px !important; }
+      .tc-titulo img { width: 24px !important; height: 24px !important; }
+      .tc-subtitulo { margin: 0 0 8px 4px !important; font-size: 11.5px !important; }
+      .tc-nota { margin: 8px 6px 0 !important; font-size: 8px !important; line-height: 1.35 !important; }
+      .tc-ayuda button { padding: 6px 10px !important; }
     }
   `;
   document.head.appendChild(styleGrid);
