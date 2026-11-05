@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import PerfilRivalModal from '../PerfilRival/PerfilRivalModal';
 import PantallaCarga from '../PantallaCarga/PantallaCarga';
 import { PlacaMadera } from '../Popup/PopupMadera';
@@ -151,6 +151,51 @@ function Filigrana() {
   );
 }
 
+// Pase 691 — Ranking en el celular sin scroll de página: el podio se escala (transform) para entrar en el
+// alto que sobra, y los puestos 4° al 16° viven en una hoja que se abre con un botón.
+function useEsCel() {
+  const [v, setV] = useState(() => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(max-width: 899px)').matches);
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return undefined;
+    const mq = window.matchMedia('(max-width: 899px)');
+    const f = () => setV(mq.matches);
+    f();
+    if (mq.addEventListener) mq.addEventListener('change', f); else mq.addListener(f);
+    return () => { if (mq.removeEventListener) mq.removeEventListener('change', f); else mq.removeListener(f); };
+  }, []);
+  return v;
+}
+
+function PodioEscalado({ children }) {
+  const areaRef = useRef(null);
+  const interiorRef = useRef(null);
+  const [m, setM] = useState({ areaH: 0, h: 0 });
+  useLayoutEffect(() => {
+    const medir = () => {
+      const a = areaRef.current;
+      const i = interiorRef.current;
+      if (!a || !i) return;
+      setM((p) => (p.areaH === a.clientHeight && p.h === i.offsetHeight ? p : { areaH: a.clientHeight, h: i.offsetHeight }));
+    };
+    medir();
+    if (typeof ResizeObserver === 'undefined') return undefined;
+    const ro = new ResizeObserver(medir);
+    ro.observe(areaRef.current);
+    ro.observe(interiorRef.current);
+    return () => ro.disconnect();
+  }, []);
+  const listo = m.h > 0 && m.areaH > 0;
+  const s = listo ? Math.min(1, m.areaH / m.h) : 1;
+  const top = listo ? Math.max(0, (m.areaH - m.h * s) / 2) : 0;
+  return (
+    <div ref={areaRef} className="rk-area">
+      <div ref={interiorRef} className="rk-area-int" style={{ top, transform: `scale(${s})`, visibility: listo ? 'visible' : 'hidden' }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 // Ya NO recibe onVolver — navegación de vuelta la maneja el AppShell.
 // Recibe usuarioActual (username) para resaltar tu propia fila en la lista.
 export default function Ranking({ token, usuarioActual }) {
@@ -180,6 +225,26 @@ export default function Ranking({ token, usuarioActual }) {
     const t = setInterval(() => setAhora(Date.now()), 30000);
     return () => clearInterval(t);
   }, []);
+  // Pase 691: celular — alto exacto que queda libre debajo del header (y del banner, si hay) y arriba de la nav.
+  const esCel = useEsCel();
+  const [hojaLista, setHojaLista] = useState(false);
+  const pantallaRef = useRef(null);
+  const [altoPantalla, setAltoPantalla] = useState(0);
+  useEffect(() => {
+    if (!esCel) return undefined;
+    const medir = () => {
+      const el = pantallaRef.current;
+      if (!el) return;
+      const arriba = el.getBoundingClientRect().top + (window.scrollY || 0);
+      const h = Math.max(260, Math.round(window.innerHeight - arriba - 90));
+      setAltoPantalla((p) => (Math.abs(p - h) > 1 ? h : p));
+    };
+    medir();
+    const t = setInterval(medir, 800);
+    window.addEventListener('resize', medir);
+    return () => { clearInterval(t); window.removeEventListener('resize', medir); };
+  }, [esCel, cargando]);
+  useEffect(() => { if (!esCel) setHojaLista(false); }, [esCel]);
 
   useEffect(() => {
     let vigente = true;
@@ -280,7 +345,7 @@ export default function Ranking({ token, usuarioActual }) {
         <div style={estilos.podioInterior}>
           <Filigrana />
           <div style={estilos.podioImgWrap}>
-            <div style={estilos.podioGloriaOro} />
+            <div className="rk-gloria" style={estilos.podioGloriaOro} />
             <img src="/assets/images/ranking-podio.png" alt="" style={estilos.podioImg} />
 
             {[
@@ -326,13 +391,33 @@ export default function Ranking({ token, usuarioActual }) {
                     }}
                     onClick={() => setPerfilAbierto(p.username)}
                   >
-                    <div style={estilos.podioBaseNombre}>{p.username}</div>
-                    <div style={estilos.podioBaseVictorias}>{p.partidas_ganadas} victorias</div>
+                    <div className="rk-pn" style={estilos.podioBaseNombre}>{p.username}</div>
+                    <div className="rk-pv" style={estilos.podioBaseVictorias}>{p.partidas_ganadas} victorias</div>
                   </div>
                 </React.Fragment>
               );
             })}
           </div>
+          {esCel && (
+            <div className="rk-vrow">
+              {[
+                { p: p3, key: 'bronce', colorBorde: C.bronceOscuro },
+                { p: p1, key: 'oro', colorBorde: C.doradoOscuro },
+                { p: p2, key: 'plata', colorBorde: C.plataOscuro },
+              ].map(({ p, key, colorBorde }) => p && (
+                <button
+                  key={key}
+                  type="button"
+                  className="rk-vp"
+                  style={{ left: `${BASE_FRACCIONES[key].xCentro * 100}%`, borderColor: colorBorde }}
+                  onClick={() => setPerfilAbierto(p.username)}
+                >
+                  <img src="/assets/images/historial-trofeo.png" alt="" />
+                  {p.partidas_ganadas} victorias
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -379,12 +464,13 @@ export default function Ranking({ token, usuarioActual }) {
   // Pase 370: pestañas de alcance (mismo estilo que Activos/Finalizados de Torneos). En 2 columnas
   // viven arriba de la lista; apiladas van antes del podio, porque filtran podio y lista.
   const bloqueTabs = (
-    <div style={estilos.tabs}>
+    <div className="rk-tabs" style={estilos.tabs}>
       {ALCANCES.map((a) => (
         <button
           key={a.clave}
           type="button"
           onClick={() => setAlcance(a.clave)}
+          className={alcance === a.clave ? 'rk-tab rk-tab-on' : 'rk-tab'}
           style={alcance === a.clave ? estilos.tabActiva : estilos.tabInactiva}
         >
           {a.texto}
@@ -435,6 +521,104 @@ export default function Ranking({ token, usuarioActual }) {
       </div>
     </div>
   );
+
+  // Pase 691 — celular: pantalla fija a lo visible (sin scroll de página).
+  if (esCel) {
+    const yoCel = info?.yo;
+    const cuentaCel = info?.temporada ? cuenta : '';
+    return (
+      <>
+        <div ref={pantallaRef} className="rk-cel" style={altoPantalla ? { height: altoPantalla } : undefined}>
+          <div className="rk-top">
+            <img src="/assets/images/historial-trofeo.png" alt="" />
+            <div className="rk-top-tit">Ranking</div>
+            {cuentaCel && (
+              <div className="rk-top-timer" title={info.temporada.nombre}>
+                <span>Fin de temporada</span>
+                <b>{cuentaCel}</b>
+              </div>
+            )}
+          </div>
+          {bloqueTabs}
+          <PodioEscalado>{bloquePodio}</PodioEscalado>
+          <div className="rk-pie">
+            {yoCel && (
+              <div className="rk-pos">
+                <div className="rk-pos-fila">
+                  <div className="rk-pos-avatar"><img src={avatarSrcCaraDe(yoCel)} alt="" /></div>
+                  <div className="rk-pos-datos">
+                    <div className="rk-pos-tit">Tu posición</div>
+                    <div className="rk-pos-nombre">{yoCel.username}</div>
+                    <div className="rk-pos-vic">
+                      <img src="/assets/images/historial-trofeo.png" alt="" />
+                      <b>{yoCel.partidas_ganadas}</b> victorias
+                      {zonaTexto && <span className="rk-pos-zona">{zonaTexto}</span>}
+                    </div>
+                  </div>
+                  <div className="rk-pos-puesto">{yoCel.puesto ? `#${yoCel.puesto}` : '—'}</div>
+                </div>
+              </div>
+            )}
+            <button type="button" className="rk-ver" onClick={() => setHojaLista(true)}>
+              <img src="/assets/images/podio.png" alt="" />
+              <span>Puestos<br />4° al {PUESTO_MAXIMO_VISIBLE}°</span>
+            </button>
+          </div>
+        </div>
+
+        {hojaLista && (
+          <div className="rk-hoja">
+            <div className="rk-hoja-barra">
+              <span>Puestos 4° al {PUESTO_MAXIMO_VISIBLE}°</span>
+              <button type="button" aria-label="Cerrar" onClick={() => setHojaLista(false)}><img src="/assets/images/boton-cerrar.webp" alt="" draggable="false" /></button>
+            </div>
+            <div className="rk-hoja-cuerpo">
+              <div className="rk-hoja-panel">
+                {mensajeVacio && <p style={estilos.listaVacia}>{mensajeVacio}</p>}
+                {!mensajeVacio && resto.length === 0 && (
+                  <p style={estilos.listaVacia}>Los primeros puestos están en el podio.</p>
+                )}
+                {resto.map((r, i) => {
+                  const puesto = i + 4;
+                  const esYo = r.username === usuarioActual;
+                  return (
+                    <div
+                      key={r.username}
+                      className="rk-fila"
+                      style={{
+                        ...estilos.fila,
+                        ...(i % 2 === 1 ? estilos.filaImpar : {}),
+                        ...(esYo ? estilos.filaYo : {}),
+                        cursor: 'pointer',
+                      }}
+                      onClick={() => setPerfilAbierto(r.username)}
+                    >
+                      <div style={estilos.filaPuesto}>{puesto}</div>
+                      <div style={estilos.filaAvatar}><img src={avatarSrcCaraDe(r)} alt="" style={estilos.filaAvatarImg} /></div>
+                      <div style={estilos.filaNombre}>{esYo ? 'Vos' : r.username}</div>
+                      <div style={estilos.filaStat}>
+                        <span style={estilos.filaStatNumero}>{r.partidas_ganadas}</span>
+                        <img src="/assets/images/historial-trofeo.png" alt="" style={estilos.filaStatIcono} />
+                        <span style={estilos.filaStatLabel}>victorias</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {perfilAbierto && (
+          <PerfilRivalModal
+            username={perfilAbierto}
+            token={token}
+            onClose={() => setPerfilAbierto(null)}
+          />
+        )}
+      </>
+    );
+  }
 
   return (
     <>
@@ -835,3 +1019,58 @@ const estilos = {
   filaStatIcono: { width: 13, height: 13 * (237 / 246), objectFit: 'contain', flexShrink: 0 },
   filaStatLabel: { fontSize: 11.5, fontWeight: 600, color: C.verdeOscuro },
 };
+
+// Pase 691 — Ranking del celular: pantalla fija sin scroll de página + hoja con los puestos 4° al 16°.
+if (typeof document !== 'undefined' && !document.getElementById('ranking-celular-691')) {
+  const styleRk = document.createElement('style');
+  styleRk.id = 'ranking-celular-691';
+  styleRk.textContent = `
+    .rk-cel { display: flex; flex-direction: column; gap: 8px; overflow: hidden; box-sizing: border-box; }
+    .rk-top { flex: 0 0 auto; display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-radius: 16px; border: 2px solid #8C6239; background: linear-gradient(155deg, #3B1A12 0%, #301610 55%, #250E08 100%); box-shadow: inset 0 0 0 1.2px rgba(212,175,55,0.5), 0 4px 0 rgba(0,0,0,0.45); }
+    .rk-top img { height: 28px; width: auto; flex: 0 0 auto; }
+    .rk-top-tit { flex: 1; min-width: 0; font-family: 'Fredoka', sans-serif; font-weight: 800; font-size: 20px; color: #FFD700; text-shadow: 1px 1.5px 2px rgba(0,0,0,0.5); }
+    .rk-top-timer { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.05; }
+    .rk-top-timer span { font-family: 'Fredoka', sans-serif; font-weight: 600; font-size: 10.5px; color: rgba(255,248,237,0.85); }
+    .rk-top-timer b { font-family: 'Fredoka', sans-serif; font-weight: 800; font-size: 16px; color: #FFD668; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; }
+    .rk-cel .rk-tabs { flex: 0 0 auto; flex-wrap: nowrap !important; gap: 6px !important; margin: 0 0 3px !important; }
+    .rk-cel .rk-tabs button { flex: 1 1 0; min-width: 0; height: 38px !important; padding: 0 4px !important; font-size: 14px !important; margin-bottom: 0 !important; white-space: nowrap; box-sizing: border-box; border-radius: 999px !important; box-shadow: none !important; background: #3E2723 !important; color: rgba(255,248,237,0.8) !important; border: 2.5px solid #5C3D21 !important; border-bottom: 4px solid #1a100a !important; }
+    .rk-cel .rk-tabs button.rk-tab-on { background: #F5B041 !important; color: #3B1F0E !important; border-color: #1a1410 !important; border-bottom-color: #B9770E !important; }
+    .rk-area-int > div { background: linear-gradient(155deg, #5D4037 0%, #4E342E 55%, #3A2520 100%) !important; border: 2px solid #C08A3E !important; border-radius: 16px !important; padding: 10px !important; box-shadow: inset 0 0 0 1.2px rgba(212,175,55,0.5), 0 4px 0 rgba(0,0,0,0.45) !important; }
+    .rk-area-int > div > span { display: none !important; }
+    .rk-area-int > div > div { background: linear-gradient(180deg, #FFFCF6, #FFF8ED) !important; border: 1.5px solid #8C6239 !important; border-radius: 12px !important; box-shadow: none !important; padding: 108px 18px 20px !important; }
+    .rk-area-int svg { display: none !important; }
+    .rk-gloria { left: 22% !important; top: -12% !important; width: 58% !important; height: 120% !important; transform: none !important; border-radius: 999px !important; background: rgba(255,193,39,0.3) !important; }
+    .rk-cel .rk-pv { display: none; }
+    .rk-cel .rk-pn { font-size: 10.5px !important; margin: 0 -6px; max-width: none !important; }
+    .rk-vrow { position: relative; width: 100%; max-width: 470px; height: 30px; margin: 8px auto 0; }
+    .rk-vp { position: absolute; top: 0; transform: translateX(-50%); display: flex; align-items: center; justify-content: center; gap: 4px; box-sizing: border-box; width: 30%; height: 28px; padding: 0 4px; border: 2px solid #8C6239; border-radius: 999px; background: rgba(26,20,16,0.82); color: #FFD668; font-family: 'Fredoka', sans-serif; font-weight: 800; font-size: 11.5px; white-space: nowrap; cursor: pointer; }
+    .rk-vp img { width: 11px; height: auto; flex: 0 0 auto; }
+    .rk-area { position: relative; flex: 1 1 0; min-height: 0; }
+    .rk-area-int { position: absolute; left: 0; right: 0; transform-origin: top center; }
+    .rk-area-int > div { margin-bottom: 0 !important; }
+    .rk-pie { flex: 0 0 auto; display: flex; align-items: stretch; gap: 8px; }
+    .rk-pie .rk-pos { flex: 1 1 auto; min-width: 0; box-sizing: border-box; padding: 6px 12px; border: 4px solid #6E4B28; border-radius: 16px; background: radial-gradient(circle at 3px 4px, rgba(138,90,43,0.16) 1.1px, transparent 1.6px) 0 0 / 16px 16px, linear-gradient(155deg, #F4E2C2 0%, #EBD3A8 55%, #E2C89A 100%); box-shadow: inset 0 0 0 1.5px #B9853F, 0 4px 0 rgba(0,0,0,0.45); margin-bottom: 4px; }
+    .rk-pos-fila { display: flex; align-items: center; gap: 8px; }
+    .rk-pos-avatar { width: 40px; height: 40px; border-radius: 50%; overflow: hidden; flex: 0 0 auto; background: #1f7a3c; box-shadow: 0 0 0 2px #1a1410; }
+    .rk-pos-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .rk-pos-datos { flex: 1; min-width: 0; line-height: 1.1; }
+    .rk-pos-tit { font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 10px; letter-spacing: 0.5px; text-transform: uppercase; color: #4A2C2A; }
+    .rk-pos-nombre { font-family: 'Fredoka', sans-serif; font-weight: 800; font-size: 15px; color: #2C160E; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .rk-pos-vic { display: flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; color: #1f7a3c; white-space: nowrap; }
+    .rk-pos-vic img { width: 12px; height: auto; flex: 0 0 auto; }
+    .rk-pos-vic b { font-family: 'Fredoka', sans-serif; font-weight: 800; font-size: 14px; color: #1e8f4e; }
+    .rk-pos-zona { margin-left: 2px; padding: 0 7px; border: 1.5px solid #000; border-radius: 999px; background: #8B5A2B; color: #FFFBEB; font-size: 10px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; max-width: 80px; }
+    .rk-pos-puesto { font-family: 'Fredoka', sans-serif; font-weight: 800; font-size: 28px; line-height: 1; color: #C9860E; text-shadow: 1.5px 1.5px 0 #2C160E; flex: 0 0 auto; }
+    .rk-ver { flex: 0 0 92px; margin-bottom: 4px !important; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 4px; border: 2px solid #000; border-radius: 14px; cursor: pointer; font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 11.5px; line-height: 1.05; color: #FFF8ED; background: #5E3A1C; box-shadow: 0 3px 0 rgba(0,0,0,0.45); }
+    .rk-ver img { width: 26px; height: 26px; object-fit: contain; }
+    .rk-ver:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,0.45); }
+    .rk-hoja { position: fixed; inset: 0; z-index: 2000; display: flex; flex-direction: column; background: rgba(20,12,8,0.95); }
+    .rk-hoja-barra { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: linear-gradient(180deg, #7A4E2A, #4A2C11); border-bottom: 3px solid #000; font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 19px; color: #FFD668; }
+    .rk-hoja-barra button { background: none; border: 0; padding: 0; width: 40px; height: 40px; cursor: pointer; }
+    .rk-hoja-barra button img { width: 100%; height: 100%; object-fit: contain; }
+    .rk-hoja-cuerpo { flex: 1 1 0; min-height: 0; padding: 10px 12px 14px; display: flex; }
+    .rk-hoja-panel { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 4px; overflow-y: auto; box-sizing: border-box; padding: 8px; border-radius: 14px; border: 3px solid #1a1410; background: linear-gradient(180deg, #FFFCF6, #FFF8ED); }
+    .rk-hoja-panel .rk-fila { margin: 0 !important; flex: 1 1 0; min-height: 34px; max-height: 52px; padding-top: 3px !important; padding-bottom: 3px !important; box-sizing: border-box; }
+  `;
+  document.head.appendChild(styleRk);
+}

@@ -723,7 +723,14 @@ function AppInterna() {
           )}
 
           {pantalla === 'historial' && (
-            <Historial token={token} />
+            <Historial
+              token={token}
+              onVerBracket={(torneoId) => {
+                if (!torneoId) return;
+                setTorneoIdActual(torneoId);
+                setPantalla('bracket');
+              }}
+            />
           )}
           {pantalla === 'perfil' && (
             <Perfil

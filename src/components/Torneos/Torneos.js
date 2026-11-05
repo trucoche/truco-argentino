@@ -229,6 +229,8 @@ export default function Torneos({ token, onVerBracket }) {
   const [codigoCreado, setCodigoCreado] = useState(null);
   const [codigoBuscar, setCodigoBuscar] = useState('');
   const [torneoPorCodigo, setTorneoPorCodigo] = useState(null);
+  // Pase 690: en el celular "Mis torneos", "Crear torneo" y "Unirme con código" viven en una hoja que se abre con 3 botones (null | 'mis' | 'crear' | 'unirme').
+  const [hojaTn, setHojaTn] = useState(null);
   const tarjetaCodigoRef = useRef(null);
 
   const [inscribiendoId, setInscribiendoId] = useState(null);
@@ -420,6 +422,7 @@ export default function Torneos({ token, onVerBracket }) {
       if (!invitado) return;
       window.__torneoInvitado = null;
       setTorneoPorCodigo(invitado);
+      setHojaTn('unirme');
       setInscribiendoId(null);
       // Pase 383: quien lo invitó viene precargado como compañero.
       setAmigosElegidos(invitado.companero_sugerido ? [invitado.companero_sugerido.id] : []);
@@ -486,6 +489,7 @@ export default function Torneos({ token, onVerBracket }) {
       setTitulo('');
       setErrorTitulo(false);
       setCreando(false);
+      setHojaTn(null);
       // Torneo privado: mostrar el código para compartirlo.
       if (data.privado && data.codigo) setCodigoCreado(data.codigo);
       setPrivado(false);
@@ -514,6 +518,7 @@ export default function Torneos({ token, onVerBracket }) {
         companero_sugerido: null,
         desde_sala: true,
       });
+      setHojaTn('unirme');
       setInscribiendoId(null);
       setAmigosElegidos([]);
       setTimeout(() => {
@@ -587,7 +592,7 @@ export default function Torneos({ token, onVerBracket }) {
         return;
       }
 
-      if (torneoPorCodigo && torneoPorCodigo.id === torneo.id) setTorneoPorCodigo(null);
+      if (torneoPorCodigo && torneoPorCodigo.id === torneo.id) { setTorneoPorCodigo(null); setHojaTn(null); }
       setInscribiendoId(null);
       setAmigosElegidos([]);
       if (data.enLista) {
@@ -693,7 +698,7 @@ return (
           dorado para que este panel en particular (el que más invita a la
           acción) se distinga del resto. */}
       {torneoDestacado && (
-        <div style={estilos.destacadoPanelExterior}>
+        <div className="tn-dest" style={estilos.destacadoPanelExterior}>
           <span style={{ ...estilos.remache, top: 10, left: 10 }} />
           <span style={{ ...estilos.remache, top: 10, right: 10 }} />
           <span style={{ ...estilos.remache, bottom: 10, left: 10 }} />
@@ -705,15 +710,15 @@ return (
             PRÓXIMO TORNEO
             <span style={{ ...estilos.cintaRemache, right: 9 }} />
           </div>
-          <div style={estilos.destacadoCard}>
+          <div className="tn-dest-card" style={estilos.destacadoCard}>
             <Filigrana />
 
-            <div style={estilos.destacadoHeader}>
+            <div className="tn-dest-head" style={estilos.destacadoHeader}>
               <img src="/assets/images/trofeo.png" alt="" style={estilos.destacadoHeaderIcono} />
               <div style={estilos.destacadoTitulo}>{torneoDestacado.titulo}</div>
             </div>
 
-            <div style={estilos.destacadoStats}>
+            <div className="tn-dest-stats" style={estilos.destacadoStats}>
               <div style={estilos.destacadoStatBadge}>
                 <span style={estilos.iconoSiluetaJugadores} />
                 <span style={estilos.destacadoStatValor}>
@@ -784,7 +789,7 @@ return (
                 </div>
               </div>
             ) : (
-              <button onClick={() => setInscribiendoId(torneoDestacado.id)} style={estilos.destacadoBtn}>
+              <button className="tn-dest-btn" onClick={() => setInscribiendoId(torneoDestacado.id)} style={estilos.destacadoBtn}>
                 Anotarme ahora
               </button>
             )}
@@ -798,7 +803,7 @@ return (
           grande, y los emoji de las etiquetas se cambian por los íconos
           ilustrados ya existentes (personaje/trofeo), para no mezclar
           emoji con arte ilustrado en la misma pantalla. */}
-      <div style={estilos.statsRow}>
+      <div className="tn-stats" style={estilos.statsRow}>
         <div style={estilos.statCard}>
           <div style={estilos.statHueco}>
             <div style={estilos.statValor}>{jugadoresParticipando}</div>
@@ -827,10 +832,30 @@ return (
           pantallas angostas (mobile) las 2 columnas se apilen solas, sin
           necesitar una media query aparte (mismo truco que ya usa
           torneosGrid más abajo). */}
-      <div style={estilos.crearYListaWrap}>
-      <div style={estilos.columnaIzquierda}>
+      <div className="tn-acciones">
+        <button type="button" className="tn-acc" onClick={() => setHojaTn('mis')}>
+          <img src="/assets/images/trofeo.png" alt="" />
+          <span>Mis torneos</span>
+          {misTorneos.length > 0 && <b className="tn-acc-cuenta">{misTorneos.length}</b>}
+        </button>
+        <button type="button" className="tn-acc" onClick={() => setHojaTn('crear')}>
+          <img src="/assets/images/icono-cartas-nueva.png" alt="" />
+          <span>Crear torneo</span>
+        </button>
+        <button type="button" className="tn-acc" onClick={() => setHojaTn('unirme')}>
+          <img src="/assets/images/icono-sala-privada.png" alt="" />
+          <span>Unirme con código</span>
+        </button>
+      </div>
+      <div className="tn-wrap" style={estilos.crearYListaWrap}>
+      <div className="tn-izq" data-hoja={hojaTn || ''} style={estilos.columnaIzquierda}>
+      <div className="tn-hoja-barra">
+        <span>{hojaTn === 'mis' ? 'Mis torneos' : hojaTn === 'crear' ? 'Crear torneo' : 'Unirme con código'}</span>
+        <button type="button" aria-label="Cerrar" onClick={() => setHojaTn(null)}><img src="/assets/images/boton-cerrar.webp" alt="" draggable="false" /></button>
+      </div>
+      {errorAccion && <div className="tn-hoja-error" onClick={() => avisarError('')}>{errorAccion}</div>}
       {/* Pase 380: tarjeta "Mis torneos" — administrar los torneos que creé o en los que estoy anotado. */}
-      <div style={{ ...estilos.panelExterior, marginBottom: 0 }}>
+      <div className="tn-p-mis" style={{ ...estilos.panelExterior, marginBottom: 0 }}>
         <span style={{ ...estilos.remache, top: 10, left: 10 }} />
         <span style={{ ...estilos.remache, top: 10, right: 10 }} />
         <span style={{ ...estilos.remache, bottom: 10, left: 10 }} />
@@ -903,13 +928,14 @@ return (
           de taberna" que el resto de la app (exterior de madera oscura +
           remaches, interior de pergamino cálido) en vez del rectángulo
           blanco plano de antes. */}
-      <div style={{ ...estilos.panelExterior, marginBottom: 0 }}>
+      <div className="tn-p-crear" style={{ ...estilos.panelExterior, marginBottom: 0 }}>
         <span style={{ ...estilos.remache, top: 10, left: 10 }} />
         <span style={{ ...estilos.remache, top: 10, right: 10 }} />
         <span style={{ ...estilos.remache, bottom: 10, left: 10 }} />
         <span style={{ ...estilos.remache, bottom: 10, right: 10 }} />
       <div style={estilos.panelInterior}>
         <Filigrana />
+        <div className="tn-sec-crear">
         <div style={estilos.panelTitle}>
           <img src="/assets/images/icono-cartas-nueva.png" alt="" style={estilos.panelTitleIcono} />
           Crear torneo
@@ -1043,6 +1069,8 @@ return (
           </form>
         )}
 
+        </div>
+        <div className="tn-sec-unirme">
         <div style={estilos.separadorCodigo} />
         <div style={estilos.panelTitle}>
           <img src="/assets/images/icono-sala-privada.png" alt="" style={estilos.panelTitleIcono} />
@@ -1104,6 +1132,7 @@ return (
             )}
           </div>
         )}
+        </div>
       </div>
       </div>
       </div>
@@ -1126,7 +1155,7 @@ return (
         <div style={estilos.codigoBox}>{codigoCreado}</div>
       </PopupMadera>
 
-      <div style={estilos.listaColumna}>
+      <div className="tn-lista" style={estilos.listaColumna}>
       {/* Pase 359: Activos/Finalizados viven dentro de UNA tarjeta (marco de madera + paño verde) con la lista
           en un área de alto máximo con scroll propio, para que la página no se alargue con muchos torneos. */}
       <div style={estilos.listaPanelExterior}>
@@ -1154,7 +1183,7 @@ return (
 
 {vista === 'ranking' && (
   <>
-    <div style={estilos.sectionTitle}>Ranking de torneos</div>
+    <div className="tn-tit" style={estilos.sectionTitle}>Ranking de torneos</div>
     {cargandoRanking && !rankingPuntos ? (
       <PantallaCarga completa={false} conLogo={false} />
     ) : (
@@ -1192,7 +1221,7 @@ return (
 
 {vista === 'activos' && (
   <>
-    <div style={estilos.sectionTitle}>Torneos disponibles</div>
+    <div className="tn-tit" style={estilos.sectionTitle}>Torneos disponibles</div>
 
     {cargando ? (
       // Centésimo cuadragésimo sexto pase: ver PantallaCarga.
@@ -1281,7 +1310,7 @@ return (
 
 {vista === 'finalizados' && (
   <>
-    <div style={estilos.sectionTitle}>Torneos finalizados</div>
+    <div className="tn-tit" style={estilos.sectionTitle}>Torneos finalizados</div>
 
     {cargandoFinalizados ? (
       // Centésimo cuadragésimo sexto pase: ver PantallaCarga.
@@ -1327,6 +1356,58 @@ return (
 
 // Pase 333: contorno negro fino alrededor del texto blanco de los botones verdes.
 const CONTORNO_TEXTO = '-1.5px -1.5px 0 #000, 0 -1.5px 0 #000, 1.5px -1.5px 0 #000, -1.5px 0 0 #000, 1.5px 0 0 #000, -1.5px 1.5px 0 #000, 0 1.5px 0 #000, 1.5px 1.5px 0 #000';
+
+// Pase 690: Torneos en el celular (< 900 px) sin scroll de página. Arriba el próximo torneo compacto y los contadores en una línea; en el
+// medio 3 botones (Mis torneos / Crear torneo / Unirme con código) que abren una hoja con ese panel; abajo la lista de torneos con su propio
+// scroll. En la compu no cambia nada (los botones y la barra de la hoja están ocultos).
+if (typeof document !== 'undefined' && !document.getElementById('torneos-celular-690')) {
+  const styleTn = document.createElement('style');
+  styleTn.id = 'torneos-celular-690';
+  styleTn.textContent = `
+    .tn-acciones, .tn-hoja-barra, .tn-hoja-error { display: none; }
+    @media (max-width: 899px) {
+      .tn-dest { padding: 6px !important; margin: 14px 0 10px !important; border-width: 2px !important; border-radius: 18px !important; }
+      .tn-dest-card { padding: 18px 10px 10px !important; border-radius: 13px !important; }
+      .tn-dest-head { margin-bottom: 8px !important; gap: 8px !important; }
+      .tn-dest-head img { height: 28px !important; }
+      .tn-dest-head > div { font-size: 17px !important; }
+      .tn-dest-stats { margin-bottom: 10px !important; gap: 6px !important; }
+      .tn-dest-stats > div { padding: 4px 2px !important; gap: 0 !important; max-width: none !important; border-width: 2px !important; border-radius: 10px !important; }
+      .tn-dest-stats > div > :first-child { width: 22px !important; height: 22px !important; margin: 0 !important; }
+      .tn-dest-stats > div > span:nth-child(2) { font-size: 14px !important; line-height: 1.1 !important; }
+      .tn-dest-stats > div > span:nth-child(3) { font-size: 8.5px !important; }
+      .tn-dest-btn { height: 42px !important; font-size: 17px !important; margin-bottom: 4px !important; }
+      .tn-stats { gap: 8px !important; margin-bottom: 10px !important; }
+      .tn-stats > div { padding: 3px !important; border-radius: 13px !important; box-shadow: inset 0 -2px 6px rgba(0,0,0,0.4), 0 3px 0 #1a0e08 !important; }
+      .tn-stats > div > div { display: flex !important; align-items: center !important; justify-content: center !important; gap: 6px !important; padding: 4px 6px !important; border-radius: 10px !important; }
+      .tn-stats > div > div > div:first-child { font-size: 20px !important; line-height: 1 !important; }
+      .tn-stats > div > div > div:last-child { font-size: 10px !important; margin: 0 !important; line-height: 1.1 !important; text-align: left; }
+      .tn-acciones { display: flex; gap: 8px; margin-bottom: 10px; }
+      .tn-acc { position: relative; flex: 1 1 0; min-width: 0; height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding: 2px 4px; border: 2px solid #000; border-radius: 14px; cursor: pointer; font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 11.5px; line-height: 1.05; color: #FFF8ED; background: linear-gradient(180deg, #7A4E2A, #4A2C11); box-shadow: inset 0 2px 0 rgba(255,255,255,0.14), 0 3px 0 #1a0e08; }
+      .tn-acc img { width: 24px; height: 24px; object-fit: contain; }
+      .tn-acc span { white-space: nowrap; }
+      .tn-acc:active { transform: translateY(2px); box-shadow: inset 0 2px 0 rgba(255,255,255,0.14), 0 1px 0 #1a0e08; }
+      .tn-acc-cuenta { position: absolute; top: -7px; right: -5px; min-width: 18px; height: 18px; padding: 0 4px; box-sizing: border-box; border-radius: 9px; background: #E8483A; border: 2px solid #fff; color: #fff; font-size: 11px; line-height: 14px; text-align: center; }
+      .tn-wrap { display: block !important; margin-bottom: 8px !important; }
+      .tn-izq { display: none !important; }
+      .tn-izq:not([data-hoja=""]) { display: flex !important; position: fixed; inset: 0; z-index: 2000; flex-direction: column; gap: 12px; padding: 0 12px 24px; box-sizing: border-box; overflow-y: auto; background: rgba(20,12,8,0.95); }
+      .tn-hoja-barra { display: flex; position: sticky; top: 0; z-index: 2; flex: 0 0 auto; align-items: center; justify-content: space-between; margin: 0 -12px; padding: 8px 12px; background: linear-gradient(180deg, #7A4E2A, #4A2C11); border-bottom: 3px solid #000; font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 19px; color: #FFD668; }
+      .tn-hoja-barra button { background: none; border: 0; padding: 0; width: 40px; height: 40px; cursor: pointer; }
+      .tn-hoja-barra button img { width: 100%; height: 100%; object-fit: contain; }
+      .tn-hoja-error { display: block; flex: 0 0 auto; background: #FFE9E4; color: #7A1F17; border: 2px solid #E8483A; border-radius: 10px; padding: 8px 10px; font-weight: 700; font-size: 13px; }
+      .tn-izq[data-hoja="mis"] .tn-p-crear, .tn-izq[data-hoja="crear"] .tn-p-mis, .tn-izq[data-hoja="unirme"] .tn-p-mis { display: none !important; }
+      .tn-izq[data-hoja="crear"] .tn-sec-unirme, .tn-izq[data-hoja="unirme"] .tn-sec-crear { display: none !important; }
+      .tn-izq[data-hoja="unirme"] .tn-sec-unirme > div:first-child { display: none; }
+      .tn-tit { display: none !important; }
+      .tn-lista [style*="overflow-y: auto"] { max-height: max(130px, calc(100dvh - 640px)) !important; }
+      .tn-lista > div > div > div:first-child { margin-bottom: 8px !important; gap: 6px !important; }
+      .tn-lista > div > div > div:first-child > button { height: 32px !important; font-size: 12.5px !important; padding: 0 12px !important; margin-bottom: 4px !important; }
+      .tn-lista > div { padding: 6px !important; border-radius: 16px !important; box-shadow: inset 0 -3px 8px rgba(0,0,0,0.5), 0 3px 0 #1a0e08 !important; }
+      .tn-lista > div > div { padding: 8px 8px 6px !important; border-radius: 12px !important; }
+    }
+  `;
+  document.head.appendChild(styleTn);
+}
 
 const estilos = {
   errorBox: {
