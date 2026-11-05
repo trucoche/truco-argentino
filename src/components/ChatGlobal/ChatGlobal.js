@@ -67,6 +67,20 @@ function caraSrcDe(u) {
 // El recorte circular lo hace un contenedor con overflow hidden: escalar solo la <img> con su border-radius
 // se saldría del hueco del aro.
 const ZOOM_CARA = 1.15;
+// Pase 694: ¿pantalla de celular? (mismo corte que el resto de la web: 899px).
+function useEsCel() {
+  const [v, setV] = useState(() => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(max-width: 899px)').matches);
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return undefined;
+    const mq = window.matchMedia('(max-width: 899px)');
+    const f = () => setV(mq.matches);
+    f();
+    if (mq.addEventListener) mq.addEventListener('change', f); else mq.addListener(f);
+    return () => { if (mq.removeEventListener) mq.removeEventListener('change', f); else mq.removeListener(f); };
+  }, []);
+  return v;
+}
+
 function FotoEnAro({ u, tam, aro }) {
   const foto = Math.round(tam * aro.hueco) + 2;
   const esFoto = u?.avatar_tipo === 'foto' && u?.foto_perfil_url;
@@ -243,9 +257,30 @@ export default function ChatGlobal({ token, usuario, abrirSolicitudesSenial }) {
   const [amigos, setAmigos] = useState([]);
   const finRef = useRef(null);
 
+  // Pase 694: baja SOLO la lista de mensajes (antes scrollIntoView movía también la página entera).
   useEffect(() => {
-    finRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const lista = finRef.current?.parentElement;
+    if (lista) lista.scrollTo({ top: lista.scrollHeight, behavior: 'smooth' });
   }, [mensajes]);
+
+  // Pase 694: en celular la pantalla mide exactamente lo visible (sin scroll de página).
+  const esCel = useEsCel();
+  const paginaRef = useRef(null);
+  const [altoPantalla, setAltoPantalla] = useState(0);
+  useEffect(() => {
+    if (!esCel) { setAltoPantalla(0); return undefined; }
+    const medir = () => {
+      const el = paginaRef.current;
+      if (!el) return;
+      const arriba = el.getBoundingClientRect().top + (window.scrollY || 0);
+      const h = Math.max(280, Math.round(window.innerHeight - arriba - 90));
+      setAltoPantalla((p) => (Math.abs(p - h) > 1 ? h : p));
+    };
+    medir();
+    const t = setInterval(medir, 800);
+    window.addEventListener('resize', medir);
+    return () => { clearInterval(t); window.removeEventListener('resize', medir); };
+  }, [esCel]);
 
   // Pase del backend real de Chat Global: historial por REST (una sola
   // vez al entrar) + sala de socket dedicada ('chat-global', separada de
@@ -577,7 +612,7 @@ export default function ChatGlobal({ token, usuario, abrirSolicitudesSenial }) {
   ];
 
   return (
-    <div className="cg-pagina" style={estilos.pagina}>
+    <div ref={paginaRef} className="cg-pagina" style={altoPantalla ? { ...estilos.pagina, height: altoPantalla, minHeight: 0 } : estilos.pagina}>
       {/* Ducentésimo quincuagésimo séptimo pase: 4 remaches de bronce en
           las esquinas del panel — mismo recurso que ya usa Historial.js
           (`estilos.remache`), acá también sin asset nuevo (`radial-gradient`
@@ -588,8 +623,8 @@ export default function ChatGlobal({ token, usuario, abrirSolicitudesSenial }) {
       <span style={{ ...estilos.remache, bottom: 8, right: 8 }} />
 
       {/* A. Header */}
-      <div style={estilos.header}>
-        <div style={estilos.headerIzquierda}>
+      <div className="cg-header" style={estilos.header}>
+        <div className="cg-header-izq" style={estilos.headerIzquierda}>
           {/* Pase siguiente: mismo criterio que el botón "Chat" colapsado
               de la mesa de juego — el emoji 💬 se reemplaza por el ícono
               que ya usa el lobby para "Chat" en el nav (icono-chat.png,
@@ -604,7 +639,7 @@ export default function ChatGlobal({ token, usuario, abrirSolicitudesSenial }) {
           </div>
         </div>
 
-        <div style={estilos.headerTabs}>
+        <div className="cg-tabs" style={estilos.headerTabs}>
           {TABS.map((t) => (
             <button
               key={t.id}
@@ -618,7 +653,7 @@ export default function ChatGlobal({ token, usuario, abrirSolicitudesSenial }) {
         </div>
 
         {usuario?.rol === 'admin' && (
-          <button style={estilos.botonLimpiarChat} onClick={limpiarChatAdmin} title="Borrar todos los mensajes del chat (solo administrador)">
+          <button className="cg-limpiar" style={estilos.botonLimpiarChat} onClick={limpiarChatAdmin} title="Borrar todos los mensajes del chat (solo administrador)">
             Limpiar
           </button>
         )}
@@ -677,7 +712,7 @@ export default function ChatGlobal({ token, usuario, abrirSolicitudesSenial }) {
         <div style={estilos.columnaChat}>
         {tab === 'global' ? (
           <>
-          <div style={estilos.mensajesLista}>
+          <div className="cg-lista" style={estilos.mensajesLista}>
             {mensajes.map((m, i) => {
               // Pase del backend real: el servidor ya no manda un flag
               // "propio" (no sabe quién está mirando) — se calcula acá
@@ -703,6 +738,7 @@ export default function ChatGlobal({ token, usuario, abrirSolicitudesSenial }) {
               ) : (
                 <div
                   key={m.id}
+                  className="cg-fila"
                   style={{
                     ...estilos.filaMensaje,
                     ...(propio ? estilos.filaMensajePropio : {}),
@@ -713,22 +749,23 @@ export default function ChatGlobal({ token, usuario, abrirSolicitudesSenial }) {
                     <img
                       src={avatarSrcDe(m)}
                       alt=""
+                      className="cg-avatar"
                       style={estilos.avatar}
                       onClick={() => abrirPerfilDe(m.usuario)}
                     />
                   )}
-                  <div style={{ ...estilos.burbuja, ...(propio ? estilos.burbujaPropia : {}) }}>
+                  <div className="cg-burbuja" style={{ ...estilos.burbuja, ...(propio ? estilos.burbujaPropia : {}) }}>
                     {!propio && (
-                      <div style={estilos.filaNombre}>
+                      <div className="cg-nombre-fila" style={estilos.filaNombre}>
                         <span
                           style={estilos.nombreUsuario}
                           onClick={() => abrirPerfilDe(m.usuario)}
                         >
                           {m.usuario}
                         </span>
-                        <span style={estilos.hora}>{horaCorta(m.timestamp)}</span>
+                        <span className="cg-hora" style={estilos.hora}>{horaCorta(m.timestamp)}</span>
                         {usuario?.rol === 'admin' && (
-                          <span style={estilos.borrarDeUsuario} onClick={() => borrarMensajesDeUsuario(m.usuario)} title={`Borrar todos los mensajes de ${m.usuario}`}>
+                          <span className="cg-borrar" style={estilos.borrarDeUsuario} onClick={() => borrarMensajesDeUsuario(m.usuario)} title={`Borrar todos los mensajes de ${m.usuario}`}>
                             borrar sus msjs
                           </span>
                         )}
@@ -792,8 +829,9 @@ export default function ChatGlobal({ token, usuario, abrirSolicitudesSenial }) {
                 type="text"
                 value={texto}
                 onChange={(e) => setTexto(e.target.value)}
-                placeholder="Escribí un mensaje..."
+                placeholder={esCel ? 'Escribí…' : 'Escribí un mensaje...'}
                 maxLength={200}
+                className="cg-input"
                 style={estilos.input}
               />
               {/* Ducentésimo cuadragésimo séptimo pase: botón + avioncito

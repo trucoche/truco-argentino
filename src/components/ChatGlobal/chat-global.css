@@ -112,3 +112,25 @@
     flex-shrink: 0;
   }
 }
+
+/* Pase 694: Chat Global en celular — pantalla fija (sin scroll de página; solo la lista de mensajes se desplaza),
+   cabecera en dos renglones como la app (título + acciones / pestañas a todo el ancho) y textos de cada mensaje con aire. */
+@media (max-width: 899px) {
+  .cg-pagina { padding: 6px !important; border-radius: 12px !important; }
+  .cg-header { padding: 8px 10px !important; gap: 8px !important; flex-wrap: wrap !important; justify-content: flex-start !important; }
+  .cg-header-izq { flex: 1 1 0 !important; min-width: 0 !important; gap: 8px !important; }
+  .cg-header-izq img { width: 28px !important; height: 28px !important; }
+  .cg-limpiar { padding: 5px 10px !important; font-size: 12px !important; }
+  .cg-boton-usuarios { padding: 5px 10px !important; }
+  .cg-tabs { order: 5; flex: 0 0 100% !important; width: 100% !important; box-sizing: border-box !important; gap: 6px !important; padding: 3px !important; }
+  .cg-tabs button { flex: 1 1 0 !important; padding: 7px 8px !important; font-size: 14px !important; }
+  .cg-lista { padding: 12px 10px !important; }
+  .cg-fila { max-width: 92% !important; gap: 8px !important; }
+  .cg-avatar { width: 34px !important; height: 34px !important; }
+  .cg-burbuja { padding: 8px 12px 9px !important; border-radius: 14px !important; }
+  .cg-nombre-fila { flex-wrap: wrap !important; row-gap: 1px !important; column-gap: 10px !important; margin-bottom: 4px !important; }
+  .cg-nombre-fila > span { white-space: nowrap !important; margin-left: 0 !important; }
+  .cg-hora { font-size: 10.5px !important; }
+  .cg-borrar { flex-basis: 100% !important; font-size: 10.5px !important; }
+  .cg-input { font-size: 16px !important; padding: 9px 12px !important; }
+}
