@@ -758,6 +758,7 @@ export default function ChatGlobal({ token, usuario, abrirSolicitudesSenial }) {
                     {!propio && (
                       <div className="cg-nombre-fila" style={estilos.filaNombre}>
                         <span
+                          className="cg-nombre-u"
                           style={estilos.nombreUsuario}
                           onClick={() => abrirPerfilDe(m.usuario)}
                         >

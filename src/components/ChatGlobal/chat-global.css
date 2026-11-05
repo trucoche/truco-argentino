@@ -131,6 +131,10 @@
   .cg-nombre-fila { flex-wrap: wrap !important; row-gap: 1px !important; column-gap: 10px !important; margin-bottom: 4px !important; }
   .cg-nombre-fila > span { white-space: nowrap !important; margin-left: 0 !important; }
   .cg-hora { font-size: 10.5px !important; }
-  .cg-borrar { flex-basis: 100% !important; font-size: 10.5px !important; }
+  /* El "borrar sus msjs" del admin pasa a un tacho chico a la derecha del nombre: no pisa el texto del mensaje. */
+  .cg-nombre-fila { flex-wrap: nowrap !important; }
+  .cg-nombre-fila .cg-nombre-u { min-width: 0 !important; overflow: hidden !important; text-overflow: ellipsis !important; }
+  .cg-nombre-fila > .cg-borrar { margin-left: auto !important; font-size: 0 !important; text-decoration: none !important; padding: 0 2px !important; }
+  .cg-borrar::after { content: "\1F5D1"; font-size: 14px; opacity: 0.7; }
   .cg-input { font-size: 16px !important; padding: 9px 12px !important; }
 }
