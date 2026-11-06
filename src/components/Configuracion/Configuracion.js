@@ -1,5 +1,5 @@
 import PopupMadera, { confirmarPopup, mostrarAviso, PlacaMadera } from '../Popup/PopupMadera';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import PersonajeSelector from '../Lobby/PersonajeSelector';
 import ReportarModal from '../Reportar/ReportarModal';
 import SelectorPersonalizacion from '../Personalizacion/SelectorPersonalizacion';
@@ -70,6 +70,60 @@ const SUBPESTANAS_ADMIN = [
   { id: 'acciones', texto: 'Acciones' },
 ];
 
+// Pase 695: ¿pantalla de celular? (mismo corte que el resto de la web: 899px).
+function useEsCelCfg() {
+  const [v, setV] = useState(() => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(max-width: 899px)').matches);
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return undefined;
+    const mq = window.matchMedia('(max-width: 899px)');
+    const f = () => setV(mq.matches);
+    f();
+    if (mq.addEventListener) mq.addEventListener('change', f); else mq.addListener(f);
+    return () => { if (mq.removeEventListener) mq.removeEventListener('change', f); else mq.removeListener(f); };
+  }, []);
+  return v;
+}
+
+// Pase 695: Ajustes en celular — pantalla fija sin scroll de página (Perfil y Cuenta = filas + hojas, como en la app).
+const CSS_AJUSTES_CEL = `
+.cf-cel { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.cf-cartel { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; margin: 0 0 10px; padding: 8px 14px; border-radius: 16px; border: 3px solid #1a1410;
+  background: linear-gradient(180deg, #4a2c1e 0%, #2d1810 100%); box-shadow: inset 0 2px 0 rgba(255,255,255,0.12), 0 3px 0 #0e0805; }
+.cf-cartel img { width: 34px; height: 34px; object-fit: contain; }
+.cf-cartel b { display: block; font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 20px; color: #FFD700; line-height: 1.1; }
+.cf-cartel span { display: block; font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 12px; color: #E0D0B0; }
+.cf-cel .cf-tabs { flex: 0 0 auto; margin: 0 0 10px !important; gap: 6px !important; }
+.cf-cel .cf-tabs button { height: 36px !important; font-size: 14px !important; padding: 0 4px !important; }
+.cf-lista { flex: 0 0 auto; border-radius: 16px; border: 3px solid #1a1410; padding: 8px;
+  background: linear-gradient(160deg, #6b4534 0%, #4a2c2a 55%, #2d1810 100%); box-shadow: inset 0 2px 0 rgba(255,255,255,0.10), 0 4px 0 #0e0805; }
+.cf-lista-int { background: #F4E2C2; border: 2px solid #C9A66B; border-radius: 12px; overflow: hidden; }
+.cf-fila { display: flex; align-items: center; gap: 10px; width: 100%; box-sizing: border-box; padding: 0 12px; border: 0; background: transparent; text-align: left;
+  font-family: 'Nunito', sans-serif; color: #4A2C2A; cursor: pointer; }
+.cf-fila + .cf-fila { border-top: 1.5px solid rgba(74,44,42,0.16); }
+.cf-fila-ico { width: 30px; height: 30px; object-fit: contain; flex: 0 0 auto; }
+.cf-fila-emo { width: 30px; text-align: center; font-size: 22px; flex: 0 0 auto; }
+.cf-fila-mini { width: 38px; height: 38px; object-fit: contain; flex: 0 0 auto; }
+.cf-fila-txt { flex: 1 1 auto; min-width: 0; }
+.cf-fila-tit { display: block; font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 15.5px; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cf-fila-val { display: block; font-weight: 700; font-size: 11.5px; color: #7a5a3a; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cf-fila-flecha { font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 24px; color: #C9860E; flex: 0 0 auto; line-height: 1; }
+.cf-fila-sw { width: 50px; height: 26px; flex: 0 0 auto; }
+.cf-fila-peligro .cf-fila-tit { color: #9c2418; }
+.cf-cel .cf-cont { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.cf-cel .cf-cont.cf-cont-pie { flex: 0 0 auto; overflow: visible; }
+.cf-cont.cf-hoja { position: fixed; inset: 0; z-index: 2000; background: #1b120c; overflow-y: auto; padding: 0 12px 28px; gap: 12px !important; }
+.cf-hoja-barra { position: sticky; top: 0; z-index: 3; display: flex; align-items: center; justify-content: space-between; margin: 0 -12px 12px; padding: 8px 14px;
+  background: #5E3A1C; border-bottom: 3px solid #000; }
+.cf-hoja-barra span { font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 19px; color: #FFD668; }
+.cf-hoja-barra button { width: 38px; height: 38px; border-radius: 50%; background: #C0392B; border: 2px solid #000; color: #fff; font-size: 18px; font-weight: 700; cursor: pointer; }
+.cf-hoja .cf-pie { display: none !important; }
+.cf-hoja[data-ver="foto"] > [data-sec]:not([data-sec="foto"]),
+.cf-hoja[data-ver="personaje"] > [data-sec]:not([data-sec="personaje"]),
+.cf-hoja[data-ver="genero"] > [data-sec]:not([data-sec="genero"]),
+.cf-hoja[data-ver="pers"] > [data-sec]:not([data-sec="pers"]),
+.cf-hoja[data-ver="bloqueados"] > [data-sec]:not([data-sec="bloqueados"]) { display: none !important; }
+`;
+
 export default function Configuracion({ token, usuario, onPersonajeCambiado, musicaVolumen, onCambiarMusicaVolumen, efectosVolumen = 1, onCambiarEfectosVolumen, onNavegar }) {
   const [modoOscuro, setModoOscuro] = useState(false);
   // Pase 519: modal intermedio antes de salir a Cafecito.
@@ -80,6 +134,24 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
   const [pestana, setPestana] = useState('perfil');   // Pase 539: Ajustes por pestañas
   const [subAdmin, setSubAdmin] = useState('reportes');   // Pase 626: subpestaña de la pestaña Admin
   const [reportarAbierto, setReportarAbierto] = useState(false);   // Pase 577: Reportar bug / sugerencia
+  const esCel = useEsCelCfg();   // Pase 695
+  const [hoja, setHoja] = useState(null);   // Pase 695: 'foto' | 'personaje' | 'genero' | 'pers' | 'bloqueados'
+  const pantallaRef = useRef(null);
+  const [altoPantalla, setAltoPantalla] = useState(0);
+  useEffect(() => {
+    if (!esCel) { setAltoPantalla(0); return undefined; }
+    const medir = () => {
+      const el = pantallaRef.current;
+      if (!el) return;
+      const arriba = el.getBoundingClientRect().top + (window.scrollY || 0);
+      const h = Math.max(300, Math.round(window.innerHeight - arriba - 90));
+      setAltoPantalla((p) => (Math.abs(p - h) > 1 ? h : p));
+    };
+    medir();
+    const t = setInterval(medir, 800);
+    window.addEventListener('resize', medir);
+    return () => { clearInterval(t); window.removeEventListener('resize', medir); };
+  }, [esCel]);
 
   // Pase 324: el selector de Género se mudó del Perfil a Ajustes (misma lógica).
   const cambiarGenero = async (nuevoGenero) => {
@@ -740,18 +812,30 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
     }
   };
 
+  // Pase 695: alto de cada fila (celular) = lo que sobra repartido entre las filas de la pestaña.
+  const cantFilasCel = pestana === 'perfil' ? (usuario?.foto_perfil_url ? 4 : 3) : 7;
+  const altoFilaCel = Math.max(46, Math.min(pestana === 'perfil' ? 84 : 66, Math.floor(((altoPantalla || 560) - 182) / cantFilasCel)));
+
   return (
-    <>
-      <div style={estilos.sectionTitle}>Configuración</div>
+    <div ref={pantallaRef} className={esCel ? 'cf-cel' : undefined} style={esCel && altoPantalla ? { height: altoPantalla } : undefined}>
+      {esCel && <style id="ajustes-celular-695">{CSS_AJUSTES_CEL}</style>}
+      {esCel ? (
+        <div className="cf-cartel">
+          <img src="/assets/images/icono-engranaje.png" alt="" />
+          <div><b>Ajustes</b><span>Tu cuenta, la mesa y tu privacidad</span></div>
+        </div>
+      ) : (
+        <div style={estilos.sectionTitle}>Configuración</div>
+      )}
 
       {/* Pase 539: pestañas — cada una agrupa un tipo de opciones. */}
-      <div style={estilos.pestanas} role="tablist">
+      <div className="cf-tabs" style={estilos.pestanas} role="tablist">
         {(esAdmin ? [...PESTANAS_AJUSTES, PESTANA_ADMIN] : PESTANAS_AJUSTES).map((t) => (
           <button
             key={t.id}
             role="tab"
             aria-selected={pestana === t.id}
-            onClick={() => setPestana(t.id)}
+            onClick={() => { setPestana(t.id); setHoja(null); }}
             style={{ ...estilos.pestana, ...(pestana === t.id ? estilos.pestanaActiva : {}) }}
           >
             {t.texto}
@@ -766,12 +850,61 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
           más los propios de PersonajeSelector) — mismo criterio que ya usa
           la Tienda (`estilos.filas`) para una pantalla "más compacta" sin
           perder aire entre secciones. */}
-      <div style={estilos.contenedor}>
+      {esCel && !hoja && (pestana === 'perfil' || pestana === 'cuenta') && (() => {
+        const sw = (v) => (v ? '/assets/images/switch-on.png' : '/assets/images/switch-off.png');
+        const Fila = ({ ico, emo, tit, val, der, onClick, peligro }) => {
+          const Tag = onClick ? 'button' : 'div';
+          return (
+            <Tag className={'cf-fila' + (peligro ? ' cf-fila-peligro' : '')} style={{ height: altoFilaCel }} onClick={onClick} type={onClick ? 'button' : undefined}>
+              {ico && <img className="cf-fila-ico" src={ico} alt="" />}
+              {emo && <span className="cf-fila-emo">{emo}</span>}
+              <span className="cf-fila-txt"><span className="cf-fila-tit">{tit}</span>{val && <span className="cf-fila-val">{val}</span>}</span>
+              {der}
+              {onClick && <span className="cf-fila-flecha">›</span>}
+            </Tag>
+          );
+        };
+        return (
+          <div className="cf-lista"><div className="cf-lista-int">
+            {pestana === 'perfil' && (
+              <>
+                {usuario?.foto_perfil_url && <Fila ico="/assets/images/icono-foto-perfil.png" tit="Foto de perfil" val={usuario.avatar_tipo === 'foto' ? 'Mi foto' : 'Personaje'} onClick={() => setHoja('foto')} />}
+                <Fila ico="/assets/images/icono-personaje.png" tit="Tu personaje" val="Elegí cómo te ven" der={<img className="cf-fila-mini" src={`/assets/${usuario?.personaje || 'gaucho'}-avatar.png`} alt="" />} onClick={() => setHoja('personaje')} />
+                <Fila ico="/assets/images/icono-genero.png" tit="Género" val={(GENEROS.find((g) => g.value === usuario?.genero) || {}).label || 'Sin elegir'} onClick={() => setHoja('genero')} />
+                <Fila ico="/assets/images/icono-cartas-nueva.png" tit="Personalización" val="Anillo, banner y dorso de cartas" onClick={() => setHoja('pers')} />
+              </>
+            )}
+            {pestana === 'cuenta' && (
+              <>
+                <Fila ico="/assets/images/icono-bloqueados.png" tit="Mostrar estado en línea" val="Apagado: te ven desconectado" der={<img className="cf-fila-sw" src={sw(mostrarEstadoEnLinea)} alt="" onClick={alternarMostrarEstadoEnLinea} />} />
+                <Fila ico="/assets/images/icono-desafios.png" tit="Desafíos de amigos" der={<img className="cf-fila-sw" src={sw(aceptaDesafiosAmigos)} alt="" onClick={alternarAceptaDesafiosAmigos} />} />
+                <Fila ico="/assets/images/icono-desafios.png" tit="Desafíos de desconocidos" der={<img className="cf-fila-sw" src={sw(aceptaDesafiosDesconocidos)} alt="" onClick={alternarAceptaDesafiosDesconocidos} />} />
+                <Fila ico="/assets/images/icono-bloqueados.png" tit="Usuarios bloqueados" val={cargandoBloqueados ? 'Cargando…' : bloqueados.length === 0 ? 'No tenés a nadie bloqueado' : `${bloqueados.length} bloqueado${bloqueados.length === 1 ? '' : 's'}`} onClick={() => setHoja('bloqueados')} />
+                <Fila emo="☕" tit="Invitar un Cafecito" val="Ayudá a que TrucoChe siga creciendo" onClick={() => setCafecitoAbierto(true)} />
+                <Fila emo="🐞" tit="Ayudanos a mejorar" val="Reportar bug o sugerencia" onClick={() => setReportarAbierto(true)} />
+                <Fila ico="/assets/images/icono-eliminar-cuenta.png" tit={enviandoEliminacion ? 'Enviando…' : 'Eliminar mi cuenta'} val="Te mandamos un mail para confirmarlo" peligro onClick={pedirEliminacionCuenta} />
+              </>
+            )}
+          </div></div>
+        );
+      })()}
 
-      {pestana === 'perfil' && (
+      <div
+        className={esCel ? `cf-cont${hoja ? ' cf-hoja' : (pestana === 'perfil' || pestana === 'cuenta') ? ' cf-cont-pie' : ''}` : undefined}
+        data-ver={esCel && hoja ? hoja : undefined}
+        style={estilos.contenedor}
+      >
+      {esCel && hoja && (
+        <div className="cf-hoja-barra">
+          <span>{{ foto: 'Foto de perfil', personaje: 'Tu personaje', genero: 'Género', pers: 'Personalización', bloqueados: 'Usuarios bloqueados' }[hoja]}</span>
+          <button type="button" onClick={() => setHoja(null)} aria-label="Cerrar">✕</button>
+        </div>
+      )}
+
+      {pestana === 'perfil' && (!esCel || hoja) && (
         <>
       {usuario?.foto_perfil_url && (
-        <PlacaMadera>
+        <PlacaMadera data-sec="foto">
           <div style={estilos.panelTitulo}>
             <img src="/assets/images/icono-foto-perfil.png" alt="" style={estilos.panelTituloIcono} />
             Foto de perfil
@@ -803,14 +936,16 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
         </PlacaMadera>
       )}
 
-      <PersonajeSelector
-        token={token}
-        personajeActual={usuario?.personaje || 'gaucho'}
-        onPersonajeCambiado={onPersonajeCambiado}
-      />
+      <div data-sec="personaje">
+        <PersonajeSelector
+          token={token}
+          personajeActual={usuario?.personaje || 'gaucho'}
+          onPersonajeCambiado={onPersonajeCambiado}
+        />
+      </div>
 
       {/* Pase 324: Género (antes vivía en el Perfil). */}
-      <PlacaMadera>
+      <PlacaMadera data-sec="genero">
         <div style={estilos.panelTitulo}>
           <img src="/assets/images/icono-genero.png" alt="" style={estilos.panelTituloIcono} />
           Género
@@ -830,7 +965,7 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
       </PlacaMadera>
 
       {/* Pase 578: anillo, banner y dorso de cartas (paridad con la app, Pase 524). */}
-      <PlacaMadera>
+      <PlacaMadera data-sec="pers">
         <div style={estilos.panelTitulo}>
           <span aria-hidden="true">🎨</span>
           Personalización
@@ -998,10 +1133,10 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
         </>
       )}
 
-      {pestana === 'cuenta' && (
+      {pestana === 'cuenta' && (!esCel || hoja === 'bloqueados') && (
         <>
       {/* Pase 427: Privacidad — mostrar (o no) el estado en línea. */}
-      <PlacaMadera>
+      <PlacaMadera data-sec="privacidad">
         <div style={estilos.panelTitulo}>
           <img src="/assets/images/icono-bloqueados.png" alt="" style={estilos.panelTituloIcono} />
           Privacidad
@@ -1022,7 +1157,7 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
 
       {/* Pase siguiente: preferencia de "Desafiar" — dos switches
           independientes, uno para amigos y otro para desconocidos. */}
-      <PlacaMadera>
+      <PlacaMadera data-sec="desafios">
         <div style={estilos.panelTitulo}>
           <img src="/assets/images/icono-desafios.png" alt="" style={estilos.panelTituloIcono} />
           Desafíos
@@ -1054,7 +1189,7 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
       {/* Centésimo quinto pase: lista de usuarios bloqueados + desbloquear.
           El backend ya existía (GET/DELETE en routes/usuarios.js) desde el
           nonagésimo octavo pase, no había ninguna pantalla que lo usara. */}
-      <PlacaMadera>
+      <PlacaMadera data-sec="bloqueados">
         <div style={estilos.panelTitulo}>
           <img src="/assets/images/icono-bloqueados.png" alt="" style={estilos.panelTituloIcono} />
           Usuarios bloqueados
@@ -1539,7 +1674,7 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
         </>
       )}
 
-      {pestana === 'cuenta' && (
+      {pestana === 'cuenta' && !esCel && (
         <>
 
       {/* Pase 495: "Sobre el proyecto" — apoyar a TrucoChe con un cafecito; va justo arriba de "Mi cuenta". */}
@@ -1614,7 +1749,7 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
 
       {/* Links legales abajo de todo (Política de Privacidad y, desde el pase
           312, Términos de Servicio — se enlazan entre sí). */}
-      <div style={estilos.footerLegal}>
+      <div className="cf-pie" style={estilos.footerLegal}>
         <button style={estilos.linkLegal} onClick={() => onNavegar && onNavegar('privacidad')}>
           Política de Privacidad
         </button>
@@ -1624,7 +1759,7 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
         </button>
       </div>
       </div>
-    </>
+    </div>
   );
 }
 
