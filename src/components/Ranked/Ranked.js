@@ -35,6 +35,48 @@ function proximoEnfriamiento(n) {
   return siguiente >= 4 ? '24 horas' : siguiente === 3 ? '30 minutos' : siguiente === 2 ? '5 minutos' : '';
 }
 
+// Pase 696: ¿pantalla de celular? (mismo corte que el resto de la web: 899px).
+function useEsCelLiga() {
+  const [v, setV] = useState(() => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(max-width: 899px)').matches);
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return undefined;
+    const mq = window.matchMedia('(max-width: 899px)');
+    const f = () => setV(mq.matches);
+    f();
+    if (mq.addEventListener) mq.addEventListener('change', f); else mq.addListener(f);
+    return () => { if (mq.removeEventListener) mq.removeEventListener('change', f); else mq.removeListener(f); };
+  }, []);
+  return v;
+}
+
+// Pase 696: Liga Criolla en celular = pantalla fija sin scroll (rango compacto, búsqueda y las 5 tarjetas repartiendo el alto que sobra).
+const CSS_LIGA_CEL = `
+.rl-cel { display: flex; flex-direction: column; padding: 4px 4px 0 !important; overflow: hidden; }
+.rl-col { flex: 1 1 auto; min-height: 0; width: 100%; max-width: 520px !important; gap: 10px !important; }
+.rl-fila1 { flex-direction: column !important; flex-wrap: nowrap !important; gap: 10px !important; flex: 0 0 auto; }
+.rl-fila1 > .rl-rango, .rl-fila1 > .rl-buscar { flex: 0 0 auto !important; width: 100% !important; min-width: 0 !important; box-sizing: border-box; }
+.rl-rango .pm-pergamino { flex-direction: row !important; justify-content: flex-start !important; align-items: center !important; gap: 12px !important; }
+.rl-rango .pm-pergamino > img { flex: 0 0 auto; }
+.rl-rango .pm-pergamino > div { flex: 1 1 auto; min-width: 0; text-align: left !important; }
+.rl-buscar .pm-pergamino { padding: 8px 12px 10px !important; gap: 5px !important; }
+.rl-buscar .pm-pergamino > div:first-child { display: none !important; }
+.rl-buscar .pm-pergamino > div:nth-child(2) { gap: 8px !important; }
+.rl-buscar .pm-pergamino > div:nth-child(2) button { padding: 5px 4px !important; font-size: 15px !important; }
+.rl-buscar .pm-pergamino > div:nth-child(2) button img { height: 20px !important; width: auto !important; }
+.rl-buscar .pm-pergamino > button { padding: 9px 10px !important; font-size: 18px !important; }
+.rl-buscar .pm-pergamino > div:not(:nth-child(2)) { font-size: 11.5px !important; line-height: 1.25 !important; margin: 0 !important; }
+.rl-rango .pm-pergamino { padding: 6px 12px !important; }
+.rl-rango .pm-pergamino > img { width: 62px !important; height: 62px !important; }
+.rl-tiles { flex: 1 1 0 !important; min-height: 0; display: grid !important; grid-template-columns: repeat(6, 1fr); grid-template-rows: 1fr 1fr; gap: 8px !important; margin: 0 !important; padding-bottom: 6px; }
+.rl-tiles > button { grid-column: span 2; min-height: 0 !important; min-width: 0 !important; width: auto !important; max-width: none !important; margin: 0 !important; padding: 4px !important;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; overflow: hidden; }
+.rl-tiles > button:nth-child(4) { grid-column: 2 / span 2; }
+.rl-tiles > button:nth-child(5) { grid-column: 4 / span 2; }
+.rl-tiles > button img { width: auto !important; height: auto !important; max-width: 62%; max-height: 52% !important; min-height: 0; object-fit: contain; flex: 0 1 auto; }
+.rl-tiles > button > div:nth-of-type(1) { font-size: 15px !important; line-height: 1.15; }
+.rl-tiles > button > div:nth-of-type(2) { font-size: 11px !important; line-height: 1.1; }
+`;
+
 export default function Ranked({token, onEntrarAPartida, usuario }) {
   const [resumen, setResumen] = useState(null);
   const [cargando, setCargando] = useState(true);
@@ -49,6 +91,23 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
     window.addEventListener('resize', alRedimensionar);
     return () => window.removeEventListener('resize', alRedimensionar);
   }, []);
+  const pantallaRef = useRef(null);
+  const [altoPantalla, setAltoPantalla] = useState(0);
+  const esCelMed = useEsCelLiga();
+  useEffect(() => {
+    if (!esCelMed) { setAltoPantalla(0); return undefined; }
+    const medir = () => {
+      const el = pantallaRef.current;
+      if (!el) return;
+      const arriba = el.getBoundingClientRect().top + (window.scrollY || 0);
+      const h = Math.max(320, Math.round(window.innerHeight - arriba - 90));
+      setAltoPantalla((p) => (Math.abs(p - h) > 1 ? h : p));
+    };
+    medir();
+    const t = setInterval(medir, 800);
+    window.addEventListener('resize', medir);
+    return () => { clearInterval(t); window.removeEventListener('resize', medir); };
+  }, [esCelMed, cargando]);
   const [popup, setPopup] = useState(null);   // Pase 622: 'rangos' | 'temporada' | 'partidas' | 'hitos' | 'reglas' (tarjetas secundarias en popup)
   const [partidaAbierta, setPartidaAbierta] = useState(null);
   const [bloqueoFin, setBloqueoFin] = useState(0);   // Pase 613: hora (ms) en que termina el enfriamiento por abandonos
@@ -142,7 +201,8 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
   const salasBuscando = resumen?.buscando?.[modo] ?? 0;
 
   // Pase 624: con la ventana alta se muestra abierta la información principal; con la ventana chica quedan las tarjetas que abren carteles.
-  const nivelEspacio = altoVentana >= 1240 ? 2 : altoVentana >= 1000 ? 1 : 0;
+  const esCel = useEsCelLiga();   // Pase 696
+  const nivelEspacio = esCel ? 0 : altoVentana >= 1240 ? 2 : altoVentana >= 1000 ? 1 : 0;
 
   if (cargando) return <div style={estilos.cargando}>Cargando…</div>;
 
@@ -215,12 +275,13 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
   );
 
   return (
-    <div style={estilos.pagina}>
-      <div style={estilos.columna}>
+    <div ref={pantallaRef} className={esCel ? 'rl-cel' : undefined} style={esCel && altoPantalla ? { ...estilos.pagina, height: altoPantalla } : estilos.pagina}>
+      {esCel && <style id="liga-celular-696">{CSS_LIGA_CEL}</style>}
+      <div className={esCel ? 'rl-col' : undefined} style={estilos.columna}>
         {/* Fila 1: rango (angosta) + modalidad y búsqueda */}
-        <div style={estilos.fila}>
+        <div className={esCel ? 'rl-fila1' : undefined} style={estilos.fila}>
         {/* A. Rango actual */}
-        <PlacaMadera style={{ display: 'flex', flexDirection: 'column', flex: '0 1 300px', minWidth: 240 }} colorInterior="#4A3226" interiorStyle={estilos.rangoInterior}>
+        <PlacaMadera className="rl-rango" style={{ display: 'flex', flexDirection: 'column', flex: '0 1 300px', minWidth: 240 }} colorInterior="#4A3226" interiorStyle={estilos.rangoInterior}>
           <img src={ui.logo} alt="" style={estilos.rangoLogo} />
           {rango && (
             <div style={{ width: '100%', textAlign: 'center' }}>
@@ -242,7 +303,7 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
         </PlacaMadera>
 
         {/* B + C. Modalidad y búsqueda */}
-        <PlacaMadera style={{ display: 'flex', flexDirection: 'column', flex: '1 1 340px', minWidth: 0 }} colorInterior={PERGAMINO} interiorStyle={{ padding: 18, flex: 1 }}>
+        <PlacaMadera className="rl-buscar" style={{ display: 'flex', flexDirection: 'column', flex: '1 1 340px', minWidth: 0 }} colorInterior={PERGAMINO} interiorStyle={{ padding: 18, flex: 1 }}>
           <div style={estilos.panelTitulo}>Elegí la modalidad</div>
           <div style={estilos.filaModos}>
             {MODOS.map((m) => (
@@ -318,7 +379,7 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
         )}
 
         {/* Pase 622: una sola pantalla sin scroll: las tarjetas secundarias abren su cartel (igual que en la app) */}
-        <div style={estilos.tilesFila}>
+        <div className={esCel ? 'rl-tiles' : undefined} style={estilos.tilesFila}>
           {(nivelEspacio < 1 || !lineaRangos) && <TileLiga icono={ui.logo} titulo="Rangos" sub="Premios" onClick={() => setPopup('rangos')} />}
           {nivelEspacio < 2 && <TileLiga icono="/assets/images/icono-rendimiento.png" titulo="Temporada" sub={`${resumen?.porcentajeVictorias ?? 0}% victorias`} onClick={() => setPopup('temporada')} />}
           {nivelEspacio < 2 && <TileLiga icono="/assets/images/icono-rango.png" titulo="Partidas" sub={`${Math.min(10, historial?.partidas?.length ?? 0)} últimas`} onClick={() => setPopup('partidas')} />}
