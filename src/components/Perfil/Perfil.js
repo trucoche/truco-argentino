@@ -6,7 +6,7 @@ import { API_URL as BASE_URL } from '../../config';
 import { rangoUi } from './rangosUi';
 import BannerPerfil from '../Personalizacion/BannerPerfil';
 import AvatarAnillo from '../Personalizacion/AvatarAnillo';
-import { resolverAnillo, ANILLOS, BANNERS, MAZOS } from '../../constants/personalizacion';
+import { resolverAnillo } from '../../constants/personalizacion';
 import { PlacaMadera } from '../Popup/PopupMadera';
 import ZonaEditor from './ZonaEditor';
 import { textoZona } from './provincias';
@@ -111,41 +111,34 @@ function StatTile({ label, valor, color, compacto }) {
 // Pase 359: etiqueta corta del género elegido en Ajustes ('prefiero_no_decir' no se muestra).
 const ETIQUETA_GENERO = { masculino: 'Masculino', femenino: 'Femenino', neutro: 'Neutro' };
 
-// Pase 633: tarjeta con las tres piezas del set Sol de Mayo y el rango que desbloquea cada una (mismo criterio que la línea de tiempo de la Liga).
-const NOMBRES_RANGO_SET = { 4: 'Gaucho', 8: 'Caudillo', 10: 'Martín Fierro' };
-function SetSolDeMayo({ rangoMax }) {
-  const piezas = [
-    { id: 'mazo', etiqueta: 'Dorso de cartas', item: MAZOS.find((m) => m.id === 'pionero'), vista: (i) => <img src={i.dorso} alt="" style={{ height: 44, width: 44 * i.proporcionDorso, objectFit: 'contain' }} /> },
-    { id: 'banner', etiqueta: 'Banner del perfil', item: BANNERS.find((b) => b.id === 'pionero'), vista: (i) => <img src={i.imagen} alt="" style={{ width: 78, height: 78 / i.proporcion, objectFit: 'contain' }} /> },
-    { id: 'anillo', etiqueta: 'Anillo del avatar', item: ANILLOS.find((a) => a.id === 'pionero'), vista: (i) => <img src={i.imagen} alt="" style={{ width: 52, height: 52, objectFit: 'contain' }} /> },
-  ].filter((p) => p.item);
-  const listas = piezas.filter((p) => rangoMax >= p.item.rangoMin).length;
-  return (
-    <PlacaMadera>
-      <div style={estilos.setTitulo}>
-        <span style={{ ...estilos.panelTitle, marginBottom: 0 }}>Sol de Mayo</span>
-        <span style={estilos.setContador}>{listas}/{piezas.length}</span>
-      </div>
-      <div style={estilos.setLista}>
-        {piezas.map((p) => {
-          const libre = rangoMax >= p.item.rangoMin;
-          return (
-            <div key={p.id} style={{ ...estilos.setFila, ...(libre ? null : estilos.setFilaBloqueada) }}>
-              <div style={estilos.setThumb}>{p.vista(p.item)}</div>
-              <div style={estilos.setTextos}>
-                <div style={estilos.setNombre}>{p.etiqueta}</div>
-                <div style={libre ? estilos.setEstadoOk : estilos.setEstado}>
-                  {libre ? 'Desbloqueado ✓' : `🔒 Llegá a ${NOMBRES_RANGO_SET[p.item.rangoMin] || ''}`}
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-      <div style={estilos.setPie}>Se eligen en Ajustes → Perfil.</div>
-    </PlacaMadera>
-  );
+// Pase 697: la tarjeta Sol de Mayo se mudó al cartel del evento en el lobby (Eventos/EventosLiga.js).
+
+// Pase 697: ¿pantalla de celular? (mismo corte que el resto de la web: 899px).
+function useEsCelPerfil() {
+  const [v, setV] = useState(() => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(max-width: 899px)').matches);
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return undefined;
+    const mq = window.matchMedia('(max-width: 899px)');
+    const f = () => setV(mq.matches);
+    f();
+    if (mq.addEventListener) mq.addEventListener('change', f); else mq.addListener(f);
+    return () => { if (mq.removeEventListener) mq.removeEventListener('change', f); else mq.removeListener(f); };
+  }, []);
+  return v;
 }
+
+// Pase 697: Perfil en celular = pantalla fija sin scroll (la pila de tarjetas se achica si no entra; Logros se abre en una hoja).
+const CSS_PERFIL_CEL = `
+.pf-cel { position: relative; width: 100%; overflow: hidden; }
+.pf-pila { position: absolute; top: 0; left: 50%; width: 100%; max-width: 520px; display: flex; flex-direction: column; gap: 8px; transform-origin: 50% 0; box-sizing: border-box; padding: 0 4px; }
+.pf-pila > .pm-placa { margin: 0 !important; }
+.pf-pila .pm-pergamino { padding: 8px 12px !important; }
+.pf-hoja { position: fixed; inset: 0; z-index: 2000; background: #1b120c; display: flex; flex-direction: column; }
+.pf-hoja-barra { display: flex; align-items: center; justify-content: space-between; padding: 8px 14px; background: #5E3A1C; border-bottom: 3px solid #000; flex: 0 0 auto; }
+.pf-hoja-barra span { font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 19px; color: #FFD668; }
+.pf-hoja-barra button { width: 38px; height: 38px; border-radius: 50%; background: #C0392B; border: 2px solid #000; color: #fff; font-size: 18px; font-weight: 700; cursor: pointer; }
+.pf-hoja-cuerpo { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; max-width: 560px; width: 100%; margin: 0 auto; box-sizing: border-box; }
+`;
 
 export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado }) {
   const headers = {
@@ -182,6 +175,34 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
   // Posición de cada tarjeta en la grilla (solo aplica en pantallas anchas).
   const pos = (col, fila, extra) => (esAncho ? { gridColumn: col, gridRow: fila, display: 'flex', flexDirection: 'column', ...extra } : undefined);
   const interiorLleno = esAncho ? { flex: 1 } : undefined;
+
+  // Pase 697: celular = pantalla fija. Alto disponible (ventana - arriba - 90) y escala de la pila si no entra.
+  const esCel = useEsCelPerfil();
+  const pantallaRef = useRef(null);
+  const pilaRef = useRef(null);
+  const [altoPantalla, setAltoPantalla] = useState(0);
+  const [altoNat, setAltoNat] = useState(0);
+  const [hojaLogros, setHojaLogros] = useState(false);
+  useEffect(() => {
+    if (!esCel) { setAltoPantalla(0); return undefined; }
+    const medir = () => {
+      const el = pantallaRef.current;
+      if (el) {
+        const arriba = el.getBoundingClientRect().top + (window.scrollY || 0);
+        const h = Math.max(320, Math.round(window.innerHeight - arriba - 90));
+        setAltoPantalla((p) => (Math.abs(p - h) > 1 ? h : p));
+      }
+      const pila = pilaRef.current;
+      if (pila) {
+        const n = Math.round(pila.offsetHeight);
+        setAltoNat((p) => (Math.abs(p - n) > 1 ? n : p));
+      }
+    };
+    medir();
+    const t = setInterval(medir, 800);
+    window.addEventListener('resize', medir);
+    return () => { clearInterval(t); window.removeEventListener('resize', medir); };
+  }, [esCel]);
 
   // ---------- Logros (sin cambios de lógica respecto de antes) ----------
   const [logros, setLogros] = useState([]);
@@ -256,14 +277,8 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
   const abandonos = Number(usuario?.abandonos || 0);
   const porcentajeAbandonos = partidasJugadas > 0 ? Math.round((abandonos / partidasJugadas) * 100) : 0;
 
-  return (
-    <>
-      <div style={estilos.sectionTitle}>Perfil</div>
-
-      <div ref={layoutRef} style={esAncho ? estilos.layoutGrilla : estilos.layout}>
-        <div style={esAncho ? estilos.contenidoPlano : estilos.columnaPrincipal}>
-
-          {/* Encabezado: foto, nombre, saldo + acceso a la Tienda, bio y género */}
+  // Pase 697: tarjeta de encabezado como variable (se usa igual en escritorio y en celular).
+  const panelPerfil = (
           <PlacaMadera style={pos(1, 1)} interiorStyle={interiorLleno}>
             {/* Centésimo pase: fondo de perfil personalizable (foto propia,
                 20 monedas) — va DETRÁS de esta fila (no del panel entero,
@@ -288,7 +303,7 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
               title="Cambiar o eliminar fondo de perfil"
               aria-label="Cambiar o eliminar fondo de perfil"
             >
-            <BannerPerfil bannerId={usuario?.banner_id} fondoUrl={usuario?.fondo_perfil_url} anchoMax={520}>
+            <BannerPerfil bannerId={usuario?.banner_id} fondoUrl={usuario?.fondo_perfil_url} anchoMax={esCel ? 210 : 520}>
               {({ altoUtil }) => (
                 <>
                   <AvatarAnillo
@@ -309,7 +324,7 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
               )}
             </BannerPerfil>
             </div>
-            <div style={estilos.pistaFondo}>Tocá el banner para cambiar tu fondo</div>
+            {!esCel && <div style={estilos.pistaFondo}>Tocá el banner para cambiar tu fondo</div>}
 
             {/* Pase 330: nombre de usuario fuera del banner, en el pergamino limpio. */}
             <div style={estilos.cartelNombreFila}>
@@ -331,6 +346,89 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
             </div>
 
           </PlacaMadera>
+  );
+
+  const reclamables = logros.filter(l => l.completado && !l.reclamado).length;
+  const tituloRango = usuario?.rango?.esTop500
+    ? `${usuario.rango.nombre} · #${usuario.rango.posicion ?? '—'}`
+    : `${usuario?.rango?.nombre || 'Mancebo'} ${usuario?.rango?.division || 'III'}`;
+  const escalaPila = altoNat > 0 && altoPantalla > 0 ? Math.min(1, (altoPantalla - 6) / altoNat) : 1;
+  const logrosOrdenados = [...logros].sort((a, b) => (Number(b.completado && !b.reclamado) - Number(a.completado && !a.reclamado)));
+
+  return (
+    <>
+      {!esCel && <div style={estilos.sectionTitle}>Perfil</div>}
+
+      {esCel && <style id="perfil-celular-697">{CSS_PERFIL_CEL}</style>}
+      {esCel ? (
+        <div className="pf-cel" ref={pantallaRef} style={{ height: altoPantalla || undefined }}>
+          <div className="pf-pila" ref={pilaRef} style={{ transform: `translateX(-50%) scale(${escalaPila})` }}>
+            {panelPerfil}
+            <PlacaMadera colorInterior="#FFE9B0" interiorStyle={{ display: 'flex', alignItems: 'center', gap: 12, padding: '6px 12px' }}>
+              <img src={rangoAssets.logo} alt={usuario?.rango?.nombre || 'Rango'} style={{ width: 66, height: 66, objectFit: 'contain', flex: '0 0 auto' }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ ...estilos.rangoTitulo, textAlign: 'left' }}>{tituloRango}</div>
+                <div style={{ ...estilos.rangoSubtitulo, textAlign: 'left', margin: '1px 0 0', fontSize: 12, lineHeight: 1.25 }}>{usuario?.rango?.concepto}</div>
+                {usuario?.rango && !usuario.rango.esTop500 && (
+                  <div style={{ marginTop: 5 }}>
+                    <div style={estilos.rangoBarraFondo}>
+                      <div style={{ ...estilos.rangoBarraRelleno, width: `${Math.round((usuario.rango.progreso || 0) * 100)}%` }} />
+                    </div>
+                    <div style={{ ...estilos.rangoPuntosTexto, marginTop: 2 }}>{usuario.rango.puntos} / {usuario.rango.rangoMax + 1} pts</div>
+                  </div>
+                )}
+              </div>
+            </PlacaMadera>
+            <PlacaMadera>
+              <div style={{ ...estilos.panelTitle, ...estilos.tituloConIcono, marginBottom: 8 }}>
+                <img src="/assets/images/icono-rendimiento.png" alt="" style={{ ...estilos.tituloIcono, width: 32, height: 32 }} />
+                <span>Rendimiento</span>
+              </div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                {[['Jugadas', partidasJugadas], ['Ganadas', partidasGanadas, C.verdeOscuro], ['Perdidas', partidasPerdidas, C.crimsonOscuro], ['Abandonos', `${porcentajeAbandonos}%`]].map(([label, valor, color]) => (
+                  <div key={label} style={{ ...estilos.statTile, flex: 1, minWidth: 0, padding: '6px 2px' }}>
+                    <div style={{ ...estilos.statValor, fontSize: 24, ...(color ? { color } : {}) }}>{valor}</div>
+                    <div style={{ ...estilos.statLabel, fontSize: 11.5, marginTop: 1 }}>{label}</div>
+                  </div>
+                ))}
+              </div>
+            </PlacaMadera>
+            <PlacaMadera>
+              <div style={estilos.panelHeader}>
+                <div style={{ ...estilos.panelTitle, ...estilos.tituloConIcono, marginBottom: 0 }}>
+                  <img src="/assets/images/icono-logros.png" alt="" style={{ ...estilos.tituloIcono, width: 32, height: 32 }} />
+                  <span>Logros</span>
+                </div>
+                {logros.length > 0 && <div style={estilos.resumen}>{completados}/{logros.length}</div>}
+              </div>
+              {errorLogros && <div style={estilos.errorBox}>{errorLogros}</div>}
+              {cargandoLogros ? (
+                <PantallaCarga completa={false} conLogo={false} tema="claro" />
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8 }}>
+                  <div style={estilos.barraFondo}>
+                    <div style={{ ...estilos.barraRelleno, width: `${logros.length ? Math.round((completados / logros.length) * 100) : 0}%` }} />
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                    <span style={{ fontWeight: 800, fontSize: 13, color: C.chocolate }}>{completados} de {logros.length} desbloqueados</span>
+                    {reclamables > 0 && (
+                      <span style={{ ...estilos.conIconito, background: '#FFE9B0', border: '2px solid #C9860E', borderRadius: 999, padding: '2px 8px', fontWeight: 800, fontSize: 12, color: C.chocolate }}>
+                        <img src="/assets/images/icono-moneda.png" alt="" style={estilos.iconito} />{reclamables} para reclamar
+                      </span>
+                    )}
+                  </div>
+                  <button type="button" style={estilos.btnReclamar} onClick={() => setHojaLogros(true)}>VER TODOS LOS LOGROS</button>
+                </div>
+              )}
+            </PlacaMadera>
+          </div>
+        </div>
+      ) : (
+      <div ref={layoutRef} style={esAncho ? estilos.layoutGrilla : estilos.layout}>
+        <div style={esAncho ? estilos.contenidoPlano : estilos.columnaPrincipal}>
+
+          {/* Encabezado: foto, nombre, saldo + acceso a la Tienda, bio y género */}
+          {panelPerfil}
 
           {/* Logros — misma lógica y contenido que ya existía */}
           <PlacaMadera style={pos(1, 2)}>
@@ -473,10 +571,53 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
               </div>
             )}
           </PlacaMadera>
-          <SetSolDeMayo rangoMax={Math.max(Number(usuario?.rango_max) || 0, Number(usuario?.rango?.id) || 0, 1)} />
           </div>
         </div>
       </div>
+      )}
+
+      {esCel && hojaLogros && (
+        <div className="pf-hoja">
+          <div className="pf-hoja-barra">
+            <span>Logros · {completados}/{logros.length}</span>
+            <button type="button" onClick={() => setHojaLogros(false)} aria-label="Cerrar">✕</button>
+          </div>
+          <div className="pf-hoja-cuerpo">
+            {logrosOrdenados.map((l) => {
+              const porcentaje = Math.round((l.progreso / l.objetivo) * 100);
+              return (
+                <div key={l.tipo} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 8, borderRadius: 14, background: l.completado ? '#fffaf0' : '#fff', border: `2px solid ${l.completado ? '#FFB627' : 'rgba(74,44,42,0.13)'}` }}>
+                  {ICONOS_LOGRO[l.tipo] && <img src={ICONOS_LOGRO[l.tipo]} alt="" style={{ width: 50, height: 50, objectFit: 'contain', flex: '0 0 auto' }} />}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 800, fontSize: 14, color: C.chocolate }}>{nombreLogroSinEmoji(l.titulo)}</div>
+                    {l.descripcion && <div style={{ fontWeight: 600, fontSize: 11.5, lineHeight: 1.25, color: '#8a7267' }}>{l.descripcion}</div>}
+                    <div style={{ ...estilos.barraFondo, height: 9, marginTop: 4 }}>
+                      <div style={{ ...estilos.barraRelleno, width: `${porcentaje}%` }} />
+                    </div>
+                    <div style={estilos.progresoTexto}>{l.progreso}/{l.objetivo}</div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, minWidth: 78, flex: '0 0 auto' }}>
+                    <span style={{ ...estilos.recompensaTexto, ...estilos.conIconito }}>
+                      <img src="/assets/images/icono-moneda.png" alt="" style={estilos.iconito} />{l.recompensa}
+                    </span>
+                    {l.reclamado ? (
+                      <span style={{ ...estilos.badgeReclamado, ...estilos.conIconito, padding: '3px 8px' }}>
+                        <img src="/assets/images/icono-check.png" alt="" style={estilos.iconito} />Reclamado
+                      </span>
+                    ) : l.completado ? (
+                      <button onClick={() => reclamarLogro(l.tipo)} disabled={reclamando === l.tipo} style={{ ...estilos.btnReclamar, padding: '5px 10px', fontSize: 12 }}>
+                        {reclamando === l.tipo ? '...' : 'Reclamar'}
+                      </button>
+                    ) : (
+                      <span style={estilos.pendienteTexto}>En progreso</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {fondoModalAbierto && (
         <CambiarFondoModal

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { API_URL as BASE_URL } from '../../config';
+import { ANILLOS, BANNERS, MAZOS } from '../../constants/personalizacion';
 
 // Pase 659: tarjetitas de eventos (Temporada Inaugural, Pack de inauguración, Pionero). Viven en el LOBBY: cada una abre un cartel
 // grande con toda la información (estilo "evento" de los juegos móviles). Los textos vienen del backend
@@ -97,7 +98,43 @@ export function EventoCard({ e, indice = 0, onClick }) {
   );
 }
 
-export function EventoDetalle({ e }) {
+// Pase 697: las tres piezas del set Sol de Mayo (antes una tarjeta en Perfil) viven ahora en el cartel del evento.
+const NOMBRES_RANGO_SET = { 4: 'Gaucho', 8: 'Caudillo', 10: 'Martín Fierro' };
+function PiezasSolDeMayo({ rangoMax }) {
+  const piezas = [
+    { id: 'mazo', etiqueta: 'Dorso de cartas', item: MAZOS.find((m) => m.id === 'pionero'), vista: (i) => <img src={i.dorso} alt="" style={{ height: 44, width: 44 * i.proporcionDorso, objectFit: 'contain' }} /> },
+    { id: 'banner', etiqueta: 'Banner del perfil', item: BANNERS.find((b) => b.id === 'pionero'), vista: (i) => <img src={i.imagen} alt="" style={{ width: 78, height: 78 / i.proporcion, objectFit: 'contain' }} /> },
+    { id: 'anillo', etiqueta: 'Anillo del avatar', item: ANILLOS.find((a) => a.id === 'pionero'), vista: (i) => <img src={i.imagen} alt="" style={{ width: 52, height: 52, objectFit: 'contain' }} /> },
+  ].filter((p) => p.item);
+  const listas = piezas.filter((p) => rangoMax >= p.item.rangoMin).length;
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+        <span style={{ ...estilos.eventosTitulo, marginBottom: 0 }}>Para desbloquear</span>
+        <span style={{ fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 15, color: '#B9770E' }}>{listas}/{piezas.length}</span>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {piezas.map((p) => {
+          const libre = rangoMax >= p.item.rangoMin;
+          return (
+            <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 8px', borderRadius: 10, background: 'rgba(255,255,255,0.55)', border: '2px solid rgba(74,44,42,0.18)', opacity: libre ? 1 : 0.65 }}>
+              <div style={{ flex: '0 0 84px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{p.vista(p.item)}</div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 800, fontSize: 13, color: C.chocolate }}>{p.etiqueta}</div>
+                <div style={{ fontWeight: libre ? 800 : 700, fontSize: 12, color: libre ? '#1f7a3c' : '#7a6660' }}>
+                  {libre ? 'Desbloqueado ✓' : `🔒 Llegá a ${NOMBRES_RANGO_SET[p.item.rangoMin] || ''}`}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div style={{ marginTop: 8, fontWeight: 700, fontSize: 11.5, color: '#7a6660' }}>Se eligen en Ajustes → Perfil.</div>
+    </div>
+  );
+}
+
+export function EventoDetalle({ e, rangoMax = 1 }) {
   const est = EVENTO_ESTILO[e.id] || EVENTO_POR_DEFECTO;
   const prog = e.meta ? Math.min(1, (e.actual || 0) / e.meta) : null;
   // Temporada Inaugural: rayos de sol dorados detrás del ícono y franjas celeste / blanco / celeste (la bandera) arriba y abajo.
@@ -133,6 +170,7 @@ export function EventoDetalle({ e }) {
             </ul>
           </div>
         )}
+        {sol && <PiezasSolDeMayo rangoMax={rangoMax} />}
       </div>
     </div>
   );

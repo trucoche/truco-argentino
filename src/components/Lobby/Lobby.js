@@ -772,7 +772,7 @@ useEffect(() => {
 
       {eventoAbierto && (
         <Hoja titulo={eventoAbierto.titulo} ancho={520} onCerrar={() => setEventoAbiertoId(null)}>
-          <EventoDetalle e={eventoAbierto} />
+          <EventoDetalle e={eventoAbierto} rangoMax={Math.max(Number(usuario?.rango_max) || 0, Number(usuario?.rango?.id) || 0, 1)} />
           {eventoAbierto.accion === 'tienda' && onIrATienda && (
             <button type="button" onClick={() => { setEventoAbiertoId(null); onIrATienda(); }} style={estilos.eventoBotonTienda}>Ir a la Tienda</button>
           )}
