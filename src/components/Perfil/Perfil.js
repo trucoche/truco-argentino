@@ -131,8 +131,8 @@ function useEsCelPerfil() {
 const CSS_PERFIL_CEL = `
 .pf-cel { position: relative; width: 100%; overflow: hidden; }
 .pf-pila { position: absolute; top: 0; left: 50%; width: 100%; max-width: 520px; display: flex; flex-direction: column; gap: 8px; transform-origin: 50% 0; box-sizing: border-box; padding: 0 4px; }
-.pf-pila > .pm-placa { margin: 0 !important; }
-.pf-pila .pm-pergamino { padding: 8px 12px !important; }
+.pf-pila > .pm-placa { margin: 0 !important; padding: 5px !important; border-radius: 16px !important; }
+.pf-pila .pm-pergamino { padding: 6px 10px !important; }
 .pf-hoja { position: fixed; inset: 0; z-index: 2000; background: #1b120c; display: flex; flex-direction: column; }
 .pf-hoja-barra { display: flex; align-items: center; justify-content: space-between; padding: 8px 14px; background: #5E3A1C; border-bottom: 3px solid #000; flex: 0 0 auto; }
 .pf-hoja-barra span { font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 19px; color: #FFD668; }
@@ -183,6 +183,7 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
   const [altoPantalla, setAltoPantalla] = useState(0);
   const [altoNat, setAltoNat] = useState(0);
   const [hojaLogros, setHojaLogros] = useState(false);
+  const [anchoBanner, setAnchoBanner] = useState(200);   // el banner es lo elástico: crece con el alto que sobra
   useEffect(() => {
     if (!esCel) { setAltoPantalla(0); return undefined; }
     const medir = () => {
@@ -196,6 +197,20 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
       if (pila) {
         const n = Math.round(pila.offsetHeight);
         setAltoNat((p) => (Math.abs(p - n) > 1 ? n : p));
+        const ban = pila.querySelector('.pf-banner');
+        const caja = ban && ban.firstElementChild && ban.firstElementChild.firstElementChild;
+        const libre = pantallaRef.current ? Math.max(320, Math.round(window.innerHeight - (pantallaRef.current.getBoundingClientRect().top + (window.scrollY || 0)) - 90)) : 0;
+        if (ban && caja && libre) {
+          const hb = caja.offsetHeight;
+          const bw = caja.offsetWidth;
+          const maxW = ban.offsetWidth;
+          if (hb > 0 && bw > 0 && maxW > 0) {
+            const otros = n - ban.offsetHeight;
+            const objetivo = libre - 8 - otros;
+            const nuevo = Math.round(Math.max(150, Math.min(maxW, objetivo * (bw / hb))));
+            setAnchoBanner((p) => (Math.abs(p - nuevo) > 3 ? nuevo : p));
+          }
+        }
       }
     };
     medir();
@@ -297,13 +312,13 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
             <div
               role="button"
               tabIndex={0}
-              style={estilos.bannerTocable}
+              className="pf-banner" style={estilos.bannerTocable}
               onClick={() => setFondoModalAbierto(true)}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setFondoModalAbierto(true); } }}
               title="Cambiar o eliminar fondo de perfil"
               aria-label="Cambiar o eliminar fondo de perfil"
             >
-            <BannerPerfil bannerId={usuario?.banner_id} fondoUrl={usuario?.fondo_perfil_url} anchoMax={esCel ? 210 : 520}>
+            <BannerPerfil bannerId={usuario?.banner_id} fondoUrl={usuario?.fondo_perfil_url} anchoMax={esCel ? anchoBanner : 520}>
               {({ altoUtil }) => (
                 <>
                   <AvatarAnillo
@@ -365,7 +380,7 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
           <div className="pf-pila" ref={pilaRef} style={{ transform: `translateX(-50%) scale(${escalaPila})` }}>
             {panelPerfil}
             <PlacaMadera colorInterior="#FFE9B0" interiorStyle={{ display: 'flex', alignItems: 'center', gap: 12, padding: '6px 12px' }}>
-              <img src={rangoAssets.logo} alt={usuario?.rango?.nombre || 'Rango'} style={{ width: 66, height: 66, objectFit: 'contain', flex: '0 0 auto' }} />
+              <img src={rangoAssets.logo} alt={usuario?.rango?.nombre || 'Rango'} style={{ width: 56, height: 56, objectFit: 'contain', flex: '0 0 auto' }} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ ...estilos.rangoTitulo, textAlign: 'left' }}>{tituloRango}</div>
                 <div style={{ ...estilos.rangoSubtitulo, textAlign: 'left', margin: '1px 0 0', fontSize: 12, lineHeight: 1.25 }}>{usuario?.rango?.concepto}</div>
@@ -380,8 +395,8 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
               </div>
             </PlacaMadera>
             <PlacaMadera>
-              <div style={{ ...estilos.panelTitle, ...estilos.tituloConIcono, marginBottom: 8 }}>
-                <img src="/assets/images/icono-rendimiento.png" alt="" style={{ ...estilos.tituloIcono, width: 32, height: 32 }} />
+              <div style={{ ...estilos.panelTitle, ...estilos.tituloConIcono, marginBottom: 4, fontSize: 16 }}>
+                <img src="/assets/images/icono-rendimiento.png" alt="" style={{ ...estilos.tituloIcono, width: 26, height: 26 }} />
                 <span>Rendimiento</span>
               </div>
               <div style={{ display: 'flex', gap: 6 }}>
@@ -395,8 +410,8 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
             </PlacaMadera>
             <PlacaMadera>
               <div style={estilos.panelHeader}>
-                <div style={{ ...estilos.panelTitle, ...estilos.tituloConIcono, marginBottom: 0 }}>
-                  <img src="/assets/images/icono-logros.png" alt="" style={{ ...estilos.tituloIcono, width: 32, height: 32 }} />
+                <div style={{ ...estilos.panelTitle, ...estilos.tituloConIcono, marginBottom: 0, fontSize: 16 }}>
+                  <img src="/assets/images/icono-logros.png" alt="" style={{ ...estilos.tituloIcono, width: 26, height: 26 }} />
                   <span>Logros</span>
                 </div>
                 {logros.length > 0 && <div style={estilos.resumen}>{completados}/{logros.length}</div>}
@@ -405,7 +420,7 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
               {cargandoLogros ? (
                 <PantallaCarga completa={false} conLogo={false} tema="claro" />
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginTop: 4 }}>
                   <div style={estilos.barraFondo}>
                     <div style={{ ...estilos.barraRelleno, width: `${logros.length ? Math.round((completados / logros.length) * 100) : 0}%` }} />
                   </div>

@@ -64,17 +64,20 @@ const CSS_LIGA_CEL = `
 .rl-buscar .pm-pergamino > div:nth-child(2) button { padding: 5px 4px !important; font-size: 15px !important; }
 .rl-buscar .pm-pergamino > div:nth-child(2) button img { height: 20px !important; width: auto !important; }
 .rl-buscar .pm-pergamino > button { padding: 9px 10px !important; font-size: 18px !important; }
-.rl-buscar .pm-pergamino > div:not(:nth-child(2)) { font-size: 11.5px !important; line-height: 1.25 !important; margin: 0 !important; }
+.rl-buscar .pm-pergamino > div:not(:nth-child(2)) { font-size: 10.5px !important; line-height: 1.2 !important; margin: 0 !important; }
 .rl-rango .pm-pergamino { padding: 6px 12px !important; }
 .rl-rango .pm-pergamino > img { width: 62px !important; height: 62px !important; }
-.rl-tiles { flex: 1 1 0 !important; min-height: 0; display: grid !important; grid-template-columns: repeat(6, 1fr); grid-template-rows: 1fr 1fr; gap: 8px !important; margin: 0 !important; padding-bottom: 6px; }
-.rl-tiles > button { grid-column: span 2; min-height: 0 !important; min-width: 0 !important; width: auto !important; max-width: none !important; margin: 0 !important; padding: 4px !important;
+.rl-tiles { flex: 0 0 auto !important; display: grid !important; grid-template-columns: repeat(4, 1fr); gap: 6px !important; margin: 0 !important; padding-bottom: 6px; }
+.rl-tiles > button { min-height: 0 !important; min-width: 0 !important; width: auto !important; max-width: none !important; margin: 0 !important; padding: 6px 2px !important; height: 86px;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; overflow: hidden; }
-.rl-tiles > button:nth-child(4) { grid-column: 2 / span 2; }
-.rl-tiles > button:nth-child(5) { grid-column: 4 / span 2; }
-.rl-tiles > button img { width: auto !important; height: auto !important; max-width: 62%; max-height: 52% !important; min-height: 0; object-fit: contain; flex: 0 1 auto; }
-.rl-tiles > button > div:nth-of-type(1) { font-size: 15px !important; line-height: 1.15; }
-.rl-tiles > button > div:nth-of-type(2) { font-size: 11px !important; line-height: 1.1; }
+.rl-tiles > button img { width: auto !important; height: 38px !important; max-width: 70%; object-fit: contain; flex: 0 0 auto; }
+.rl-tiles > button > div:nth-of-type(1) { font-size: 13.5px !important; line-height: 1.15; }
+.rl-tiles > button > div:nth-of-type(2) { font-size: 10.5px !important; line-height: 1.1; }
+.rl-camino { flex: 1 1 0; min-height: 0; position: relative; overflow: hidden; }
+.rl-camino .rl-cosm { display: none !important; }
+.rl-rango .pm-pergamino > div > div:first-child { font-size: 24px !important; line-height: 1.1 !important; }
+.rl-rango .pm-pergamino > div > div { margin-top: 0 !important; }
+.rl-camino-in { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
 `;
 
 export default function Ranked({token, onEntrarAPartida, usuario }) {
@@ -108,6 +111,28 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
     window.addEventListener('resize', medir);
     return () => { clearInterval(t); window.removeEventListener('resize', medir); };
   }, [esCelMed, cargando]);
+  // Pase 698: en celular "Tu camino en la Liga" va a la vista y se achica (scale) si no entra en el alto que sobra.
+  const caminoRef = useRef(null);
+  const caminoInRef = useRef(null);
+  const [escalaCamino, setEscalaCamino] = useState(1);
+  useEffect(() => {
+    if (!esCelMed) return undefined;
+    const medir = () => {
+      const cont = caminoRef.current;
+      const inn = caminoInRef.current;
+      if (!cont || !inn) return;
+      const nat = inn.offsetHeight;
+      const libre = cont.clientHeight;
+      if (nat > 0 && libre > 0) {
+        const e = Math.max(0.4, Math.min(1, libre / nat));
+        setEscalaCamino((p) => (Math.abs(p - e) > 0.01 ? e : p));
+      }
+    };
+    medir();
+    const t = setInterval(medir, 600);
+    window.addEventListener('resize', medir);
+    return () => { clearInterval(t); window.removeEventListener('resize', medir); };
+  }, [esCelMed]);
   const [popup, setPopup] = useState(null);   // Pase 622: 'rangos' | 'temporada' | 'partidas' | 'hitos' | 'reglas' (tarjetas secundarias en popup)
   const [partidaAbierta, setPartidaAbierta] = useState(null);
   const [bloqueoFin, setBloqueoFin] = useState(0);   // Pase 613: hora (ms) en que termina el enfriamiento por abandonos
@@ -292,6 +317,11 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
               <div style={estilos.barraTexto}>
                 {rango.esTop500 ? `${rango.puntos} pts · rango máximo` : `${rango.puntos} / ${rango.rangoMax + 1} pts`}
               </div>
+              {esCel && !rango.esTop500 && lineaRangos && (() => {
+                const prox = lineaRangos.rangos.find((r) => r.min === rango.rangoMax + 1);
+                const falta = rango.rangoMax + 1 - rango.puntos;
+                return prox ? <div style={{ ...estilos.barraTexto, color: '#FFD668', fontWeight: 800 }}>{`Te ${falta === 1 ? 'falta 1 pt' : `faltan ${falta} pts`} para ${prox.nombre}`}</div> : null;
+              })()}
               {resumen?.clasificacion && !resumen.clasificacion.completa && (
                 <div style={estilos.miniSerie}>{`Clasificando ${resumen.clasificacion.jugadas}/${resumen.clasificacion.total}`}</div>
               )}
@@ -379,8 +409,19 @@ export default function Ranked({token, onEntrarAPartida, usuario }) {
         )}
 
         {/* Pase 622: una sola pantalla sin scroll: las tarjetas secundarias abren su cartel (igual que en la app) */}
+        {esCel && lineaRangos && (
+          <div ref={caminoRef} className="rl-camino">
+            <div ref={caminoInRef} className="rl-camino-in" style={{ width: `${100 / escalaCamino}%`, transform: `scale(${escalaCamino})` }}>
+              <PlacaMadera colorInterior={PERGAMINO} interiorStyle={{ padding: '8px 10px' }}>
+                <div style={{ ...estilos.panelTitulo, marginBottom: 2 }}>Tu camino en la Liga</div>
+                <LineaRangos data={lineaRangos} />
+              </PlacaMadera>
+            </div>
+          </div>
+        )}
+
         <div className={esCel ? 'rl-tiles' : undefined} style={estilos.tilesFila}>
-          {(nivelEspacio < 1 || !lineaRangos) && <TileLiga icono={ui.logo} titulo="Rangos" sub="Premios" onClick={() => setPopup('rangos')} />}
+          {(nivelEspacio < 1 || !lineaRangos) && !(esCel && lineaRangos) && <TileLiga icono={ui.logo} titulo="Rangos" sub="Premios" onClick={() => setPopup('rangos')} />}
           {nivelEspacio < 2 && <TileLiga icono="/assets/images/icono-rendimiento.png" titulo="Temporada" sub={`${resumen?.porcentajeVictorias ?? 0}% victorias`} onClick={() => setPopup('temporada')} />}
           {nivelEspacio < 2 && <TileLiga icono="/assets/images/icono-rango.png" titulo="Partidas" sub={`${Math.min(10, historial?.partidas?.length ?? 0)} últimas`} onClick={() => setPopup('partidas')} />}
           {nivelEspacio < 2 && <TileLiga icono="/assets/images/icono-logros.png" titulo="Hitos" sub={`${(resumen?.hitos ?? []).filter((h) => h.cobrado).length}/${resumen?.hitos?.length ?? 0}`} onClick={() => setPopup('hitos')} />}
@@ -521,7 +562,7 @@ function LineaRangos({ data }) {
               <div style={estilos.nodoInicio}>Inicio</div>
             )}
             {r.cosmetico ? (
-              <div style={{ ...estilos.nodoCosmetico, ...(r.cosmetico.disponible && r.alcanzado ? { borderStyle: 'solid', borderColor: C.verdeOscuro } : {}) }}>
+              <div className="rl-cosm" style={{ ...estilos.nodoCosmetico, ...(r.cosmetico.disponible && r.alcanzado ? { borderStyle: 'solid', borderColor: C.verdeOscuro } : {}) }}>
                 {imagenPieza(r.cosmetico.tipo) && (
                   <img src={imagenPieza(r.cosmetico.tipo)} alt="" draggable={false}
                     style={{ ...(MEDIDAS_PIEZA[r.cosmetico.tipo] ? { width: MEDIDAS_PIEZA[r.cosmetico.tipo].w, height: MEDIDAS_PIEZA[r.cosmetico.tipo].h } : {}), objectFit: 'contain', marginBottom: 3, ...(r.alcanzado ? {} : { opacity: 0.55, filter: 'grayscale(0.6)' }) }} />
@@ -529,7 +570,7 @@ function LineaRangos({ data }) {
                 <div style={estilos.nodoCosmeticoTexto}>{r.cosmetico.texto}</div>
                 <div style={estilos.nodoCosmeticoSub}>{r.cosmetico.disponible ? (r.alcanzado ? 'Desbloqueado' : 'Se desbloquea acá') : 'Próximamente'}</div>
               </div>
-            ) : <div style={estilos.nodoCosmeticoVacio} />}
+            ) : <div className="rl-cosm" style={estilos.nodoCosmeticoVacio} />}
             {r.actual ? <div style={estilos.nodoAqui}>ESTÁS ACÁ</div> : <div style={{ height: 22 }} />}
           </div>
         );
