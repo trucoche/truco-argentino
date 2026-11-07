@@ -1548,7 +1548,7 @@ _crearElementosDeTexto() {
     if (dos) {
       // Pase 682: el remache medio de los costados del aro (y = 575 de la imagen) queda a la altura de la base de los mazos laterales:
     // el centro del mazo va 60 px de imagen más arriba que ese remache (la base del abanico queda justo en él).
-    G.seat = { 270: { x: 400, y: yDeckTop }, 180: { ...pt(62, 440), x: 400 - xLado }, 0: { ...pt(738, 440), x: 400 + xLado } };   // Pase 698: las manos de los costados suben (515 → 440) a la altura de las cartas jugadas (zona y = 410)
+    G.seat = { 270: { x: 400, y: yDeckTop }, 180: { ...pt(62, 425), x: 400 - xLado }, 0: { ...pt(738, 425), x: 400 + xLado } };   // Pase 698: las manos de los costados suben (515 → 425) a la altura de las cartas jugadas (zona y = 410)
       G.zona = { 270: zona(400, 176, 1, 2), 180: zona(272, 410, -1, -6), 0: zona(528, 410, 1, 6) };
     } else {
       G.seat = { 270: { x: 400, y: yDeckTop }, 210: { ...pt(62, 300), x: 400 - xLado }, 330: { ...pt(738, 300), x: 400 + xLado }, 150: { ...pt(62, 575), x: 400 - xLado }, 30: { ...pt(738, 575), x: 400 + xLado } };

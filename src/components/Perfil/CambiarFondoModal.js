@@ -225,7 +225,7 @@ export default function CambiarFondoModal({ token, saldoActual, onCerrar, onFond
         <div style={estilos.bannersBloque}>
           <div style={estilos.bannersTitulo}>Elegí un banner del juego <span style={estilos.gratis}>GRATIS</span></div>
           <div style={estilos.bannersFila}>
-            {BANNERS.map((item) => {
+            {BANNERS.filter((b) => estaDisponible(b, { kitFundador: kit, esSponsor, rangoId }) || bannerActual === b.id).map((item) => {   // Pase 698: solo los que el jugador tiene
               const libre = estaDisponible(item, { kitFundador: kit, esSponsor, rangoId });
               const activo = bannerActual === item.id;
               return (

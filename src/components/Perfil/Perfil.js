@@ -328,12 +328,6 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
                     fuente={avatarSrcDe(usuario)}
                     fallback={`/assets/${usuario?.personaje || 'gaucho'}-avatar-cara.png`}
                   >
-                    {/* Centésimo cuadragésimo séptimo pase: el emoji 📷 se reemplaza por el ícono de cámara ilustrado. */}
-                    <button
-                      style={estilos.avatarBadge}
-                      onClick={(e) => { e.stopPropagation(); if (onNavegar) onNavegar('config'); }}
-                      title="Cambiar foto o personaje"
-                    ><img src="/assets/images/icono-cambiar-foto.png" alt="" style={estilos.avatarBadgeIcono} /></button>
                   </AvatarAnillo>
                 </>
               )}
