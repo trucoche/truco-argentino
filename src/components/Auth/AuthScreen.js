@@ -45,8 +45,64 @@ function Filigrana() {
   );
 }
 
+// Pase 699: login/registro en celular = pantalla fija sin scroll (espaciados compactos + escala si aún así no entra).
+function useEsCelAuth() {
+  const [v, setV] = useState(() => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(max-width: 899px)').matches);
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return undefined;
+    const mq = window.matchMedia('(max-width: 899px)');
+    const f = () => setV(mq.matches);
+    f();
+    if (mq.addEventListener) mq.addEventListener('change', f); else mq.addListener(f);
+    return () => { if (mq.removeEventListener) mq.removeEventListener('change', f); else mq.removeListener(f); };
+  }, []);
+  return v;
+}
+const CSS_AUTH_CEL = `
+.au-pagina { height: 100dvh; min-height: 0 !important; overflow: hidden; padding: 8px 12px 6px !important; align-items: flex-start !important; box-sizing: border-box; }
+.au-app { transform-origin: 50% 0; }
+.au-logowrap { margin-bottom: 8px !important; }
+.au-logo { max-width: 250px !important; }
+.au-sub { font-size: 16px !important; }
+.au-panelext { padding: 8px !important; }
+.au-panel { padding: 12px 14px 14px !important; }
+.au-tabs { margin-bottom: 10px !important; }
+.au-tab { padding: 6px !important; }
+.au-field { margin-bottom: 8px !important; }
+.au-label { margin-bottom: 2px !important; font-size: 12px !important; }
+.au-input { padding: 9px 12px !important; font-size: 16px !important; }
+.au-btn { padding: 11px !important; }
+.au-olvide { margin-top: 6px !important; }
+.au-acepta { margin-top: 8px !important; font-size: 11.5px !important; line-height: 1.3 !important; }
+.au-divider { margin: 10px 0 8px !important; }
+.au-fb { padding: 8px !important; }
+.au-aviso { margin-top: 8px !important; font-size: 10.5px !important; line-height: 1.3 !important; }
+.au-anot { margin-top: 8px !important; padding: 6px 14px !important; }
+.au-footer { margin-top: 10px !important; }
+`;
+
 export default function AuthScreen({ onLoginExitoso, onOlvidoPassword, onIrAnotador, musicaMuteada, onToggleMusica }) {
   const [modo, setModo] = useState('login');
+  const esCel = useEsCelAuth();
+  const appRef = useRef(null);
+  const [escalaAuth, setEscalaAuth] = useState(1);
+  useEffect(() => {
+    if (!esCel) { setEscalaAuth(1); return undefined; }
+    const medir = () => {
+      const el = appRef.current;
+      if (!el) return;
+      const nat = el.offsetHeight;
+      const libre = window.innerHeight - 14;
+      if (nat > 0) {
+        const e = Math.max(0.6, Math.min(1, libre / nat));
+        setEscalaAuth((p) => (Math.abs(p - e) > 0.005 ? e : p));
+      }
+    };
+    medir();
+    const t = setInterval(medir, 500);
+    window.addEventListener('resize', medir);
+    return () => { clearInterval(t); window.removeEventListener('resize', medir); };
+  }, [esCel, modo]);
   const [form, setForm] = useState({ username: '', email: '', password: '' });
   const [error, setError] = useState('');
   const [cargando, setCargando] = useState(false);
@@ -236,7 +292,8 @@ useEffect(() => {
 }, []);
 
   return (
-  <div style={estilos.pagina}>
+  <div className={esCel ? 'au-pagina' : undefined} style={estilos.pagina}>
+    {esCel && <style id="auth-celular-699">{CSS_AUTH_CEL}</style>}
     <button
       type="button"
       onClick={onToggleMusica}
@@ -246,36 +303,36 @@ useEffect(() => {
       {musicaMuteada ? '🔇' : '🎵'}
     </button>
 
-    <div style={estilos.app}>
+    <div ref={appRef} className="au-app" style={esCel && escalaAuth < 1 ? { ...estilos.app, transform: `scale(${escalaAuth})` } : estilos.app}>
 
-        <div style={estilos.logoWrap}>
-          <img src="/assets/trucoche-logo.png" alt="TrucoChe" style={estilos.logoCompleto} />
-          <div style={estilos.logoSub}>che, ¿un truquito?</div>
+        <div className="au-logowrap" style={estilos.logoWrap}>
+          <img src="/assets/trucoche-logo.png" alt="TrucoChe" className="au-logo" style={estilos.logoCompleto} />
+          <div className="au-sub" style={estilos.logoSub}>che, ¿un truquito?</div>
         </div>
 
         {/* Pase de rediseño: placa de madera de caoba con remaches de
             bronce en las 4 esquinas envolviendo el pergamino interior
             (antes era una sola caja crema plana con borde chocolate). */}
-        <div style={estilos.panelExterior}>
+        <div className="au-panelext" style={estilos.panelExterior}>
           <span style={{ ...estilos.remache, top: 10, left: 10 }} />
           <span style={{ ...estilos.remache, top: 10, right: 10 }} />
           <span style={{ ...estilos.remache, bottom: 10, left: 10 }} />
           <span style={{ ...estilos.remache, bottom: 10, right: 10 }} />
-        <div style={estilos.panel}>
+        <div className="au-panel" style={estilos.panel}>
           <Filigrana />
 
-          <div style={estilos.tabs}>
+          <div className="au-tabs" style={estilos.tabs}>
             <button
               type="button"
               onClick={() => { setModo('login'); setError(''); }}
-              style={{ ...estilos.tab, ...(modo === 'login' ? estilos.tabActivo : {}) }}
+              className="au-tab" style={{ ...estilos.tab, ...(modo === 'login' ? estilos.tabActivo : {}) }}
             >
               Iniciar sesión
             </button>
             <button
               type="button"
               onClick={() => { setModo('registro'); setError(''); }}
-              style={{ ...estilos.tab, ...(modo === 'registro' ? estilos.tabActivo : {}) }}
+              className="au-tab" style={{ ...estilos.tab, ...(modo === 'registro' ? estilos.tabActivo : {}) }}
             >
               Registrarme
             </button>
@@ -283,8 +340,8 @@ useEffect(() => {
 
           <form onSubmit={handleSubmit}>
             {modo === 'registro' && (
-              <div style={estilos.field}>
-                <label style={estilos.label}>Usuario</label>
+              <div className="au-field" style={estilos.field}>
+                <label className="au-label" style={estilos.label}>Usuario</label>
                 <input
                   type="text"
                   name="username"
@@ -292,13 +349,13 @@ useEffect(() => {
                   value={form.username}
                   onChange={handleChange}
                   required
-                  style={estilos.input}
+                  className="au-input" style={estilos.input}
                 />
               </div>
             )}
 
-            <div style={estilos.field}>
-              <label style={estilos.label}>Email</label>
+            <div className="au-field" style={estilos.field}>
+              <label className="au-label" style={estilos.label}>Email</label>
               <input
                 type="email"
                 name="email"
@@ -306,12 +363,12 @@ useEffect(() => {
                 value={form.email}
                 onChange={handleChange}
                 required
-                style={estilos.input}
+                className="au-input" style={estilos.input}
               />
             </div>
 
-            <div style={estilos.field}>
-              <label style={estilos.label}>Contraseña</label>
+            <div className="au-field" style={estilos.field}>
+              <label className="au-label" style={estilos.label}>Contraseña</label>
               <input
                 type="password"
                 name="password"
@@ -319,12 +376,12 @@ useEffect(() => {
                 value={form.password}
                 onChange={handleChange}
                 required
-                style={estilos.input}
+                className="au-input" style={estilos.input}
               />
             </div>
 
             {modo === 'registro' && (
-              <label style={estilos.aceptaFila}>
+              <label className="au-acepta" style={estilos.aceptaFila}>
                 <input
                   type="checkbox"
                   checked={aceptaTerminos}
@@ -342,7 +399,7 @@ useEffect(() => {
 
             {error && <div style={estilos.errorBox}>{error}</div>}
 
-          <button type="submit" disabled={cargando} style={estilos.btnPrimary}>
+          <button type="submit" disabled={cargando} className="au-btn" style={estilos.btnPrimary}>
               {cargando ? 'Cargando...' : (modo === 'login' ? '✓ Entrar' : '✓ Registrarme')}
             </button>
 
@@ -350,6 +407,7 @@ useEffect(() => {
               <button
                 type="button"
                 onClick={onOlvidoPassword}
+                className="au-olvide"
                 style={estilos.linkOlvide}
               >
                 ¿Olvidaste tu contraseña?
@@ -357,18 +415,18 @@ useEffect(() => {
             )}
           </form>
 
-          <div style={estilos.divider}><span style={estilos.dividerTexto}>o</span></div>
+          <div className="au-divider" style={estilos.divider}><span style={estilos.dividerTexto}>o</span></div>
 
           <div style={estilos.googleBox}>
             {/* Pase 316: clip-path de 2px para ocultar el borde gris propio del botón de Google (queda solo el marco negro de la caja). */}
             <div ref={botonGoogleRef} style={{ clipPath: 'inset(2px)' }} />
           </div>
 
-          <button type="button" onClick={iniciarSesionFacebook} style={estilos.btnFacebook} disabled={cargando}>
+          <button type="button" onClick={iniciarSesionFacebook} className="au-fb" style={estilos.btnFacebook} disabled={cargando}>
             <img src="/assets/facebook-icon.png" alt="Facebook" style={{ width: 20, height: 20 }} />
             Continuar con Facebook
           </button>
-          <div style={estilos.avisoSocial}>
+          <div className="au-aviso" style={estilos.avisoSocial}>
             Al continuar con Google o Facebook aceptás los{' '}
             <a href="/terminos" target="_blank" rel="noopener noreferrer" style={estilos.aceptaLink}>Términos de Servicio</a>
             {' '}y la{' '}
@@ -376,7 +434,7 @@ useEffect(() => {
           </div>
           {/* Pase 404: el Anotador Offline se puede usar sin iniciar sesión. */}
           {onIrAnotador && (
-            <button type="button" onClick={onIrAnotador} style={estilos.anotadorBoton}>
+            <button type="button" onClick={onIrAnotador} className="au-anot" style={estilos.anotadorBoton}>
               <img src="/assets/images/icono-anotador.png" alt="" style={estilos.anotadorIcono} />
               Anotador Offline
             </button>
@@ -386,7 +444,7 @@ useEffect(() => {
         </div>
         {/* ← cierre de panelExterior (marco de madera) */}
 
-          <div style={estilos.footerHint}>
+          <div className="au-footer" style={estilos.footerHint}>
             Un juego de truco argentino
           </div>
 
