@@ -13,9 +13,9 @@ const ANILLO = anilloPorId('cafecito');
 const BANNER = bannerPorId('cafecito');
 const MAZO = mazoPorId('cafecito');
 
-const TAM_ANILLO = 70;
-const ANCHO_BANNER = 112;
-const ALTO_DORSO = 66;
+const TAM_ANILLO = 56;
+const ANCHO_BANNER = 92;
+const ALTO_DORSO = 54;
 
 function encabezados(token) {
   return { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
@@ -27,10 +27,10 @@ export function SponsorGraciasModal({ visible, equipando = false, onEquipar, onC
     <PopupMadera
       visible={visible}
       scroll
-      titulo="¡Gracias por apoyar TrucoChe!"
+      titulo="¡Gracias, Sponsor!"
       cinta="dorada"
       anchoMax={400}
-      mensaje="Tu aporte ayuda a que el juego siga creciendo, y por eso ya sos Sponsor Criollo. Te llevás tres diseños exclusivos que solo tienen quienes apoyan el proyecto."
+      mensaje="Gracias por apoyar a TrucoChe: ya sos Sponsor Criollo y te llevás tres diseños exclusivos."
       onCerrar={onCerrar}
       botones={[
         { texto: equipando ? 'Equipando…' : 'Equipar todo', tipo: 'dorado', onClick: onEquipar, disabled: equipando },
@@ -58,7 +58,7 @@ export function SponsorGraciasModal({ visible, equipando = false, onEquipar, onC
           <span style={estilos.etiqueta}>Dorso</span>
         </div>
       </div>
-      <div style={estilos.nota}>Podés cambiar tus diseños cuando quieras desde Ajustes → Perfil → Personalización.</div>
+      <div style={estilos.nota}>Cambialos cuando quieras desde Ajustes → Perfil → Personalización.</div>
     </PopupMadera>
   );
 }
@@ -109,8 +109,8 @@ export default function SponsorGraciasHost({ usuario, token, pantalla, onPerfilA
 }
 
 const estilos = {
-  fila: { display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 14, marginBottom: 12, flexWrap: 'wrap' },
+  fila: { display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 12, margin: '16px 0 14px', flexWrap: 'nowrap' },
   item: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 },
-  etiqueta: { fontWeight: 800, fontSize: 12, color: '#4A2C2A' },
-  nota: { fontWeight: 700, fontSize: 12, color: '#7a5a3a', textAlign: 'center', marginBottom: 10 },
+  etiqueta: { fontWeight: 800, fontSize: 11.5, color: '#4A2C2A' },
+  nota: { fontWeight: 700, fontSize: 12, color: '#7a5a3a', textAlign: 'center', marginBottom: 12, lineHeight: '17px' },
 };

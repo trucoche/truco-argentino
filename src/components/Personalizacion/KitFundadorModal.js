@@ -14,9 +14,9 @@ const ANILLO = anilloPorId('tester');
 const BANNER = bannerPorId('tester');
 const MAZO = mazoPorId('tester');
 
-const TAM_ANILLO = 70;
-const ANCHO_BANNER = 112;
-const ALTO_DORSO = 66;
+const TAM_ANILLO = 56;
+const ANCHO_BANNER = 92;
+const ALTO_DORSO = 54;
 
 function encabezados(token) {
   return { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
@@ -31,7 +31,7 @@ export function KitFundadorModal({ visible, equipando = false, onEquipar, onCerr
       titulo="¡Bienvenido, Beta Tester!"
       cinta="dorada"
       anchoMax={400}
-      mensaje="Gracias por ser de los primeros en jugar TrucoChe. Tu ayuda en esta etapa de pruebas es clave para dejar el juego bien pulido, y por eso te regalamos el Kit de Fundador: tres diseños exclusivos que solo tienen los primeros jugadores."
+      mensaje="Gracias por ser de los primeros en jugar TrucoChe. Te regalamos el Kit de Fundador: tres diseños exclusivos para los primeros jugadores."
       onCerrar={onCerrar}
       botones={[
         { texto: equipando ? 'Equipando…' : 'Equipar todo', tipo: 'dorado', onClick: onEquipar, disabled: equipando },
@@ -61,12 +61,12 @@ export function KitFundadorModal({ visible, equipando = false, onEquipar, onCerr
       </div>
 
       <div style={estilos.aviso}>
-        <div style={estilos.avisoTitulo}>🐞 ¿Algo falla o tenés una idea?</div>
+        <div style={estilos.avisoTitulo}>¿Algo falla o tenés una idea?</div>
         <div style={estilos.avisoTexto}>
-          Entrá a Ajustes y tocá «Reportar bug / sugerencia». Contanos qué pasó y en qué pantalla: cuanto más detalle, más rápido lo arreglamos.
+          Tocá «Reportar bug / sugerencia» en Ajustes y contanos qué pasó y en qué pantalla.
         </div>
       </div>
-      <div style={estilos.nota}>Podés cambiar tus diseños cuando quieras desde Ajustes.</div>
+      <div style={estilos.nota}>Cambiá tus diseños desde Ajustes.</div>
     </PopupMadera>
   );
 }
@@ -119,11 +119,11 @@ export default function KitFundadorHost({ usuario, token, pantalla, onPerfilActu
 }
 
 const estilos = {
-  fila: { display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 14, marginBottom: 12, flexWrap: 'wrap' },
+  fila: { display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 12, margin: '12px 0 12px', flexWrap: 'nowrap' },
   item: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 },
-  etiqueta: { fontWeight: 800, fontSize: 12, color: '#4A2C2A' },
-  aviso: { width: '100%', boxSizing: 'border-box', background: 'rgba(74,44,42,0.10)', borderRadius: 10, border: '1.5px solid rgba(74,44,42,0.35)', padding: '10px 12px', marginBottom: 8 },
+  etiqueta: { fontWeight: 800, fontSize: 11.5, color: '#4A2C2A' },
+  aviso: { width: '100%', boxSizing: 'border-box', background: 'rgba(74,44,42,0.10)', borderRadius: 10, border: '1.5px solid rgba(74,44,42,0.35)', padding: '10px 12px', marginBottom: 10 },
   avisoTitulo: { fontWeight: 800, fontSize: 14, color: '#2C160E', textAlign: 'center', marginBottom: 4 },
   avisoTexto: { fontWeight: 700, fontSize: 13, lineHeight: '18px', color: '#4A2C2A', textAlign: 'center' },
-  nota: { fontWeight: 700, fontSize: 12, color: '#7a5a3a', textAlign: 'center', marginBottom: 10 },
+  nota: { fontWeight: 700, fontSize: 12, color: '#7a5a3a', textAlign: 'center', marginBottom: 12, lineHeight: '17px' },
 };
