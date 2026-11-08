@@ -130,7 +130,7 @@ function useEsCelPerfil() {
 // Pase 697: Perfil en celular = pantalla fija sin scroll (la pila de tarjetas se achica si no entra; Logros se abre en una hoja).
 const CSS_PERFIL_CEL = `
 .pf-cel { position: relative; width: 100%; overflow: hidden; }
-.pf-pila { position: absolute; top: 0; left: 50%; width: 100%; max-width: 520px; display: flex; flex-direction: column; gap: 8px; transform-origin: 50% 0; box-sizing: border-box; padding: 0 4px; }
+.pf-pila { position: absolute; top: 0; left: 50%; width: 100%; max-width: 520px; display: flex; flex-direction: column; gap: 6px; transform-origin: 50% 0; box-sizing: border-box; padding: 0 4px; }
 .pf-pila > .pm-placa { margin: 0 !important; padding: 5px !important; border-radius: 16px !important; }
 .pf-pila .pm-pergamino { padding: 6px 10px !important; }
 .pf-hoja { position: fixed; inset: 0; z-index: 2000; background: #1b120c; display: flex; flex-direction: column; }
@@ -207,7 +207,7 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
           if (hb > 0 && bw > 0 && maxW > 0) {
             const otros = n - ban.offsetHeight;
             const objetivo = libre - 8 - otros;
-            const nuevo = Math.round(Math.max(150, Math.min(maxW, objetivo * (bw / hb))));
+            const nuevo = Math.round(Math.max(110, Math.min(maxW, objetivo * (bw / hb))));
             setAnchoBanner((p) => (Math.abs(p - nuevo) > 3 ? nuevo : p));
           }
         }
@@ -374,59 +374,52 @@ export default function Perfil({ token, usuario, onNavegar, onPerfilActualizado 
           <div className="pf-pila" ref={pilaRef} style={{ transform: `translateX(-50%) scale(${escalaPila})` }}>
             {panelPerfil}
             <PlacaMadera colorInterior="#FFE9B0" interiorStyle={{ display: 'flex', alignItems: 'center', gap: 12, padding: '6px 12px' }}>
-              <img src={rangoAssets.logo} alt={usuario?.rango?.nombre || 'Rango'} style={{ width: 56, height: 56, objectFit: 'contain', flex: '0 0 auto' }} />
+              <img src={rangoAssets.logo} alt={usuario?.rango?.nombre || 'Rango'} style={{ width: 46, height: 46, objectFit: 'contain', flex: '0 0 auto' }} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ ...estilos.rangoTitulo, textAlign: 'left' }}>{tituloRango}</div>
-                <div style={{ ...estilos.rangoSubtitulo, textAlign: 'left', margin: '1px 0 0', fontSize: 12, lineHeight: 1.25 }}>{usuario?.rango?.concepto}</div>
+                <div title={usuario?.rango?.concepto} style={{ ...estilos.rangoSubtitulo, textAlign: 'left', margin: '1px 0 0', fontSize: 12, lineHeight: 1.25, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{usuario?.rango?.concepto}</div>
                 {usuario?.rango && !usuario.rango.esTop500 && (
-                  <div style={{ marginTop: 5 }}>
-                    <div style={estilos.rangoBarraFondo}>
+                  <div style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ ...estilos.rangoBarraFondo, flex: 1, minWidth: 0 }}>
                       <div style={{ ...estilos.rangoBarraRelleno, width: `${Math.round((usuario.rango.progreso || 0) * 100)}%` }} />
                     </div>
-                    <div style={{ ...estilos.rangoPuntosTexto, marginTop: 2 }}>{usuario.rango.puntos} / {usuario.rango.rangoMax + 1} pts</div>
+                    <div style={{ ...estilos.rangoPuntosTexto, margin: 0, whiteSpace: 'nowrap', flex: '0 0 auto' }}>{usuario.rango.puntos} / {usuario.rango.rangoMax + 1} pts</div>
                   </div>
                 )}
               </div>
             </PlacaMadera>
             <PlacaMadera>
-              <div style={{ ...estilos.panelTitle, ...estilos.tituloConIcono, marginBottom: 4, fontSize: 16 }}>
-                <img src="/assets/images/icono-rendimiento.png" alt="" style={{ ...estilos.tituloIcono, width: 26, height: 26 }} />
-                <span>Rendimiento</span>
-              </div>
               <div style={{ display: 'flex', gap: 6 }}>
                 {[['Jugadas', partidasJugadas], ['Ganadas', partidasGanadas, C.verdeOscuro], ['Perdidas', partidasPerdidas, C.crimsonOscuro], ['Abandonos', `${porcentajeAbandonos}%`]].map(([label, valor, color]) => (
-                  <div key={label} style={{ ...estilos.statTile, flex: 1, minWidth: 0, padding: '6px 2px' }}>
-                    <div style={{ ...estilos.statValor, fontSize: 24, ...(color ? { color } : {}) }}>{valor}</div>
+                  <div key={label} style={{ ...estilos.statTile, flex: 1, minWidth: 0, padding: '4px 2px' }}>
+                    <div style={{ ...estilos.statValor, fontSize: 22, ...(color ? { color } : {}) }}>{valor}</div>
                     <div style={{ ...estilos.statLabel, fontSize: 11.5, marginTop: 1 }}>{label}</div>
                   </div>
                 ))}
               </div>
             </PlacaMadera>
             <PlacaMadera>
-              <div style={estilos.panelHeader}>
-                <div style={{ ...estilos.panelTitle, ...estilos.tituloConIcono, marginBottom: 0, fontSize: 16 }}>
-                  <img src="/assets/images/icono-logros.png" alt="" style={{ ...estilos.tituloIcono, width: 26, height: 26 }} />
-                  <span>Logros</span>
-                </div>
-                {logros.length > 0 && <div style={estilos.resumen}>{completados}/{logros.length}</div>}
-              </div>
               {errorLogros && <div style={estilos.errorBox}>{errorLogros}</div>}
               {cargandoLogros ? (
                 <PantallaCarga completa={false} conLogo={false} tema="claro" />
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginTop: 4 }}>
-                  <div style={estilos.barraFondo}>
-                    <div style={{ ...estilos.barraRelleno, width: `${logros.length ? Math.round((completados / logros.length) * 100) : 0}%` }} />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <img src="/assets/images/icono-logros.png" alt="" style={{ ...estilos.tituloIcono, width: 26, height: 26, flex: '0 0 auto' }} />
+                    <span style={{ ...estilos.panelTitle, marginBottom: 0, fontSize: 16, flex: '0 0 auto' }}>Logros</span>
+                    <div style={{ ...estilos.barraFondo, flex: 1, minWidth: 0 }}>
+                      <div style={{ ...estilos.barraRelleno, width: `${logros.length ? Math.round((completados / logros.length) * 100) : 0}%` }} />
+                    </div>
+                    <span style={{ fontWeight: 800, fontSize: 13, color: C.chocolate, flex: '0 0 auto' }}>{completados}/{logros.length}</span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                    <span style={{ fontWeight: 800, fontSize: 13, color: C.chocolate }}>{completados} de {logros.length} desbloqueados</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     {reclamables > 0 && (
-                      <span style={{ ...estilos.conIconito, background: '#FFE9B0', border: '2px solid #C9860E', borderRadius: 999, padding: '2px 8px', fontWeight: 800, fontSize: 12, color: C.chocolate }}>
+                      <span style={{ ...estilos.conIconito, flex: '0 0 auto', background: '#FFE9B0', border: '2px solid #C9860E', borderRadius: 999, padding: '2px 8px', fontWeight: 800, fontSize: 12, color: C.chocolate, whiteSpace: 'nowrap' }}>
                         <img src="/assets/images/icono-moneda.png" alt="" style={estilos.iconito} />{reclamables} para reclamar
                       </span>
                     )}
+                    <button type="button" style={{ ...estilos.btnReclamar, flex: 1, minWidth: 0, height: 34, padding: '0 8px', fontSize: 13 }} onClick={() => setHojaLogros(true)}>VER LOGROS</button>
                   </div>
-                  <button type="button" style={estilos.btnReclamar} onClick={() => setHojaLogros(true)}>VER TODOS LOS LOGROS</button>
                 </div>
               )}
             </PlacaMadera>
