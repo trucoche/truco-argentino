@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import PantallaCarga from '../PantallaCarga/PantallaCarga';
 import PopupMadera from '../Popup/PopupMadera';
 import { useToast } from '../../contexts/ToastContext';
@@ -36,9 +36,9 @@ function Remaches({ inset = 9 }) {
 }
 
 // Marco de madera con remaches y cinta opcional (cartel de pergamino a caballo sobre el borde superior).
-function Marco({ cinta, interior = 'pergamino', children, style, innerStyle }) {
+function Marco({ cinta, interior = 'pergamino', children, style, innerStyle, clase, claseInterior }) {
   return (
-    <div style={{ ...estilos.marco, ...(cinta ? { marginTop: 22 } : null), ...style }}>
+    <div className={clase} style={{ ...estilos.marco, ...(cinta ? { marginTop: 22 } : null), ...style }}>
       <Remaches />
       {cinta && (
         <div style={estilos.cinta}>
@@ -47,7 +47,7 @@ function Marco({ cinta, interior = 'pergamino', children, style, innerStyle }) {
           <span style={{ ...estilos.cintaRemache, right: 9 }} />
         </div>
       )}
-      <div style={{ ...(interior === 'fieltro' ? estilos.interiorFieltro : estilos.interiorPergamino), ...innerStyle }}>
+      <div className={claseInterior} style={{ ...(interior === 'fieltro' ? estilos.interiorFieltro : estilos.interiorPergamino), ...innerStyle }}>
         {children}
       </div>
     </div>
@@ -95,6 +95,57 @@ function nombreDeRonda(cruces, numRonda) {
   return `Ronda ${numRonda}`;
 }
 
+// Pase 701: Bracket en el celular (< 900 px) sin scroll de página. Arriba la cabecera compacta (solo el botón de volver, sin texto, con el
+// título y el estado debajo), después el campeón con las fichas en poco alto, y el cuadro de llaves (o la sala) ocupa todo el resto con su
+// propio scroll (horizontal y vertical). En la compu no cambia nada.
+function useEsCelBracket() {
+  const [v, setV] = useState(() => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(max-width: 899px)').matches);
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return undefined;
+    const mq = window.matchMedia('(max-width: 899px)');
+    const f = () => setV(mq.matches);
+    f();
+    if (mq.addEventListener) mq.addEventListener('change', f); else mq.addListener(f);
+    return () => { if (mq.removeEventListener) mq.removeEventListener('change', f); else mq.removeListener(f); };
+  }, []);
+  return v;
+}
+
+const CSS_BRACKET_CEL = `
+.br-cel { display: flex; flex-direction: column; overflow: hidden; box-sizing: border-box; padding: 0 2px 12px !important; }
+.br-cel > * { flex: 0 0 auto; }
+.br-cel .br-marco { margin-bottom: 8px !important; border-radius: 16px !important; padding: 6px !important; }
+.br-cel .br-head { margin-bottom: 6px !important; }
+.br-cel .br-head-int { padding: 6px 8px !important; gap: 8px !important; }
+.br-cel .br-volver { background: none !important; border: 0 !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; }
+.br-cel .br-volver img { width: 42px !important; height: 42px !important; margin: 0 !important; }
+.br-cel .br-volver-txt { display: none; }
+.br-cel .br-head-int > img { height: 30px !important; }
+.br-cel .br-head-int [data-br="titulo"] { font-size: 16px !important; }
+.br-cel .br-pill { padding: 1px 9px !important; font-size: 11px !important; border-width: 1.5px !important; box-shadow: 0 1px 0 rgba(0,0,0,0.35) !important; }
+.br-cel .br-camp { margin-top: 18px !important; }
+.br-cel .br-camp-int { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 10px; padding: 14px 10px 10px !important; }
+.br-cel .br-camp-int > img { height: 46px !important; margin: 0 !important; }
+.br-cel .br-camp-int > [data-br="placa"] { flex: 1 1 0; min-width: 0; width: auto !important; font-size: 16px !important; padding: 5px 12px !important; text-align: center; }
+.br-cel .br-camp-int > [data-br="felicita"] { flex: 0 0 100%; margin: 0 !important; text-align: center; font-size: 12px !important; }
+.br-cel .br-camp-int > [data-br="fichas"] { flex: 0 0 100%; margin-top: 2px !important; gap: 6px !important; }
+.br-cel .br-camp-int > [data-br="fichas"] > div { max-width: none !important; padding: 4px 2px 4px !important; gap: 1px !important; border-radius: 10px !important; border-width: 2px !important; }
+.br-cel .br-camp-int > [data-br="fichas"] > div > :first-child { width: 22px !important; height: 22px !important; }
+.br-cel .br-camp-int > [data-br="fichas"] > div > span:nth-child(2) { font-size: 13px !important; }
+.br-cel .br-camp-int > [data-br="fichas"] > div > span:nth-child(3) { font-size: 8.5px !important; }
+.br-cel .br-camp-int > [data-br="progreso"] { flex: 0 0 100%; margin-top: 0 !important; }
+.br-cel .br-camp-llaves .br-camp-int > [data-br="fichas"] > div { flex-direction: row !important; justify-content: center; align-items: center; padding: 3px 4px !important; gap: 4px !important; }
+.br-cel .br-camp-llaves .br-camp-int > [data-br="fichas"] > div > :first-child { width: 18px !important; height: 18px !important; }
+.br-cel .br-camp-llaves .br-camp-int > [data-br="fichas"] > div > span:nth-child(3) { display: none; }
+.br-cel .br-camp-int > [data-br="progreso"] > div:first-child { font-size: 11.5px !important; margin-bottom: 3px !important; }
+.br-cel .br-principal { flex: 1 1 auto !important; min-height: 0; display: flex; flex-direction: column; margin-bottom: 8px !important; }
+.br-cel .br-principal-int { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: auto !important; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+.br-cel .br-principal-int > * { flex-shrink: 0; }
+.br-cel .br-principal.br-llaves .br-principal-int { padding: 20px 6px 8px !important; }
+.br-cel .br-principal.br-sala .br-principal-int { padding: 20px 10px 10px !important; }
+.br-cel .br-scroll { overflow: visible !important; padding-bottom: 0 !important; }
+`;
+
 // ---------- Pantalla ----------
 
 // Pase 684: `datosSimulados = { torneo, partidos }` (galería de pantallas del admin) dibuja la sala / el bracket con datos de ejemplo,
@@ -111,6 +162,24 @@ export default function BracketView({ torneoId, usuario, token, onVolver, onEntr
   const [cargandoAmigos, setCargandoAmigos] = useState(false);
   const [invitandoId, setInvitandoId] = useState(null);
   const headers = { 'Authorization': `Bearer ${token}` };
+  // Pase 701: en el celular la pantalla mide lo que queda libre (menos el menú de abajo) y no scrollea; el cuadro scrollea adentro.
+  const esCel = useEsCelBracket();
+  const raizRef = useRef(null);
+  const [altoPantalla, setAltoPantalla] = useState(0);
+  useEffect(() => {
+    if (!esCel) { setAltoPantalla(0); return undefined; }
+    const medir = () => {
+      const el = raizRef.current;
+      if (!el) return;
+      const arriba = el.getBoundingClientRect().top + (window.scrollY || 0);
+      const h = Math.max(320, Math.round(window.innerHeight - arriba - 90));
+      setAltoPantalla((p) => (Math.abs(p - h) > 1 ? h : p));
+    };
+    medir();
+    const t = setInterval(medir, 600);
+    window.addEventListener('resize', medir);
+    return () => { clearInterval(t); window.removeEventListener('resize', medir); };
+  }, [esCel, torneoId]);
 
   const abrirSelectorAmigos = async () => {
     setSelectorAbierto(true);
@@ -284,7 +353,9 @@ export default function BracketView({ torneoId, usuario, token, onVolver, onEntr
   const cantidadPorRonda = numerosRonda.map((n) => rondas[n].length);
   const llaveCompleta = cantidadPorRonda.every((c, i) => i === 0 || c * 2 === cantidadPorRonda[i - 1]);
   const cantidadRonda1 = cantidadPorRonda[0] || 1;
-  const unidad = ALTO_PARTIDO + SEPARACION;
+  const altoP = esCel ? 92 : ALTO_PARTIDO;
+  const anchoP = esCel ? 178 : ANCHO_PARTIDO;
+  const unidad = altoP + (esCel ? 12 : SEPARACION);
 
   const colorLinea = (activa) => (activa ? C.doradoClaro : 'rgba(255,248,237,0.45)');
 
@@ -305,7 +376,8 @@ export default function BracketView({ torneoId, usuario, token, onVolver, onEntr
   );
 
   return (
-    <div style={estilos.contenedor}>
+    <div ref={raizRef} className={esCel ? 'br-cel' : undefined} style={{ ...estilos.contenedor, ...(esCel && altoPantalla ? { height: altoPantalla } : null) }}>
+      {esCel && <style id="bracket-celular-701">{CSS_BRACKET_CEL}</style>}
 
       <PopupMadera
         visible={selectorAbierto}
@@ -345,29 +417,30 @@ export default function BracketView({ torneoId, usuario, token, onVolver, onEntr
       </PopupMadera>
 
       {/* ---- Encabezado ---- */}
-      <Marco style={{ marginBottom: 16 }} innerStyle={estilos.headerInterior}>
-        <button onClick={onVolver} style={estilos.btnVolver}><img src="/assets/images/boton-volver.webp" alt="" draggable="false" style={{ width: 24, height: 24, verticalAlign: 'middle', marginRight: 6 }} />Volver</button>
+      <Marco clase="br-marco br-head" style={{ marginBottom: 16 }} innerStyle={estilos.headerInterior} claseInterior="br-head-int">
+        <button onClick={onVolver} className="br-volver" aria-label="Volver" style={estilos.btnVolver}><img src="/assets/images/boton-volver.webp" alt="" draggable="false" style={{ width: 24, height: 24, verticalAlign: 'middle', marginRight: 6 }} /><span className="br-volver-txt">Volver</span></button>
         <img src="/assets/images/trofeo.png" alt="" style={estilos.headerTrofeo} />
         <div style={estilos.headerCentro}>
-          <div style={estilos.pageTitle}>{torneo.titulo}</div>
+          <div data-br="titulo" style={estilos.pageTitle}>{torneo.titulo}</div>
           <div style={estilos.headerChips}>
             <span style={estilos.chipInfo}>{torneo.modo}</span>
             <span style={estilos.chipInfo}>{cupoTotal} equipos</span>
             {torneo.privado && <span style={estilos.chipInfo}>Privado</span>}
+            {esCel && <span className="br-pill" style={{ ...estilos.pill, ...estadoEstilo }}>{estadoTexto}</span>}
           </div>
         </div>
-        <div style={{ ...estilos.pill, ...estadoEstilo }}>{estadoTexto}</div>
+        {!esCel && <div style={{ ...estilos.pill, ...estadoEstilo }}>{estadoTexto}</div>}
       </Marco>
 
       {/* ---- Copa, campeón y datos del torneo ---- */}
-      <Marco cinta="CAMPEÓN" interior="fieltro" innerStyle={{ padding: '26px 14px 16px', textAlign: 'center' }}>
+      <Marco clase={`br-marco br-camp${totalPartidos > 0 ? ' br-camp-llaves' : ''}`} claseInterior="br-camp-int" cinta="CAMPEÓN" interior="fieltro" innerStyle={{ padding: '26px 14px 16px', textAlign: 'center' }}>
         <img src="/assets/images/trofeo.png" alt="" style={estilos.copaImg} />
-        <div style={{ ...estilos.placaCampeon, ...(nombreCampeon ? estilos.placaCampeonListo : null) }}>
+        <div data-br="placa" style={{ ...estilos.placaCampeon, ...(nombreCampeon ? estilos.placaCampeonListo : null) }}>
           {nombreCampeon || 'Por definir'}
         </div>
-        {nombreCampeon && <div style={estilos.felicitaciones}>¡Felicitaciones al campeón!</div>}
+        {nombreCampeon && <div data-br="felicita" style={estilos.felicitaciones}>¡Felicitaciones al campeón!</div>}
 
-        <div style={estilos.fichas}>
+        <div data-br="fichas" style={estilos.fichas}>
           <Ficha icono="/assets/images/icono-personaje.png" mascara valor={`${enSala ? equiposListos : cupoTotal}/${cupoTotal}`} label="Equipos" />
           <Ficha icono="/assets/images/icono-cartas-nueva.png" valor={torneo.modo} label="Modo" />
           {torneo.puntos_para_ganar != null && (
@@ -380,7 +453,7 @@ export default function BracketView({ torneoId, usuario, token, onVolver, onEntr
         </div>
 
         {totalPartidos > 0 && (
-          <div style={estilos.progresoBox}>
+          <div data-br="progreso" style={estilos.progresoBox}>
             <div style={estilos.progresoTexto}>{partidosFinalizados} de {totalPartidos} partidos jugados</div>
             <BarraPlana porcentaje={progreso} claro />
           </div>
@@ -389,7 +462,7 @@ export default function BracketView({ torneoId, usuario, token, onVolver, onEntr
 
       {/* ---- Sala del torneo (inscripción) ---- */}
       {enSala ? (
-        <Marco cinta="SALA DEL TORNEO" innerStyle={{ padding: '24px 14px 14px' }}>
+        <Marco clase="br-marco br-principal br-sala" claseInterior="br-principal-int" cinta="SALA DEL TORNEO" innerStyle={{ padding: '24px 14px 14px' }}>
           <div style={estilos.salaSub}>
             {equiposListos} de {cupoTotal} equipos listos · el bracket se arma cuando se completa el cupo
           </div>
@@ -474,14 +547,14 @@ export default function BracketView({ torneoId, usuario, token, onVolver, onEntr
           </div>
         </Marco>
       ) : totalPartidos === 0 ? (
-        <Marco cinta="BRACKET" innerStyle={{ padding: '30px 18px 22px', textAlign: 'center' }}>
+        <Marco clase="br-marco br-principal" claseInterior="br-principal-int" cinta="BRACKET" innerStyle={{ padding: '30px 18px 22px', textAlign: 'center' }}>
           <img src="/assets/images/trofeo.png" alt="" style={{ height: 52, width: 'auto', objectFit: 'contain', marginBottom: 6 }} />
           <div style={estilos.vacioTitulo}>El bracket todavía se está armando</div>
           <div style={estilos.vacioTexto}>En cuanto se completen los cupos vas a ver acá los cruces de cada ronda.</div>
         </Marco>
       ) : (
-        <Marco cinta="LLAVES DEL TORNEO" interior="fieltro" innerStyle={{ padding: '24px 8px 12px' }}>
-          <div style={estilos.bracketScroll}>
+        <Marco clase="br-marco br-principal br-llaves" claseInterior="br-principal-int" cinta="LLAVES DEL TORNEO" interior="fieltro" innerStyle={{ padding: '24px 8px 12px' }}>
+          <div className="br-scroll" style={estilos.bracketScroll}>
             <div style={estilos.bracket}>
               {numerosRonda.map((numRonda, idxRonda) => {
                 const esRondaFinal = numRonda === ultimaRonda;
@@ -490,7 +563,7 @@ export default function BracketView({ torneoId, usuario, token, onVolver, onEntr
                 const dibujarSalida = llaveCompleta && !esRondaFinal;
                 const dibujarEntrada = llaveCompleta && idxRonda > 0;
                 return (
-                  <div key={numRonda} style={{ ...estilos.ronda, width: ANCHO_PARTIDO + MARGEN_LINEA * 2 }}>
+                  <div key={numRonda} style={{ ...estilos.ronda, width: anchoP + MARGEN_LINEA * 2 }}>
                     <div style={{ ...estilos.rondaTitulo, ...(esRondaFinal ? estilos.rondaTituloFinal : null) }}>
                       {nombreDeRonda(cruces.length, numRonda)}
                     </div>
@@ -514,7 +587,7 @@ export default function BracketView({ torneoId, usuario, token, onVolver, onEntr
                               <span style={{ ...estilos.lineaVertical, background: colorLinea(terminado), ...(idx % 2 === 0 ? { top: '50%', bottom: 0 } : { top: 0, bottom: '50%' }) }} />
                             </>
                           )}
-                          <div style={{ ...estilos.match, ...(esRondaFinal ? estilos.matchFinal : null), ...(mio && p.estado === 'jugando' ? estilos.matchMio : null) }}>
+                          <div style={{ ...estilos.match, width: anchoP, height: altoP, ...(esRondaFinal ? estilos.matchFinal : null), ...(mio && p.estado === 'jugando' ? estilos.matchMio : null) }}>
                             {renderLado({ nombre: nombreA, jugadores: p.jugadores_a, gana: gananA, esCampeon: esElCampeonA, mio: p.jugadores_a && p.jugadores_a.includes(usuario.username) })}
                             <div style={estilos.matchSeparador} />
                             {renderLado({ nombre: nombreB, jugadores: p.jugadores_b, gana: gananB, esCampeon: esElCampeonB, mio: p.jugadores_b && p.jugadores_b.includes(usuario.username) })}
