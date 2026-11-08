@@ -47,7 +47,9 @@
 .ao-cabecera { display: flex; flex-direction: column; gap: 8px; flex: 0 0 auto; }
 .ao-fila-titulo { display: flex; align-items: center; gap: 8px; }
 .ao-titulo {
-  flex: 1;
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
   margin: 0;
   display: flex; align-items: center; justify-content: center; gap: 8px;
   font-family: 'Fredoka', 'Nunito', sans-serif;
@@ -325,8 +327,13 @@
   .ao-cinta { height: 22px; }
   .ao-cinta-placa { font-size: 12px; padding: 0 12px; }
 }
-@media (max-width: 400px) {
+@media (max-width: 460px) {
   .ao-titulo-icono { display: none; }
+  .ao-fila-titulo { gap: 6px; }
+  .ao-limpiar { padding: 0 12px; }
+}
+@media (max-width: 400px) {
+  .ao-titulo { font-size: 14px; letter-spacing: 0; }
   .ao-segmento button { padding: 0 9px; font-size: 13px; }
 }
 @media (prefers-reduced-motion: reduce) {
