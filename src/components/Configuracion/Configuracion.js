@@ -97,17 +97,17 @@ const CSS_AJUSTES_CEL = `
 .cf-lista { flex: 0 0 auto; border-radius: 16px; border: 3px solid #1a1410; padding: 8px;
   background: linear-gradient(160deg, #6b4534 0%, #4a2c2a 55%, #2d1810 100%); box-shadow: inset 0 2px 0 rgba(255,255,255,0.10), 0 4px 0 #0e0805; }
 .cf-lista-int { background: #F4E2C2; border: 2px solid #C9A66B; border-radius: 12px; overflow: hidden; }
-.cf-fila { display: flex; align-items: center; gap: 10px; width: 100%; box-sizing: border-box; padding: 0 12px; border: 0; background: transparent; text-align: left;
+.cf-fila { display: flex; align-items: center; gap: 12px; width: 100%; box-sizing: border-box; padding: 0 14px; border: 0; background: transparent; text-align: left;
   font-family: 'Nunito', sans-serif; color: #4A2C2A; cursor: pointer; }
 .cf-fila + .cf-fila { border-top: 1.5px solid rgba(74,44,42,0.16); }
-.cf-fila-ico { width: 30px; height: 30px; object-fit: contain; flex: 0 0 auto; }
-.cf-fila-emo { width: 30px; text-align: center; font-size: 22px; flex: 0 0 auto; }
-.cf-fila-mini { width: 38px; height: 38px; object-fit: contain; flex: 0 0 auto; }
+.cf-fila-ico { width: 36px; height: 36px; object-fit: contain; flex: 0 0 auto; }
+.cf-fila-emo { width: 36px; text-align: center; font-size: 26px; flex: 0 0 auto; }
+.cf-fila-mini { width: 44px; height: 44px; object-fit: contain; flex: 0 0 auto; }
 .cf-fila-txt { flex: 1 1 auto; min-width: 0; }
-.cf-fila-tit { display: block; font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 15.5px; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.cf-fila-val { display: block; font-weight: 700; font-size: 11.5px; color: #7a5a3a; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.cf-fila-flecha { font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 24px; color: #C9860E; flex: 0 0 auto; line-height: 1; }
-.cf-fila-sw { width: 50px; height: 26px; flex: 0 0 auto; }
+.cf-fila-tit { display: block; font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 18px; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cf-fila-val { display: block; font-weight: 700; font-size: 13.5px; color: #7a5a3a; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cf-fila-flecha { font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 30px; color: #C9860E; flex: 0 0 auto; line-height: 1; }
+.cf-fila-sw { width: 56px; height: 29px; flex: 0 0 auto; }
 .cf-fila-peligro .cf-fila-tit { color: #9c2418; }
 .cf-cel .cf-cont { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 .cf-cel .cf-cont.cf-cont-pie { flex: 0 0 auto; overflow: visible; }
@@ -814,7 +814,7 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
 
   // Pase 695: alto de cada fila (celular) = lo que sobra repartido entre las filas de la pestaña.
   const cantFilasCel = pestana === 'perfil' ? (usuario?.foto_perfil_url ? 4 : 3) : 7;
-  const altoFilaCel = Math.max(46, Math.min(pestana === 'perfil' ? 84 : 66, Math.floor(((altoPantalla || 560) - 182) / cantFilasCel)));
+  const altoFilaCel = Math.max(46, Math.min(pestana === 'perfil' ? 70 : 66, Math.floor(((altoPantalla || 560) - 182) / cantFilasCel)));
 
   return (
     <div ref={pantallaRef} className={esCel ? 'cf-cel' : undefined} style={esCel && altoPantalla ? { height: altoPantalla } : undefined}>
