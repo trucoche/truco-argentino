@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { leerOrigen } from '../../utils/origenRegistro';
 import { API_URL as BASE_URL } from '../../config';
 
 const API_URL = `${BASE_URL}/api/auth`;
@@ -126,7 +127,7 @@ export default function AuthScreen({ onLoginExitoso, onOlvidoPassword, onIrAnota
     const endpoint = modo === 'login' ? '/login' : '/registro';
     const body = modo === 'login'
       ? { email: form.email, password: form.password }
-      : form;
+      : { ...form, ...leerOrigen() };
 
     try {
       const res = await fetch(`${API_URL}${endpoint}`, {
@@ -163,7 +164,7 @@ export default function AuthScreen({ onLoginExitoso, onOlvidoPassword, onIrAnota
       const res = await fetch(`${API_URL}/google`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ credential: response.credential })
+        body: JSON.stringify({ credential: response.credential, ...leerOrigen() })
       });
       const data = await res.json();
 
@@ -197,7 +198,7 @@ const handleFacebookResponse = (response) => {
   fetch(`${API_URL}/facebook`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ accessToken: response.authResponse.accessToken })
+    body: JSON.stringify({ accessToken: response.authResponse.accessToken, ...leerOrigen() })
   })
     .then(res => res.json().then(data => ({ ok: res.ok, data })))
     .then(({ ok, data }) => {

@@ -91,6 +91,21 @@ export function AdminResumen({ token }) {
             <Ficha etiqueta="Denuncias sin revisar" valor={num(datos.pendientes.denuncias)} color={datos.pendientes.denuncias ? C.rojo : undefined} />
             <Ficha etiqueta="Cuentas suspendidas" valor={num(datos.usuarios.suspendidos)} />
           </div>
+          <div style={estilos.subtitulo}>Origen de los registros (links con ?utm_source=…&utm_medium=…)</div>
+          {!datos.origenes ? (
+            <p style={estilos.pie}>No se pudo leer el origen de los registros.</p>
+          ) : (
+            <div style={estilos.lista}>
+              {datos.origenes.map((o) => (
+                <div key={`${o.fuente}|${o.medio}`} style={estilos.fila}>
+                  <div style={{ flex: 1 }}>
+                    <div style={estilos.filaTitulo}>{o.fuente}{o.medio ? ` · ${o.medio}` : ''}</div>
+                    <div style={estilos.filaDetalle}>7 días: {num(o.d7)} · 30 días: {num(o.d30)} · total: {num(o.total)}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
           <div style={estilos.subtitulo}>Eventos y variables (solo lectura; se cambian en Railway)</div>
           <div style={estilos.lista}>
             {datos.eventos.map((ev) => (

@@ -1,6 +1,10 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import { guardarOrigenInicial } from './utils/origenRegistro';
+
+// Pase 706: guarda utm_source / utm_medium de la primera visita (para saber qué publicación trae jugadores).
+guardarOrigenInicial();
 
 // Pase 671: sin el margen de 8 px que trae el navegador por defecto (dejaba una franja blanca arriba/izquierda y
 // corría todo hacia la derecha en el celular).
