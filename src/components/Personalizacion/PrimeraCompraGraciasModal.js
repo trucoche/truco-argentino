@@ -22,7 +22,7 @@ function encabezados(token) {
 }
 
 export function PrimeraCompraGraciasModal({ visible, equipando = false, onEquipar, onCerrar }) {
-  const hueco = ANILLO.hueco || 0.69;
+  const hueco = ANILLO.hueco || 0.75;
   return (
     <PopupMadera
       visible={visible}

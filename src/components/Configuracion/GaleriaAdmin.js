@@ -1,8 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { PlacaMadera } from '../Popup/PopupMadera';
 import PopupMadera from '../Popup/PopupMadera';
-import BracketView from '../Torneos/BracketView';
-import { generarSimulacion, etapasDisponibles, SIM_MODOS, SIM_CUPOS } from '../Torneos/bracketSimulado';
+import { etapasDisponibles, SIM_MODOS, SIM_CUPOS } from '../Torneos/bracketSimulado';
 import { CSS_EVENTOS, EventoCard, EventoDetalle } from '../Eventos/EventosLiga';
 import { RegaloAvisoModal } from '../Regalo/RegaloAvisoModal';
 import { KitFundadorModal } from '../Personalizacion/KitFundadorModal';
@@ -93,10 +92,6 @@ export default function GaleriaAdmin() {
 
   const etapas = useMemo(() => etapasDisponibles(bCupo), [bCupo]);
   const etapaValida = etapas.some((e) => e.id === bEtapa) ? bEtapa : 'sala-media';
-  const datosBracket = useMemo(() => {
-    const sim = generarSimulacion({ modo: bModo, cupo: bCupo, etapa: etapaValida, yo: 'vos' });
-    return { ...sim, torneo: { ...sim.torneo, titulo: 'Copa Criolla' } };
-  }, [bModo, bCupo, etapaValida]);
   const eventos = useMemo(() => eventosEjemplo(eventosAbiertos), [eventosAbiertos]);
   const evento = eventos.find((e) => e.id === eventoSel) || eventos[0];
   const cap = CAPACIDAD[modo];
@@ -104,15 +99,16 @@ export default function GaleriaAdmin() {
 
   const celular = ancho < 900;
   const alto = celular ? Math.round(ancho * 2.05) : 640;
-  const usaIframe = seccion === 'final' || seccion === 'espera' || seccion === 'mesa';
+  const usaIframe = seccion === 'bracket' || seccion === 'final' || seccion === 'espera' || seccion === 'mesa';   // Pase 710: el bracket también va en iframe (para que valga el diseño de celular)
 
   const urlIframe = useMemo(() => {
+    if (seccion === 'bracket') return `/?galeria=bracket&modo=${bModo}&cupo=${bCupo}&etapa=${etapaValida}`;
     const q = [`preview=${modo}`];
     if (seccion === 'final') q.push(`final=${gano ? '1' : 'perdiste'}`);
     if (seccion === 'espera') { q.push(`espera=${sentadosOk}`); if (ranked) q.push('ranked=1'); }
     if (seccion === 'mesa' && canto) q.push(`canto=${canto}`);
     return `/?${q.join('&')}`;
-  }, [seccion, modo, gano, sentadosOk, ranked, canto]);
+  }, [seccion, modo, gano, sentadosOk, ranked, canto, bModo, bCupo, etapaValida]);
 
   const chip = (activo) => ({ ...estilos.chip, ...(activo ? estilos.chipActivo : {}) });
   const chips = (lista, valor, alElegir, key = (x) => x, texto = (x) => x) => (
@@ -280,23 +276,6 @@ export default function GaleriaAdmin() {
           <div style={estilos.pantalla}>
             {usaIframe && (
               <iframe key={`${urlIframe}-${ancho}-${recarga}`} title="Vista previa de la pantalla" src={urlIframe} style={estilos.iframe} />
-            )}
-
-            {seccion === 'bracket' && (
-              <div style={estilos.scroll}>
-                <div style={{ padding: celular ? '12px 8px' : '16px' }}>
-                  <BracketView
-                    key={`${bModo}-${bCupo}-${etapaValida}`}
-                    torneoId="galeria"
-                    usuario={{ username: 'vos', id: 1 }}
-                    token=""
-                    datosSimulados={datosBracket}
-                    onVolver={() => {}}
-                    onEntrarAPartida={() => {}}
-                    onAnotarme={() => {}}
-                  />
-                </div>
-              </div>
             )}
 
             {seccion === 'eventos' && (

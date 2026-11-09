@@ -8,6 +8,7 @@ import Ranking from './components/Ranking/Ranking';
 import Ranked from './components/Ranked/Ranked';
 import Torneos from './components/Torneos/Torneos';
 import BracketView from './components/Torneos/BracketView';
+import GaleriaBracketPagina from './components/Torneos/GaleriaBracketPagina';
 import BotonTorneoFlotante from './components/Torneos/BotonTorneoFlotante';
 import AppShell from './components/AppShell/AppShell';
 import Historial from './components/Historial/Historial';
@@ -81,6 +82,7 @@ function AppInterna() {
   const [resetToken, setResetToken] = useState(null);
   const [verificarToken, setVerificarToken] = useState(null);
   const [eliminacionToken, setEliminacionToken] = useState(null);
+  const [galeriaBracket, setGaleriaBracket] = useState(null);   // Pase 710
   const [codigoParaUnirse, setCodigoParaUnirse] = useState('');
   // Pase siguiente: logros recién desbloqueados en la última partida (ver
   // LogroDesbloqueadoPopup.js) — se llena desde GameOnlinePhaser justo
@@ -253,6 +255,13 @@ function AppInterna() {
     if (path === '/confirmar-eliminacion') {
       setEliminacionToken(params.get('token'));
       setPantalla('confirmar-eliminacion');
+      return;
+    }
+
+    // Pase 710: página de la galería de admin con el bracket de ejemplo (va dentro de un <iframe>, ver GaleriaAdmin).
+    if (params.get('galeria') === 'bracket') {
+      setGaleriaBracket({ modo: params.get('modo') || '2v2', cupo: Number(params.get('cupo')) || 8, etapa: params.get('etapa') || 'sala-media' });
+      setPantalla('galeria-bracket');
       return;
     }
 
@@ -617,6 +626,8 @@ function AppInterna() {
         }}
       />
     );
+  } else if (pantalla === 'galeria-bracket' && galeriaBracket) {
+    contenido = <GaleriaBracketPagina modo={galeriaBracket.modo} cupo={galeriaBracket.cupo} etapa={galeriaBracket.etapa} />;
   } else if (pantalla === 'eliminar-cuenta-publica') {
     contenido = (
       <SolicitarEliminacionCuenta

@@ -19,7 +19,7 @@ export const ANILLOS = [
   { id: 'cafecito', nombre: 'Sponsor Criollo', imagen: BASE + '/anillos/anillo_cafecito.png', hueco: 0.677, ...SPONSOR },
   { id: 'tester', nombre: 'Beta Tester', imagen: BASE + '/anillos/anillo_tester.png', hueco: 0.635, ...KIT },
   { id: 'pionero', nombre: 'Sol de Mayo', imagen: BASE + '/anillos/anillo_pionero.webp', hueco: 0.547, escalaHeader: 1.25, ...LIBRE, rangoMin: 10 },
-  { id: 'primera-compra', nombre: 'Pack Primera Compra', imagen: BASE + '/anillos/anillo_primera-compra.webp', hueco: 0.69, ...PRIMERA_COMPRA },
+  { id: 'primera-compra', nombre: 'Pack Primera Compra', imagen: BASE + '/anillos/anillo_primera-compra.webp', hueco: 0.75, ...PRIMERA_COMPRA },
 ];
 
 export const BANNERS = [

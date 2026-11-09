@@ -2169,15 +2169,16 @@ _crearCartelVictoria(id, texto, detalle, opts = {}) {
   const ancho = opts.ancho || 260;
   const alto = ancho / cfg.proporcion;
   const img = this.add.image(0, 0, cfg.cuadros[0].clave).setDisplaySize(ancho, alto);
-  const label = this.add.text(0, detalle ? -12 : 0, texto, {
-    fontFamily: 'Fredoka, Arial', fontSize: '30px', fontStyle: '700', color: cfg.colorTitulo,
-    stroke: '#2C160E', strokeThickness: 5,
+  const k = ancho / 260;   // el texto crece junto con el panel
+  const label = this.add.text(0, detalle ? -12 * k : 0, texto, {
+    fontFamily: 'Fredoka, Arial', fontSize: `${Math.round(30 * k)}px`, fontStyle: '700', color: cfg.colorTitulo,
+    stroke: '#2C160E', strokeThickness: Math.round(5 * k),
   }).setOrigin(0.5);
   const hijos = [img, label];
   if (detalle) {
-    hijos.push(this.add.text(0, 20, detalle, {
-      fontFamily: 'Fredoka, Arial', fontSize: '12px', fontStyle: '600', color: cfg.colorDetalle,
-      stroke: '#2C160E', strokeThickness: 3,
+    hijos.push(this.add.text(0, 20 * k, detalle, {
+      fontFamily: 'Fredoka, Arial', fontSize: `${Math.round(12 * k)}px`, fontStyle: '600', color: cfg.colorDetalle,
+      stroke: '#2C160E', strokeThickness: Math.max(3, Math.round(3 * k)),
     }).setOrigin(0.5));
   }
   const contenedor = this.add.container(400, opts.y || 64, hijos).setDepth(opts.depth || 903);
@@ -2353,8 +2354,41 @@ _esperaDy(k, G) {
     const obj3 = Math.max(v.yTop + v.h - 64, obj2 + 70);
     return [v.yTop + 170, obj1, obj2, obj3][k] - diseno[k];
   }
-  const extra = Math.max(0, v.h - 600);
-  return (v.yTop < 0 ? v.yTop : 0) + (extra * (k + 1)) / (G + 1);
+  // Pase 709: en 2v2/3v3 del celular los aros crecen (ver _escalaEsperaEquipos); ese crecimiento (`_esperaCrecimiento`) sale del
+  // sobrante que se reparte y los bloques de abajo (estado y botón) bajan lo mismo, así nada se pisa.
+  const g = (this._L && G === 6) ? (this._esperaCrecimiento || 0) : 0;
+  const extra = Math.max(0, v.h - 600 - g);
+  return (v.yTop < 0 ? v.yTop : 0) + (extra * (k + 1)) / (G + 1) + (k >= 4 ? g : 0);
+}
+
+// Pase 709: factor de escala `e` de la grilla de la sala de espera de 2v2/3v3 (n = jugadores por equipo). En escritorio nunca pasa de 1
+// (como antes); en el celular crece hasta llenar ~92 % del ancho y el alto libre de la vista (tope 1.9). Guarda cuánto alto suma el
+// crecimiento (`_esperaCrecimiento`) para que _esperaDy lo descuente del reparto.
+_escalaEsperaEquipos(n) {
+  const T0 = 92, GAP0 = 16;
+  const medir = (tam) => {
+    const est = { fontFamily: 'Fredoka, Arial', fontSize: `${tam}px`, fontStyle: '700' };
+    const a1 = this.add.text(0, 0, '✓ Conectado', est);
+    const a2 = this.add.text(0, 0, 'Conectando...', est);
+    const w = Math.ceil(Math.max(a1.width, a2.width));
+    a1.destroy(); a2.destroy();
+    return w;
+  };
+  const pill0 = Math.max(medir(15) + 32, 110);
+  const paso0 = Math.max(T0 * 1.125, pill0) + GAP0;
+  const fila0 = (n - 1) * paso0 + pill0;
+  const v = this._vistaEspera();
+  const anchoVista = Math.min(760, v.w) - 24;
+  let e = Math.max(0.55, Math.min(1, anchoVista / fila0));
+  this._esperaCrecimiento = 0;
+  if (this._L) {
+    const eAncho = (anchoVista * 0.92) / fila0;
+    const eAlto = 1 + (Math.max(0, v.h - 600) - 400) / 361;   // 337 = lo que suma el bloque de filas por cada +1 de escala (337 de aros/píldoras/escudo + 24 del aire de las dos etiquetas); 400 = sobrante que se deja para el aire entre bloques (estado, contador y botón)
+    const eGrande = Math.min(1.9, eAncho, eAlto);
+    if (eGrande > e) e = eGrande;
+    this._esperaCrecimiento = e > 1 ? 361 * (e - 1) : 0;
+  }
+  return e;
 }
 
 _actualizarTextoBuscando() {
@@ -2419,6 +2453,8 @@ _redibujarFilaEspera() {
 
   // Pase 346: el modo ("1v1") va en una mini píldora dorada dentro del cartel.
   // Pase 436: en 2v2/3v3 el cartel sube (y=100, antes 130) para aprovechar la franja vacía de arriba.
+  // Pase 709: el crecimiento de la grilla de equipos se fija ANTES de ubicar título, texto de estado y botón.
+  if (this._capacidadSala > 2) this._escalaEsperaEquipos(this._capacidadSala / 2); else this._esperaCrecimiento = 0;
   this._actualizarBannerEsperaTitulo('Esperando jugadores', this._modoSala, this._textoDetalleSala(), this._capacidadSala > 2 ? { y: 64 + this._esperaDy(0, 6) } : { y: 105 + this._esperaDy(0, 4), anchoMax: this._L ? this._vistaEspera().w * 0.86 : 0, escalaMax: 1.3 });
   this._actualizarTextoBuscando();
 
@@ -2515,11 +2551,7 @@ _dibujarGrillaEquiposEspera(total, pendientes) {
     a1.destroy(); a2.destroy();
     return w;
   };
-  const pill0 = Math.max(medir(15) + 32, 110);
-  const paso0 = Math.max(T0 * 1.125, pill0) + GAP0;
-  const fila0 = (n - 1) * paso0 + pill0;
-  const anchoVista = Math.min(760, this._vistaEspera().w) - 24;
-  const e = Math.max(0.55, Math.min(1, anchoVista / fila0));
+  const e = this._escalaEsperaEquipos(n);   // Pase 709: en el celular los aros crecen para llenar la vista
 
   const T = T0 * e;
   const radioAro = T * 0.5625;
@@ -2546,10 +2578,11 @@ _dibujarGrillaEquiposEspera(total, pendientes) {
   const VS = 62 * e;                                    // Pase 436: escudo +20 % (52 → 62)
   const pb = 34 * e + 3;                                // alto desde el borde del aro hasta el pie de la píldora
   const yEtiqueta1 = 124 + this._esperaDy(1, 6);
-  const cy1 = yEtiqueta1 + 14 + radioAro;
+  const gapEtq = Math.max(0, 12 * (e - 1));                           // Pase 709: las etiquetas crecen con `e`, el aire que dejan también
+  const cy1 = yEtiqueta1 + 14 + gapEtq + radioAro;
   const yVs = cy1 + radioAro + pb + 2 + VS / 2 + (this._esperaDy(2, 6) - this._esperaDy(1, 6));
   const cy2 = yVs + VS / 2 + 2 + radioAro + (this._esperaDy(3, 6) - this._esperaDy(2, 6));
-  const yEtiqueta2 = cy2 + radioAro + pb + 10;
+  const yEtiqueta2 = cy2 + radioAro + pb + 16 + gapEtq;   // Pase 709: 10 → 16 (la etiqueta tocaba las píldoras)
 
   etiqueta('TU EQUIPO', yEtiqueta1);
   armar(miEquipo).forEach((j, i) => this._dibujarTileEspera(inicioX + i * paso, cy1, T / 2, j, pendientes, true, e));
@@ -3315,7 +3348,15 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
     // 1) Cartel de caoba con el resultado
     const textoCartel = modo === 'victoria' ? '¡GANASTE!' : (modo === 'derrota' ? 'PERDISTE' : 'Sala cancelada');
     // Pase 708: en la victoria el cartel es el panel con luces que se alternan (si no cargó, queda el de caoba de siempre).
-    let cartel = modo === 'victoria' ? this._crearCartelVictoria('base', textoCartel, detalle, { y: 64, depth: 903 }) : null;
+    // Pase 710: en el 1v1 del celular el panel crece (hasta ~80 % del ancho visible) y ocupa el hueco que hay sobre los avatares.
+    let anchoCartel = 260, yCartel = 64;
+    if (finalGrande && !gridN) {
+      const visW = this.scale.width / this.cameras.main.zoom;
+      const libreAlto = Math.max(216, Math.round(0.345 * HnFinal)) - 164 / 2 - 20 - 14;   // desde y=14 hasta 20 px sobre los avatares
+      anchoCartel = Math.round(Math.max(260, Math.min(visW * 0.8, 2 * libreAlto, 420)));
+      yCartel = 14 + anchoCartel / 4;
+    }
+    let cartel = modo === 'victoria' ? this._crearCartelVictoria('base', textoCartel, detalle, { y: yCartel, ancho: anchoCartel, depth: 903 }) : null;
     const cartelConLuces = !!cartel;
     if (!cartel) {
       this._actualizarBannerEsperaTitulo(textoCartel, null, detalle, {
@@ -3714,6 +3755,13 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
       // Pase 668: en el celular la barra no puede ser más ancha que lo que muestra la cámara (se cortaba en los costados).
       const visMundoR = this._L ? this.scale.width / this.cameras.main.zoom : 800;
       const wR = Math.min(560, Math.floor(visMundoR * (finalGrande ? 0.92 : 0.92))), hR = gridN ? 78 : (finalGrande ? 62 : 50), xR = 400 - wR / 2, anchoCelda = wR / celdas.length;
+      // Pase 709: la botonera se ancla más abajo (ver más adelante); en vez de dejar todo el hueco entre la barra de datos y
+      // "Pedir revancha", la barra baja hasta que el aire de arriba y el de abajo queden parejos.
+      if (finalGrande) {
+        const objetivoBotones = Math.round((gridN ? 0.78 : 0.69) * HnFinal);
+        const libre = objetivoBotones - (y + hR + 24);
+        if (libre > 28) y += Math.round((libre - 28) / 2);
+      }
       const panelR = this.add.graphics().setDepth(904);
       panelR.fillStyle(0x140C08, 0.55);
       panelR.fillRoundedRect(xR, y, wR, hR, 12);
