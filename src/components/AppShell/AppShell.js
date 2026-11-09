@@ -318,7 +318,7 @@ export default function AppShell({
           pedido, esa pantalla ya tiene su propio contenido promocional
           (la cinta de descuento del pack de Inauguración) y no necesita
           además la invitación a torneos arriba. */}
-      {bannerTexto && !['lobby', 'torneos', 'config', 'perfil', 'tienda', 'ranked', 'chat'].includes(pantallaActiva) && (
+      {bannerTexto && !['lobby', 'torneos', 'config', 'perfil', 'tienda', 'ranked', 'chat', 'ranking'].includes(pantallaActiva) && (
         // Bug real encontrado (pase siguiente): este banner tenía su
         // propia copia vieja del botón — imagen de fondo Y texto los dos
         // directo en el <button> `.ts-banner`, sin el glow (`.ts-banner-

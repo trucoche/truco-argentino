@@ -364,7 +364,14 @@ export default function Ranking({ token, usuarioActual }) {
                   >
                     <div style={wrap}>
                       <img src={`/assets/images/${marco}`} alt="" style={estilos.marcoAvatarImg} />
-                      <img src={avatarSrcCaraDe(p)} alt="" style={foto} />
+                      {key === 'oro'
+                        ? <img src={avatarSrcCaraDe(p)} alt="" style={foto} />
+                        : (
+                          /* Pase 705: en plata/bronce el busto quedaba chico y dejaba un hueco blanco contra el borde de abajo del anillo; ahora va en un recorte circular un poco mayor que el hueco (el anillo tapa el borde) y más grande, apoyado en el borde inferior. */
+                          <div style={estilos.marcoAvatarClipChico}>
+                            <img src={avatarSrcCaraDe(p)} alt="" style={p?.avatar_tipo === 'foto' ? { ...estilos.marcoAvatarFotoClipChico, transform: 'translate(-50%, -50%)' } : estilos.marcoAvatarFotoClipChico} />
+                          </div>
+                        )}
                     </div>
                   </div>
                   {/* Ducentésimo sexagésimo octavo pase: el usuario pidió una
@@ -896,6 +903,13 @@ const estilos = {
   marcoAvatarFoto: {
     position: 'relative', width: 49, height: 49, borderRadius: '50%', objectFit: 'cover', zIndex: 1,
     transform: 'translateY(6px)',
+  },
+  marcoAvatarClipChico: {
+    position: 'relative', width: 56, height: 56, borderRadius: '50%', overflow: 'hidden', zIndex: 1, flex: 'none',
+  },
+  marcoAvatarFotoClipChico: {
+    position: 'absolute', left: '50%', top: '50%', width: 56, height: 56, objectFit: 'cover',
+    transform: 'translate(-50%, calc(-50% + 5px))',
   },
   marcoAvatarFotoGrande: {
     position: 'relative', width: 64, height: 64, borderRadius: '50%', objectFit: 'cover', zIndex: 1,
