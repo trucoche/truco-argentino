@@ -30,6 +30,7 @@ import { getSocket } from './services/socket';
 import AvisosGlobales from './components/Desafio/AvisosGlobales';
 import KitFundadorHost from './components/Personalizacion/KitFundadorModal';
 import SponsorGraciasHost from './components/Personalizacion/SponsorGraciasModal';
+import PrimeraCompraGraciasHost from './components/Personalizacion/PrimeraCompraGraciasModal';
 import ReporteAvisoHost from './components/Reportar/ReporteAvisoModal';
 import RegaloAvisoHost from './components/Regalo/RegaloAvisoModal';   // Pase 623
 import { AvisoMaderaHost, instalarAlertaMadera, mostrarAviso } from './components/Popup/PopupMadera';
@@ -823,6 +824,7 @@ function AppInterna() {
       {/* Pase 577: bienvenida del Kit de Fundador / Beta Tester (una sola vez, en el lobby). */}
       <KitFundadorHost usuario={usuario} token={token} pantalla={pantalla} onPerfilActualizado={actualizarPerfil} />
       <SponsorGraciasHost usuario={usuario} token={token} pantalla={pantalla} onPerfilActualizado={actualizarPerfil} />
+      <PrimeraCompraGraciasHost usuario={usuario} token={token} pantalla={pantalla} onPerfilActualizado={actualizarPerfil} />
       <ReporteAvisoHost usuario={usuario} token={token} pantalla={pantalla} onPerfilActualizado={actualizarPerfil} />
       <RegaloAvisoHost usuario={usuario} token={token} pantalla={pantalla} onPerfilActualizado={actualizarPerfil} />
       {/* Pase 379: botón flotante "Mi torneo" — lleva a la sala del torneo en el que estoy anotado.

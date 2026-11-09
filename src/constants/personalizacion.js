@@ -9,6 +9,7 @@ const BASE = (process.env.PUBLIC_URL || '') + '/assets/personalizacion-opt';
 const LIBRE = { precio: 0, rangoMin: null, soloSponsor: false };
 const KIT = { ...LIBRE, soloKit: true };   // Pase 523: exclusivo del Kit de Fundador/Beta Tester
 const SPONSOR = { ...LIBRE, soloSponsor: true };   // Pase 563: solo quien donó en Cafecito (usuario.es_sponsor)
+const PRIMERA_COMPRA = { ...LIBRE, soloPrimeraCompra: true };   // Pase 707: "Pack Primera Compra": se entrega al acreditarse la primera compra de mates (usuario.primera_compra)
 // Pase 628: set "Sol de Mayo": se desbloquea por el mayor rango alcanzado en la Liga (usuario.rango_max): dorso Gaucho (4), banner Caudillo (8), anillo Martín Fierro (10).
 
 // Pase 630: `escalaHeader` = cuánto se agranda el anillo cuando se dibuja ENCIMA del panel del rango en el header (el aro de madera del Sol de Mayo
@@ -18,6 +19,7 @@ export const ANILLOS = [
   { id: 'cafecito', nombre: 'Sponsor Criollo', imagen: BASE + '/anillos/anillo_cafecito.png', hueco: 0.677, ...SPONSOR },
   { id: 'tester', nombre: 'Beta Tester', imagen: BASE + '/anillos/anillo_tester.png', hueco: 0.635, ...KIT },
   { id: 'pionero', nombre: 'Sol de Mayo', imagen: BASE + '/anillos/anillo_pionero.webp', hueco: 0.547, escalaHeader: 1.25, ...LIBRE, rangoMin: 10 },
+  { id: 'primera-compra', nombre: 'Pack Primera Compra', imagen: BASE + '/anillos/anillo_primera-compra.webp', hueco: 0.69, ...PRIMERA_COMPRA },
 ];
 
 export const BANNERS = [
@@ -25,6 +27,7 @@ export const BANNERS = [
   { id: 'cafecito', nombre: 'Sponsor Criollo', imagen: BASE + '/banners/banner_cafecito.png', proporcion: 480 / 230, margenInterior: { x: 0.075, y: 0.13 }, ...SPONSOR },
   { id: 'tester', nombre: 'Beta Tester', imagen: BASE + '/banners/banner_tester.png', proporcion: 480 / 230, margenInterior: { x: 0.075, y: 0.13 }, ...KIT },
   { id: 'pionero', nombre: 'Sol de Mayo', imagen: BASE + '/banners/banner_palabra_gaucho.webp', proporcion: 1120 / 619, margenInterior: { x: 0.075, y: 0.13 }, ...LIBRE, rangoMin: 8 },
+  { id: 'primera-compra', nombre: 'Pack Primera Compra', imagen: BASE + '/banners/banner_primera-compra.webp', proporcion: 400 / 230, margenInterior: { x: 0.075, y: 0.13 }, ...PRIMERA_COMPRA },
 ];
 
 export const MAZOS = [
@@ -32,6 +35,7 @@ export const MAZOS = [
   { id: 'cafecito', nombre: 'Sponsor Criollo', dorso: BASE + '/cartas/cafecito/back.png', proporcionDorso: 400 / 552, ...SPONSOR },
   { id: 'tester', nombre: 'Beta Tester', dorso: BASE + '/cartas/tester/back.png', proporcionDorso: 400 / 552, ...KIT },
   { id: 'pionero', nombre: 'Sol de Mayo', dorso: BASE + '/cartas/pionero/back.png', proporcionDorso: 400 / 552, ...LIBRE, rangoMin: 4 },
+  { id: 'primera-compra', nombre: 'Pack Primera Compra', dorso: BASE + '/cartas/primera-compra/back.png', proporcionDorso: 400 / 595, ...PRIMERA_COMPRA },
 ];
 
 // Pase 578: marco de madera SIN el tablón del medio (Pase 533 de la app). Con una foto de fondo propia, la foto va atrás de este marco.
@@ -45,7 +49,7 @@ export const mazoPorId = (id) => MAZOS.find(m => m.id === id) || MAZOS[0];
 
 // Disponible = no es del kit (o la cuenta lo tiene) y no es de sponsors (o la cuenta donó). El backend vuelve a validar.
 export const estaDisponible = (item, ctx) =>
-  !(item.soloKit && !(ctx && ctx.kitFundador)) && !(item.soloSponsor && !(ctx && ctx.esSponsor)) && !(item.rangoMin && !((ctx && ctx.rangoId) >= item.rangoMin));
+  !(item.soloKit && !(ctx && ctx.kitFundador)) && !(item.soloSponsor && !(ctx && ctx.esSponsor)) && !(item.soloPrimeraCompra && !(ctx && ctx.primeraCompra)) && !(item.rangoMin && !((ctx && ctx.rangoId) >= item.rangoMin));
 
 // Anillo a dibujar alrededor de un avatar: el elegido o el de su rango (`rangoAssets` = { anillo, hueco }).
 export const resolverAnillo = (anilloId, rangoAssets) => {

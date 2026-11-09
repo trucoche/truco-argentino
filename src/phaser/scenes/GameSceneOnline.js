@@ -4,6 +4,7 @@ import { ANCHO_MAX_CSS } from '../config/gameConfigOnline';
 import { CARD_RANKS } from '../utils/constants';
 import { RANGOS_UI } from '../../components/Perfil/rangosUi';
 import { MAZOS } from '../../constants/personalizacion';
+import { CARTELES_VICTORIA, cartelVictoriaPorId } from '../../constants/cartelesVictoria';
 import { crearEstadoFoto, getConfigFoto } from '../../constants/modoFoto';
 
 // Decimotercer pase: bug de fondo detrás de "el dorso del rival sigue
@@ -413,6 +414,8 @@ preload() {
     // (con fallback a 'gaucho' si no tiene uno válido todavía), no los
     // 8 juegos completos de expresiones, para no descargar de más.
     this.load.image('fondoResultado', conVersion('assets/images/fondo-lobby.jpeg'));
+    // Pase 708: cuadros de los carteles de victoria (panel con luces que se alternan).
+    CARTELES_VICTORIA.forEach((c) => c.cuadros.forEach((q) => this.load.image(q.clave, conVersion(q.ruta))));
     const miPersonajeResultado = PERSONAJES_CANTO.includes(this.usuario?.personaje) ? this.usuario.personaje : 'gaucho';
     // Pase 266: ahora se cargan las variantes "_cerca" — versiones
     // recortadas al bbox de contenido (+6% de margen, luego centradas en
@@ -2157,6 +2160,44 @@ _textoDetalleSala() {
   return `Mesa a ${this._puntosSala} tantos · ${tipo}`;
 }
 
+// Pase 708: cartel de victoria de la pantalla final: un panel (cuadros PNG de CARTELES_VICTORIA) que alterna sus cuadros cada
+// `intervaloMs` para que las luces parezcan cambiar de color, con el texto encima. Devuelve el container, o null si los cuadros no
+// están cargados (en ese caso el llamador usa el cartel de caoba). El temporizador se frena con _limpiarSprites (vía _tweensFinal).
+_crearCartelVictoria(id, texto, detalle, opts = {}) {
+  const cfg = cartelVictoriaPorId(id);
+  if (!cfg || !cfg.cuadros.every((q) => this.textures.exists(q.clave))) return null;
+  const ancho = opts.ancho || 260;
+  const alto = ancho / cfg.proporcion;
+  const img = this.add.image(0, 0, cfg.cuadros[0].clave).setDisplaySize(ancho, alto);
+  const label = this.add.text(0, detalle ? -12 : 0, texto, {
+    fontFamily: 'Fredoka, Arial', fontSize: '30px', fontStyle: '700', color: cfg.colorTitulo,
+    stroke: '#2C160E', strokeThickness: 5,
+  }).setOrigin(0.5);
+  const hijos = [img, label];
+  if (detalle) {
+    hijos.push(this.add.text(0, 20, detalle, {
+      fontFamily: 'Fredoka, Arial', fontSize: '12px', fontStyle: '600', color: cfg.colorDetalle,
+      stroke: '#2C160E', strokeThickness: 3,
+    }).setOrigin(0.5));
+  }
+  const contenedor = this.add.container(400, opts.y || 64, hijos).setDepth(opts.depth || 903);
+  this._sprites.push(contenedor);
+  if (cfg.cuadros.length > 1) {
+    let n = 0;
+    const reloj = this.time.addEvent({
+      delay: cfg.intervaloMs, loop: true,
+      callback: () => {
+        if (!img.scene) return;   // el cartel ya se destruyó
+        n = (n + 1) % cfg.cuadros.length;
+        img.setTexture(cfg.cuadros[n].clave);
+      },
+    });
+    if (!this._tweensFinal) this._tweensFinal = [];
+    this._tweensFinal.push({ stop: () => reloj.remove(false) });
+  }
+  return contenedor;
+}
+
 _actualizarBannerEsperaTitulo(texto, modo = null, detalle = null, opts = {}) {
   if (this._bannerEsperaTitulo) {
     const viejo = this._bannerEsperaTitulo;
@@ -3273,13 +3314,18 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
 
     // 1) Cartel de caoba con el resultado
     const textoCartel = modo === 'victoria' ? '¡GANASTE!' : (modo === 'derrota' ? 'PERDISTE' : 'Sala cancelada');
-    this._actualizarBannerEsperaTitulo(textoCartel, null, detalle, {
-      y: 58, depth: 903,
-      color: modo === 'derrota' ? '#E4573D' : '#FFD98A',
-      tamano: 30,
-    });
-    const cartel = this._bannerEsperaTitulo;
-    this._bannerEsperaTitulo = null;       // ya no es el cartel de la espera
+    // Pase 708: en la victoria el cartel es el panel con luces que se alternan (si no cargó, queda el de caoba de siempre).
+    let cartel = modo === 'victoria' ? this._crearCartelVictoria('base', textoCartel, detalle, { y: 64, depth: 903 }) : null;
+    const cartelConLuces = !!cartel;
+    if (!cartel) {
+      this._actualizarBannerEsperaTitulo(textoCartel, null, detalle, {
+        y: 58, depth: 903,
+        color: modo === 'derrota' ? '#E4573D' : '#FFD98A',
+        tamano: 30,
+      });
+      cartel = this._bannerEsperaTitulo;
+      this._bannerEsperaTitulo = null;       // ya no es el cartel de la espera
+    }
 
     // 2) Fila de avatares: ganadores a la izquierda, escudo con el marcador, perdedores a la derecha
     const hayJugadores = jugadoresFinal && jugadoresFinal.length > 0;
@@ -3783,8 +3829,10 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
         }));
       };
       const cartelAncho = cartel && cartel.getBounds ? cartel.getBounds().width : 300;
-      estrella(400 + cartelAncho / 2 - 22, 46, 12, 0);
-      estrella(400 - cartelAncho / 2 + 26, 92, 9, 500);
+      if (!cartelConLuces) {   // Pase 708: el panel con luces ya brilla solo
+        estrella(400 + cartelAncho / 2 - 22, 46, 12, 0);
+        estrella(400 - cartelAncho / 2 + 26, 92, 9, 500);
+      }
       if (ganadores.length) {
         const inicioFila = 400 - anchoFila / 2 + tamano / 2;
         const gx = grid3 ? 400 : grid2 ? 400 + (izqGanadores ? -GRID_DX : GRID_DX) : (izqGanadores ? inicioFila : inicioFila + izq.length * paso + gapEscudo - gapIntra);   // Pase 659: los ganadores quedan donde estén

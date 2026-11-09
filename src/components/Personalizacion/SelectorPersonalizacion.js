@@ -41,6 +41,7 @@ export default function SelectorPersonalizacion({ usuario, token, recargarPerfil
   const rangoAssets = rangoUi(usuario && usuario.rango);
   const kit = !!(usuario && usuario.kit_fundador);
   const esSponsor = !!(usuario && usuario.es_sponsor);
+  const primeraCompra = !!(usuario && usuario.primera_compra);   // Pase 707
   const rangoId = (usuario && usuario.rango_max) || 0;   // Pase 628: mayor rango alcanzado (desbloquea el set Sol de Mayo)
 
   // Sincroniza con lo guardado en la cuenta cada vez que llega el perfil.
@@ -54,7 +55,7 @@ export default function SelectorPersonalizacion({ usuario, token, recargarPerfil
   }, [usuario && usuario.anillo_id, usuario && usuario.banner_id, usuario && usuario.mazo_id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const elegir = async (campo, item) => {
-    if (!estaDisponible(item, { kitFundador: kit, esSponsor, rangoId })) {
+    if (!estaDisponible(item, { kitFundador: kit, esSponsor, primeraCompra, rangoId })) {
       if (item.soloSponsor) {
         const apoyar = await confirmarPopup({
           titulo: 'Diseño de Sponsor',
@@ -64,6 +65,12 @@ export default function SelectorPersonalizacion({ usuario, token, recargarPerfil
           tipoSi: 'celeste',
         });
         if (apoyar && onApoyar) onApoyar();
+      } else if (item.soloPrimeraCompra) {
+        mostrarAviso({
+          titulo: 'Pack Primera Compra',
+          mensaje: 'Es el regalo por tu primera compra de mates: el anillo, el banner y el dorso se desbloquean solos apenas se acredita tu primera compra en la Tienda.',
+          botones: [{ texto: 'Entendido', tipo: 'dorado' }],
+        });
       } else if (item.rangoMin) {
         mostrarAviso({
           titulo: 'Diseño de la Liga Criolla',
@@ -112,7 +119,7 @@ export default function SelectorPersonalizacion({ usuario, token, recargarPerfil
           )}
           <div style={estilos.fila}>
             {cat.items.map((item) => {
-              const libre = estaDisponible(item, { kitFundador: kit, esSponsor, rangoId });
+              const libre = estaDisponible(item, { kitFundador: kit, esSponsor, primeraCompra, rangoId });
               const activo = sel[cat.campo] === item.id;
               return (
                 <button

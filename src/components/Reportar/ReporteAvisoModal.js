@@ -70,7 +70,7 @@ export default function ReporteAvisoHost({ usuario, token, pantalla, onPerfilAct
   };
 
   // Si hay un cartel de Kit o de Sponsor pendiente, el de reportes espera su turno (de a uno por vez).
-  const otroPendiente = !!(usuario && ((usuario.kit_fundador && !usuario.kit_fundador_visto) || (usuario.es_sponsor && usuario.sponsor_visto === false)));
+  const otroPendiente = !!(usuario && ((usuario.kit_fundador && !usuario.kit_fundador_visto) || (usuario.es_sponsor && usuario.sponsor_visto === false) || (usuario.primera_compra && usuario.primera_compra_visto === false)));
   return (
     <ReporteAvisoModal
       visible={!!datos && !otroPendiente}

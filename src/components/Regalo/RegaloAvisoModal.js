@@ -64,7 +64,7 @@ export default function RegaloAvisoHost({ usuario, token, pantalla, onPerfilActu
   };
 
   // Si hay un cartel de Kit o de Sponsor pendiente, el regalo espera su turno (de a uno por vez).
-  const otroPendiente = !!(usuario && ((usuario.kit_fundador && !usuario.kit_fundador_visto) || (usuario.es_sponsor && usuario.sponsor_visto === false)));
+  const otroPendiente = !!(usuario && ((usuario.kit_fundador && !usuario.kit_fundador_visto) || (usuario.es_sponsor && usuario.sponsor_visto === false) || (usuario.primera_compra && usuario.primera_compra_visto === false)));
   return (
     <RegaloAvisoModal
       visible={!!datos && !otroPendiente}

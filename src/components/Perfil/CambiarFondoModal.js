@@ -108,14 +108,16 @@ export default function CambiarFondoModal({ token, saldoActual, onCerrar, onFond
   // Pase 630: elegir uno de los banners del juego (gratis). Si tenía una foto propia, se reemplaza (con confirmación).
   const kit = !!(usuario && usuario.kit_fundador);
   const esSponsor = !!(usuario && usuario.es_sponsor);
+  const primeraCompra = !!(usuario && usuario.primera_compra);   // Pase 707
   const rangoId = (usuario && usuario.rango_max) || 0;
   const bannerActual = tieneFondo ? null : ((usuario && usuario.banner_id) || 'base');
 
   const elegirBanner = async (item) => {
     if (enviando) return;
-    if (!estaDisponible(item, { kitFundador: kit, esSponsor, rangoId })) {
+    if (!estaDisponible(item, { kitFundador: kit, esSponsor, primeraCompra, rangoId })) {
       const motivo = item.soloKit ? 'Es parte del Kit de Beta Tester, que se regaló a quienes probaron TrucoChe en la etapa de pruebas.'
         : item.soloSponsor ? 'Es un diseño exclusivo de quienes apoyan el proyecto.'
+        : item.soloPrimeraCompra ? 'Es el regalo por tu primera compra de mates: se desbloquea solo apenas se acredita.'
         : `Se desbloquea al llegar al rango ${NOMBRES_RANGO_SET[item.rangoMin] || ''} en la Liga Criolla.`;
       mostrarAviso({ titulo: 'Banner bloqueado', mensaje: motivo, botones: [{ texto: 'Entendido', tipo: 'dorado' }] });
       return;
@@ -225,8 +227,8 @@ export default function CambiarFondoModal({ token, saldoActual, onCerrar, onFond
         <div style={estilos.bannersBloque}>
           <div style={estilos.bannersTitulo}>Elegí un banner del juego <span style={estilos.gratis}>GRATIS</span></div>
           <div style={estilos.bannersFila}>
-            {BANNERS.filter((b) => estaDisponible(b, { kitFundador: kit, esSponsor, rangoId }) || bannerActual === b.id).map((item) => {   // Pase 698: solo los que el jugador tiene
-              const libre = estaDisponible(item, { kitFundador: kit, esSponsor, rangoId });
+            {BANNERS.filter((b) => estaDisponible(b, { kitFundador: kit, esSponsor, primeraCompra, rangoId }) || bannerActual === b.id).map((item) => {   // Pase 698: solo los que el jugador tiene
+              const libre = estaDisponible(item, { kitFundador: kit, esSponsor, primeraCompra, rangoId });
               const activo = bannerActual === item.id;
               return (
                 <button

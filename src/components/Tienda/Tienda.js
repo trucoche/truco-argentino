@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { API_URL } from '../../config';
 import { PlacaMadera } from '../Popup/PopupMadera';
+import { anilloPorId, bannerPorId, mazoPorId } from '../../constants/personalizacion';
 
 const C = {
   verde: '#2D9B4F', verdeOscuro: '#1f7a3c',
@@ -432,6 +433,22 @@ export default function Tienda({ usuario, token }) {
       </div>
       <div className="tc-subtitulo" style={estilos.sectionSubtitle}>Se acreditan al instante en tu cuenta</div>
 
+      {/* Pase 707: oferta "Pack Primera Compra". Se ve mientras la cuenta no tenga ninguna compra acreditada (usuario.primera_compra);
+          apenas se acredita la primera (Mercado Pago), el perfil se actualiza y la tira desaparece. */}
+      {!!usuario && !usuario.primera_compra && (
+        <div className="tc-oferta-pc" style={estilos.ofertaPC}>
+          <div style={estilos.ofertaPCImgs}>
+            <img src={anilloPorId('primera-compra').imagen} alt="" style={estilos.ofertaPCAnillo} />
+            <img src={bannerPorId('primera-compra').imagen} alt="" style={estilos.ofertaPCBanner} />
+            <img src={mazoPorId('primera-compra').dorso} alt="" style={estilos.ofertaPCDorso} />
+          </div>
+          <div style={estilos.ofertaPCTexto}>
+            <span style={estilos.ofertaPCTitulo}>Pack Primera Compra</span>
+            <span style={estilos.ofertaPCSub}>Con tu primera compra de mates te llevás un anillo, un banner y un dorso exclusivos</span>
+          </div>
+        </div>
+      )}
+
       {/* Ducentésimo trigésimo tercer pase: se retira el banner rojo de
           texto que iba acá ("🔥 Pack Inauguración: $990 en vez de $2.800 —
           edición limitada") — el usuario lo marcó como "exceso de texto
@@ -479,7 +496,7 @@ export default function Tienda({ usuario, token }) {
             {packsFilaAbajo.map((pack, i) => renderPack(pack, 2, i + 3))}
           </div>
         </div>
-        <div className="tc-lista">
+        <div className={`tc-lista${usuario && !usuario.primera_compra ? ' tc-lista-oferta' : ''}`}>
           {packsLista.map((pack, i) => renderFilaCompacta(pack, i))}
         </div>
       </PlacaMadera>
@@ -542,6 +559,15 @@ const estilos = {
   sectionTitleIcono: { width: 30, height: 30, objectFit: 'contain', flexShrink: 0 },
   // Mismo criterio que el subtítulo agregado en Ranking.js — la tienda
   // tampoco tenía ninguna bajada de línea, solo el título suelto.
+  // Pase 707: tira de la oferta "Pack Primera Compra".
+  ofertaPC: { display: 'flex', alignItems: 'center', gap: 12, margin: '0 0 12px 0', padding: '8px 12px', borderRadius: 12, border: '2px solid #F5B041', background: 'linear-gradient(135deg, #6B2A10, #3D1707)', boxShadow: '0 3px 0 rgba(0,0,0,0.35)' },
+  ofertaPCImgs: { display: 'flex', alignItems: 'center', gap: 8, flex: '0 0 auto' },
+  ofertaPCAnillo: { width: 40, height: 40, objectFit: 'contain' },
+  ofertaPCBanner: { width: 70, height: 40, objectFit: 'contain' },
+  ofertaPCDorso: { height: 40, width: 'auto', objectFit: 'contain', transform: 'rotate(-6deg)' },
+  ofertaPCTexto: { display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 },
+  ofertaPCTitulo: { fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 15, color: '#F5B041', lineHeight: 1.1 },
+  ofertaPCSub: { fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 12, color: '#FBE7B0', lineHeight: 1.25 },
   sectionSubtitle: { fontSize: 12.5, color: 'rgba(255,248,237,0.75)', fontWeight: 700, margin: '0 0 10px 4px' },
   aviso: {
     display: 'flex', alignItems: 'center', gap: 10,
@@ -1160,6 +1186,13 @@ if (typeof document !== 'undefined' && !document.getElementById('tienda-grid-res
       .tc-titulo { margin: 0 0 0 4px !important; font-size: 15px !important; }
       .tc-titulo img { width: 24px !important; height: 24px !important; }
       .tc-subtitulo { margin: 0 0 8px 4px !important; font-size: 11.5px !important; }
+      .tc-oferta-pc { gap: 8px !important; margin: 0 0 8px 0 !important; padding: 4px 8px !important; }
+      .tc-oferta-pc img { max-height: 26px !important; }
+      .tc-oferta-pc img:nth-child(1) { width: 26px !important; }
+      .tc-oferta-pc img:nth-child(2) { width: 46px !important; }
+      .tc-oferta-pc span:nth-child(1) { font-size: 12.5px !important; }
+      .tc-oferta-pc span:nth-child(2) { font-size: 9.5px !important; line-height: 1.2 !important; }
+      .tc-lista.tc-lista-oferta { --fp: clamp(44px, calc((100dvh - 420px) / 6 - 10px), 62px); }
       .tc-nota { margin: 8px 6px 0 !important; font-size: 8px !important; line-height: 1.35 !important; }
       .tc-ayuda button { padding: 6px 10px !important; }
     }
