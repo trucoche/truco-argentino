@@ -14,3 +14,14 @@ export const CARTELES_VICTORIA = [
 ];
 
 export const cartelVictoriaPorId = (id) => CARTELES_VICTORIA.find((c) => c.id === id) || CARTELES_VICTORIA[0];
+
+// Pase 712: carteles de la pantalla de derrota ("PERDISTE"). Mismo formato que los de victoria; los cuadros viven en
+// public/assets/images/juego/cartel-derrota/<id>-<n>.png (400×200, panel SIN texto).
+const RUTA_DERROTA = 'assets/images/juego/cartel-derrota';
+const cuadrosDerrota = (id, cantidad) => Array.from({ length: cantidad }, (_, i) => ({ clave: `cartelDerrota_${id}_${i + 1}`, ruta: `${RUTA_DERROTA}/${id}-${i + 1}.png` }));
+
+export const CARTELES_DERROTA = [
+  { id: 'base', nombre: 'Luces apagadas', cuadros: cuadrosDerrota('base', 2), proporcion: 2, intervaloMs: 700, colorTitulo: '#F27A5E', colorDetalle: '#F1D9A8' },
+];
+
+export const cartelDerrotaPorId = (id) => CARTELES_DERROTA.find((c) => c.id === id) || CARTELES_DERROTA[0];

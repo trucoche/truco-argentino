@@ -4,7 +4,7 @@ import { ANCHO_MAX_CSS } from '../config/gameConfigOnline';
 import { CARD_RANKS } from '../utils/constants';
 import { RANGOS_UI } from '../../components/Perfil/rangosUi';
 import { MAZOS } from '../../constants/personalizacion';
-import { CARTELES_VICTORIA, cartelVictoriaPorId } from '../../constants/cartelesVictoria';
+import { CARTELES_VICTORIA, cartelVictoriaPorId, CARTELES_DERROTA, cartelDerrotaPorId } from '../../constants/cartelesVictoria';
 import { crearEstadoFoto, getConfigFoto } from '../../constants/modoFoto';
 
 // Decimotercer pase: bug de fondo detrás de "el dorso del rival sigue
@@ -416,6 +416,7 @@ preload() {
     this.load.image('fondoResultado', conVersion('assets/images/fondo-lobby.jpeg'));
     // Pase 708: cuadros de los carteles de victoria (panel con luces que se alternan).
     CARTELES_VICTORIA.forEach((c) => c.cuadros.forEach((q) => this.load.image(q.clave, conVersion(q.ruta))));
+    CARTELES_DERROTA.forEach((c) => c.cuadros.forEach((q) => this.load.image(q.clave, conVersion(q.ruta))));   // Pase 712
     const miPersonajeResultado = PERSONAJES_CANTO.includes(this.usuario?.personaje) ? this.usuario.personaje : 'gaucho';
     // Pase 266: ahora se cargan las variantes "_cerca" — versiones
     // recortadas al bbox de contenido (+6% de margen, luego centradas en
@@ -2164,7 +2165,7 @@ _textoDetalleSala() {
 // `intervaloMs` para que las luces parezcan cambiar de color, con el texto encima. Devuelve el container, o null si los cuadros no
 // están cargados (en ese caso el llamador usa el cartel de caoba). El temporizador se frena con _limpiarSprites (vía _tweensFinal).
 _crearCartelVictoria(id, texto, detalle, opts = {}) {
-  const cfg = cartelVictoriaPorId(id);
+  const cfg = opts.derrota ? cartelDerrotaPorId(id) : cartelVictoriaPorId(id);   // Pase 712: la derrota tiene su propio panel
   if (!cfg || !cfg.cuadros.every((q) => this.textures.exists(q.clave))) return null;
   const ancho = opts.ancho || 260;
   const alto = ancho / cfg.proporcion;
@@ -3356,7 +3357,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
       anchoCartel = Math.round(Math.max(260, Math.min(visW * 0.8, 2 * libreAlto, 420)));
       yCartel = 14 + anchoCartel / 4;
     }
-    let cartel = modo === 'victoria' ? this._crearCartelVictoria('base', textoCartel, detalle, { y: yCartel, ancho: anchoCartel, depth: 903 }) : null;
+    let cartel = (modo === 'victoria' || modo === 'derrota') ? this._crearCartelVictoria('base', textoCartel, detalle, { y: yCartel, ancho: anchoCartel, depth: 903, derrota: modo === 'derrota' }) : null;
     const cartelConLuces = !!cartel;
     if (!cartel) {
       this._actualizarBannerEsperaTitulo(textoCartel, null, detalle, {
