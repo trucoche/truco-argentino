@@ -4123,6 +4123,7 @@ _renderizarEstado(animarReparto) {
     // tenía el texto combinado.
     this.scoreText.setText(String(e.scores.yo));
     if (this.scoreTextRival) this.scoreTextRival.setText(String(e.scores.rival));
+    if (e.puntosParaGanar) this._puntosSala = e.puntosParaGanar;   // Pase 721: el objetivo viaja en el estado (antes solo en info-sala, que a veces no llegaba)
     this._notificarPuntos(e.scores.yo, e.scores.rival);
     this.miManoTexto.setText(e.esMano ? 'Sos mano' : '');
     if (this.manoIconoPropio) this.manoIconoPropio.setVisible(!!e.esMano);
@@ -4641,7 +4642,7 @@ _aplicarMarcadorEstilo(animar = false) {
   const fosforos = this._marcadorEstilo === 'fosforos';
   const visiblePlacas = this.scoreBg.visible;
   const pts = this._puntosPrevios || { yo: 0, rival: 0 };
-  const objetivo = this._puntosSala || 15;
+  const objetivo = this._puntosSala || ((pts.yo > 15 || pts.rival > 15) ? 30 : 15);
   const buenas = objetivo >= 30 || pts.yo > 15 || pts.rival > 15;
 
   const lados = [
@@ -4758,7 +4759,7 @@ _notificarPuntos(yo, rival) {
   this._puntosPrevios = { yo, rival };
   this._aplicarMarcadorEstilo(!!ant);
   const cambio = !ant || ant.yo !== yo || ant.rival !== rival;
-  if (cambio && this.onPuntos) this.onPuntos({ yo, rival, objetivo: this._puntosSala || 15 });
+  if (cambio && this.onPuntos) this.onPuntos({ yo, rival, objetivo: this._puntosSala || ((yo > 15 || rival > 15) ? 30 : 15) });
   // Pase 411: sin ningun sonido al cambiar el puntaje (el clic de fosforo queda solo en el Anotador offline).
 }
 
