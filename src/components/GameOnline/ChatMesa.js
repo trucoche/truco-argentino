@@ -154,6 +154,8 @@ export default function ChatMesa({ angosto = false, codigoSala, esEquipos, perso
   if (!abierto) {
     return (
       <>
+        {/* Pase 718: con la pantalla final abierta, en celular el botón de chat baja a la esquina de abajo (arriba pisaba el cartel de resultado). */}
+        <style>{'@media (max-width: 899px) { #game-container[data-final="1"] ~ .chat-mesa-btn { top: auto !important; bottom: calc(16px + env(safe-area-inset-bottom, 0px)) !important; } }'}</style>
         <button
           onClick={() => { setAbierto(true); setHayNuevoMientrasCerrado(false); }}
           className="chat-mesa-btn"

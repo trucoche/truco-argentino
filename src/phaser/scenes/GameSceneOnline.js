@@ -3349,6 +3349,11 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
       camF.centerOn(400, 300);
       this._modoCamara = 'final';   // para que el próximo 'estatica' (sala de espera) vuelva a aplicar zoom8
     }
+    // Pase 718: en celulares largos (alto/ancho > ~1,75) el 1v1 deja mucho verde abajo: avatares y botones se bajan un poco (hasta +3 % y +6 % del alto)
+    // para repartir el aire. En 2v2/3v3 y en pantallas más cortas no cambia nada.
+    const aireF = (finalGrande && !gridN && this._L) ? Math.max(0, Math.min(1, (HnFinal / (this.scale.width / this.cameras.main.zoom) - 1.75) / 0.2)) : 0;
+    const fracAv = 0.345 + 0.03 * aireF;
+    const fracBot = (gridN ? 0.78 : 0.69) + 0.06 * aireF;
     this.children.list
       .filter(c => c !== undefined)
       .forEach(c => { if (!elementosMarcador.includes(c)) c.setVisible(false); });
@@ -3382,7 +3387,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
     let anchoCartel = 260, yCartel = 64;
     if (finalGrande && !gridN) {
       const visW = this.scale.width / this.cameras.main.zoom;
-      const libreAlto = Math.max(216, Math.round(0.345 * HnFinal)) - 164 / 2 - 20 - 14;   // desde y=14 hasta 20 px sobre los avatares
+      const libreAlto = Math.max(216, Math.round(fracAv * HnFinal)) - 164 / 2 - 20 - 14;   // desde y=14 hasta 20 px sobre los avatares
       anchoCartel = Math.round(Math.max(260, Math.min(visW * 0.8, 2 * libreAlto, 420)));
       yCartel = 14 + anchoCartel / 4;
     }
@@ -3417,7 +3422,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
     const anchoGrupo = (n) => (n > 0 ? n * paso - gapIntra : 0);
     const anchoFila = anchoGrupo(izq.length) + (izq.length && der.length ? gapEscudo : 0) + anchoGrupo(der.length);
     let cursorX = 400 - anchoFila / 2 + tamano / 2;
-    let cyAv = finalGrande ? Math.max(216, Math.round(0.345 * HnFinal)) : 184;   // Pase 679: avatares un poco más abajo (el bloque de datos y botones queda más junto)   // Pase 659: cartel más arriba y avatares más chicos: 22 px de aire bajo el cartel
+    let cyAv = finalGrande ? Math.max(216, Math.round(fracAv * HnFinal)) : 184;   // Pase 679: avatares un poco más abajo (el bloque de datos y botones queda más junto)   // Pase 659: cartel más arriba y avatares más chicos: 22 px de aire bajo el cartel
 
     const radio = tamano / 2;
     const radioFoto = radio * 0.72;
@@ -3788,7 +3793,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
       // Pase 709: la botonera se ancla más abajo (ver más adelante); en vez de dejar todo el hueco entre la barra de datos y
       // "Pedir revancha", la barra baja hasta que el aire de arriba y el de abajo queden parejos.
       if (finalGrande) {
-        const objetivoBotones = Math.round((gridN ? 0.78 : 0.69) * HnFinal);
+        const objetivoBotones = Math.round(fracBot * HnFinal);
         const libre = objetivoBotones - (y + hR + 24);
         if (libre > 28) y += Math.round((libre - 28) / 2);
       }
@@ -3812,7 +3817,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
 
     if (!resumenDibujado && modo !== 'neutro') y += 2;   // sin barra de datos: 22 + 2 = 24 px antes de los botones
     // Pase 669: en el celular 1v1 la botonera baja hasta ~72 % del alto de la vista, como en la app.
-    if (finalGrande && modo !== 'neutro') y = Math.max(y, Math.round((gridN ? 0.78 : 0.69) * HnFinal));
+    if (finalGrande && modo !== 'neutro') y = Math.max(y, Math.round(fracBot * HnFinal));
     // 6) Botonera vertical en cápsulas 3D
     // Pase 677: altura táctil de ~50 px reales (tope 66 de mundo); la letra y el ancho acompañan.
     const altoBoton = gridN ? Math.max(60, Math.min(74, Math.ceil(56 / (this.cameras.main.zoom || 1)))) : (finalGrande ? Math.max(54, Math.min(66, Math.ceil(50 / (this.cameras.main.zoom || 1)))) : 42);
