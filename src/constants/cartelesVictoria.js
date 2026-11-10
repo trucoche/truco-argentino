@@ -24,6 +24,8 @@ const cuadrosDerrota = (id, cantidad) => Array.from({ length: cantidad }, (_, i)
 
 export const CARTELES_DERROTA = [
   { id: 'base', nombre: 'Luces apagadas', cuadros: cuadrosDerrota('base', 2), proporcion: 2, intervaloMs: 700, colorTitulo: '#F27A5E', colorDetalle: '#F1D9A8' },
+  // Pase 717: La Pulpería (faroles apagados con humo). El panel está más abajo en el lienzo (el humo ocupa arriba): `textoDy` baja el texto.
+  { id: 'pulperia', nombre: 'La Pulpería', cuadros: cuadrosDerrota('pulperia', 3), secuencia: [0, 1, 2, 1], suave: true, escalaTitulo: 0.75, textoDy: 0.15, proporcion: 2, intervaloMs: 800, colorTitulo: '#F27A5E', colorDetalle: '#F1D9A8' },
 ];
 
 export const cartelDerrotaPorId = (id) => CARTELES_DERROTA.find((c) => c.id === id) || CARTELES_DERROTA[0];

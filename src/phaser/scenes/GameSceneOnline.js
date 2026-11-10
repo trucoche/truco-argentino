@@ -2176,14 +2176,15 @@ _crearCartelVictoria(id, texto, detalle, opts = {}) {
   const img = this.add.image(0, 0, cfg.cuadros[baseIdx].clave).setDisplaySize(ancho, alto);
   const capas = suave ? cfg.cuadros.map((q, i) => (i === baseIdx ? null : this.add.image(0, 0, q.clave).setDisplaySize(ancho, alto).setAlpha(i === cfg.secuencia[0] ? 1 : 0))) : [];
   const k = ancho / 260;   // el texto crece junto con el panel
-  const label = this.add.text(0, detalle ? -12 * k : 0, texto, {
+  const dy = (cfg.textoDy || 0) * alto;   // Pase 717: baja el texto si el panel no está centrado en el lienzo (humo arriba)
+  const label = this.add.text(0, (detalle ? -12 * k : 0) + dy, texto, {
     fontFamily: 'Fredoka, Arial', fontSize: `${Math.round(30 * k * (cfg.escalaTitulo || 1))}px`, fontStyle: '700', color: cfg.colorTitulo,   // escalaTitulo: títulos más chicos si los costados del panel (faroles) estorban
 
     stroke: '#2C160E', strokeThickness: Math.round(5 * k),
   }).setOrigin(0.5);
   const hijos = [img, ...capas.filter(Boolean), label];
   if (detalle) {
-    hijos.push(this.add.text(0, 20 * k, detalle, {
+    hijos.push(this.add.text(0, 20 * k + dy, detalle, {
       fontFamily: 'Fredoka, Arial', fontSize: `${Math.round(12 * k)}px`, fontStyle: '600', color: cfg.colorDetalle,
       stroke: '#2C160E', strokeThickness: Math.max(3, Math.round(3 * k)),
     }).setOrigin(0.5));
