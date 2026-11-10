@@ -116,6 +116,17 @@ const VARIANTES_RUSTICAS = {
   oliva:   { marco: 0x26331a, marcoLuz: 0x5a7438, campo: 0x4f8a3a, campoLuz: 0x82bd5e, campoSombra: 0x2f5a22, texto: '#f4ffdc', grabado: false, prof: 0.10 },
   carmesi: { marco: 0x3a1010, marcoLuz: 0x7e2c24, campo: 0xb02a24, campoLuz: 0xdc564d, campoSombra: 0x7a1411, texto: '#ffe6d6', grabado: false, prof: 0.12 },
 };
+// Pase 720: textos largos de los botones del celular ("CONTRAFLOR AL RESTO") se parten en dos líneas (por el espacio más cercano al medio) en vez de achicarse hasta no leerse.
+function partirEnDosLineas(txt) {
+  const pal = String(txt || '').split(' ');
+  if (pal.length < 2) return txt;
+  let mejor = 1, dif = Infinity;
+  for (let i = 1; i < pal.length; i++) {
+    const d = Math.abs(pal.slice(0, i).join(' ').length - pal.slice(i).join(' ').length);
+    if (d < dif) { dif = d; mejor = i; }
+  }
+  return pal.slice(0, mejor).join(' ') + '\n' + pal.slice(mejor).join(' ');
+}
 const RATIO_FUENTE_RUSTICO = 0.43;
 
 export default class GameSceneOnline extends Phaser.Scene {
@@ -3275,6 +3286,7 @@ _actualizarPlacaPausa() {
 // Pase 680: datos de ejemplo para ver la pantalla final sin jugar (solo en las mesas PREVIEW_*).
 _mostrarPantallaFinalDePrueba(modo, variante) {
   const yo = (this.usuario && this.usuario.username) || 'catrielquintana';
+  if (!(this.usuario && this.usuario.username)) this.usuario = { ...(this.usuario || {}), username: yo };   // Pase 719: en la vista previa yo = el usuario de prueba, así mi equipo queda a la izquierda como en el juego real
   const gano = variante !== 'perdiste';
   const n = modo === '1v1' ? 1 : (modo === '3v3' ? 3 : 2);
   const equipoYo = [{ nombre: yo, gano, tantos: gano ? 15 : 7 }];
@@ -3539,8 +3551,8 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
       }
       const ponerCara = () => {
         if (generacion !== this._finalGeneracion || !this.textures.exists(claveCara)) return;
-        const lado = esFoto ? radioFoto * 2 : radioFoto * 2.15;
-        const img = this.add.image(cx, cyAv, claveCara).setDisplaySize(lado, lado).setDepth(902.2);
+        const lado = esFoto ? radioFoto * 2 : radioFoto * 2.15 * 1.07;   // Pase 719: el busto del personaje llega hasta el borde de abajo del aro (antes quedaba un hueco)
+        const img = this.add.image(cx, esFoto ? cyAv : cyAv + radioFoto * 2.15 * 0.035, claveCara).setDisplaySize(lado, lado).setDepth(902.2);
         const m = this.make.graphics();
         m.fillStyle(0xffffff);
         m.fillCircle(cx, cyAv, radioFoto);
@@ -6351,7 +6363,14 @@ _calcularPerspectiva(y) {
       // Pase 681: en las filas de 3-4 botones el texto largo ("CONTRAFLOR AL RESTO") se achica para entrar dentro del botón.
       const tPrin = partes[partes.length - 1];
       const wMax = ancho - alto * 0.65;
-      const sc = escalaTexto != null ? escalaTexto : (tPrin.width > wMax && wMax > 10 ? wMax / tPrin.width : 1);
+      let dosLineas = false;
+      if (def.txt.includes(' ') && tPrin.width > wMax && wMax > 10) {
+        const t2 = partirEnDosLineas(def.txt);   // Pase 720: dos líneas en vez de un texto diminuto
+        partes.forEach(o => { if (o !== gRus) { o.setText(t2); o.setAlign('center'); o.setLineSpacing(-fs * 0.18); } });
+        dosLineas = true;
+      }
+      let sc = escalaTexto != null ? escalaTexto : (tPrin.width > wMax && wMax > 10 ? wMax / tPrin.width : 1);
+      if (dosLineas) sc = Math.min(sc, (alto * 0.74) / tPrin.height);
       if (sc < 1) partes.forEach(o => { if (o !== gRus) o.setScale(sc); });
     }
     if (deshabilitado) partes.forEach(o => o.setAlpha(0.4));
@@ -6958,8 +6977,14 @@ _dibujarBotonesCantoInterno(e) {
         if (!def) return;
         const fsT = s.alto * kBf * RATIO_FUENTE_RUSTICO;
         const med = this.add.text(0, 0, def.txt, { fontFamily: 'Nunito, Arial', fontSize: `${fsT.toFixed(1)}px`, fontStyle: 'bold' });
-        const wT = med.width; med.destroy();
+        let wT = med.width;
         const disp = bw - s.alto * kBf * 0.65;
+        if (wT > disp && disp > 10 && def.txt.includes(' ')) {   // Pase 720: se parte en dos líneas; la escala la marca la línea más ancha y el alto
+          med.setText(partirEnDosLineas(def.txt)); med.setAlign('center'); med.setLineSpacing(-fsT * 0.18);
+          wT = med.width;
+          escalaFila = Math.min(escalaFila, (s.alto * kBf * 0.74) / med.height);
+        }
+        med.destroy();
         if (wT > disp && disp > 10) escalaFila = Math.min(escalaFila, disp / wT);
       });
       specs.forEach((s) => {
