@@ -12,7 +12,7 @@ const cuadros = (id, cantidad) => Array.from({ length: cantidad }, (_, i) => ({ 
 export const CARTELES_VICTORIA = [
   { id: 'base', nombre: 'Luces de fiesta', cuadros: cuadros('base', 2), proporcion: 2, intervaloMs: 550, colorTitulo: '#FFD98A', colorDetalle: '#F1D9A8' },
   // Pase 715: La Pulpería (3 cuadros: farol izquierdo, ambos, farol derecho). `secuencia` = orden de los cuadros (opcional): 1-2-3-2 va y vuelve.
-  { id: 'pulperia', nombre: 'La Pulpería', cuadros: cuadros('pulperia', 3), secuencia: [0, 1, 2, 1], escalaTitulo: 0.82, proporcion: 2, intervaloMs: 450, colorTitulo: '#FFD98A', colorDetalle: '#F1D9A8' },
+  { id: 'pulperia', nombre: 'La Pulpería', cuadros: cuadros('pulperia', 3), secuencia: [0, 1, 2, 1], suave: true, escalaTitulo: 0.82, proporcion: 2, intervaloMs: 650, colorTitulo: '#FFD98A', colorDetalle: '#F1D9A8' },
 ];
 
 export const cartelVictoriaPorId = (id) => CARTELES_VICTORIA.find((c) => c.id === id) || CARTELES_VICTORIA[0];

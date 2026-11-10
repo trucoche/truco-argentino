@@ -2169,14 +2169,19 @@ _crearCartelVictoria(id, texto, detalle, opts = {}) {
   if (!cfg || !cfg.cuadros.every((q) => this.textures.exists(q.clave))) return null;
   const ancho = opts.ancho || 260;
   const alto = ancho / cfg.proporcion;
-  const img = this.add.image(0, 0, cfg.cuadros[0].clave).setDisplaySize(ancho, alto);
+  // Pase 716: cartel "suave" (ej. La Pulpería): un cuadro base siempre opaco (el del medio de la secuencia) y los otros encima, que se
+  // funden con él con una curva suave; así el panel nunca se ve translúcido ni salta de una imagen a la otra.
+  const suave = !!(cfg.suave && cfg.secuencia && cfg.secuencia.length >= 4);
+  const baseIdx = suave ? cfg.secuencia[1] : 0;
+  const img = this.add.image(0, 0, cfg.cuadros[baseIdx].clave).setDisplaySize(ancho, alto);
+  const capas = suave ? cfg.cuadros.map((q, i) => (i === baseIdx ? null : this.add.image(0, 0, q.clave).setDisplaySize(ancho, alto).setAlpha(i === cfg.secuencia[0] ? 1 : 0))) : [];
   const k = ancho / 260;   // el texto crece junto con el panel
   const label = this.add.text(0, detalle ? -12 * k : 0, texto, {
     fontFamily: 'Fredoka, Arial', fontSize: `${Math.round(30 * k * (cfg.escalaTitulo || 1))}px`, fontStyle: '700', color: cfg.colorTitulo,   // escalaTitulo: títulos más chicos si los costados del panel (faroles) estorban
 
     stroke: '#2C160E', strokeThickness: Math.round(5 * k),
   }).setOrigin(0.5);
-  const hijos = [img, label];
+  const hijos = [img, ...capas.filter(Boolean), label];
   if (detalle) {
     hijos.push(this.add.text(0, 20 * k, detalle, {
       fontFamily: 'Fredoka, Arial', fontSize: `${Math.round(12 * k)}px`, fontStyle: '600', color: cfg.colorDetalle,
@@ -2185,7 +2190,27 @@ _crearCartelVictoria(id, texto, detalle, opts = {}) {
   }
   const contenedor = this.add.container(400, opts.y || 64, hijos).setDepth(opts.depth || 903);
   this._sprites.push(contenedor);
-  if (cfg.cuadros.length > 1) {
+  if (suave) {
+    const orden = cfg.secuencia;
+    const total = orden.length;
+    const ease = (f) => f * f * (3 - 2 * f);   // smoothstep: arranca y termina despacio
+    const tw = this.tweens.addCounter({
+      from: 0, to: total, duration: total * cfg.intervaloMs, repeat: -1,
+      onUpdate: (t) => {
+        const p = t.getValue();
+        const paso = Math.min(total - 1, Math.floor(p));
+        const f = ease(Math.max(0, Math.min(1, p - paso)));
+        capas.forEach((c, i) => {
+          if (!c || !c.scene) return;
+          const a0 = orden[paso] === i ? 1 : 0;
+          const a1 = orden[(paso + 1) % total] === i ? 1 : 0;
+          c.setAlpha(a0 + (a1 - a0) * f);
+        });
+      },
+    });
+    if (!this._tweensFinal) this._tweensFinal = [];
+    this._tweensFinal.push({ stop: () => tw.stop() });
+  } else if (cfg.cuadros.length > 1) {
     let n = 0;
     const orden = cfg.secuencia || cfg.cuadros.map((_, i) => i);   // Pase 715: orden opcional de los cuadros (ej. 1-2-3-2)
     const reloj = this.time.addEvent({
