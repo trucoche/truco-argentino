@@ -8,6 +8,7 @@ import { KitFundadorModal } from '../Personalizacion/KitFundadorModal';
 import { SponsorGraciasModal } from '../Personalizacion/SponsorGraciasModal';
 import { ReporteAvisoModal } from '../Reportar/ReporteAvisoModal';
 import LogroDesbloqueadoPopup from '../Lobby/LogroDesbloqueadoPopup';
+import { CARTELES_VICTORIA } from '../../constants/cartelesVictoria';
 
 // Pase 684: Galería de pantallas (solo admin; subpestaña "Galería" de Ajustes → Admin).
 // Muestra pantallas difíciles de alcanzar (bracket de torneos, pantalla final, sala de espera, mesa con cantos, eventos y popups)
@@ -81,6 +82,7 @@ export default function GaleriaAdmin() {
   // Pantalla final / espera / mesa
   const [modo, setModo] = useState('2v2');
   const [gano, setGano] = useState(true);
+  const [cartel, setCartel] = useState('base');
   const [sentados, setSentados] = useState(1);
   const [ranked, setRanked] = useState(false);
   const [canto, setCanto] = useState('');
@@ -104,11 +106,11 @@ export default function GaleriaAdmin() {
   const urlIframe = useMemo(() => {
     if (seccion === 'bracket') return `/?galeria=bracket&modo=${bModo}&cupo=${bCupo}&etapa=${etapaValida}`;
     const q = [`preview=${modo}`];
-    if (seccion === 'final') q.push(`final=${gano ? '1' : 'perdiste'}`);
+    if (seccion === 'final') { q.push(`final=${gano ? '1' : 'perdiste'}`); if (cartel !== 'base') q.push(`cartel=${cartel}`); }
     if (seccion === 'espera') { q.push(`espera=${sentadosOk}`); if (ranked) q.push('ranked=1'); }
     if (seccion === 'mesa' && canto) q.push(`canto=${canto}`);
     return `/?${q.join('&')}`;
-  }, [seccion, modo, gano, sentadosOk, ranked, canto, bModo, bCupo, etapaValida]);
+  }, [seccion, modo, gano, cartel, sentadosOk, ranked, canto, bModo, bCupo, etapaValida]);
 
   const chip = (activo) => ({ ...estilos.chip, ...(activo ? estilos.chipActivo : {}) });
   const chips = (lista, valor, alElegir, key = (x) => x, texto = (x) => x) => (
@@ -221,6 +223,8 @@ export default function GaleriaAdmin() {
             <button type="button" style={chip(gano)} onClick={() => setGano(true)}>Ganaste</button>
             <button type="button" style={chip(!gano)} onClick={() => setGano(false)}>Perdiste</button>
           </div>
+          <div style={estilos.seccion}>Cartel</div>
+          {chips(CARTELES_VICTORIA, cartel, setCartel, (c) => c.id, (c) => c.nombre)}
         </>
       )}
 

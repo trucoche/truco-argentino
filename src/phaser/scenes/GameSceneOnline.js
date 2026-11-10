@@ -2172,7 +2172,8 @@ _crearCartelVictoria(id, texto, detalle, opts = {}) {
   const img = this.add.image(0, 0, cfg.cuadros[0].clave).setDisplaySize(ancho, alto);
   const k = ancho / 260;   // el texto crece junto con el panel
   const label = this.add.text(0, detalle ? -12 * k : 0, texto, {
-    fontFamily: 'Fredoka, Arial', fontSize: `${Math.round(30 * k)}px`, fontStyle: '700', color: cfg.colorTitulo,
+    fontFamily: 'Fredoka, Arial', fontSize: `${Math.round(30 * k * (cfg.escalaTitulo || 1))}px`, fontStyle: '700', color: cfg.colorTitulo,   // escalaTitulo: títulos más chicos si los costados del panel (faroles) estorban
+
     stroke: '#2C160E', strokeThickness: Math.round(5 * k),
   }).setOrigin(0.5);
   const hijos = [img, label];
@@ -2186,12 +2187,13 @@ _crearCartelVictoria(id, texto, detalle, opts = {}) {
   this._sprites.push(contenedor);
   if (cfg.cuadros.length > 1) {
     let n = 0;
+    const orden = cfg.secuencia || cfg.cuadros.map((_, i) => i);   // Pase 715: orden opcional de los cuadros (ej. 1-2-3-2)
     const reloj = this.time.addEvent({
       delay: cfg.intervaloMs, loop: true,
       callback: () => {
         if (!img.scene) return;   // el cartel ya se destruyó
-        n = (n + 1) % cfg.cuadros.length;
-        img.setTexture(cfg.cuadros[n].clave);
+        n = (n + 1) % orden.length;
+        img.setTexture(cfg.cuadros[orden[n]].clave);
       },
     });
     if (!this._tweensFinal) this._tweensFinal = [];
@@ -2991,6 +2993,7 @@ _conectarSocket() {
       // Pase 680: `?preview=2v2&final=1` (o `final=perdiste`) muestra la pantalla final con datos de ejemplo (para ajustar el layout sin jugar).
       try {
         const qf = new URLSearchParams(window.location.search).get('final');
+        this._cartelPrueba = new URLSearchParams(window.location.search).get('cartel');   // Pase 715: la galería de admin elige el cartel (solo en la vista previa)
         if (qf) this.time.delayedCall(400, () => { try { this._mostrarPantallaFinalDePrueba(modo, qf); } catch (e2) { console.error('FINAL-PREVIEW', e2 && e2.stack); } });
       } catch (err) { /* sin query */ }
       return;
@@ -3357,7 +3360,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
       anchoCartel = Math.round(Math.max(260, Math.min(visW * 0.8, 2 * libreAlto, 420)));
       yCartel = 14 + anchoCartel / 4;
     }
-    let cartel = (modo === 'victoria' || modo === 'derrota') ? this._crearCartelVictoria('base', textoCartel, detalle, { y: yCartel, ancho: anchoCartel, depth: 903, derrota: modo === 'derrota' }) : null;
+    let cartel = (modo === 'victoria' || modo === 'derrota') ? this._crearCartelVictoria(this._cartelPrueba || 'base', textoCartel, detalle, { y: yCartel, ancho: anchoCartel, depth: 903, derrota: modo === 'derrota' }) : null;
     const cartelConLuces = !!cartel;
     if (!cartel) {
       this._actualizarBannerEsperaTitulo(textoCartel, null, detalle, {
