@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import { guardarOrigenInicial } from './utils/origenRegistro';
+import './utils/instalarWeb';   // Pase 724: captura `beforeinstallprompt` desde el arranque (aviso de instalar la web)
 
 // Pase 706: guarda utm_source / utm_medium de la primera visita (para saber qué publicación trae jugadores).
 guardarOrigenInicial();

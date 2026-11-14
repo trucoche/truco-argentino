@@ -1,3 +1,6 @@
 # https://www.robotstxt.org/robotstxt.html
+# Pase 723: el sitio es público; se indica el mapa del sitio.
 User-agent: *
-Disallow:
+Allow: /
+
+Sitemap: https://www.trucoche.com.ar/sitemap.xml

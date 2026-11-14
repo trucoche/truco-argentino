@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import MisionesCard from './MisionesCard';
+import AvisoInstalarWeb from './AvisoInstalarWeb';   // Pase 724: aviso de instalar la web en el celular
 import MonedaGirando from '../MonedaGirando';
 import PerfilRivalModal from '../PerfilRival/PerfilRivalModal';
 import PantallaCarga from '../PantallaCarga/PantallaCarga';
@@ -119,6 +120,11 @@ function SwitchMadera({ id, valor, onCambio }) {
       }} />
     </button>
   );
+}
+
+// Pase 724: invitar por WhatsApp. `wa.me` abre la app en el celular y WhatsApp Web en la compu; el texto lleva el link (con origen utm para medir qué invitaciones traen jugadores).
+function invitarPorWhatsApp(texto) {
+  window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank', 'noopener');
 }
 
 function Hoja({ titulo, onCerrar, children, variante, ancho }) {
@@ -813,6 +819,16 @@ useEffect(() => {
                 </div>
               );
             })}
+            <div style={estilos.redesInvitar}>
+              <span style={estilos.redesNombre}>Invitá a un amigo</span>
+              <button
+                type="button"
+                onClick={() => invitarPorWhatsApp(`Te invito a jugar al truco en TrucoChe 🃏 Jugás gratis desde el celular o la compu. Entrá acá: ${window.location.origin}/?utm_source=whatsapp&utm_medium=invite`)}
+                style={{ ...estilos.redesBoton, ...estilos.redesBotonHecho, cursor: 'pointer' }}
+              >
+                WhatsApp
+              </button>
+            </div>
             {!RECLAMO_SOCIAL_ACTIVO && <p style={estilos.redesNota}>{`Los +${RECOMPENSA_SOCIAL} mates se sumarán solos en la próxima actualización.`}</p>}
             {!!avisoRedes && (
               <p role="status" style={{ ...estilos.redesAviso, ...(avisoRedes.startsWith('¡Listo') ? estilos.redesAvisoOk : {}) }}>
@@ -851,6 +867,13 @@ useEffect(() => {
               setTimeout(() => setCopiadoUrl(false), 2000);
             },
           },
+          {
+            texto: 'Invitar por WhatsApp',
+            onClick: () => {
+              const url = `${window.location.origin}/?codigo=${codigoPrivadoCreado}&utm_source=whatsapp&utm_medium=invite_sala`;
+              invitarPorWhatsApp(`Te invito a jugar al truco en TrucoChe 🃏 Mi sala es ${codigoPrivadoCreado}. Entrá acá: ${url}`);
+            },
+          },
           // Pase siguiente (se mantiene): crear la sala no ocupa lugar; este botón hace el join real.
           {
             texto: '✓ Entrar a jugar',
@@ -869,6 +892,8 @@ useEffect(() => {
         </p>
         <div style={estilos.codigoBox}>{codigoPrivadoCreado}</div>
       </PopupMadera>
+
+      <AvisoInstalarWeb />
 
       {perfilAbierto && (
         <PerfilRivalModal
@@ -1109,6 +1134,7 @@ const estilos = {
   redesBotonOff: { background: '#A0522D', borderBottomColor: '#5C2D16', color: '#FFF8E7' },
   redesBotonHecho: { background: '#3F8F4E', borderBottomColor: '#25602F', color: '#FFF8E7' },
   redesNota: { margin: 0, fontWeight: 700, fontSize: 13, color: '#E0D0B0', textAlign: 'center' },
+  redesInvitar: { display: 'flex', alignItems: 'center', gap: 12, background: '#1E100A', border: '1.5px dashed #5C3D21', borderRadius: 12, padding: '8px 12px', margin: '10px 0 6px' },
   // Pase 516: modal de redes (madera oscura, ribete bronce, remaches, X roja flotante, banner pergamino).
   redesCapa: { background: 'rgba(0,0,0,0.75)' },
   redesPlaca: { position: 'relative', overflow: 'visible', maxWidth: 560, borderRadius: 20, border: '3px solid #8C6239', background: 'repeating-linear-gradient(0deg, rgba(255,255,255,0.025) 0 1px, transparent 1px 3px), linear-gradient(160deg, #2A1B40 0%, #231635 55%, #1B1028 100%)', boxShadow: '0 16px 40px rgba(0,0,0,0.7), inset 0 0 0 2px rgba(201,162,74,0.35)' },
