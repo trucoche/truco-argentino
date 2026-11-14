@@ -1540,8 +1540,12 @@ _crearElementosDeTexto() {
     const Gtop = L.HDR + 70;                 // borde de arriba del aro
     const apoyo = L.panelTop + 6;            // las patas llegan a la franja de remaches
     const s = Math.max(0.78, Math.min(0.94, (apoyo - Gtop) / 983));   // tope 0.94: los mazos de los costados tienen que verse enteros
-    const top = Gtop - 16 * s;
-    const extra = Math.max(0, apoyo - (top + 999 * s));
+    const top0 = Gtop - 16 * s;
+    const extra0 = Math.max(0, apoyo - (top0 + 999 * s));
+    // Pase 724: en celulares largos las patas de la mesa se estiraban demasiado; ahora la mesa baja la mitad de lo que sobra (tope 90) y solo el resto se estira.
+    const desc = (!dos && extra0 > 0) ? Math.min(90, Math.round(extra0 * 0.5)) : 0;
+    const top = top0 + desc;
+    const extra = Math.max(0, extra0 - desc);
     const FA = 850, FB = 905;
     this.mesaImg.setTexture('mesaEquiposApp').setCrop(0, 0, 800, FA + 1).setOrigin(0.5, 0).setScale(s).setPosition(400, top);
     if (!this._mesaAppExtra) {
@@ -1557,7 +1561,7 @@ _crearElementosDeTexto() {
     [this.mesaMedio, this.mesaPatas, this.mesaPies, this.marcaTcMesa].forEach(o => { if (o && o.scene) o.setVisible(false); });
     const pt = (xi, yi) => ({ x: Math.round(400 + (xi - 400) * s), y: Math.round(top + yi * s) });
     const xLado = Math.round(Math.min(338 * s, 312));   // mazos de los costados: pegados al aro, pero enteros dentro de la vista (40..760)
-    const yDeckTop = L.HDR + 80;
+    const yDeckTop = L.HDR + 80 + desc;
     const zona = (xi, yi, sx, rot) => ({ ...pt(xi, yi), sx, rot });
     const G = { s, top, extra };
     if (dos) {
@@ -1566,7 +1570,8 @@ _crearElementosDeTexto() {
     G.seat = { 270: { x: 400, y: yDeckTop }, 180: { ...pt(62, 425), x: 400 - xLado }, 0: { ...pt(738, 425), x: 400 + xLado } };   // Pase 698: las manos de los costados suben (515 → 425) a la altura de las cartas jugadas (zona y = 410)
       G.zona = { 270: zona(400, 176, 1, 2), 180: zona(272, 410, -1, -6), 0: zona(528, 410, 1, 6) };
     } else {
-      G.seat = { 270: { x: 400, y: yDeckTop }, 210: { ...pt(62, 300), x: 400 - xLado }, 330: { ...pt(738, 300), x: 400 + xLado }, 150: { ...pt(62, 575), x: 400 - xLado }, 30: { ...pt(738, 575), x: 400 + xLado } };
+      const xLadoArr = xLado - 42;   // Pase 724: los compañeros de arriba (210 / 330) se acercan a la mesa
+      G.seat = { 270: { x: 400, y: yDeckTop }, 210: { ...pt(62, 272), x: 400 - xLadoArr }, 330: { ...pt(738, 272), x: 400 + xLadoArr }, 150: { ...pt(62, 545), x: 400 - xLado }, 30: { ...pt(738, 545), x: 400 + xLado } };   // Pase 723: los 4 jugadores de los costados suben ~28 px de imagen (300 → 272 y 575 → 545)
       G.zona = { 270: zona(400, 160, 1, 0), 210: zona(262, 300, -1, -8), 330: zona(538, 300, 1, 8), 150: zona(262, 470, -1, -12), 30: zona(538, 470, 1, 12) };
     }
     G.miY = pt(400, 600).y;
@@ -4447,7 +4452,7 @@ _renderizarEquipos(e, animarReparto, hayCantoSinResolver) {
     // "carta rival" para enfrentar en este mismo lugar (las de compañeros/
     // rivales viven junto a cada asiento, ver _dibujarJugador), así que
     // sigue siendo una fila simple, sin DueloCartas.
-    this._dibujarFilaCartas(e.misJugadas, G ? G.miY : this._yEq(esTresVTres ? 276 : 269), false, false, (this._L ? 0.60 * 1.4 : 0.60) * 0.85, false, 30, esTresVTres ? 0 : -3);   // Pase 443: 2v2 sube 15% (340 -> 299) y cartas -15%
+    this._dibujarFilaCartas(e.misJugadas, G ? G.miY : this._yEq(esTresVTres ? 276 : 269), false, false, (this._L ? 0.60 * 1.4 : 0.60) * 0.85, false, 30, G ? (esTresVTres ? 0 : -3) : (esTresVTres ? 7 : -9));   // Pase 724: en escritorio mi carta jugada también va con ángulo   // Pase 443: 2v2 sube 15% (340 -> 299) y cartas -15%
     // Pase siguiente: mismo ajuste que en 1v1 (ver el otro call site,
     // dentro del bloque no-equipos de _renderizarEstado) — la mano
     // propia comparte la misma barra de botonera en cualquier modo.
@@ -5116,9 +5121,9 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
       if (esDos) {
         // Pase 443: cruz de 4 zonas dentro del paño (norte = compañero, oeste/este = rivales, el sur es mi fila).
         const ZONAS_2V2 = {
-          180: { x: 235, y: 215, sx: -1, sy: 0, rot: -6 },   // Rival1 (oeste)
-          270: { x: 400, y: 162, sx: 1, sy: 0, rot: 2 },     // Compañero (norte)
-          0: { x: 565, y: 215, sx: 1, sy: 0, rot: 6 },       // Rival2 (este)
+          180: { x: 250, y: 215, sx: -1, sy: 0, rot: -16 },  // Rival1 (oeste)   (Pase 724: más hacia el centro y con más ángulo)
+          270: { x: 400, y: 162, sx: 1, sy: 0, rot: -5 },    // Compañero (norte)
+          0: { x: 550, y: 215, sx: 1, sy: 0, rot: 16 },      // Rival2 (este)
         };
         const z2 = ZONAS_2V2[Math.round(((angulo % 360) + 360) % 360)];
         if (z2) { baseX = z2.x; baseY = z2.y; dirX = z2.sx; dirY = z2.sy; rotZona = z2.rot * (Math.PI / 180); }
@@ -5127,11 +5132,12 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
         // Pase 442: trayectoria ovalada alrededor del centro del paño (ya con la mesa elevada), en vez de la
         // grilla 2x3: norte, noroeste/noreste, oeste/este y sur (mi fila). `rot` en grados.
         const ZONAS_3V3 = {
-          150: { x: 250, y: 236, sx: -1, sy: 0, rot: -12 },   // Rival1 (oeste)
-          210: { x: 268, y: 160, sx: -1, sy: 0, rot: -8 },    // Compa1 (noroeste)
-          270: { x: 400, y: 140, sx: 1, sy: 0, rot: 0 },      // Rival2 (norte)
-          330: { x: 532, y: 160, sx: 1, sy: 0, rot: 8 },      // Compa2 (noreste)
-          30: { x: 550, y: 236, sx: 1, sy: 0, rot: 12 },      // Rival3 (este)
+          // Pase 724: cartas un poco más hacia el centro del paño (ya no rozan el borde de madera) y con más ángulo, como tiradas sobre la mesa.
+          150: { x: 264, y: 234, sx: -1, sy: 0, rot: -20 },   // Rival1 (oeste)
+          210: { x: 282, y: 164, sx: -1, sy: 0, rot: -14 },   // Compa1 (noroeste)
+          270: { x: 400, y: 144, sx: 1, sy: 0, rot: -6 },     // Rival2 (norte)
+          330: { x: 518, y: 164, sx: 1, sy: 0, rot: 14 },     // Compa2 (noreste)
+          30: { x: 536, y: 234, sx: 1, sy: 0, rot: 20 },      // Rival3 (este)
         };
         const z = ZONAS_3V3[Math.round(((angulo % 360) + 360) % 360)];
         if (z) { baseX = z.x; baseY = z.y; dirX = z.sx; dirY = z.sy; rotZona = z.rot * (Math.PI / 180); }
@@ -5175,9 +5181,14 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
 
       jugadas.forEach((carta, idx) => {
         const esUltima = idx === jugadas.length - 1;
-        const offset = (jugadas.length - 1 - idx) * pasoApilado;
+        // Pase 724 (escritorio): el abanico de cartas jugadas se reparte parejo alrededor del punto base (antes las viejas salían
+        // todas hacia afuera, hacia el borde de madera) y cada carta lleva un giro propio fijo (según su id) para que parezcan tiradas.
+        const escritorio = !this._geoEq;
+        const offset = (jugadas.length - 1 - idx) * pasoApilado - (escritorio ? (jugadas.length - 1) * pasoApilado * 0.5 : 0);
         const px = baseX + dirX * offset;
         const py = baseY + dirY * offset;
+        const semJug = this._hashSimple(carta.id);
+        const rotCarta = rotZona + (escritorio ? (((semJug % 7) - 3) * 1.6 + (idx % 2 ? 3 : -3)) * Math.PI / 180 : 0);
         const keyOriginal = `${carta.valor}_${carta.palo}`;
         const keyEscalada = `${keyOriginal}_${anchoBaseJugadaR}x${altoBaseJugadaR}`;
         this._crearTexturaEscalada(keyOriginal, keyEscalada, anchoBaseJugadaR, altoBaseJugadaR);
@@ -5208,7 +5219,7 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
 
         const img = this.add.image(px, pyN, keyEscalada)
           .setDisplaySize(anchoCarta, altoCarta)
-          .setRotation(rotZona)
+          .setRotation(rotCarta)
           .setDepth(60 + idx)
           .setAlpha(esUltima ? 1 : 0.85);
         this._sprites.push(img);
@@ -6876,7 +6887,7 @@ _geoBotonera(esEq) {
 _geoEtiquetaPanel() {
   const L = this._L;
   const interior = L.panelH - 48;
-  return { interior, yEtiqueta: this.yCentroBotonera - interior / 2 + 14, kFila: 0.76 };
+  return { interior, yEtiqueta: this.yCentroBotonera - interior / 2 + 24, kFila: 0.72 };   // Pase 724: la pregunta baja 10 px dentro del panel y las filas miden un poco menos
 }
 
 _dibujarBotonesCanto(e) {
@@ -6897,12 +6908,12 @@ _dibujarBotonesCanto(e) {
 
 _dibujarBotonesCantoInterno(e) {
   const CENTRO_X = 400;
-  const GAP = 30;
+  const GAP = 12;   // Pase 724: separación única entre botones de una fila (escritorio)
   // Pase 443: en equipos va el botón circular de cartas a la derecha de la botonera; las filas
   // dejan libre ese margen y Truco / Ir al mazo pierden un 15% de ancho.
   const esEq = Array.isArray(e.companeros);
   if (esEq) this._dibujarBotonCartasEquipo(e);
-  const F_ANCHO_EQ = esEq ? 0.85 : 1;
+  const F_ANCHO_EQ = (esEq && this._L) ? 0.85 : 1;   // Pase 724: en escritorio los botones no se angostan (mismo tamaño que en 1v1)
 
   // Nonagésimo séptimo pase (resumen histórico — ver el pase 269 más abajo
   // para el esquema actual): el usuario pidió que el TAMAÑO no cambiara de
@@ -6912,7 +6923,7 @@ _dibujarBotonesCantoInterno(e) {
   // estos PNG (aspecto ~2.0-2.1, ver abajo) y los deformaba (puntas
   // "aplastadas") — se mantiene la altura fija (ALTO_BOTON_FIJO), pero el
   // ancho vuelve a salir del aspecto real de cada archivo.
-  const ALTO_BOTON_FIJO = this._L ? 52 : 44;   // Pase 675: botones más altos en el celular (altura táctil ~48-52 px)
+  const ALTO_BOTON_FIJO = this._L ? 52 : 32;   // Pase 724: en escritorio TODOS los botones miden lo mismo (32), Truco incluido, en 1v1/2v2/3v3   // Pase 675: botones más altos en el celular (altura táctil ~48-52 px)
 
   // Ducentésimo sexagésimo noveno pase: el usuario reportó que los botones
   // se ven "aplastados" (las puntas redondeadas de la píldora pierden su
@@ -6994,10 +7005,25 @@ _dibujarBotonesCantoInterno(e) {
       });
       return;
     }
+    // Pase 724 (escritorio): todos los botones miden lo mismo en cualquier fila. Si la fila no entra, primero se achica la
+    // separación (hasta 6); si aun así no entra y hay 4 o más botones, se parte en dos filas (como en el celular) sin achicar nada.
+    const sumaAnchos = specs.reduce((acc, s) => acc + s.ancho, 0);
+    const dispD = (esEq && !!this._L) ? 580 : (esEq ? 372 : this.anchoBotonera - 40);   // equipos: la fila ocupa el tramo izquierdo del panel (el botón de cartas queda a la derecha)
+    if (specs.length >= 4 && !extraK_dividida && (sumaAnchos + 6 * (specs.length - 1)) * kB > dispD) {
+      const mitad = Math.ceil(specs.length / 2);
+      const altoD = specs[0].alto * kB;
+      const yA = 511 + altoD / 2, yB = 511 + altoD + 5 + altoD / 2;
+      centrarFila(specs.slice(0, mitad), yA, 10, extraK, true);
+      centrarFila(specs.slice(mitad), yB, 10, extraK, true);
+      return;
+    }
+    if ((sumaAnchos + gap * (specs.length - 1)) * kB > dispD && specs.length > 1) {
+      gap = Math.max(6, (dispD / kB - sumaAnchos) / (specs.length - 1));
+    }
     const anchoNatural = (specs.reduce((acc, s) => acc + s.ancho, 0) + gap * (specs.length - 1)) * kB;
     // Pase 678: en equipos del celular la fila se corre a la izquierda para no pisar el botón de señas (esquina inferior derecha).
     const filaConSena = esEq && !!this._L;
-    const anchoDisponible = filaConSena ? 580 : this.anchoBotonera - 40 - (esEq && !this._L ? 111 : 0);
+    const anchoDisponible = filaConSena ? 580 : (esEq ? 372 : this.anchoBotonera - 40);
     // Freno de emergencia: la única fila donde el ancho nativo de verdad no
     // entra es la fusionada de 5 (Truco+Envido+RealEnvido+FaltaEnvido+
     // IrAlMazo, gap 8 — ver pase 97). Si no entra, se achica TODA la fila
@@ -7010,7 +7036,7 @@ _dibujarBotonesCantoInterno(e) {
     const factor = anchoNatural > anchoDisponible ? anchoDisponible / anchoNatural : 1;
     const gapFinal = gap * factor * kB;
     const anchoTotal = anchoNatural * factor;
-    let cursorX = (filaConSena ? 368 : CENTRO_X) - anchoTotal / 2;
+    let cursorX = ((filaConSena || esEq) ? 368 : CENTRO_X) - anchoTotal / 2;
     specs.forEach((s) => {
       const anchoFinal = s.ancho * factor * kB;
       const altoFinal = s.alto * factor * kB;
@@ -7034,7 +7060,7 @@ _dibujarBotonesCantoInterno(e) {
   const specImagen = (idSemantico, onClick, opciones = {}) => {
     const clave = CLAVE_IMAGEN_BOTON[idSemantico];
     // Pase 406: la placa del Truco (y Retruco/Vale Cuatro) es 1.3x más grande — jerarquía visual.
-    const altoB = (!this._L && BOTON_RUSTICO[clave] && BOTON_RUSTICO[clave].v === 'oro') ? Math.round(ALTO_BOTON_FIJO * 1.3) : ALTO_BOTON_FIJO;   // Pase 681: en el celular Truco mide lo mismo que el resto
+    const altoB = ALTO_BOTON_FIJO;   // Pase 724: Truco mide lo mismo que el resto también en escritorio   // Pase 681: en el celular Truco mide lo mismo que el resto
     return { alto: altoB, imagen: clave, ancho: this._anchoBotonImagen(clave, altoB), onClick, ...opciones };
   };
 
@@ -7262,14 +7288,14 @@ _dibujarBotonesCantoInterno(e) {
     if (hayEnvido && itemsFila.length > 3) {
       const ids = ['envido', 'real-envido', 'falta-envido'];
       const K2 = 1;   // Pase 675: el agrandado del celular ahora viene de kBoton
-      const altoArriba = this._L ? 38 : 32, altoAbajo = this._L ? 52 : 38;
+      const altoArriba = this._L ? 38 : ALTO_BOTON_FIJO, altoAbajo = this._L ? 52 : ALTO_BOTON_FIJO;   // Pase 724
       const filaArriba = itemsFila.filter(it => ids.includes(it.id))
         .map(it => { const sp = specImagen(it.id, it.onClick); const c = CLAVE_IMAGEN_BOTON[it.id]; return { ...sp, alto: altoArriba, ancho: this._anchoBotonImagen(c, altoArriba) }; });
       const filaAbajo = itemsFila.filter(it => !ids.includes(it.id))
-        .map(it => { const sp = specImagen(it.id, it.onClick); const esTruco = it.id !== 'ir-al-mazo'; const h = esTruco ? Math.round(altoAbajo * (this._L ? 1 : 1.3)) : altoAbajo; const c = CLAVE_IMAGEN_BOTON[it.id]; return { ...sp, alto: h, ancho: this._anchoBotonImagen(c, h) * F_ANCHO_EQ }; });
+        .map(it => { const sp = specImagen(it.id, it.onClick); const h = altoAbajo; const c = CLAVE_IMAGEN_BOTON[it.id]; return { ...sp, alto: h, ancho: this._anchoBotonImagen(c, h) * F_ANCHO_EQ }; });
       const kk = kB0 * K2;
       const sep = 8 * kk;
-      const hA = altoArriba * kk, hB = Math.round(altoAbajo * (this._L ? 1 : 1.3)) * kk;
+      const hA = altoArriba * kk, hB = altoAbajo * kk;
       const dyP = this._L ? 3 : 10;
       let yTop = Y_FILA_UNICA + dyP - (hB + sep) / 2;
       let yBot = Y_FILA_UNICA + dyP + (hA + sep) / 2;
@@ -7279,8 +7305,8 @@ _dibujarBotonesCantoInterno(e) {
         yTop = tope + hA / 2;
         yBot = tope + hA + sepD + hB / 2;
       }
-      centrarFila(filaArriba, yTop, this._L ? 9 : 14, K2);
-      centrarFila(filaAbajo, yBot, this._L ? 22 : 30, K2);
+      centrarFila(filaArriba, yTop, this._L ? 9 : 10, K2);
+      centrarFila(filaAbajo, yBot, this._L ? 22 : 10, K2);
       return;
     }
     // Ducentésimo sexagésimo noveno pase: Y_FILA_UNICA en vez del 565 suelto
