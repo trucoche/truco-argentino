@@ -1345,7 +1345,7 @@ _crearElementosDeTexto() {
     const panelTop = Hg - panelH;
     const panelCY = Hg - panelH / 2;
     // Pase 402: la carta de la mano nunca es mas alta que la botonera de madera. Pase 546: +15% (tope 1.95 / 1.2x la botonera) — pedido: las cartas se veían chicas en el celular.
-    const kMano = Math.min(2.3 * f, 1.2 * panelH / 118);   // Pase 675: cartas de la mano +18% (tope 1.95 -> 2.3)
+    const kMano = Math.min(2.5 * f, 1.3 * panelH / 118);   // Pase 725: cartas de la mano +9 % (2.3 -> 2.5, tope 1.2 -> 1.3)   // Pase 675: cartas de la mano +18% (tope 1.95 -> 2.3)
     const manoY = panelTop - 40;   // Pase 676: la mano apoya sobre la franja de remaches (antes -6: el borde de abajo quedaba tapado por el panel)
 
     // Mesa: la imagen se parte en TRES franjas y solo la del medio se
@@ -1591,13 +1591,22 @@ _crearElementosDeTexto() {
     // Pase 675: el mazo y el nombre del rival quedan pegados a la cabecera (nombre a ~26 bajo ella): la mesa sube lo que haga falta
     // (antes eran 70 fijos y en celulares largos quedaba aire vacío) y se agranda hasta apoyar en la botonera.
     if (L._subidaMesa === undefined) {
-      const delta = Math.round(L.nombreY - (L.HDR + 26));
+      const delta = Math.round(L.nombreY - (L.HDR + 48));   // Pase 725: 26 -> 48 (los anotadores de fósforos de dos filas bajan hasta ~143 y el nombre del rival no los toca)
       L._subidaMesa = delta;
       L.rivalY -= delta;
       L.nombreY -= delta;
+      // Pase 725: en celulares largos sobraba alto y se estiraban las patas (se veian muy largas con la mesa pegada arriba). Ahora la mesa,
+      // el mazo y el nombre del rival bajan el 60 % de lo que sobra (tope 110) y solo el resto se estira en las patas.
+      const top0 = L.tableTop - delta;
+      const apoyo0 = L.panelTop + 6;
+      const s0 = Math.max(0.8, Math.min(0.92, (apoyo0 - top0) / 919));
+      const extra0 = Math.max(0, apoyo0 - top0 - 919 * s0);
+      L._descMesa = Math.min(110, Math.round(extra0 * 0.6));
+      L.rivalY += L._descMesa;
+      L.nombreY += L._descMesa;
       if (this.nombreRivalAngosto && this.nombreRivalAngosto.scene) this.nombreRivalAngosto.setY(L.nombreY);
     }
-    const top = L.tableTop - L._subidaMesa;
+    const top = L.tableTop - L._subidaMesa + (L._descMesa || 0);
     const apoyo = L.panelTop + 6;   // Pase 676: las patas llegan hasta la franja de remaches (no queda la mesa flotando)
     const s = Math.max(0.8, Math.min(0.92, (apoyo - top) / 919));
     const extra = Math.max(0, apoyo - top - 919 * s);   // lo que falta para llegar: se estira solo la madera lisa de las patas (filas 850-895)
@@ -4691,7 +4700,7 @@ _aplicarMarcadorEstilo(animar = false) {
   lados.forEach(({ k, geo, bg, num, label, puntos, zona }) => {
     // Layout angosto: la placa crece hacia ARRIBA (su borde de abajo queda donde estaba);
     // en escritorio crece hacia abajo desde el borde de arriba.
-    const top = this._L ? (geo.cy + geo.h / 2 - h2) : (geo.cy - geo.h / 2);
+    const top = this._L ? Math.max(14, geo.cy + geo.h / 2 - h2) : (geo.cy - geo.h / 2);   // Pase 725: con dos filas (mesa a 30) la placa crece hacia abajo si no entra arriba
     const cy2 = top + h2 / 2;
     const cx2 = this._cxPlacaFosforos(k);
     this._dibujarPlacaMarcador(bg, cx2, cy2, wF, h2, k === 'rival');
@@ -4733,12 +4742,12 @@ _aplicarMarcadorEstilo(animar = false) {
   });
   // Rectangulo real de la placa del rival (el anillo del timer lo bordea en modo fosforos).
   {
-    const topR2 = this._L ? (g.rival.cy + g.rival.h / 2 - h2) : (g.rival.cy - g.rival.h / 2);
+    const topR2 = this._L ? Math.max(14, g.rival.cy + g.rival.h / 2 - h2) : (g.rival.cy - g.rival.h / 2);
     this._rectPlacaRival = { x: this._cxPlacaFosforos('rival') - wF / 2, y: topR2, w: wF, h: h2, r: 9 };
     if (this._anilloRect && this._anilloEsRival) this._anilloRect = { ...this._rectPlacaRival };
   }
   if (this.manoIconoRival && this.manoIconoRival.scene) {
-    const topR = this._L ? (g.rival.cy + g.rival.h / 2 - h2) : (g.rival.cy - g.rival.h / 2);
+    const topR = this._L ? Math.max(14, g.rival.cy + g.rival.h / 2 - h2) : (g.rival.cy - g.rival.h / 2);
     // Fuera del marco (y del anillo del timer, que sobresale ~3 px de la placa).
     this.manoIconoRival.setPosition(this._cxPlacaFosforos('rival') + wF / 2 + (this._L ? 22 : 20), topR + hLabel / 2 + 2);
     this._posicionarMedallaRival();
@@ -6887,7 +6896,18 @@ _geoBotonera(esEq) {
 _geoEtiquetaPanel() {
   const L = this._L;
   const interior = L.panelH - 48;
-  return { interior, yEtiqueta: this.yCentroBotonera - interior / 2 + 24, kFila: 0.72 };   // Pase 724: la pregunta baja 10 px dentro del panel y las filas miden un poco menos
+  return { interior, yEtiqueta: this.yCentroBotonera - interior / 2 + 38, kFila: 0.72 };   // Pase 725: la pregunta baja 14 px mas (24 -> 38): ya no roza la franja de remaches   // Pase 724: la pregunta baja 10 px dentro del panel y las filas miden un poco menos
+}
+
+// Pase 728: galería web. El panel (PanelGaleriaWeb) guarda la configuración del Modo foto y la escena rearma el estado simulado y lo redibuja al instante.
+recargarEstadoFoto() {
+  const foto = getConfigFoto();
+  if (!foto.activo || !this.codigoSala || !String(this.codigoSala).startsWith('PREVIEW_')) return;
+  if (foto.yo) this.usuario = { ...(this.usuario || {}), username: foto.yo };
+  this._jugadoresSala = [...foto.compas, ...foto.rivales].filter(Boolean).map((n) => ({ username: n, mazo_id: foto.mazo }));
+  this.estado = crearEstadoFoto(foto);
+  if (this.onEsEquipos) this.onEsEquipos(Array.isArray(this.estado.companeros));
+  this._renderizarEstado(false);
 }
 
 _dibujarBotonesCanto(e) {

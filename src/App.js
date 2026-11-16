@@ -359,6 +359,14 @@ function AppInterna() {
       return;
     }
 
+    // Pase 728: al salir de la mesa del Modo foto (/?ajustes=foto) se vuelve a Ajustes → Admin → Modo foto en vez de al lobby.
+    if (params.get('ajustes') === 'foto') {
+      window.history.replaceState({}, '', window.location.pathname);
+      try { sessionStorage.setItem('tc_abrir_modo_foto', '1'); } catch (e) { /* sin storage */ }
+      restaurarSesion().then(() => setPantalla('config'));
+      return;
+    }
+
     restaurarSesion();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

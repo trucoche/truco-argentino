@@ -19,9 +19,12 @@ export default function ModoFotoAdmin() {
     cambiar({ [clave]: arr });
   };
   const numero = (t) => Math.max(0, Math.min(30, parseInt(String(t).replace(/[^0-9]/g, ''), 10) || 0));
-  const abrir = () => {
-    guardarConfigFoto(cfg);
-    window.location.href = `/?preview=${cfg.modo}&foto=1`;
+  // Pase 728: "Abrir galería" abre la mesa con el panel (cartas jugadas, turno, mano, cantos, señas y puntos en vivo) y la interfaz visible;
+  // "Abrir mesa" queda como antes, con esas variantes en automático.
+  const abrir = (galeria = false) => {
+    const auto = { jugadasMias: null, jugadasCompas: null, jugadasRivales: null, turno: 'yo', mano: null, tengoFlor: null, senias: false, objetivo: null };
+    guardarConfigFoto({ ...cfg, ...(galeria ? {} : auto), ocultarUI: galeria ? false : cfg.ocultarUI });
+    window.location.href = `/?preview=${cfg.modo}&foto=1${galeria ? '&galeria=1' : ''}`;
   };
   const chip = (activo) => ({ ...estilos.chip, ...(activo ? estilos.chipActivo : {}) });
 
@@ -78,10 +81,11 @@ export default function ModoFotoAdmin() {
 
       <label style={estilos.checkFila}>
         <input id="foto-limpia" type="checkbox" checked={cfg.ocultarUI} onChange={(e) => cambiar({ ocultarUI: e.target.checked })} style={{ width: 20, height: 20 }} />
-        <span>Interfaz limpia (sin chat ni botones)</span>
+        <span>Interfaz limpia (sin código de sala ni botón volver)</span>
       </label>
 
-      <button type="button" style={estilos.btnAbrir} onClick={abrir}>Abrir mesa</button>
+      <button type="button" style={estilos.btnAbrir} onClick={() => abrir(false)}>Abrir mesa</button>
+      <button type="button" style={{ ...estilos.btnAbrir, marginTop: 10, background: '#F3E3C3' }} onClick={() => abrir(true)}>Abrir galería (panel en la mesa)</button>
     </PlacaMadera>
   );
 }

@@ -9,7 +9,8 @@ import ConfiguracionMesaModal from './ConfiguracionMesaModal';
 import { getSocket } from '../../services/socket';
 import PerfilRivalModal from '../PerfilRival/PerfilRivalModal';
 import AnotadorCriollo from './AnotadorCriollo';
-import { getConfigFoto } from '../../constants/modoFoto';
+import { getConfigFoto, URL_SALIDA_FOTO } from '../../constants/modoFoto';
+import PanelGaleriaWeb from './PanelGaleriaWeb';
 import { confirmarPopup } from '../Popup/PopupMadera';
 
 // Pase 404: estilo del marcador de la mesa ('numeros' | 'fosforos'), recordado entre partidas.
@@ -266,7 +267,7 @@ useEffect(() => {
   salirRef.current = async () => {
     const escena = gameRef.current?.scene.getScene('GameSceneOnline');
     const esPreview = String(codigoSala || '').startsWith('PREVIEW_');
-    if (esPreview) { window.location.href = '/'; return; }
+    if (esPreview) { window.location.href = getConfigFoto().activo ? URL_SALIDA_FOTO : '/'; return; }   // Pase 728: el Modo foto vuelve a Ajustes → Modo foto
     // Pase 680: con la pantalla final abierta la partida ya terminó: Volver va directo al lobby, sin preguntar.
     if (escena?._pantallaFinalActiva) { manejarVolverLobby(escena._logrosDesbloqueadosPendientes || []); return; }
     const puede = !!escena?.puedeRendirse?.();
@@ -313,16 +314,20 @@ useEffect(() => {
             <div style={{ fontSize: 14, opacity: 0.8, maxWidth: 280 }}>La mesa se juega en vertical. Tu partida sigue en curso.</div>
           </div>
         )}
+        {String(codigoSala || '').startsWith('PREVIEW_') && getConfigFoto().galeria && (
+          <PanelGaleriaWeb escenaRef={() => gameRef.current?.scene.getScene('GameSceneOnline')} marcadorEstilo={marcadorEstilo} onCambiarMarcadorEstilo={cambiarMarcadorEstilo} />
+        )}
         {fotoLimpia && (
           // Salida escondida del Modo foto: esquina superior izquierda, invisible.
-          <div onClick={() => { window.location.href = '/'; }} style={{ position: 'absolute', top: 0, left: 0, width: 56, height: 56, zIndex: 90, cursor: 'default' }} />
+          <div onClick={() => { window.location.href = URL_SALIDA_FOTO; }} style={{ position: 'absolute', top: 0, left: 0, width: 56, height: 56, zIndex: 90, cursor: 'default' }} />
         )}
-        {!fotoLimpia && <ChatMesa angosto={angosto} codigoSala={codigoSala} esEquipos={esEquipos} personaje={usuario?.personaje || 'gaucho'} token={token} usuarioActual={usuario?.username} />}
+        {/* Pase 727: con la interfaz limpia del Modo foto el chat y los ajustes se ven como en una partida normal */}
+        {<ChatMesa angosto={angosto} codigoSala={codigoSala} esEquipos={esEquipos} personaje={usuario?.personaje || 'gaucho'} token={token} usuarioActual={usuario?.username} />}
         {/* Pase 443: el botón de mostrar/esconder cartas ahora se dibuja dentro de la botonera (GameSceneOnline.js, _dibujarBotonCartasEquipo). */}
         {audioInfo.privada && !fotoLimpia && (
           <AudioMesaBoton audioRoomUrl={audioInfo.audioRoomUrl} nombreUsuario={usuario?.username} />
         )}
-        {!fotoLimpia && !angosto && <ConfiguracionMesaBoton onAbrir={() => setMostrarConfiguracion(true)} />}
+        {!angosto && <ConfiguracionMesaBoton onAbrir={() => setMostrarConfiguracion(true)} />}
         <ConfiguracionMesaModal
           visible={mostrarConfiguracion}
           onCerrar={() => setMostrarConfiguracion(false)}

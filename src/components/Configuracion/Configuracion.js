@@ -131,8 +131,11 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
   const [guardandoAvatar, setGuardandoAvatar] = useState(false);
   const [enviandoEliminacion, setEnviandoEliminacion] = useState(false);
   const [guardandoGenero, setGuardandoGenero] = useState(false);
-  const [pestana, setPestana] = useState('perfil');   // Pase 539: Ajustes por pestañas
-  const [subAdmin, setSubAdmin] = useState('reportes');   // Pase 626: subpestaña de la pestaña Admin
+  // Pase 728: al salir de la mesa del Modo foto, App.js deja una marca y Ajustes se abre directo en Admin → Modo foto (para seguir probando).
+  const volverAFoto = useRef((() => { try { return sessionStorage.getItem('tc_abrir_modo_foto') === '1'; } catch (e) { return false; } })());
+  useEffect(() => { try { sessionStorage.removeItem('tc_abrir_modo_foto'); } catch (e) { /* sin storage */ } }, []);
+  const [pestana, setPestana] = useState(volverAFoto.current ? 'admin' : 'perfil');   // Pase 539: Ajustes por pestañas
+  const [subAdmin, setSubAdmin] = useState(volverAFoto.current ? 'foto' : 'reportes');   // Pase 626: subpestaña de la pestaña Admin
   const [reportarAbierto, setReportarAbierto] = useState(false);   // Pase 577: Reportar bug / sugerencia
   const esCel = useEsCelCfg();   // Pase 695
   const [hoja, setHoja] = useState(null);   // Pase 695: 'foto' | 'personaje' | 'genero' | 'pers' | 'bloqueados'
