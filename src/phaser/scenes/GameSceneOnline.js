@@ -31,6 +31,10 @@ const conVersion = (ruta) => `${ruta}?v=${ASSET_VERSION}`;
 // Pase 457: margen interno mínimo (px) entre el borde de la placa de fósforos y los cuadritos, para no chocar con los remaches dorados.
 const MARGEN_INTERNO_FOS = 12;
 
+// Pase 730: en escritorio (ventana ancha) la mesa, los mazos, los asientos y las cartas jugadas bajan estas unidades de mundo
+// para despegarse de los anotadores de arriba y quedar mas centrados en pantalla (la mano y la botonera no se mueven).
+const DESC_ESCRITORIO = 26;
+
 function proximoNivelTruco(nivelActual) {
   const niveles = ['truco', 'retruco', 'vale-cuatro'];
   const idx = niveles.indexOf(nivelActual);
@@ -570,7 +574,7 @@ _crearElementosDeTexto() {
     this._crearTexturasAtmosfera();
     this.vinetaMaderaImg = this.add.image(400, 300, 'vinetaMadera').setDepth(0.2);
 
-    this.sombraMesa = this.add.ellipse(400, 520, 560, 90, 0x000000, 0.35).setDepth(0.5);
+    this.sombraMesa = this.add.ellipse(400, 520 + DESC_ESCRITORIO, 560, 90, 0x000000, 0.35).setDepth(0.5);
     // Ducentésimo sexagésimo noveno pase: halo cálido detrás de la mesa
     // (ver `resplandorMesa` en _crearTexturasAtmosfera) — depth 0.6, entre
     // la sombra (0.5) y la mesa (1), así queda siempre DETRÁS del tapete,
@@ -1446,7 +1450,7 @@ _crearElementosDeTexto() {
   // centro de la mesa para llenar el alto de la ventana.
   _yEq(y) {
     const m = this._eqMap;
-    return m ? m.cy + (y - m.cyOld) * m.gy : y;
+    return m ? m.cy + (y - m.cyOld) * m.gy : y + (this._L ? 0 : DESC_ESCRITORIO);   // Pase 730
   }
 
   // 'juego': 720 de ancho de mundo, alto H. 'estatica': el 800x600 de
@@ -1710,7 +1714,7 @@ _crearElementosDeTexto() {
       .setOrigin(0.5, 0.5)
       .setCrop(CROP.x, CROP.y, CROP.width, CROP.height)
       .setDisplaySize(anchoDisplay, altoDisplay)
-      .setPosition(400, 220 - ELEVACION_MESA_3V3);
+      .setPosition(400, 220 - ELEVACION_MESA_3V3 + (this._L ? 0 : DESC_ESCRITORIO));
     if (this._L) {
       // Pase 394: la mesa de 3v3 se estira en vertical para llenar la ventana (ver eq3 en _calcularLayoutAngosto)
       const m = this._L.eq3;
@@ -1762,7 +1766,7 @@ _crearElementosDeTexto() {
       .setTexture('mesaRedonda')
       .setCrop()
       .setDisplaySize(anchoDisplay, altoDisplay)
-      .setPosition(400, 340);
+      .setPosition(400, 340 + DESC_ESCRITORIO);
   }
 }
 
@@ -4287,9 +4291,9 @@ _renderizarEstado(animarReparto) {
       // ver `_ajustarMesaSegunAsientos`), en vez de nacer más abajo, ya
       // sobre el paño.
       if (revelacionRival) {
-        this._dibujarFilaCartasReveladas(revelacionRival.cartas, this._L ? this._L.rivalY : 80);
+        this._dibujarFilaCartasReveladas(revelacionRival.cartas, this._L ? this._L.rivalY : 80 + DESC_ESCRITORIO);
       } else {
-        this._dibujarFilaDorso(e.cartasRivalEnMano, this._L ? this._L.rivalY : 80);
+        this._dibujarFilaDorso(e.cartasRivalEnMano, this._L ? this._L.rivalY : 80 + DESC_ESCRITORIO);
       }
 
       // Sexagésimo primer/segundo pase — punto 1 ("jerarquía visual y
@@ -4315,7 +4319,7 @@ _renderizarEstado(animarReparto) {
       // arriba (245→220) para que queden alineadas al centro geométrico
       // real del paño (la fila de botones ahora vive en una sola línea
       // más abajo, dentro del panel agrandado, así que hay más aire).
-      this._dibujarDueloCartas(e.jugadasRival, e.misJugadas, this._L ? this._L.dueloY : 220, this._L ? this._L.dueloEscala : 0.66, 60, !!e.esMano);
+      this._dibujarDueloCartas(e.jugadasRival, e.misJugadas, this._L ? this._L.dueloY : 220 + DESC_ESCRITORIO, this._L ? this._L.dueloEscala : 0.66, 60, !!e.esMano);
             // Pase siguiente (feedback del usuario: "deben nacer y apoyarse
             // directamente desde el marco de madera de la botonera
             // inferior, sin invadir la zona verde") — bajada 15px (490→505)
@@ -4480,7 +4484,7 @@ _renderizarEquipos(e, animarReparto, hayCantoSinResolver) {
     // "carta rival" para enfrentar en este mismo lugar (las de compañeros/
     // rivales viven junto a cada asiento, ver _dibujarJugador), así que
     // sigue siendo una fila simple, sin DueloCartas.
-    this._dibujarFilaCartas(e.misJugadas, G ? G.miY : this._yEq(esTresVTres ? 276 : 269), false, false, (this._L ? 0.60 * 1.4 : 0.60) * 0.85 * (G && !esTresVTres ? 1.08 : 1), false, 30, G ? (esTresVTres ? 0 : -3) : (esTresVTres ? 7 : -9));   // Pase 724: en escritorio mi carta jugada también va con ángulo   // Pase 443: 2v2 sube 15% (340 -> 299) y cartas -15%
+    this._dibujarFilaCartas(e.misJugadas, G ? G.miY : this._yEq(esTresVTres ? 276 : 269), false, false, (this._L ? 0.60 * 1.4 : 0.60) * 0.85 * (G && !esTresVTres ? 1.08 : 1), false, 30, G ? (esTresVTres ? 0 : -3) : (esTresVTres ? 0 : -3));   // Pase 724: en escritorio mi carta jugada también va con ángulo   // Pase 443: 2v2 sube 15% (340 -> 299) y cartas -15%
     // Pase siguiente: mismo ajuste que en 1v1 (ver el otro call site,
     // dentro del bloque no-equipos de _renderizarEstado) — la mano
     // propia comparte la misma barra de botonera en cualquier modo.
@@ -5154,9 +5158,9 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
       if (esDos) {
         // Pase 443: cruz de 4 zonas dentro del paño (norte = compañero, oeste/este = rivales, el sur es mi fila).
         const ZONAS_2V2 = {
-          180: { x: 250, y: 215, sx: -1, sy: 0, rot: -16 },  // Rival1 (oeste)   (Pase 724: más hacia el centro y con más ángulo)
-          270: { x: 400, y: 162, sx: 1, sy: 0, rot: -5 },    // Compañero (norte)
-          0: { x: 550, y: 215, sx: 1, sy: 0, rot: 16 },      // Rival2 (este)
+          180: { x: 252, y: 215, sx: -1, sy: 0, rot: -6 },   // Rival1 (oeste)   (Pase 730: mismo ángulo suave que en la app)
+          270: { x: 400, y: 162, sx: 1, sy: 0, rot: 2 },     // Compañero (norte)
+          0: { x: 548, y: 215, sx: 1, sy: 0, rot: 6 },       // Rival2 (este)
         };
         const z2 = ZONAS_2V2[Math.round(((angulo % 360) + 360) % 360)];
         if (z2) { baseX = z2.x; baseY = z2.y; dirX = z2.sx; dirY = z2.sy; rotZona = z2.rot * (Math.PI / 180); }
@@ -5166,11 +5170,11 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
         // grilla 2x3: norte, noroeste/noreste, oeste/este y sur (mi fila). `rot` en grados.
         const ZONAS_3V3 = {
           // Pase 724: cartas un poco más hacia el centro del paño (ya no rozan el borde de madera) y con más ángulo, como tiradas sobre la mesa.
-          150: { x: 264, y: 234, sx: -1, sy: 0, rot: -20 },   // Rival1 (oeste)
-          210: { x: 282, y: 164, sx: -1, sy: 0, rot: -14 },   // Compa1 (noroeste)
-          270: { x: 400, y: 144, sx: 1, sy: 0, rot: -6 },     // Rival2 (norte)
-          330: { x: 518, y: 164, sx: 1, sy: 0, rot: 14 },     // Compa2 (noreste)
-          30: { x: 536, y: 234, sx: 1, sy: 0, rot: 20 },      // Rival3 (este)
+          150: { x: 292, y: 236, sx: -1, sy: 0, rot: -12 },   // Rival1 (oeste)   (Pase 730: más hacia adentro y con el ángulo suave de la app)
+          210: { x: 308, y: 168, sx: -1, sy: 0, rot: -8 },    // Compa1 (noroeste)
+          270: { x: 400, y: 146, sx: 1, sy: 0, rot: 0 },      // Rival2 (norte)
+          330: { x: 492, y: 168, sx: 1, sy: 0, rot: 8 },      // Compa2 (noreste)
+          30: { x: 508, y: 236, sx: 1, sy: 0, rot: 12 },      // Rival3 (este)
         };
         const z = ZONAS_3V3[Math.round(((angulo % 360) + 360) % 360)];
         if (z) { baseX = z.x; baseY = z.y; dirX = z.sx; dirY = z.sy; rotZona = z.rot * (Math.PI / 180); }
@@ -5193,7 +5197,7 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
       // había jugado; se sube a 14px, término medio entre el 16 (mucho
       // hueco) y el 10 (demasiado pegadas).
       const kJug = this._geoEq ? 1.32 : 1;   // Pase 682: +12 % más (1.18 → 1.32)   // Pase 681: en la mesa vertical del celular las cartas jugadas son ~18 % más grandes (sobra lugar en el paño)
-      const pasoApilado = 14 * kJug;
+      const pasoApilado = this._geoEq ? 14 * kJug : 24;   // Pase 730: escritorio con paso de medio ancho de carta (como en la app)
 
       // Igual que _dibujarFilaCartas: pre-escalamos con el canvas de alta
       // calidad (mismo criterio que la mano y el dorso) al tamaño BASE, antes
@@ -5220,8 +5224,7 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
         const offset = (jugadas.length - 1 - idx) * pasoApilado - (escritorio ? (jugadas.length - 1) * pasoApilado * 0.5 : 0);
         const px = baseX + dirX * offset;
         const py = baseY + dirY * offset;
-        const semJug = this._hashSimple(carta.id);
-        const rotCarta = rotZona + (escritorio ? (((semJug % 7) - 3) * 1.6 + (idx % 2 ? 3 : -3)) * Math.PI / 180 : 0);
+        const rotCarta = rotZona;   // Pase 730: sin giro al azar (queda el ángulo fijo de la zona, como en la app)
         const keyOriginal = `${carta.valor}_${carta.palo}`;
         const keyEscalada = `${keyOriginal}_${anchoBaseJugadaR}x${altoBaseJugadaR}`;
         this._crearTexturaEscalada(keyOriginal, keyEscalada, anchoBaseJugadaR, altoBaseJugadaR);
@@ -6043,7 +6046,7 @@ _dibujarFilaCartas(cartas, y, jugable, esMiMano = false, escala = 1, animar = fa
     // carta, para que queden casi tocándose sin llegar a taparse del todo.
     // Pase 729: en el celular (mesa vertical de la app) mis cartas jugadas van en cascada como en la app: cada una corrida medio
     // ancho de la anterior (la nueva encima), centradas sobre el eje de la mesa y sin vaivén al azar.
-    const cascada = !!this._geoEq && !esMiMano;
+    const cascada = !esMiMano;   // Pase 730: también en escritorio
     const espacio   = cascada ? Math.round(anchoBase * 0.5 * this._calcularPerspectiva(y).scale) : Math.max(anchoBase + 4, 56);
     const inicioX   = 400 - ((cartas.length - 1) * espacio) / 2;
 
@@ -6255,7 +6258,7 @@ _hashSimple(str) {
 }
 
 _calcularPerspectiva(y) {
-    const centroMesaY = this._L ? this._L.perspCY : 320;
+    const centroMesaY = this._L ? this._L.perspCY : 320 + DESC_ESCRITORIO;   // Pase 730
     const radioY = this._L ? this._L.perspRY : 170;
     const t = Phaser.Math.Clamp((y - (centroMesaY - radioY)) / (radioY * 2), 0, 1);
     // Decimoséptimo pase: el usuario (revisando una captura real del juego)
