@@ -2128,10 +2128,9 @@ _crearCabeceraMesa() {
   if (L) {
     const HDR = L.HDR || 116;
     const barra = this.add.graphics().setDepth(995);
-    barra.fillStyle(0x000000, 0.35); barra.fillRect(-200, HDR - 2, 1200, 8);
-    barra.fillStyle(0xF3E7CF, 1); barra.fillRect(-200, 0, 1200, HDR);
-    barra.fillStyle(0xFFFFFF, 0.4); barra.fillRect(-200, 0, 1200, 8);
-    barra.lineStyle(4, 0x5C3317, 1); barra.lineBetween(-200, HDR, 1000, HDR);
+    this._cabBarra = barra;
+    this._cabAlto = 0;
+    this._ajustarAltoCabecera(HDR);
     objs.push(barra);
     const engranaje = this.add.image(714, py, 'botonConfigMesa').setDisplaySize(tam, tam).setDepth(1003);
     engranaje.setInteractive({ useHandCursor: true });
@@ -2151,8 +2150,28 @@ _crearCabeceraMesa() {
 
   objs.forEach(o => o.setVisible(false));
   this._cabeceraObjs = objs;
+  this._aplicarMarcadorEstilo();   // Pase 729: si ya hay placas de fosforos de dos filas, la barra ya nace del alto justo
   this.time.addEvent({ delay: 4000, loop: true, callback: () => this._medirPing() });
   this.time.delayedCall(1500, () => this._medirPing());
+}
+
+// Pase 729: la barra crema de la cabecera (celular) crece cuando los anotadores de fosforos pasan a dos filas
+// (mesa a 30 / mas de 15 puntos) para que las placas no se salgan del panel. Idempotente.
+_ajustarAltoCabecera(alto) {
+  const barra = this._cabBarra;
+  if (!barra || !barra.scene) return;
+  const h = Math.round(alto);
+  if (this._cabAlto === h) return;
+  this._cabAlto = h;
+  barra.clear();
+  barra.fillStyle(0x000000, 0.35); barra.fillRect(-200, h - 2, 1200, 8);
+  barra.fillStyle(0xF3E7CF, 1); barra.fillRect(-200, 0, 1200, h);
+  barra.fillStyle(0xFFFFFF, 0.4); barra.fillRect(-200, 0, 1200, 8);
+  barra.lineStyle(4, 0x5C3317, 1); barra.lineBetween(-200, h, 1000, h);
+  if (this.pingTexto && this.pingTexto.scene) {
+    this.pingTexto.setY(h + 28);
+    if (this.pingPunto && this.pingPunto.scene) this.pingPunto.setY(h + 28);
+  }
 }
 
 _medirPing() {
@@ -4461,7 +4480,7 @@ _renderizarEquipos(e, animarReparto, hayCantoSinResolver) {
     // "carta rival" para enfrentar en este mismo lugar (las de compañeros/
     // rivales viven junto a cada asiento, ver _dibujarJugador), así que
     // sigue siendo una fila simple, sin DueloCartas.
-    this._dibujarFilaCartas(e.misJugadas, G ? G.miY : this._yEq(esTresVTres ? 276 : 269), false, false, (this._L ? 0.60 * 1.4 : 0.60) * 0.85, false, 30, G ? (esTresVTres ? 0 : -3) : (esTresVTres ? 7 : -9));   // Pase 724: en escritorio mi carta jugada también va con ángulo   // Pase 443: 2v2 sube 15% (340 -> 299) y cartas -15%
+    this._dibujarFilaCartas(e.misJugadas, G ? G.miY : this._yEq(esTresVTres ? 276 : 269), false, false, (this._L ? 0.60 * 1.4 : 0.60) * 0.85 * (G && !esTresVTres ? 1.08 : 1), false, 30, G ? (esTresVTres ? 0 : -3) : (esTresVTres ? 7 : -9));   // Pase 724: en escritorio mi carta jugada también va con ángulo   // Pase 443: 2v2 sube 15% (340 -> 299) y cartas -15%
     // Pase siguiente: mismo ajuste que en 1v1 (ver el otro call site,
     // dentro del bloque no-equipos de _renderizarEstado) — la mano
     // propia comparte la misma barra de botonera en cualquier modo.
@@ -4680,6 +4699,7 @@ _aplicarMarcadorEstilo(animar = false) {
       this._posicionarMedallaRival();
     }
     if (this._fosObjs) this._fosObjs.todos.forEach(o => o.setVisible(false));
+    if (this._L) this._ajustarAltoCabecera(this._L.HDR || 116);
     this._placaFosforosActiva = false;
     this._rectPlacaRival = null;
     if (this._anilloRect && this._anilloEsRival) this._anilloRect = this._rectAnilloRivalNumeros();
@@ -4697,6 +4717,10 @@ _aplicarMarcadorEstilo(animar = false) {
   this._placaFosforosActiva = true;
 
   const wF = this._anchoPlacaFosforos();
+  if (this._L) {
+    const topHdr = Math.max(14, g.vos.cy + g.vos.h / 2 - h2);
+    this._ajustarAltoCabecera(Math.max(this._L.HDR || 116, topHdr + h2 + 10));
+  }
   lados.forEach(({ k, geo, bg, num, label, puntos, zona }) => {
     // Layout angosto: la placa crece hacia ARRIBA (su borde de abajo queda donde estaba);
     // en escritorio crece hacia abajo desde el borde de arriba.
@@ -5221,7 +5245,8 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
         // _dibujarFilaCartas/_dibujarDueloCartas más abajo.
         const pyN = this._yEq(py);
         const persp = this._calcularPerspectiva(pyN);
-        const fJug = (esTres || esDos) ? 0.85 : 1;   // Pase 442/443: cartas tiradas -15% en 2v2 y 3v3
+        const fJug = (esTres || esDos) ? 0.85 * (esDos && this._geoEq ? 1.08 : 1) : 1;   // Pase 729: en el 2v2 del celular las cartas jugadas +8 %
+          // Pase 442/443: cartas tiradas -15% en 2v2 y 3v3
         // Pase 446: todas las cartas jugadas se dibujan igual, planas (sin aura, brillo ni escala extra en la ganadora).
         const anchoCarta = 58 * kS * persp.scale * fJug;
         const altoCarta  = 87 * kS * persp.scale * fJug;
@@ -6016,7 +6041,10 @@ _dibujarFilaCartas(cartas, y, jugable, esMiMano = false, escala = 1, animar = fa
     // de la carta (54px), dejando ~26px de hueco entre una y la siguiente.
     // Se cambia a un piso mucho más chico (56) casi pegado al ancho de la
     // carta, para que queden casi tocándose sin llegar a taparse del todo.
-    const espacio   = Math.max(anchoBase + 4, 56);
+    // Pase 729: en el celular (mesa vertical de la app) mis cartas jugadas van en cascada como en la app: cada una corrida medio
+    // ancho de la anterior (la nueva encima), centradas sobre el eje de la mesa y sin vaivén al azar.
+    const cascada = !!this._geoEq && !esMiMano;
+    const espacio   = cascada ? Math.round(anchoBase * 0.5 * this._calcularPerspectiva(y).scale) : Math.max(anchoBase + 4, 56);
     const inicioX   = 400 - ((cartas.length - 1) * espacio) / 2;
 
     const esCartaJugada = !esMiMano;
@@ -6038,7 +6066,7 @@ _dibujarFilaCartas(cartas, y, jugable, esMiMano = false, escala = 1, animar = fa
       // _dibujarDueloCartas.
       const rotacion = rotGrados * (Math.PI / 180);   // Pase 444: inclinación sutil de mi carta jugada en 2v2
 
-      if (esCartaJugada) {
+      if (esCartaJugada && !cascada) {
         const semilla = this._hashSimple(carta.id);
         destinoX += ((semilla % 13) - 6) * 1.5;
         destinoY += ((semilla % 9) - 4) * 1.5;
