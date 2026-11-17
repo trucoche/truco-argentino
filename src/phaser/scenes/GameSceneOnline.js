@@ -293,6 +293,10 @@ preload() {
     // bronce que pasó el usuario (ver comentario junto al add.image más
     // abajo sobre por qué el tamaño de display cambió de 800x110).
     this.load.image('panelBotonera', conVersion('assets/images/juego/panel-botonera-madera-remaches.png'));
+    // Pase 734: panel de la botonera de la app (tira de remaches, cuerpo de madera y base con esquinas) para la web del celular.
+    this.load.image('panelTiraN', conVersion('assets/images/juego/ui-panel-botonera-nueva-tira.png'));
+    this.load.image('panelCuerpoN', conVersion('assets/images/juego/ui-panel-botonera-nueva-cuerpo.png'));
+    this.load.image('panelBaseN', conVersion('assets/images/juego/ui-panel-botonera-nueva-base.png'));
     // Nonagésimo quinto pase: se había agregado acá la carga de
     // `placaTurno` (faja de madera detrás de "● Tu turno") — el
     // nonagésimo séptimo pase la sacó de nuevo a pedido del usuario (ver
@@ -798,9 +802,26 @@ _crearElementosDeTexto() {
         const k = dh / sh;
         this.add.image(x0, dy - sy * k, 'panelBotonera').setOrigin(0, 0).setScale(1, k).setCrop(0, sy, 700, sh).setDepth(150);
       };
-      rebanada(0, T, y0, T);
-      rebanada(T, SH - T - B, y0 + T, Lp.panelH - T - B + 1);
-      rebanada(SH - B, B, y0 + Lp.panelH - B, B);
+      if (['panelTiraN', 'panelCuerpoN', 'panelBaseN'].every(k => this.textures.exists(k))) {
+        // Pase 734: mismo panel que la app (1080 de ancho: tira 65, cuerpo 170 que se estira, base 53). Tira y base 1:1 con el ancho
+        // del panel (los remaches no se deforman) y el cuerpo ocupa el resto; cada pieza se pre-escala con el canvas de alta calidad.
+        const W = Lp.panelW, Hp = Lp.panelH;
+        const altoTira = Math.round(W * 65 / 1080), altoBase = Math.round(W * 53 / 1080);
+        const altoCuerpo = Hp - altoTira - altoBase + 2;
+        const f = this._factorEscalaTextura();
+        const pieza = (clave, alto, y) => {
+          const kEsc = `${clave}_${Math.round(W * f)}x${Math.round(alto * f)}`;
+          this._crearTexturaEscalada(clave, kEsc, Math.round(W * f), Math.round(alto * f));
+          this.add.image(x0, y, kEsc).setOrigin(0, 0).setDisplaySize(W, alto).setDepth(150);
+        };
+        pieza('panelTiraN', altoTira, y0);
+        pieza('panelCuerpoN', altoCuerpo, y0 + altoTira - 1);
+        pieza('panelBaseN', altoBase, y0 + Hp - altoBase);
+      } else {
+        rebanada(0, T, y0, T);
+        rebanada(T, SH - T - B, y0 + T, Lp.panelH - T - B + 1);
+        rebanada(SH - B, B, y0 + Lp.panelH - B, B);
+      }
     } else {
       this.add.image(400, yBotonera, 'panelBotonera').setDisplaySize(anchoBotonera, altoBotonera).setDepth(150);
     }
@@ -3489,7 +3510,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
     }), 0);
     // Pase 680: grilla 2x2: dos filas bien separadas (aire entre una fila y la otra), columnas a ±GRID_DX del centro.
     const GRID_DX = 132;
-    const rowGap = grid3 ? Math.round(aroRef + 200) : (grid2 ? Math.max(225, Math.min(280, Math.round(0.215 * HnFinal))) : 0);   // Pase 682: en 3v3 el escudo cabe entre las dos filas (la columna del medio queda justo encima/debajo de él)
+    const rowGap = grid3 ? Math.round(aroRef + 200) : (grid2 ? Math.max(245, Math.min(300, Math.round(0.235 * HnFinal))) : 0);   // Pase 735: 2v2 con 20 más de separación entre las dos filas   // Pase 682: en 3v3 el escudo cabe entre las dos filas (la columna del medio queda justo encima/debajo de él)
     const COL_DX3 = 150;
     if (grid2) cyAv = 140 + aroRef / 2;
     if (grid3) cyAv = 128 + aroRef / 2;
@@ -3682,7 +3703,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
       // Pase 657: el marcador sigue el orden de la pantalla (izquierda - derecha); yo estoy a la derecha.
       const tantosGan = izq.length ? Number(izq[0].tantos) : NaN;
       const kS = gridN ? 0.95 : (finalGrande ? 1.2 : 1);
-      const cyEsc = grid3 ? cyAv + (rowGap + 77) / 2 : cyAv + rowGap / 2;   // Pase 682 (3v3): centro del hueco libre entre las pastillas de arriba y los avatares de abajo   // Pase 680: en la grilla, justo en el centro entre los 4 avatares
+      const cyEsc = (grid3 || grid2) ? cyAv + (rowGap + 77) / 2 : cyAv + rowGap / 2;   // Pase 735: el escudo del 2v2 queda en el centro del hueco entre las pastillas de arriba y los avatares de abajo   // Pase 682 (3v3): centro del hueco libre entre las pastillas de arriba y los avatares de abajo   // Pase 680: en la grilla, justo en el centro entre los 4 avatares
       const tantosPer = der.length ? Number(der[0].tantos) : NaN;
       if (this.textures.exists('escudoSinTexto')) {
         const esc = this.add.image(escudoX, cyEsc, 'escudoSinTexto').setDisplaySize(96 * kS, 96 * kS).setDepth(904);
