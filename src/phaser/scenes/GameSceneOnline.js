@@ -4484,7 +4484,7 @@ _renderizarEquipos(e, animarReparto, hayCantoSinResolver) {
     // "carta rival" para enfrentar en este mismo lugar (las de compañeros/
     // rivales viven junto a cada asiento, ver _dibujarJugador), así que
     // sigue siendo una fila simple, sin DueloCartas.
-    this._dibujarFilaCartas(e.misJugadas, G ? G.miY : this._yEq(esTresVTres ? 276 : 269), false, false, (this._L ? 0.60 * 1.4 : 0.60) * 0.85 * (G && !esTresVTres ? 1.08 : 1), false, 30, G ? (esTresVTres ? 0 : -3) : (esTresVTres ? 0 : -3));   // Pase 724: en escritorio mi carta jugada también va con ángulo   // Pase 443: 2v2 sube 15% (340 -> 299) y cartas -15%
+    this._dibujarFilaCartas(e.misJugadas, G ? G.miY : this._yEq(esTresVTres ? 276 : 269), false, false, (this._L ? 0.60 * 1.4 : 0.60) * 0.85 * (esTresVTres ? (G ? 1 : 0.88) : (G ? 1.08 : 1.12)), false, 30, G ? (esTresVTres ? 0 : -3) : (esTresVTres ? 0 : -3));   // Pase 724: en escritorio mi carta jugada también va con ángulo   // Pase 443: 2v2 sube 15% (340 -> 299) y cartas -15%
     // Pase siguiente: mismo ajuste que en 1v1 (ver el otro call site,
     // dentro del bloque no-equipos de _renderizarEstado) — la mano
     // propia comparte la misma barra de botonera en cualquier modo.
@@ -5197,7 +5197,7 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
       // había jugado; se sube a 14px, término medio entre el 16 (mucho
       // hueco) y el 10 (demasiado pegadas).
       const kJug = this._geoEq ? 1.32 : 1;   // Pase 682: +12 % más (1.18 → 1.32)   // Pase 681: en la mesa vertical del celular las cartas jugadas son ~18 % más grandes (sobra lugar en el paño)
-      const pasoApilado = this._geoEq ? 14 * kJug : 24;   // Pase 730: escritorio con paso de medio ancho de carta (como en la app)
+      const pasoApilado = this._geoEq ? 14 * kJug : (esDos ? 27 : 21);   // Pase 730: escritorio con paso de medio ancho de carta (como en la app)
 
       // Igual que _dibujarFilaCartas: pre-escalamos con el canvas de alta
       // calidad (mismo criterio que la mano y el dorso) al tamaño BASE, antes
@@ -5217,7 +5217,6 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
       const altoBaseJugadaR = Math.round(87 * kJug * kS * factorJugada);
 
       jugadas.forEach((carta, idx) => {
-        const esUltima = idx === jugadas.length - 1;
         // Pase 724 (escritorio): el abanico de cartas jugadas se reparte parejo alrededor del punto base (antes las viejas salían
         // todas hacia afuera, hacia el borde de madera) y cada carta lleva un giro propio fijo (según su id) para que parezcan tiradas.
         const escritorio = !this._geoEq;
@@ -5248,7 +5247,7 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
         // _dibujarFilaCartas/_dibujarDueloCartas más abajo.
         const pyN = this._yEq(py);
         const persp = this._calcularPerspectiva(pyN);
-        const fJug = (esTres || esDos) ? 0.85 * (esDos && this._geoEq ? 1.08 : 1) : 1;   // Pase 729: en el 2v2 del celular las cartas jugadas +8 %
+        const fJug = (esTres || esDos) ? 0.85 * (esDos ? (this._geoEq ? 1.08 : 1.12) : (this._geoEq ? 1 : 0.88)) : 1;   // Pase 731: escritorio 2v2 +12 %, 3v3 -12 %   // Pase 729: en el 2v2 del celular las cartas jugadas +8 %
           // Pase 442/443: cartas tiradas -15% en 2v2 y 3v3
         // Pase 446: todas las cartas jugadas se dibujan igual, planas (sin aura, brillo ni escala extra en la ganadora).
         const anchoCarta = 58 * kS * persp.scale * fJug;
@@ -5258,7 +5257,7 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
           .setDisplaySize(anchoCarta, altoCarta)
           .setRotation(rotCarta)
           .setDepth(60 + idx)
-          .setAlpha(esUltima ? 1 : 0.85);
+          .setAlpha(1);   // Pase 731: sin transparencia en las cartas jugadas
         this._sprites.push(img);
       });
     }
