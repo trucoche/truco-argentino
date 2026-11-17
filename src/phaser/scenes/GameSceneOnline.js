@@ -4484,7 +4484,7 @@ _renderizarEquipos(e, animarReparto, hayCantoSinResolver) {
     // "carta rival" para enfrentar en este mismo lugar (las de compañeros/
     // rivales viven junto a cada asiento, ver _dibujarJugador), así que
     // sigue siendo una fila simple, sin DueloCartas.
-    this._dibujarFilaCartas(e.misJugadas, G ? G.miY : this._yEq(esTresVTres ? 276 : 269), false, false, (this._L ? 0.60 * 1.4 : 0.60) * 0.85 * (esTresVTres ? (G ? 1 : 0.88) : (G ? 1.08 : 1.12)), false, 30, G ? (esTresVTres ? 0 : -3) : (esTresVTres ? 0 : -3));   // Pase 724: en escritorio mi carta jugada también va con ángulo   // Pase 443: 2v2 sube 15% (340 -> 299) y cartas -15%
+    this._dibujarFilaCartas(e.misJugadas, G ? G.miY : this._yEq(esTresVTres ? 288 : 269), false, false, (this._L ? 0.60 * 1.4 : 0.60) * 0.85 * (esTresVTres ? (G ? 1 : 0.88) : (G ? 1.08 : 1.12)), false, 30, G ? (esTresVTres ? 0 : -3) : (esTresVTres ? 0 : -3));   // Pase 724: en escritorio mi carta jugada también va con ángulo   // Pase 443: 2v2 sube 15% (340 -> 299) y cartas -15%
     // Pase siguiente: mismo ajuste que en 1v1 (ver el otro call site,
     // dentro del bloque no-equipos de _renderizarEstado) — la mano
     // propia comparte la misma barra de botonera en cualquier modo.
@@ -5171,9 +5171,9 @@ _dibujarJugador(j, cx, cy, angulo = -90, tipo = 'rival') {
         const ZONAS_3V3 = {
           // Pase 724: cartas un poco más hacia el centro del paño (ya no rozan el borde de madera) y con más ángulo, como tiradas sobre la mesa.
           150: { x: 292, y: 236, sx: -1, sy: 0, rot: -12 },   // Rival1 (oeste)   (Pase 730: más hacia adentro y con el ángulo suave de la app)
-          210: { x: 308, y: 168, sx: -1, sy: 0, rot: -8 },    // Compa1 (noroeste)
-          270: { x: 400, y: 146, sx: 1, sy: 0, rot: 0 },      // Rival2 (norte)
-          330: { x: 492, y: 168, sx: 1, sy: 0, rot: 8 },      // Compa2 (noreste)
+          210: { x: 302, y: 168, sx: -1, sy: 0, rot: -8 },    // Compa1 (noroeste)
+          270: { x: 400, y: 134, sx: 1, sy: 0, rot: 0 },      // Rival2 (norte)   (Pase 732: 12 más arriba, separado de los compañeros)
+          330: { x: 498, y: 168, sx: 1, sy: 0, rot: 8 },      // Compa2 (noreste)
           30: { x: 508, y: 236, sx: 1, sy: 0, rot: 12 },      // Rival3 (este)
         };
         const z = ZONAS_3V3[Math.round(((angulo % 360) + 360) % 360)];
