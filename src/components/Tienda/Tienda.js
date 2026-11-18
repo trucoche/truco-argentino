@@ -169,6 +169,25 @@ export default function Tienda({ usuario, token }) {
   // (PACK_INAUGURACION_HASTA). El backend manda { disponible, hasta }; sin respuesta, el pack no se muestra.
   const [packInaug, setPackInaug] = useState({ disponible: false, hastaMs: 0 });
   const [ahora, setAhora] = useState(() => Date.now());
+  // Pase 740: Black Friday. El backend manda { activa, bonos: { 'pack-50': 20, ... }, hasta }; los mates extra los acredita el servidor
+  // (el precio no cambia). Sin respuesta o fuera de la ventana no se muestra nada.
+  const [promo, setPromo] = useState({ activa: false, bonos: {}, hastaMs: 0 });
+  useEffect(() => {
+    let cancelado = false;
+    (async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/pagos/promocion`, { headers: { Authorization: `Bearer ${token}` } });
+        const data = await res.json();
+        if (!cancelado && res.ok && data.activa) {
+          setPromo({ activa: true, bonos: data.bonos || {}, hastaMs: data.hasta ? new Date(data.hasta).getTime() : 0 });
+        }
+      } catch (err) {
+        console.error('Error consultando la promoción:', err);
+      }
+    })();
+    return () => { cancelado = true; };
+  }, [token]);
+  const bonoPromoDe = (packId) => (promo.activa && promo.hastaMs > ahora ? Number(promo.bonos[packId]) || 0 : 0);
   // Pase 655: las tarjetas se dibujan recién cuando el backend contestó (o pasaron 2,5 s), así no saltan de 5 a 6 ni repiten la entrada.
   const [packInaugListo, setPackInaugListo] = useState(false);
   useEffect(() => {
@@ -266,7 +285,8 @@ export default function Tienda({ usuario, token }) {
   // descuento debe estar integrada dentro del banner/tarjeta de la oferta
   // mediante etiquetas, ej. '-65%'").
   const renderPack = (pack, fila, indice = 0) => {
-    const total = pack.monedas + pack.bono;
+    const bonoPromo = bonoPromoDe(pack.id);   // Pase 740
+    const total = pack.monedas + pack.bono + bonoPromo;
     const destacado = pack.tag === 'mejorPrecio';
     const inauguracion = pack.tag === 'inauguracion';
     const descuentoPct = pack.precioOriginal ? Math.round((1 - pack.precio / pack.precioOriginal) * 100) : null;
@@ -350,7 +370,9 @@ export default function Tienda({ usuario, token }) {
             <div style={estilos.cantidadLabel}>mates</div>
           </div>
 
-          {pack.bono > 0 ? (
+          {bonoPromo > 0 ? (
+            <div style={estilos.bonoTag}>🔥 +{bonoPromo} Black Friday</div>
+          ) : pack.bono > 0 ? (
             <div style={estilos.bonoTag}>+{pack.bono} de regalo</div>
           ) : inauguracion && textoRestante(packInaug.hastaMs, ahora) ? (
             <div style={estilos.notaEspecialTag}>{textoRestante(packInaug.hastaMs, ahora)}</div>
@@ -393,12 +415,13 @@ export default function Tienda({ usuario, token }) {
   // placas cuadradas: las 6 entran en pantalla SIN scroll. Las placas siguen igual en la compu (el CSS esconde una u otra según el ancho).
   const packsLista = !packInaugListo ? [] : [packPorId('pack-800'), ...(inaugDisponible ? [packPorId('pack-inauguracion')] : []), packPorId('pack-400'), packPorId('pack-200'), packPorId('pack-100'), packPorId('pack-50')];
   const renderFilaCompacta = (pack, indice) => {
-    const total = pack.monedas + pack.bono;
+    const bonoPromo = bonoPromoDe(pack.id);   // Pase 740
+    const total = pack.monedas + pack.bono + bonoPromo;
     const destacado = pack.tag === 'mejorPrecio';
     const inauguracion = pack.tag === 'inauguracion';
     const tono = destacado ? 'verde' : inauguracion ? 'rojo' : 'base';
     const descuentoPct = pack.precioOriginal ? Math.round((1 - pack.precio / pack.precioOriginal) * 100) : null;
-    const nota = pack.bono > 0 ? `+${pack.bono} de regalo` : (inauguracion && textoRestante(packInaug.hastaMs, ahora)) || pack.notaEspecial || null;
+    const nota = bonoPromo > 0 ? `🔥 +${bonoPromo} Black Friday` : pack.bono > 0 ? `+${pack.bono} de regalo` : (inauguracion && textoRestante(packInaug.hastaMs, ahora)) || pack.notaEspecial || null;
     return (
       <div key={pack.id} className={`tc-fp tc-fp-${tono}`} style={{ animationDelay: `${0.05 + indice * 0.07}s` }}>
         {destacado && <span className="tc-fp-tag tc-fp-tag-verde">⭐ MEJOR VALOR</span>}
@@ -406,7 +429,7 @@ export default function Tienda({ usuario, token }) {
         <img className="tc-fp-icono tc-icono-flota" src={pack.icono} alt="" style={{ animationDelay: `${indice * 0.26}s` }} />
         <div className="tc-fp-datos">
           <div className="tc-fp-cant"><b>{total.toLocaleString('es-AR')}</b> mates</div>
-          {nota && <div className={`tc-fp-nota${pack.bono > 0 ? '' : ' tc-fp-nota-roja'}`}>{nota}</div>}
+          {nota && <div className={`tc-fp-nota${pack.bono > 0 || bonoPromo > 0 ? '' : ' tc-fp-nota-roja'}`}>{nota}</div>}
         </div>
         <div className="tc-fp-precio">
           {pack.precioOriginal != null && <span className="tc-fp-tachado">{formatearPrecio(pack.precioOriginal)}</span>}

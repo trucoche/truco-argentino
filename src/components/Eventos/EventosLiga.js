@@ -12,6 +12,8 @@ export const EVENTO_ESTILO = {
   temporada_inaugural: { fondo: 'linear-gradient(135deg, #1B3A6B, #10244A)', borde: '#9CD3F5', color: '#9CD3F5', icono: '/assets/images/evento-temporada-inaugural.png', etiqueta: 'TEMPORADA', completa: true, sol: true },
   pionero: { fondo: 'linear-gradient(135deg, #1E4E7A, #12304D)', borde: '#9CD3F5', color: '#9CD3F5', icono: '/assets/images/icono-logros.png', etiqueta: 'PIONERO' },
   pack_inauguracion: { fondo: 'linear-gradient(135deg, #8A3B12, #5E2408)', borde: '#F5B041', color: '#F5B041', icono: '/assets/images/caja-inauguracion.png', etiqueta: 'OFERTA' },
+  // Pase 740: Black Friday (se abre y se cierra solo por fecha, ver truco-backend/src/promociones.js).
+  black_friday: { fondo: 'linear-gradient(135deg, #222222, #050505)', borde: '#F5B041', color: '#FFD668', icono: '/assets/images/regalo.png', etiqueta: 'BLACK FRIDAY' },
 };
 const EVENTO_POR_DEFECTO = { fondo: 'linear-gradient(135deg, #4A3226, #2E1F17)', borde: '#C9A66B', color: '#C9A66B', icono: '/assets/images/icono-misiones.png', etiqueta: 'EVENTO' };
 
