@@ -618,19 +618,24 @@ useEffect(() => {
                 return (
                   <div key={sala.id} style={estilos.salaFila}>
                     {iconoModoSrc ? <img src={iconoModoSrc} alt="" style={estilos.salaFilaIcono} /> : <span style={{ fontSize: 20 }}>🃏</span>}
-                    <span style={estilos.salaFilaCodigo}>{sala.codigo}</span>
-                    <span style={estilos.salaFilaChips}>
-                      <span style={estilos.chip}>👥 {sala.jugadores_count}/{sala.jugadores_totales}</span>
-                      <span style={estilos.chip}>🎯 {sala.puntos_para_ganar} pts</span>
-                      {sala.tiempo_por_turno && <span style={estilos.chip}>⏱ {sala.tiempo_por_turno}s</span>}
-                    </span>
-                    <span
-                      style={{ ...estilos.salaFilaCreador, cursor: sala.creador_nombre ? 'pointer' : 'default' }}
-                      onClick={() => sala.creador_nombre && setPerfilAbierto(sala.creador_nombre)}
-                    >
-                      {sala.creador_nombre ? `de ${sala.creador_nombre}` : ''}
-                    </span>
-                    <button onClick={() => handleUnirse(sala.codigo)} disabled={completa} style={completa ? estilos.btnCardDisabled : { ...estilos.btnCard, width: 'auto', padding: '6px 16px' }}>
+                    {/* Pase 739: fila compacta de 2 líneas. Arriba código y creador, abajo las fichas en una sola fila; "Unirse" fijo a la derecha. */}
+                    <div style={estilos.salaFilaCentro}>
+                      <div style={estilos.salaFilaLinea1}>
+                        <span style={estilos.salaFilaCodigo}>{sala.codigo}</span>
+                        <span
+                          style={{ ...estilos.salaFilaCreador, cursor: sala.creador_nombre ? 'pointer' : 'default' }}
+                          onClick={() => sala.creador_nombre && setPerfilAbierto(sala.creador_nombre)}
+                        >
+                          {sala.creador_nombre ? `de ${sala.creador_nombre}` : ''}
+                        </span>
+                      </div>
+                      <span style={estilos.salaFilaChips}>
+                        <span style={estilos.salaChip}>👥 {sala.jugadores_count}/{sala.jugadores_totales}</span>
+                        <span style={estilos.salaChip}>🎯 {sala.puntos_para_ganar} pts</span>
+                        {sala.tiempo_por_turno && <span style={estilos.salaChip}>⏱ {sala.tiempo_por_turno}s</span>}
+                      </span>
+                    </div>
+                    <button onClick={() => handleUnirse(sala.codigo)} disabled={completa} style={completa ? estilos.btnCardDisabled : { ...estilos.btnCard, width: 'auto', padding: '6px 16px', flexShrink: 0, whiteSpace: 'nowrap' }}>
                       {completa ? 'Completa' : 'Unirse'}
                     </button>
                   </div>
@@ -1109,11 +1114,14 @@ const estilos = {
   zocaloLista: { flex: '1 1 130px', minHeight: 130, overflowY: 'auto', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: 6, padding: 8, borderRadius: 12, background: `linear-gradient(180deg, ${C.verdeProfundo}, ${C.verdeOscuro})`, boxShadow: 'inset 0 3px 10px rgba(0,0,0,0.55)' },
   zocaloVacio: { flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, color: '#FFF8ED', fontWeight: 700, fontSize: 14.5, textAlign: 'center' },
   zocaloVacioImg: { height: 84, width: 'auto', objectFit: 'contain' },
-  salaFila: { flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', background: C.cremaSutil, border: `2px solid ${C.negroPulido}`, borderRadius: 12, padding: '5px 10px', minHeight: 40, boxSizing: 'border-box' },
-  salaFilaIcono: { width: 28, height: 28, objectFit: 'contain' },
-  salaFilaCodigo: { fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 16, color: C.chocolate, letterSpacing: 1 },
-  salaFilaChips: { display: 'flex', gap: 6, flexWrap: 'wrap', flex: 1 },
-  salaFilaCreador: { fontSize: 12.5, fontWeight: 700, color: '#7a6660' },
+  salaFila: { flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'nowrap', background: C.cremaSutil, border: `2px solid ${C.negroPulido}`, borderRadius: 12, padding: '6px 10px', minHeight: 52, boxSizing: 'border-box' },
+  salaFilaIcono: { width: 28, height: 28, objectFit: 'contain', flexShrink: 0 },
+  salaFilaCentro: { flex: '1 1 0', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 },
+  salaFilaLinea1: { display: 'flex', alignItems: 'baseline', gap: 8, minWidth: 0 },
+  salaFilaCodigo: { fontFamily: "'Fredoka', sans-serif", fontWeight: 700, fontSize: 16, color: C.chocolate, letterSpacing: 1, flexShrink: 0 },
+  salaFilaChips: { display: 'flex', gap: 5, flexWrap: 'nowrap', overflow: 'hidden' },
+  salaChip: { fontSize: 12, fontWeight: 700, color: C.chocolate, background: '#f5ead9', border: `1.5px solid ${C.chocolate}33`, borderRadius: 8, padding: '1px 7px', whiteSpace: 'nowrap', flexShrink: 0 },
+  salaFilaCreador: { fontSize: 12.5, fontWeight: 700, color: '#7a6660', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
   // Hoja (capa)
   hojaCapa: { position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '4vh 12px', overflowY: 'auto', boxSizing: 'border-box' },
   hojaCaja: { margin: 'auto', width: '100%', maxWidth: 900, borderRadius: 18, border: `3px solid ${C.negroPulido}`, background: C.maderaMedia, overflow: 'hidden', boxShadow: '0 16px 40px rgba(0,0,0,0.6)' },
