@@ -2240,7 +2240,7 @@ _crearCartelVictoria(id, texto, detalle, opts = {}) {
   const alto = ancho / cfg.proporcion;
   // Pase 716: cartel "suave" (ej. La Pulpería): un cuadro base siempre opaco (el del medio de la secuencia) y los otros encima, que se
   // funden con él con una curva suave; así el panel nunca se ve translúcido ni salta de una imagen a la otra.
-  const suave = !!(cfg.suave && cfg.secuencia && cfg.secuencia.length >= 4);
+  const suave = !!(cfg.suave && cfg.secuencia && cfg.secuencia.length >= 3);   // Pase 743: también vale una secuencia de 3 pasos que da la vuelta ([0,1,2])
   const baseIdx = suave ? cfg.secuencia[1] : 0;
   const img = this.add.image(0, 0, cfg.cuadros[baseIdx].clave).setDisplaySize(ancho, alto);
   const capas = suave ? cfg.cuadros.map((q, i) => (i === baseIdx ? null : this.add.image(0, 0, q.clave).setDisplaySize(ancho, alto).setAlpha(i === cfg.secuencia[0] ? 1 : 0))) : [];

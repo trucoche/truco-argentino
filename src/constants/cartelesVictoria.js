@@ -15,6 +15,8 @@ export const CARTELES_VICTORIA = [
   { id: 'pulperia', nombre: 'La Pulpería', cuadros: cuadros('pulperia', 3), secuencia: [0, 1, 2, 1], suave: true, escalaTitulo: 0.82, textoDy: 0.08, proporcion: 2, intervaloMs: 650, colorTitulo: '#FFD98A', colorDetalle: '#F1D9A8' },
   // Pase 741/742: Noche Camperal (fogata; 5 cuadros). Cuadro base (2) siempre opaco; la secuencia pasa siempre por él (inclinada → base → recta → base ...) para que la llama se funda sin saltar. `textoDy` negativo sube el texto.
   { id: 'noche-camperal', nombre: 'Noche Camperal', cuadros: cuadros('noche-camperal', 5), secuencia: [0, 1, 3, 1, 4, 1, 2, 1], suave: true, escalaTitulo: 0.88, textoDy: -0.04, proporcion: 2, intervaloMs: 450, colorTitulo: '#FFD98A', colorDetalle: '#F1D9A8' },
+  // Pase 743: Pampa y Patria (sol de mayo; el brillo recorre el panel de izquierda a derecha: 1 = izquierda, 2 = sobre el sol, 3 = derecha). Cuadro 2 fijo debajo; [0,1,2] da la vuelta.
+  { id: 'pampa-y-patria', nombre: 'Pampa y Patria', cuadros: cuadros('pampa-y-patria', 3), secuencia: [0, 1, 2], suave: true, escalaTitulo: 0.95, textoDy: 0.025, proporcion: 2, intervaloMs: 650, colorTitulo: '#FFD98A', colorDetalle: '#F1D9A8' },
 ];
 
 export const cartelVictoriaPorId = (id) => CARTELES_VICTORIA.find((c) => c.id === id) || CARTELES_VICTORIA[0];
@@ -30,6 +32,8 @@ export const CARTELES_DERROTA = [
   { id: 'pulperia', nombre: 'La Pulpería', cuadros: cuadrosDerrota('pulperia', 3), secuencia: [0, 1, 2, 1], suave: true, escalaTitulo: 0.75, textoDy: 0.15, proporcion: 2, intervaloMs: 800, colorTitulo: '#F27A5E', colorDetalle: '#F1D9A8' },
   // Pase 741: Noche Camperal (brasas que se apagan; 3 cuadros 1-2-3-2).
   { id: 'noche-camperal', nombre: 'Noche Camperal', cuadros: cuadrosDerrota('noche-camperal', 3), secuencia: [0, 1, 2, 1], suave: true, escalaTitulo: 0.88, textoDy: -0.04, proporcion: 2, intervaloMs: 800, colorTitulo: '#F27A5E', colorDetalle: '#F1D9A8' },
+  // Pase 743: Pampa y Patria (panel gris; el brillo recorre de izquierda a derecha: 1 = izquierda, 2 = sin brillo, 3 = derecha).
+  { id: 'pampa-y-patria', nombre: 'Pampa y Patria', cuadros: cuadrosDerrota('pampa-y-patria', 3), secuencia: [0, 1, 2, 1], suave: true, escalaTitulo: 0.95, textoDy: 0.025, proporcion: 2, intervaloMs: 800, colorTitulo: '#F27A5E', colorDetalle: '#F1D9A8' },
 ];
 
 export const cartelDerrotaPorId = (id) => CARTELES_DERROTA.find((c) => c.id === id) || CARTELES_DERROTA[0];
