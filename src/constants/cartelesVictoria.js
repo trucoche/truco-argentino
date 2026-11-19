@@ -13,8 +13,8 @@ export const CARTELES_VICTORIA = [
   { id: 'base', nombre: 'Luces de fiesta', cuadros: cuadros('base', 2), proporcion: 2, intervaloMs: 550, colorTitulo: '#FFD98A', colorDetalle: '#F1D9A8' },
   // Pase 715: La Pulpería (3 cuadros: farol izquierdo, ambos, farol derecho). `secuencia` = orden de los cuadros (opcional): 1-2-3-2 va y vuelve.
   { id: 'pulperia', nombre: 'La Pulpería', cuadros: cuadros('pulperia', 3), secuencia: [0, 1, 2, 1], suave: true, escalaTitulo: 0.82, textoDy: 0.08, proporcion: 2, intervaloMs: 650, colorTitulo: '#FFD98A', colorDetalle: '#F1D9A8' },
-  // Pase 741: Noche Camperal (fogata; 6 cuadros en orden). `textoDy` negativo sube el texto (el panel queda un poco arriba del centro del lienzo).
-  { id: 'noche-camperal', nombre: 'Noche Camperal', cuadros: cuadros('noche-camperal', 6), escalaTitulo: 0.88, textoDy: -0.04, proporcion: 2, intervaloMs: 380, colorTitulo: '#FFD98A', colorDetalle: '#F1D9A8' },
+  // Pase 741/742: Noche Camperal (fogata; 5 cuadros). Cuadro base (2) siempre opaco; la secuencia pasa siempre por él (inclinada → base → recta → base ...) para que la llama se funda sin saltar. `textoDy` negativo sube el texto.
+  { id: 'noche-camperal', nombre: 'Noche Camperal', cuadros: cuadros('noche-camperal', 5), secuencia: [0, 1, 3, 1, 4, 1, 2, 1], suave: true, escalaTitulo: 0.88, textoDy: -0.04, proporcion: 2, intervaloMs: 450, colorTitulo: '#FFD98A', colorDetalle: '#F1D9A8' },
 ];
 
 export const cartelVictoriaPorId = (id) => CARTELES_VICTORIA.find((c) => c.id === id) || CARTELES_VICTORIA[0];
