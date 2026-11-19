@@ -42,6 +42,7 @@ export default function SelectorPersonalizacion({ usuario, token, recargarPerfil
   const kit = !!(usuario && usuario.kit_fundador);
   const esSponsor = !!(usuario && usuario.es_sponsor);
   const primeraCompra = !!(usuario && usuario.primera_compra);   // Pase 707
+  const diaMate = !!(usuario && usuario.dia_mate);   // Pase 744: reclamó el regalo del Día Nacional del Mate
   const rangoId = (usuario && usuario.rango_max) || 0;   // Pase 628: mayor rango alcanzado (desbloquea el set Sol de Mayo)
 
   // Sincroniza con lo guardado en la cuenta cada vez que llega el perfil.
@@ -55,7 +56,7 @@ export default function SelectorPersonalizacion({ usuario, token, recargarPerfil
   }, [usuario && usuario.anillo_id, usuario && usuario.banner_id, usuario && usuario.mazo_id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const elegir = async (campo, item) => {
-    if (!estaDisponible(item, { kitFundador: kit, esSponsor, primeraCompra, rangoId })) {
+    if (!estaDisponible(item, { kitFundador: kit, esSponsor, primeraCompra, diaMate, rangoId })) {
       if (item.soloSponsor) {
         const apoyar = await confirmarPopup({
           titulo: 'Diseño de Sponsor',
@@ -118,8 +119,9 @@ export default function SelectorPersonalizacion({ usuario, token, recargarPerfil
             <div style={estilos.aviso}>Mientras tengas un fondo propio, tu perfil usa la Madera clásica. Tu banner elegido vuelve si sacás el fondo.</div>
           )}
           <div style={estilos.fila}>
-            {cat.items.map((item) => {
-              const libre = estaDisponible(item, { kitFundador: kit, esSponsor, primeraCompra, rangoId });
+            {/* Pase 744: el dorso del Día del Mate solo se muestra a quien lo reclamó (no es un diseño que se pueda conseguir después). */}
+            {cat.items.filter((item) => !item.soloDiaMate || diaMate).map((item) => {
+              const libre = estaDisponible(item, { kitFundador: kit, esSponsor, primeraCompra, diaMate, rangoId });
               const activo = sel[cat.campo] === item.id;
               return (
                 <button

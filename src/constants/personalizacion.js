@@ -9,6 +9,7 @@ const BASE = (process.env.PUBLIC_URL || '') + '/assets/personalizacion-opt';
 const LIBRE = { precio: 0, rangoMin: null, soloSponsor: false };
 const KIT = { ...LIBRE, soloKit: true };   // Pase 523: exclusivo del Kit de Fundador/Beta Tester
 const SPONSOR = { ...LIBRE, soloSponsor: true };   // Pase 563: solo quien donó en Cafecito (usuario.es_sponsor)
+const DIA_MATE = { ...LIBRE, soloDiaMate: true };   // Pase 744: dorso conmemorativo del Día Nacional del Mate (30/11/2026): se desbloquea al reclamar el regalo del evento (usuario.dia_mate)
 const PRIMERA_COMPRA = { ...LIBRE, soloPrimeraCompra: true };   // Pase 707: "Pack Primera Compra": se entrega al acreditarse la primera compra de mates (usuario.primera_compra)
 // Pase 628: set "Sol de Mayo": se desbloquea por el mayor rango alcanzado en la Liga (usuario.rango_max): dorso Gaucho (4), banner Caudillo (8), anillo Martín Fierro (10).
 
@@ -36,6 +37,7 @@ export const MAZOS = [
   { id: 'tester', nombre: 'Beta Tester', dorso: BASE + '/cartas/tester/back.png', proporcionDorso: 400 / 552, ...KIT },
   { id: 'pionero', nombre: 'Sol de Mayo', dorso: BASE + '/cartas/pionero/back.png', proporcionDorso: 400 / 552, ...LIBRE, rangoMin: 4 },
   { id: 'primera-compra', nombre: 'Pack Primera Compra', dorso: BASE + '/cartas/primera-compra/back.png', proporcionDorso: 400 / 595, ...PRIMERA_COMPRA },
+  { id: 'dia-del-mate', nombre: 'Día del Mate', dorso: BASE + '/cartas/dia-del-mate/back.png', proporcionDorso: 400 / 552, ...DIA_MATE },
 ];
 
 // Pase 578: marco de madera SIN el tablón del medio (Pase 533 de la app). Con una foto de fondo propia, la foto va atrás de este marco.
@@ -49,7 +51,7 @@ export const mazoPorId = (id) => MAZOS.find(m => m.id === id) || MAZOS[0];
 
 // Disponible = no es del kit (o la cuenta lo tiene) y no es de sponsors (o la cuenta donó). El backend vuelve a validar.
 export const estaDisponible = (item, ctx) =>
-  !(item.soloKit && !(ctx && ctx.kitFundador)) && !(item.soloSponsor && !(ctx && ctx.esSponsor)) && !(item.soloPrimeraCompra && !(ctx && ctx.primeraCompra)) && !(item.rangoMin && !((ctx && ctx.rangoId) >= item.rangoMin));
+  !(item.soloKit && !(ctx && ctx.kitFundador)) && !(item.soloSponsor && !(ctx && ctx.esSponsor)) && !(item.soloPrimeraCompra && !(ctx && ctx.primeraCompra)) && !(item.soloDiaMate && !(ctx && ctx.diaMate)) && !(item.rangoMin && !((ctx && ctx.rangoId) >= item.rangoMin));
 
 // Anillo a dibujar alrededor de un avatar: el elegido o el de su rango (`rangoAssets` = { anillo, hueco }).
 export const resolverAnillo = (anilloId, rangoAssets) => {
