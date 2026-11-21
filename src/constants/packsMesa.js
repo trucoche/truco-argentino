@@ -51,7 +51,12 @@ export function guardarPackMesa(id) {
 }
 
 // Pack que se dibuja en la mesa de este usuario. Por ahora solo los admins (prueba); más adelante: el pack equipado desde la tienda.
+// En la mesa simulada de la galería (/?preview=...) App.js no restaura la sesión y `usuario` llega vacío: ahí se lee el usuario guardado del navegador.
 export function packParaUsuario(usuario) {
-  if (!usuario || usuario.rol !== 'admin') return null;
+  let u = usuario;
+  if (!u) {
+    try { u = JSON.parse(window.localStorage.getItem('truco_usuario') || 'null'); } catch (e) { u = null; }
+  }
+  if (!u || u.rol !== 'admin') return null;
   return packPorId(leerPackMesa());
 }
