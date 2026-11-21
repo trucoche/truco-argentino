@@ -6,6 +6,7 @@ import { RANGOS_UI } from '../../components/Perfil/rangosUi';
 import { MAZOS } from '../../constants/personalizacion';
 import { CARTELES_VICTORIA, cartelVictoriaPorId, CARTELES_DERROTA, cartelDerrotaPorId } from '../../constants/cartelesVictoria';
 import { crearEstadoFoto, getConfigFoto } from '../../constants/modoFoto';
+import { packParaUsuario, rutaPack, POS_ADORNO } from '../../constants/packsMesa';
 
 // Decimotercer pase: bug de fondo detrás de "el dorso del rival sigue
 // borroso aunque Ctrl+Shift+R en Edge" — el navegador cachea las imágenes
@@ -148,6 +149,10 @@ export default class GameSceneOnline extends Phaser.Scene {
     this._angosto   = !!data.angosto;
     // Pase 404: estilo del marcador de las placas VOS/RIVAL ('numeros' | 'fosforos').
     this._marcadorEstilo = data.marcadorEstilo === 'fosforos' ? 'fosforos' : 'numeros';
+    // Pase 747: pack de la tienda (mesa + marcador + adorno). Por ahora solo admins, elegido en la Galería. Con pack el marcador es siempre de fósforos.
+    this._pack = packParaUsuario(this.usuario);
+    this._adornoPack = null;
+    if (this._pack) this._marcadorEstilo = 'fosforos';
     this._fosObjs = null;
     this._puntosPrevios = null;
     this._eqMap     = null;
@@ -270,6 +275,7 @@ preload() {
     // 1v1/2v2 (la rama "normal" de esa función) — el usuario no mandó
     // reemplazo para la mesa de 3v3, que sigue con su asset de siempre.
     this.load.image('mesaRedonda', conVersion('assets/images/juego/mesa-truco-nueva.webp'));
+    if (this._pack) this._cargarAssetsPack();   // Pase 747
     this.load.image('mesaRedonda3v3', conVersion('assets/images/juego/mesa-truco-3v3.webp'));
     // Pase 667: la mesa 1v1 de la app (redonda vista desde arriba, con patas) para el layout del celular.
     this.load.image('mesa1v1App', conVersion('assets/images/juego/mesa-1v1-app.webp'));
@@ -1572,17 +1578,17 @@ _crearElementosDeTexto() {
     const top = top0 + desc;
     const extra = Math.max(0, extra0 - desc);
     const FA = 850, FB = 905;
-    this.mesaImg.setTexture('mesaEquiposApp').setCrop(0, 0, 800, FA + 1).setOrigin(0.5, 0).setScale(s).setPosition(400, top);
+    this.mesaImg.setTexture(this._tk('mesaEquiposApp')).setCrop(0, 0, 800, FA + 1).setOrigin(0.5, 0).setScale(s).setPosition(400, top);
     if (!this._mesaAppExtra) {
       const dep = this.mesaImg.depth;
-      this._mesaAppExtra = [this.add.image(400, 0, 'mesaEquiposApp').setOrigin(0.5, 0).setDepth(dep), this.add.image(400, 0, 'mesaEquiposApp').setOrigin(0.5, 0).setDepth(dep)];
+      this._mesaAppExtra = [this.add.image(400, 0, this._tk('mesaEquiposApp')).setOrigin(0.5, 0).setDepth(dep), this.add.image(400, 0, this._tk('mesaEquiposApp')).setOrigin(0.5, 0).setDepth(dep)];
       const visOrig = this.mesaImg.setVisible.bind(this.mesaImg);
       this.mesaImg.setVisible = (v) => { visOrig(v); this._mesaAppExtra.forEach(o => { if (o && o.scene) o.setVisible(v); }); return this.mesaImg; };
       this._mesaAppExtra.forEach(o => o.setVisible(this.mesaImg.visible));
     }
     const kB = ((FB - FA) * s + extra) / ((FB - FA) * s);
-    this._mesaAppExtra[0].setTexture('mesaEquiposApp').setCrop(0, FA, 800, FB - FA + 1).setScale(s, s * kB).setPosition(400, top + FA * s - FA * s * kB);
-    this._mesaAppExtra[1].setTexture('mesaEquiposApp').setCrop(0, FB, 800, 1000 - FB).setScale(s).setPosition(400, top + extra);
+    this._mesaAppExtra[0].setTexture(this._tk('mesaEquiposApp')).setCrop(0, FA, 800, FB - FA + 1).setScale(s, s * kB).setPosition(400, top + FA * s - FA * s * kB);
+    this._mesaAppExtra[1].setTexture(this._tk('mesaEquiposApp')).setCrop(0, FB, 800, 1000 - FB).setScale(s).setPosition(400, top + extra);
     [this.mesaMedio, this.mesaPatas, this.mesaPies, this.marcaTcMesa].forEach(o => { if (o && o.scene) o.setVisible(false); });
     const pt = (xi, yi) => ({ x: Math.round(400 + (xi - 400) * s), y: Math.round(top + yi * s) });
     const xLado = Math.round(Math.min(338 * s, 312));   // mazos de los costados: pegados al aro, pero enteros dentro de la vista (40..760)
@@ -1608,6 +1614,7 @@ _crearElementosDeTexto() {
     L.turnoX = 400;
     L.turnoY = L.panelTop - 23;   // Pase 681: en el arco que dejan las cartas en abanico, justo bajo la carta del medio
     if (this.sombraMesa) this.sombraMesa.setPosition(400, top + 999 * s + extra - 10).setSize(560 * s, 50).setAlpha(0);   // Pase 679
+    this._colocarAdornoPack('eqApp');   // Pase 747
     return;
   }
 
@@ -1637,14 +1644,14 @@ _crearElementosDeTexto() {
     const extra = Math.max(0, apoyo - top - 919 * s);   // lo que falta para llegar: se estira solo la madera lisa de las patas (filas 850-895)
     const FA = 850, FB = 895;
     this.mesaImg
-      .setTexture('mesa1v1App')
+      .setTexture(this._tk('mesa1v1App'))
       .setCrop(0, 0, 840, FA)
       .setOrigin(0.5, 0)
       .setScale(s)
       .setPosition(400, top);
     if (!this._mesaAppExtra) {
       const dep = this.mesaImg.depth;
-      this._mesaAppExtra = [this.add.image(400, 0, 'mesa1v1App').setOrigin(0.5, 0).setDepth(dep), this.add.image(400, 0, 'mesa1v1App').setOrigin(0.5, 0).setDepth(dep)];
+      this._mesaAppExtra = [this.add.image(400, 0, this._tk('mesa1v1App')).setOrigin(0.5, 0).setDepth(dep), this.add.image(400, 0, this._tk('mesa1v1App')).setOrigin(0.5, 0).setDepth(dep)];
       const visOrig = this.mesaImg.setVisible.bind(this.mesaImg);
       this.mesaImg.setVisible = (v) => { visOrig(v); this._mesaAppExtra.forEach(o => { if (o && o.scene) o.setVisible(v); }); return this.mesaImg; };
       this._mesaAppExtra.forEach(o => o.setVisible(this.mesaImg.visible));
@@ -1669,6 +1676,7 @@ _crearElementosDeTexto() {
     L.feltRY = (visBot - feltTop) / 2;
     L.dueloEscala = Math.min(0.66 * 1.9 * L.f, 0.95 * (visBot - feltTop) / 234);
     if (this.sombraMesa) this.sombraMesa.setPosition(400, top + 919 * s + extra - 10).setSize(660 * s, 56).setAlpha(0);   // Pase 679: sin sombra de mesa en el celular
+    this._colocarAdornoPack('app1v1');   // Pase 747
     return;
   }
 
@@ -1731,7 +1739,7 @@ _crearElementosDeTexto() {
     const altoDisplay = anchoDisplay * (CROP.height / CROP.width) * FACTOR_ALTURA;
 
     this.mesaImg
-      .setTexture('mesaRedonda3v3')
+      .setTexture(this._tk('mesaRedonda3v3'))
       .setOrigin(0.5, 0.5)
       .setCrop(CROP.x, CROP.y, CROP.width, CROP.height)
       .setDisplaySize(anchoDisplay, altoDisplay)
@@ -1784,11 +1792,88 @@ _crearElementosDeTexto() {
     const altoDisplay = anchoDisplay * (895 / 1169) * FACTOR_ALTURA_MESA_NUEVA;
 
     this.mesaImg
-      .setTexture('mesaRedonda')
+      .setTexture(this._tk('mesaRedonda'))
       .setCrop()
       .setDisplaySize(anchoDisplay, altoDisplay)
       .setPosition(400, 340 + DESC_ESCRITORIO);
   }
+  // Pase 747: el adorno interactivo del pack se coloca (o se reubica) según la mesa que quedó dibujada.
+  this._colocarAdornoPack(modo);
+}
+
+// Pase 747: clave de textura de la mesa: la del pack si hay pack equipado y sus imágenes cargaron; si no, la de siempre.
+_tk(base) {
+  if (!this._pack) return base;
+  const m = { mesaEquiposApp: 'mesaVertical', mesa1v1App: 'mesaRedonda', mesaRedonda: 'mesaOval', mesaRedonda3v3: 'mesa3v3' }[base];
+  const clave = m ? `pk_${this._pack.id}_${m}` : null;
+  return clave && this.textures.exists(clave) ? clave : base;
+}
+
+// Pase 747: carga los archivos del pack (mesas, cuadritos del marcador, estados del adorno y su sonido).
+_cargarAssetsPack() {
+  const p = this._pack;
+  const id = p.id;
+  [['mesaVertical', 'mesa-vertical.webp'], ['mesaRedonda', 'mesa-redonda.webp'], ['mesaOval', 'mesa-oval.webp'], ['mesa3v3', 'mesa-3v3.webp']]
+    .forEach(([c, f]) => this.load.image(`pk_${id}_${c}`, conVersion(rutaPack(id, f))));
+  for (let n = 1; n <= 5; n++) this.load.image(`pk_${id}_fos_${n}`, conVersion(rutaPack(id, `marcador-${n}.webp`)));
+  for (let n = 1; n <= p.adorno.estados; n++) this.load.image(`pk_${id}_adorno_${n}`, conVersion(rutaPack(id, `adorno-${n}.webp`)));
+  if (p.adorno.sonido) this.load.audio(`pk_${id}_sonido`, conVersion(rutaPack(id, p.adorno.sonido)));
+}
+
+// Pase 747: adorno interactivo (picada / farol / mate) sobre el paño. `modo` es el de _ajustarMesaSegunAsientos.
+// La posición se saca del rectángulo visible de la mesa (ver POS_ADORNO en constants/packsMesa.js).
+_colocarAdornoPack(modo) {
+  const pack = this._pack;
+  const img = this.mesaImg;
+  if (!pack || !img || !img.scene) return;
+  const clave = (n) => `pk_${pack.id}_adorno_${n}`;
+  if (!this.textures.exists(clave(1))) return;
+  let izq; let arr; let w; let h; let tipo;
+  if (modo === 'eqApp' || modo === 'app1v1') {
+    const W = modo === 'eqApp' ? 800 : 840;
+    const H = modo === 'eqApp' ? 1000 : 919;
+    const s = img.scaleX;
+    izq = img.x - (W * s) / 2; arr = img.y; w = W * s; h = H * s;
+    tipo = modo === 'eqApp' ? 'vertical' : 'redonda';
+  } else if (modo === '3v3') {
+    const sx = img.scaleX; const sy = img.scaleY;
+    izq = img.x - (1200 * sx) / 2 + 37 * sx; arr = img.y - (2160 * sy) / 2 + 876 * sy; w = 1128 * sx; h = 1064 * sy;
+    tipo = 'tresVsTres';
+  } else if (!this._L) {
+    w = img.displayWidth; h = img.displayHeight; izq = img.x - w / 2; arr = img.y - h / 2;
+    tipo = 'oval';
+  } else {
+    return;   // 1v1 angosto sin la mesa de la app: no hay dónde apoyarlo
+  }
+  const P = POS_ADORNO[tipo];
+  const tam = P.tam * w;
+  const x = izq + P.x * w;
+  const y = arr + P.y * h;
+  let A = this._adornoPack;
+  if (!A) {
+    A = { estado: 0, glow: null, img: null, base: 1 };
+    if (pack.adorno.brillo) A.glow = this.add.circle(0, 0, 10, 0xffb042, 0.3).setDepth(4);
+    A.img = this.add.image(0, 0, clave(1)).setDepth(5).setInteractive({ useHandCursor: true });
+    A.img.on('pointerdown', () => {
+      const ad = pack.adorno;
+      A.estado = ad.tipo === 'alternar' ? (A.estado + 1) % 2 : (A.estado + 1) % ad.estados;
+      A.img.setTexture(clave(A.estado + 1));
+      if (A.glow) A.glow.setVisible(!!ad.brillo && A.estado === 0 && img.visible);
+      if (ad.sonido && this.cache.audio.exists(`pk_${pack.id}_sonido`)) {
+        try { this.sound.play(`pk_${pack.id}_sonido`, { volume: 0.8 * (this.efectosVolumen ?? 1) }); } catch (e) { /* sin audio */ }
+      }
+      this.tweens.killTweensOf(A.img);
+      A.img.setScale(A.base * 0.88);
+      this.tweens.add({ targets: A.img, scaleX: A.base, scaleY: A.base, duration: 220, ease: 'Back.easeOut' });
+    });
+    // sigue a la mesa: si la mesa se oculta (sala de espera, pantalla final) el adorno también
+    const visOrig = img.setVisible.bind(img);
+    img.setVisible = (v) => { visOrig(v); if (A.img && A.img.scene) A.img.setVisible(v); if (A.glow && A.glow.scene) A.glow.setVisible(v && A.estado === 0); return img; };
+    this._adornoPack = A;
+  }
+  A.base = tam / A.img.width;
+  A.img.setPosition(x, y).setScale(A.base).setVisible(img.visible);
+  if (A.glow) A.glow.setPosition(x, y).setRadius(tam * 0.75).setVisible(img.visible && A.estado === 0);
 }
 
 _crearTexturaDorsoMini() {
@@ -4645,7 +4730,7 @@ _dibujarMarcoMaderaConRemaches(g, x, y, w, h, rExterior = 20, rInterior = 14, pa
 // placas se vuelven minitableros con los cuadritos de 5 fosforos (malas y, si la
 // mesa es a 30, buenas). Se puede cambiar en cualquier momento desde Ajustes.
 setMarcadorEstilo(estilo) {
-  this._marcadorEstilo = estilo === 'fosforos' ? 'fosforos' : 'numeros';
+  this._marcadorEstilo = (estilo === 'fosforos' || this._pack) ? 'fosforos' : 'numeros';   // Pase 747: con pack siempre fósforos
   this._aplicarMarcadorEstilo(false);
 }
 
@@ -4673,9 +4758,11 @@ _crearFosforosMarcador() {
   const g = this._geoPlacas;
   const gap = 3 * g.kp;
   const B = Math.floor((this._anchoPlacaFosforos() - 2 * MARGEN_INTERNO_FOS - 2 * gap) / 3);   // Pase 457: 12 px de margen interno a cada lado
+  // Pase 747: con pack, los cuadritos son los del pack (fósforos / ramitas / porotos)
+  const pkFos = (this._pack && this.textures.exists(`pk_${this._pack.id}_fos_1`)) ? `pk_${this._pack.id}_` : '';
   const claves = [1, 2, 3, 4, 5].map((n) => {
-    const k = `fos_${n}_s`;
-    this._crearTexturaEscalada(`fos_${n}`, k, Math.round(B * factor), Math.round(B * factor));
+    const k = `${pkFos}fos_${n}_s`;
+    this._crearTexturaEscalada(`${pkFos}fos_${n}`, k, Math.round(B * factor), Math.round(B * factor));
     return k;
   });
   const lado = () => ({ fantasma: [], caja: [], n: [0, 0, 0, 0, 0, 0] });

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ESCENAS_FOTO, getConfigFoto, guardarConfigFoto } from '../../constants/modoFoto';
+import { IDS_PACK, PACKS, leerPackMesa, guardarPackMesa } from '../../constants/packsMesa';
 
 // Pase 728: GALERÍA de la web (solo admin; se abre desde Ajustes → Admin → Modo foto → "Abrir galería").
 // Panel flotante sobre la mesa simulada (/?preview=<modo>&foto=1&galeria=1) para cambiar en vivo lo que pasa en la partida y revisar cómo se ve:
@@ -108,6 +109,12 @@ export default function PanelGaleriaWeb({ escenaRef, marcadorEstilo, onCambiarMa
       <Seccion titulo="Marcador (cambia tu preferencia del navegador)">
         <Chip texto="Números" activo={marcadorEstilo !== 'fosforos'} onClick={() => onCambiarMarcadorEstilo('numeros')} />
         <Chip texto="Fósforos" activo={marcadorEstilo === 'fosforos'} onClick={() => onCambiarMarcadorEstilo('fosforos')} />
+      </Seccion>
+      <Seccion titulo="Pack de la mesa (prueba, solo admin; recarga la mesa)">
+        {IDS_PACK.map((id) => (
+          <Chip key={id} texto={id === 'ninguno' ? 'Ninguno' : PACKS[id].nombre} activo={leerPackMesa() === id}
+            onClick={() => { if (leerPackMesa() === id) return; guardarPackMesa(id); window.location.reload(); }} />
+        ))}
       </Seccion>
       <Seccion titulo="Objetivo de la mesa">
         <Chip texto="Auto" activo={cfg.objetivo === null} onClick={() => cambiar({ objetivo: null })} />
