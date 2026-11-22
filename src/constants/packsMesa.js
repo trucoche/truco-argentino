@@ -20,18 +20,26 @@ export const PACKS = {
   'la-pulperia': {
     id: 'la-pulperia', nombre: 'La Pulpería',
     adorno: { nombre: 'Picada', tipo: 'ciclo', estados: 4, brillo: false, sonido: null },
-    anclas: { uno: { der: [718, 504], izq: [120, 506] }, dos: { der: [670, 648], izq: [135, 648] }, tres: { der: [655, 680], izq: [150, 680] } },
+    anclas: { uno: { der: [718, 514], izq: [120, 516] }, dos: { der: [670, 658], izq: [135, 658] }, tres: { der: [655, 680], izq: [150, 680] } },
+    // Pase 752: escritorio por modo (uno = 1v1, dos = 2v2, tres = 3v3): fracciones de la mesa visible; lo que falte usa POS_ADORNO
+    escritorio: { tres: { der: [0.82, 0.48], izq: [0.18, 0.48] } },
   },
   'noche-camperal': {
     id: 'noche-camperal', nombre: 'Noche Camperal',
     adorno: { nombre: 'Farol', tipo: 'alternar', estados: 2, brillo: true, sonido: null },
-    anclas: { uno: { der: [733, 464], izq: [105, 465] }, dos: { der: [672, 646], izq: [126, 646] }, tres: { der: [657, 678], izq: [141, 678] } },
+    anclas: { uno: { der: [733, 464], izq: [105, 465] }, dos: { der: [672, 636], izq: [126, 636] }, tres: { der: [642, 693], izq: [156, 693] } },
+    escritorio: {
+      uno: { tam: 0.18, der: [0.83, 0.425], izq: [0.17, 0.425] },
+      dos: { der: [0.815, 0.425], izq: [0.185, 0.425] },
+      tres: { der: [0.82, 0.42], izq: [0.18, 0.42] },
+    },
     dorso: 'pack-noche-camperal',   // Pase 751: carpeta public/assets/personalizacion-opt/cartas/<dorso>/ (abanicos)
   },
   'pampa-y-patria': {
     id: 'pampa-y-patria', nombre: 'Pampa y Patria',
     adorno: { nombre: 'Mate', tipo: 'ciclo', estados: 3, brillo: false, sonido: 'sorbo-mate.mp3' },
-    anclas: { uno: { der: [711, 470], izq: [129, 469] }, dos: { der: [695, 643], izq: [119, 643] }, tres: { der: [680, 675], izq: [134, 675] } },
+    anclas: { uno: { der: [711, 470], izq: [129, 469] }, dos: { der: [695, 643], izq: [119, 643] }, tres: { der: [668, 663], izq: [146, 663] } },
+    escritorio: { uno: { der: [0.83, 0.42], izq: [0.17, 0.42] }, dos: { der: [0.83, 0.435], izq: [0.17, 0.435] } },
     dorso: 'pack-pampa-y-patria',
   },
 };
