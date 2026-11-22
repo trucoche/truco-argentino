@@ -27,10 +27,10 @@ export const PACKS = {
   'noche-camperal': {
     id: 'noche-camperal', nombre: 'Noche Camperal',
     adorno: { nombre: 'Farol', tipo: 'alternar', estados: 2, brillo: true, sonido: null },
-    anclas: { uno: { der: [733, 464], izq: [105, 465] }, dos: { der: [672, 636], izq: [126, 636] }, tres: { der: [642, 693], izq: [156, 693] } },
+    anclas: { uno: { der: [733, 464], izq: [105, 465] }, dos: { der: [672, 636], izq: [126, 636] }, tres: { der: [630, 681], izq: [168, 681] } },
     escritorio: {
-      uno: { tam: 0.18, der: [0.83, 0.425], izq: [0.17, 0.425] },
-      dos: { der: [0.815, 0.425], izq: [0.185, 0.425] },
+      uno: { tam: 0.18, der: [0.83, 0.40], izq: [0.17, 0.40] },
+      dos: { der: [0.80, 0.40], izq: [0.20, 0.40] },
       tres: { der: [0.82, 0.42], izq: [0.18, 0.42] },
     },
     dorso: 'pack-noche-camperal',   // Pase 751: carpeta public/assets/personalizacion-opt/cartas/<dorso>/ (abanicos)
@@ -38,8 +38,8 @@ export const PACKS = {
   'pampa-y-patria': {
     id: 'pampa-y-patria', nombre: 'Pampa y Patria',
     adorno: { nombre: 'Mate', tipo: 'ciclo', estados: 3, brillo: false, sonido: 'sorbo-mate.mp3' },
-    anclas: { uno: { der: [711, 470], izq: [129, 469] }, dos: { der: [695, 643], izq: [119, 643] }, tres: { der: [668, 663], izq: [146, 663] } },
-    escritorio: { uno: { der: [0.83, 0.42], izq: [0.17, 0.42] }, dos: { der: [0.83, 0.435], izq: [0.17, 0.435] } },
+    anclas: { uno: { der: [699, 482], izq: [141, 481] }, dos: { der: [683, 655], izq: [131, 655] }, tres: { der: [658, 675], izq: [156, 675] } },
+    escritorio: { uno: { der: [0.83, 0.395], izq: [0.17, 0.395] }, dos: { der: [0.815, 0.41], izq: [0.185, 0.41] } },
     dorso: 'pack-pampa-y-patria',
   },
 };
