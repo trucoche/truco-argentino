@@ -15,22 +15,24 @@ export const CLAVE_PACK_MESA = 'tc_pack_mesa';
 
 // Adorno interactivo: 'ciclo' = cada toque pasa al estado siguiente (y del último vuelve al primero); 'alternar' = cambia entre dos estados.
 // `anclas` (Pase 750) = dónde se apoya el adorno, igual que en la app (constants/packs.ts). Son el CENTRO en píxeles de la imagen de la mesa:
-// uno = 1v1 en el celular (imagen 840x919), equipos = 2v2 y 3v3 en el celular (imagen 800x1000); `der` = lado derecho e `izq` = lado izquierdo (imagen espejada).
+// uno = 1v1 en el celular (imagen 840x919), dos = 2v2 y tres = 3v3 en el celular (imagen 800x1000); `der` = lado derecho e `izq` = lado izquierdo (imagen espejada).
 export const PACKS = {
   'la-pulperia': {
     id: 'la-pulperia', nombre: 'La Pulpería',
     adorno: { nombre: 'Picada', tipo: 'ciclo', estados: 4, brillo: false, sonido: null },
-    anclas: { uno: { der: [733, 474], izq: [105, 476] }, equipos: { der: [670, 648], izq: [135, 648] } },
+    anclas: { uno: { der: [718, 504], izq: [120, 506] }, dos: { der: [670, 648], izq: [135, 648] }, tres: { der: [655, 680], izq: [150, 680] } },
   },
   'noche-camperal': {
     id: 'noche-camperal', nombre: 'Noche Camperal',
     adorno: { nombre: 'Farol', tipo: 'alternar', estados: 2, brillo: true, sonido: null },
-    anclas: { uno: { der: [733, 464], izq: [105, 465] }, equipos: { der: [672, 646], izq: [126, 646] } },
+    anclas: { uno: { der: [733, 464], izq: [105, 465] }, dos: { der: [672, 646], izq: [126, 646] }, tres: { der: [657, 678], izq: [141, 678] } },
+    dorso: 'pack-noche-camperal',   // Pase 751: carpeta public/assets/personalizacion-opt/cartas/<dorso>/ (abanicos)
   },
   'pampa-y-patria': {
     id: 'pampa-y-patria', nombre: 'Pampa y Patria',
     adorno: { nombre: 'Mate', tipo: 'ciclo', estados: 3, brillo: false, sonido: 'sorbo-mate.mp3' },
-    anclas: { uno: { der: [711, 470], izq: [129, 469] }, equipos: { der: [695, 643], izq: [119, 643] } },
+    anclas: { uno: { der: [711, 470], izq: [129, 469] }, dos: { der: [695, 643], izq: [119, 643] }, tres: { der: [680, 675], izq: [134, 675] } },
+    dorso: 'pack-pampa-y-patria',
   },
 };
 
@@ -38,10 +40,10 @@ export const PACKS = {
 // (fracciones de la mesa visible: x e y del CENTRO, `der` / `izq`). Se afinan mirando la galería.
 // vertical = 2v2/3v3 en el celular, redonda = 1v1 en el celular, oval = 1v1/2v2 en escritorio, tresVsTres = 3v3 en escritorio.
 export const POS_ADORNO = {
-  vertical:   { tam: 0.17 },
+  vertical:   { tam: 0.19 },
   redonda:    { tam: 0.22 },
-  oval:       { tam: 0.13, der: [0.84, 0.44], izq: [0.16, 0.44] },
-  tresVsTres: { tam: 0.13, der: [0.76, 0.50], izq: [0.24, 0.50] },
+  oval:       { tam: 0.15, der: [0.83, 0.452], izq: [0.17, 0.452] },
+  tresVsTres: { tam: 0.13, der: [0.80, 0.45], izq: [0.20, 0.45] },
 };
 
 // Lado donde va el adorno: 'derecha' (por defecto) o 'izquierda' (la imagen se da vuelta, efecto espejo). Se guarda en el navegador.

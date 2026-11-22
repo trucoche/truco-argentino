@@ -1614,7 +1614,7 @@ _crearElementosDeTexto() {
     L.turnoX = 400;
     L.turnoY = L.panelTop - 23;   // Pase 681: en el arco que dejan las cartas en abanico, justo bajo la carta del medio
     if (this.sombraMesa) this.sombraMesa.setPosition(400, top + 999 * s + extra - 10).setSize(560 * s, 50).setAlpha(0);   // Pase 679
-    this._colocarAdornoPack('eqApp');   // Pase 747
+    this._colocarAdornoPack('eqApp', cantidadAsientos);   // Pase 747
     return;
   }
 
@@ -1676,7 +1676,7 @@ _crearElementosDeTexto() {
     L.feltRY = (visBot - feltTop) / 2;
     L.dueloEscala = Math.min(0.66 * 1.9 * L.f, 0.95 * (visBot - feltTop) / 234);
     if (this.sombraMesa) this.sombraMesa.setPosition(400, top + 919 * s + extra - 10).setSize(660 * s, 56).setAlpha(0);   // Pase 679: sin sombra de mesa en el celular
-    this._colocarAdornoPack('app1v1');   // Pase 747
+    this._colocarAdornoPack('app1v1', cantidadAsientos);   // Pase 747
     return;
   }
 
@@ -1798,7 +1798,7 @@ _crearElementosDeTexto() {
       .setPosition(400, 340 + DESC_ESCRITORIO);
   }
   // Pase 747: el adorno interactivo del pack se coloca (o se reubica) según la mesa que quedó dibujada.
-  this._colocarAdornoPack(modo);
+  this._colocarAdornoPack(modo, cantidadAsientos);
 }
 
 // Pase 747: clave de textura de la mesa: la del pack si hay pack equipado y sus imágenes cargaron; si no, la de siempre.
@@ -1823,8 +1823,9 @@ _cargarAssetsPack() {
 // Pase 747/750: adorno interactivo (picada / farol / mate) sobre el aro de la mesa. `modo` es el de _ajustarMesaSegunAsientos.
 // En el celular se apoya en las `anclas` del pack (px de la imagen, las mismas que usa la app); en escritorio, en fracciones de la mesa visible (POS_ADORNO).
 // Lado: derecha (por defecto) o izquierda con la imagen espejada; mantener apretado el adorno cambia de lado.
-_colocarAdornoPack(modo) {
+_colocarAdornoPack(modo, cantidad) {
   const pack = this._pack;
+  if (cantidad !== undefined) this._cantAdorno = cantidad; else cantidad = this._cantAdorno;   // 3 asientos = 2v2, 5 = 3v3
   const img = this.mesaImg;
   if (!pack || !img || !img.scene) return;
   const clave = (n) => `pk_${pack.id}_adorno_${n}`;
@@ -1835,7 +1836,7 @@ _colocarAdornoPack(modo) {
   if (modo === 'eqApp' || modo === 'app1v1') {
     const W = modo === 'eqApp' ? 800 : 840;
     const s = img.scaleX;
-    const anc = (modo === 'eqApp' ? pack.anclas.equipos : pack.anclas.uno)[lado];
+    const anc = (modo === 'eqApp' ? (cantidad === 5 ? pack.anclas.tres : pack.anclas.dos) : pack.anclas.uno)[lado];
     x = img.x - (W * s) / 2 + anc[0] * s;
     y = img.y + anc[1] * s;
     tam = (modo === 'eqApp' ? POS_ADORNO.vertical.tam : POS_ADORNO.redonda.tam) * W * s;
@@ -1882,7 +1883,7 @@ _colocarAdornoPack(modo) {
       A.timer = this.time.delayedCall(450, () => {
         A.largo = true;
         guardarLadoAdorno(leerLadoAdorno() === 'izquierda' ? 'derecha' : 'izquierda');
-        this._colocarAdornoPack(this._mesaModoActual);
+        this._colocarAdornoPack(this._mesaModoActual, this._cantAdorno);
       });
     });
     A.img.on('pointerup', () => {
@@ -5844,6 +5845,7 @@ _posicionarMedallaRival() {
 
 _mazoIdDe(nombre) {
   const info = (this._jugadoresSala || []).find((s) => s.username === nombre);
+  if (this._pack && this._pack.dorso) return this._pack.dorso;   // Pase 751: con un pack que trae dorso, todos los mazos de la mesa lo usan
   const id = info && info.mazo_id;
   return (id && id !== 'base' && MAZOS.some((m) => m.id === id)) ? id : 'base';
 }
