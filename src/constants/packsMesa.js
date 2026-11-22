@@ -14,29 +14,44 @@ export const IDS_PACK = ['ninguno', 'la-pulperia', 'noche-camperal', 'pampa-y-pa
 export const CLAVE_PACK_MESA = 'tc_pack_mesa';
 
 // Adorno interactivo: 'ciclo' = cada toque pasa al estado siguiente (y del último vuelve al primero); 'alternar' = cambia entre dos estados.
+// `anclas` (Pase 750) = dónde se apoya el adorno, igual que en la app (constants/packs.ts). Son el CENTRO en píxeles de la imagen de la mesa:
+// uno = 1v1 en el celular (imagen 840x919), equipos = 2v2 y 3v3 en el celular (imagen 800x1000); `der` = lado derecho e `izq` = lado izquierdo (imagen espejada).
 export const PACKS = {
   'la-pulperia': {
     id: 'la-pulperia', nombre: 'La Pulpería',
     adorno: { nombre: 'Picada', tipo: 'ciclo', estados: 4, brillo: false, sonido: null },
+    anclas: { uno: { der: [733, 474], izq: [105, 476] }, equipos: { der: [670, 648], izq: [135, 648] } },
   },
   'noche-camperal': {
     id: 'noche-camperal', nombre: 'Noche Camperal',
     adorno: { nombre: 'Farol', tipo: 'alternar', estados: 2, brillo: true, sonido: null },
+    anclas: { uno: { der: [733, 464], izq: [105, 465] }, equipos: { der: [672, 646], izq: [126, 646] } },
   },
   'pampa-y-patria': {
     id: 'pampa-y-patria', nombre: 'Pampa y Patria',
     adorno: { nombre: 'Mate', tipo: 'ciclo', estados: 3, brillo: false, sonido: 'sorbo-mate.mp3' },
+    anclas: { uno: { der: [711, 470], izq: [129, 469] }, equipos: { der: [695, 643], izq: [119, 643] } },
   },
 };
 
-// Posición del adorno en cada tipo de mesa: x e y = CENTRO del adorno como fracción de la mesa visible; tam = lado como fracción del ancho de la mesa.
-// vertical = 2v2/3v3 en el celular, redonda = 1v1 en el celular, oval = 1v1/2v2 en escritorio, tresVsTres = 3v3 en escritorio. Se afinan mirando la galería.
+// Tamaño del adorno (lado, como fracción del ancho de la mesa visible) en cada tipo de mesa y, en escritorio, dónde se apoya
+// (fracciones de la mesa visible: x e y del CENTRO, `der` / `izq`). Se afinan mirando la galería.
+// vertical = 2v2/3v3 en el celular, redonda = 1v1 en el celular, oval = 1v1/2v2 en escritorio, tresVsTres = 3v3 en escritorio.
 export const POS_ADORNO = {
-  vertical:   { x: 0.22, y: 0.57, tam: 0.17 },   // mismos valores que la app (ADORNO_PACK_POS)
-  redonda:    { x: 0.17, y: 0.44, tam: 0.17 },
-  oval:       { x: 0.17, y: 0.30, tam: 0.12 },
-  tresVsTres: { x: 0.16, y: 0.62, tam: 0.12 },
+  vertical:   { tam: 0.17 },
+  redonda:    { tam: 0.22 },
+  oval:       { tam: 0.13, der: [0.84, 0.44], izq: [0.16, 0.44] },
+  tresVsTres: { tam: 0.13, der: [0.76, 0.50], izq: [0.24, 0.50] },
 };
+
+// Lado donde va el adorno: 'derecha' (por defecto) o 'izquierda' (la imagen se da vuelta, efecto espejo). Se guarda en el navegador.
+export const CLAVE_LADO_ADORNO = 'tc_pack_lado';
+export function leerLadoAdorno() {
+  try { return window.localStorage.getItem(CLAVE_LADO_ADORNO) === 'izquierda' ? 'izquierda' : 'derecha'; } catch (e) { return 'derecha'; }
+}
+export function guardarLadoAdorno(lado) {
+  try { window.localStorage.setItem(CLAVE_LADO_ADORNO, lado === 'izquierda' ? 'izquierda' : 'derecha'); } catch (e) { /* sin almacenamiento */ }
+}
 
 export const rutaPack = (id, archivo) => `assets/images/packs/${id}/${archivo}`;
 

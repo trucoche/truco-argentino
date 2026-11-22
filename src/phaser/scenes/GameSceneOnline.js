@@ -6,7 +6,7 @@ import { RANGOS_UI } from '../../components/Perfil/rangosUi';
 import { MAZOS } from '../../constants/personalizacion';
 import { CARTELES_VICTORIA, cartelVictoriaPorId, CARTELES_DERROTA, cartelDerrotaPorId } from '../../constants/cartelesVictoria';
 import { crearEstadoFoto, getConfigFoto } from '../../constants/modoFoto';
-import { packParaUsuario, rutaPack, POS_ADORNO } from '../../constants/packsMesa';
+import { packParaUsuario, rutaPack, POS_ADORNO, leerLadoAdorno, guardarLadoAdorno } from '../../constants/packsMesa';
 
 // Decimotercer pase: bug de fondo detrás de "el dorso del rival sigue
 // borroso aunque Ctrl+Shift+R en Edge" — el navegador cachea las imágenes
@@ -1820,41 +1820,50 @@ _cargarAssetsPack() {
   if (p.adorno.sonido) this.load.audio(`pk_${id}_sonido`, conVersion(rutaPack(id, p.adorno.sonido)));
 }
 
-// Pase 747: adorno interactivo (picada / farol / mate) sobre el paño. `modo` es el de _ajustarMesaSegunAsientos.
-// La posición se saca del rectángulo visible de la mesa (ver POS_ADORNO en constants/packsMesa.js).
+// Pase 747/750: adorno interactivo (picada / farol / mate) sobre el aro de la mesa. `modo` es el de _ajustarMesaSegunAsientos.
+// En el celular se apoya en las `anclas` del pack (px de la imagen, las mismas que usa la app); en escritorio, en fracciones de la mesa visible (POS_ADORNO).
+// Lado: derecha (por defecto) o izquierda con la imagen espejada; mantener apretado el adorno cambia de lado.
 _colocarAdornoPack(modo) {
   const pack = this._pack;
   const img = this.mesaImg;
   if (!pack || !img || !img.scene) return;
   const clave = (n) => `pk_${pack.id}_adorno_${n}`;
   if (!this.textures.exists(clave(1))) return;
-  let izq; let arr; let w; let h; let tipo;
+  const izquierda = leerLadoAdorno() === 'izquierda';
+  const lado = izquierda ? 'izq' : 'der';
+  let x; let y; let tam;
   if (modo === 'eqApp' || modo === 'app1v1') {
     const W = modo === 'eqApp' ? 800 : 840;
-    const H = modo === 'eqApp' ? 1000 : 919;
     const s = img.scaleX;
-    izq = img.x - (W * s) / 2; arr = img.y; w = W * s; h = H * s;
-    tipo = modo === 'eqApp' ? 'vertical' : 'redonda';
-  } else if (modo === '3v3') {
-    const sx = img.scaleX; const sy = img.scaleY;
-    izq = img.x - (1200 * sx) / 2 + 37 * sx; arr = img.y - (2160 * sy) / 2 + 876 * sy; w = 1128 * sx; h = 1064 * sy;
-    tipo = 'tresVsTres';
-  } else if (!this._L) {
-    w = img.displayWidth; h = img.displayHeight; izq = img.x - w / 2; arr = img.y - h / 2;
-    tipo = 'oval';
+    const anc = (modo === 'eqApp' ? pack.anclas.equipos : pack.anclas.uno)[lado];
+    x = img.x - (W * s) / 2 + anc[0] * s;
+    y = img.y + anc[1] * s;
+    tam = (modo === 'eqApp' ? POS_ADORNO.vertical.tam : POS_ADORNO.redonda.tam) * W * s;
   } else {
-    return;   // 1v1 angosto sin la mesa de la app: no hay dónde apoyarlo
+    let izq0; let arr; let w; let h; let P;
+    if (modo === '3v3') {
+      const sx = img.scaleX; const sy = img.scaleY;
+      izq0 = img.x - (1200 * sx) / 2 + 37 * sx; arr = img.y - (2160 * sy) / 2 + 876 * sy; w = 1128 * sx; h = 1064 * sy;
+      P = POS_ADORNO.tresVsTres;
+    } else if (!this._L) {
+      w = img.displayWidth; h = img.displayHeight; izq0 = img.x - w / 2; arr = img.y - h / 2;
+      P = POS_ADORNO.oval;
+    } else {
+      return;   // 1v1 angosto sin la mesa de la app: no hay dónde apoyarlo
+    }
+    x = izq0 + P[lado][0] * w;
+    y = arr + P[lado][1] * h;
+    tam = P.tam * w;
   }
-  const P = POS_ADORNO[tipo];
-  const tam = P.tam * w;
-  const x = izq + P.x * w;
-  const y = arr + P.y * h;
   let A = this._adornoPack;
   if (!A) {
-    A = { estado: 0, glow: null, img: null, base: 1 };
-    if (pack.adorno.brillo) A.glow = this.add.circle(0, 0, 10, 0xffb042, 0.3).setDepth(4);
+    A = { estado: 0, glow: null, img: null, base: 1, largo: false, timer: null };
+    if (pack.adorno.brillo) {
+      A.glow = this.add.circle(0, 0, 10, 0xffb042, 0.3).setDepth(4);
+      this._titilarLuzPack(A);
+    }
     A.img = this.add.image(0, 0, clave(1)).setDepth(5).setInteractive({ useHandCursor: true });
-    A.img.on('pointerdown', () => {
+    const tocar = () => {
       const ad = pack.adorno;
       A.estado = ad.tipo === 'alternar' ? (A.estado + 1) % 2 : (A.estado + 1) % ad.estados;
       A.img.setTexture(clave(A.estado + 1));
@@ -1865,15 +1874,41 @@ _colocarAdornoPack(modo) {
       this.tweens.killTweensOf(A.img);
       A.img.setScale(A.base * 0.88);
       this.tweens.add({ targets: A.img, scaleX: A.base, scaleY: A.base, duration: 220, ease: 'Back.easeOut' });
+    };
+    // toque corto = usar el adorno; mantener apretado (450 ms) = pasarlo al otro lado de la mesa
+    A.img.on('pointerdown', () => {
+      A.largo = false;
+      if (A.timer) A.timer.remove(false);
+      A.timer = this.time.delayedCall(450, () => {
+        A.largo = true;
+        guardarLadoAdorno(leerLadoAdorno() === 'izquierda' ? 'derecha' : 'izquierda');
+        this._colocarAdornoPack(this._mesaModoActual);
+      });
     });
+    A.img.on('pointerup', () => {
+      if (A.timer) { A.timer.remove(false); A.timer = null; }
+      if (!A.largo) tocar();
+    });
+    A.img.on('pointerout', () => { if (A.timer) { A.timer.remove(false); A.timer = null; } });
     // sigue a la mesa: si la mesa se oculta (sala de espera, pantalla final) el adorno también
     const visOrig = img.setVisible.bind(img);
     img.setVisible = (v) => { visOrig(v); if (A.img && A.img.scene) A.img.setVisible(v); if (A.glow && A.glow.scene) A.glow.setVisible(v && A.estado === 0); return img; };
     this._adornoPack = A;
   }
   A.base = tam / A.img.width;
-  A.img.setPosition(x, y).setScale(A.base).setVisible(img.visible);
+  A.img.setPosition(x, y).setScale(A.base).setFlipX(izquierda).setVisible(img.visible);
   if (A.glow) A.glow.setPosition(x, y).setRadius(tam * 0.75).setVisible(img.visible && A.estado === 0);
+}
+
+// Pase 750: la luz del farol sube y baja de potencia de forma irregular, como un farol de verdad.
+_titilarLuzPack(A) {
+  if (!A.glow || !A.glow.scene) return;
+  const alpha = Phaser.Math.FloatBetween(0.14, 0.4);
+  A.glow.setData('alphaDestino', alpha);
+  this.tweens.add({
+    targets: A.glow, alpha, scale: 0.92 + (alpha - 0.14) * 0.6, duration: Phaser.Math.Between(250, 900), ease: 'Sine.easeInOut',
+    onComplete: () => this._titilarLuzPack(A),
+  });
 }
 
 _crearTexturaDorsoMini() {

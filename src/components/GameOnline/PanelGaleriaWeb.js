@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ESCENAS_FOTO, getConfigFoto, guardarConfigFoto } from '../../constants/modoFoto';
-import { IDS_PACK, PACKS, leerPackMesa, guardarPackMesa } from '../../constants/packsMesa';
+import { IDS_PACK, PACKS, leerPackMesa, guardarPackMesa, leerLadoAdorno, guardarLadoAdorno } from '../../constants/packsMesa';
 
 // Pase 728: GALERÍA de la web (solo admin; se abre desde Ajustes → Admin → Modo foto → "Abrir galería").
 // Panel flotante sobre la mesa simulada (/?preview=<modo>&foto=1&galeria=1) para cambiar en vivo lo que pasa en la partida y revisar cómo se ve:
@@ -114,6 +114,12 @@ export default function PanelGaleriaWeb({ escenaRef, marcadorEstilo, onCambiarMa
         {IDS_PACK.map((id) => (
           <Chip key={id} texto={id === 'ninguno' ? 'Ninguno' : PACKS[id].nombre} activo={leerPackMesa() === id}
             onClick={() => { if (leerPackMesa() === id) return; guardarPackMesa(id); window.location.reload(); }} />
+        ))}
+      </Seccion>
+      <Seccion titulo="Lado del adorno del pack (también: mantener apretado el adorno)">
+        {['derecha', 'izquierda'].map((l) => (
+          <Chip key={l} texto={l === 'derecha' ? 'Derecha' : 'Izquierda'} activo={leerLadoAdorno() === l}
+            onClick={() => { guardarLadoAdorno(l); const e = escenaRef && escenaRef(); if (e && e._colocarAdornoPack) e._colocarAdornoPack(e._mesaModoActual); setCfg((c) => ({ ...c })); }} />
         ))}
       </Seccion>
       <Seccion titulo="Objetivo de la mesa">
