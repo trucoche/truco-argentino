@@ -22,24 +22,24 @@ export const PACKS = {
     adorno: { nombre: 'Picada', tipo: 'ciclo', estados: 4, brillo: false, sonido: null },
     anclas: { uno: { der: [718, 514], izq: [120, 516] }, dos: { der: [670, 658], izq: [135, 658] }, tres: { der: [655, 680], izq: [150, 680] } },
     // Pase 752: escritorio por modo (uno = 1v1, dos = 2v2, tres = 3v3): fracciones de la mesa visible; lo que falte usa POS_ADORNO
-    escritorio: { tres: { der: [0.82, 0.48], izq: [0.18, 0.48] } },
+    escritorio: { tres: { der: [0.835, 0.51], izq: [0.165, 0.51] } },
   },
   'noche-camperal': {
     id: 'noche-camperal', nombre: 'Noche Camperal',
     adorno: { nombre: 'Farol', tipo: 'alternar', estados: 2, brillo: true, sonido: null },
-    anclas: { uno: { der: [733, 464], izq: [105, 465] }, dos: { der: [672, 636], izq: [126, 636] }, tres: { der: [630, 681], izq: [168, 681] } },
+    anclas: { uno: { der: [733, 464], izq: [105, 465] }, dos: { der: [660, 648], izq: [138, 648] }, tres: { der: [618, 681], izq: [180, 681] } },
     escritorio: {
-      uno: { tam: 0.18, der: [0.83, 0.40], izq: [0.17, 0.40] },
-      dos: { der: [0.80, 0.40], izq: [0.20, 0.40] },
-      tres: { der: [0.82, 0.42], izq: [0.18, 0.42] },
+      uno: { tam: 0.18, der: [0.83, 0.375], izq: [0.17, 0.375] },
+      dos: { der: [0.80, 0.375], izq: [0.20, 0.375] },
+      tres: { der: [0.82, 0.395], izq: [0.18, 0.395] },
     },
     dorso: 'pack-noche-camperal',   // Pase 751: carpeta public/assets/personalizacion-opt/cartas/<dorso>/ (abanicos)
   },
   'pampa-y-patria': {
     id: 'pampa-y-patria', nombre: 'Pampa y Patria',
     adorno: { nombre: 'Mate', tipo: 'ciclo', estados: 3, brillo: false, sonido: 'sorbo-mate.mp3' },
-    anclas: { uno: { der: [699, 482], izq: [141, 481] }, dos: { der: [683, 655], izq: [131, 655] }, tres: { der: [658, 675], izq: [156, 675] } },
-    escritorio: { uno: { der: [0.83, 0.395], izq: [0.17, 0.395] }, dos: { der: [0.815, 0.41], izq: [0.185, 0.41] } },
+    anclas: { uno: { der: [699, 482], izq: [141, 481] }, dos: { der: [671, 667], izq: [143, 667] }, tres: { der: [658, 675], izq: [156, 675] } },
+    escritorio: { uno: { der: [0.83, 0.37], izq: [0.17, 0.37] }, dos: { der: [0.815, 0.385], izq: [0.185, 0.385] } },
     dorso: 'pack-pampa-y-patria',
   },
 };

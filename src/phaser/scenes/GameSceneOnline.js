@@ -1845,10 +1845,10 @@ _colocarAdornoPack(modo, cantidad) {
     if (modo === '3v3') {
       const sx = img.scaleX; const sy = img.scaleY;
       izq0 = img.x - (1200 * sx) / 2 + 37 * sx; arr = img.y - (2160 * sy) / 2 + 876 * sy; w = 1128 * sx; h = 1064 * sy;
-      P = POS_ADORNO.tresVsTres;
+      P = { ...POS_ADORNO.tresVsTres, ...((pack.escritorio && pack.escritorio.tres) || {}) };   // Pase 752: ajuste por pack
     } else if (!this._L) {
       w = img.displayWidth; h = img.displayHeight; izq0 = img.x - w / 2; arr = img.y - h / 2;
-      P = POS_ADORNO.oval;
+      P = { ...POS_ADORNO.oval, ...((pack.escritorio && pack.escritorio[cantidad === 3 ? 'dos' : 'uno']) || {}) };   // Pase 752: 1v1 y 2v2 se ajustan por separado
     } else {
       return;   // 1v1 angosto sin la mesa de la app: no hay dónde apoyarlo
     }
@@ -1869,7 +1869,7 @@ _colocarAdornoPack(modo, cantidad) {
       A.estado = ad.tipo === 'alternar' ? (A.estado + 1) % 2 : (A.estado + 1) % ad.estados;
       A.img.setTexture(clave(A.estado + 1));
       if (A.glow) A.glow.setVisible(!!ad.brillo && A.estado === 0 && img.visible);
-      if (ad.sonido && this.cache.audio.exists(`pk_${pack.id}_sonido`)) {
+      if (ad.sonido && A.estado !== 0 && this.cache.audio.exists(`pk_${pack.id}_sonido`)) {   // Pase 755: al volver al estado inicial (se rellena) no suena
         try { this.sound.play(`pk_${pack.id}_sonido`, { volume: 0.8 * (this.efectosVolumen ?? 1) }); } catch (e) { /* sin audio */ }
       }
       this.tweens.killTweensOf(A.img);
