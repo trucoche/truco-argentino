@@ -30,7 +30,7 @@ export const PACKS = {
     anclas: { uno: { der: [733, 464], izq: [105, 465] }, dos: { der: [660, 648], izq: [138, 648] }, tres: { der: [606, 681], izq: [192, 681] } },
     escritorio: {
       uno: { tam: 0.18, der: [0.83, 0.35], izq: [0.17, 0.35] },
-      dos: { der: [0.77, 0.395], izq: [0.23, 0.395] },
+      dos: { der: [0.76, 0.41], izq: [0.24, 0.41] },
       tres: { der: [0.81, 0.44], izq: [0.19, 0.44] },
     },
     dorso: 'pack-noche-camperal',   // Pase 751: carpeta public/assets/personalizacion-opt/cartas/<dorso>/ (abanicos)

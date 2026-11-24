@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import PopupMadera from '../Popup/PopupMadera';
 import { API_URL } from '../../config';
+import { mazoPorId } from '../../constants/personalizacion';
 
 // Pase 623: cartel "Regalo de TrucoChe". Cuando un admin le regala mates a una cuenta con un mensaje de agradecimiento
 // (panel de Ajustes → administración), la próxima vez que entra al lobby ve este cartel UNA vez.
@@ -26,6 +27,18 @@ export function RegaloAvisoModal({ visible, regalos, totalMates, onCerrar }) {
         <img src={MONEDA} alt="" style={estilos.moneda} />
         <span style={estilos.monto}>+{totalMates} mates</span>
       </div>
+      {/* Pase 762: dorso desbloqueado por el regalo (Día del Mate) */}
+      {(() => {
+        const conDorso = regalos.find((r) => r.dorso);
+        if (!conDorso) return null;
+        const m = mazoPorId(conDorso.dorso);
+        return (
+          <div style={estilos.dorsoCaja}>
+            <img src={m.dorso} alt="" style={{ height: 120, width: 'auto', objectFit: 'contain', filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.35))' }} />
+            <span style={estilos.dorsoEtiqueta}>Dorso desbloqueado: {m.nombre}</span>
+          </div>
+        );
+      })()}
       {regalos.map((r) => (
         <p key={r.id} style={estilos.mensaje}>{`“${r.mensaje}”`}</p>
       ))}
@@ -79,5 +92,7 @@ const estilos = {
   premio: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 10 },
   moneda: { width: 40, height: 40, objectFit: 'contain' },
   monto: { fontWeight: 800, fontSize: 26, color: '#4A2C2A' },
+  dorsoCaja: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, margin: '4px 0 10px' },
+  dorsoEtiqueta: { fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 13, color: '#B9770E' },
   mensaje: { margin: '6px 0', fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 15, color: '#4A2C2A', textAlign: 'center', lineHeight: 1.35 },
 };
