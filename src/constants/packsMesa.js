@@ -22,7 +22,7 @@ export const PACKS = {
     adorno: { nombre: 'Picada', tipo: 'ciclo', estados: 4, brillo: false, sonido: null },
     anclas: { uno: { der: [718, 514], izq: [120, 516] }, dos: { der: [670, 658], izq: [135, 658] }, tres: { der: [655, 680], izq: [150, 680] } },
     // Pase 752: escritorio por modo (uno = 1v1, dos = 2v2, tres = 3v3): fracciones de la mesa visible; lo que falte usa POS_ADORNO
-    escritorio: { tres: { der: [0.85, 0.52], izq: [0.15, 0.52] } },
+    escritorio: { tres: { der: [0.85, 0.505], izq: [0.15, 0.505] } },
   },
   'noche-camperal': {
     id: 'noche-camperal', nombre: 'Noche Camperal',
@@ -30,8 +30,8 @@ export const PACKS = {
     anclas: { uno: { der: [733, 464], izq: [105, 465] }, dos: { der: [660, 648], izq: [138, 648] }, tres: { der: [606, 681], izq: [192, 681] } },
     escritorio: {
       uno: { tam: 0.18, der: [0.83, 0.35], izq: [0.17, 0.35] },
-      dos: { der: [0.80, 0.35], izq: [0.20, 0.35] },
-      tres: { der: [0.81, 0.41], izq: [0.19, 0.41] },
+      dos: { der: [0.79, 0.365], izq: [0.21, 0.365] },
+      tres: { der: [0.81, 0.425], izq: [0.19, 0.425] },
     },
     dorso: 'pack-noche-camperal',   // Pase 751: carpeta public/assets/personalizacion-opt/cartas/<dorso>/ (abanicos)
   },
@@ -39,7 +39,7 @@ export const PACKS = {
     id: 'pampa-y-patria', nombre: 'Pampa y Patria',
     adorno: { nombre: 'Mate', tipo: 'ciclo', estados: 3, brillo: false, sonido: 'sorbo-mate.mp3' },
     anclas: { uno: { der: [699, 482], izq: [141, 481] }, dos: { der: [671, 667], izq: [143, 667] }, tres: { der: [658, 675], izq: [156, 675] } },
-    escritorio: { uno: { der: [0.815, 0.37], izq: [0.185, 0.37] }, dos: { der: [0.80, 0.385], izq: [0.20, 0.385] } },
+    escritorio: { uno: { der: [0.815, 0.385], izq: [0.185, 0.385] }, dos: { der: [0.80, 0.40], izq: [0.20, 0.40] } },
     dorso: 'pack-pampa-y-patria',
   },
 };
