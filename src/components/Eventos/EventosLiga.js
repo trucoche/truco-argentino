@@ -15,7 +15,7 @@ export const EVENTO_ESTILO = {
   // Pase 740: Black Friday (se abre y se cierra solo por fecha, ver truco-backend/src/promociones.js).
   black_friday: { fondo: 'linear-gradient(135deg, #222222, #050505)', borde: '#F5B041', color: '#FFD668', icono: '/assets/images/regalo.png', etiqueta: 'BLACK FRIDAY' },
   // Pase 744: Día Nacional del Mate (30/11): celeste y blanco con el Sol de Mayo. Regalo automático al abrir el lobby (ver truco-backend/src/eventoMate.js).
-  dia_del_mate: { fondo: 'linear-gradient(135deg, #3E8CC4, #1B4F82)', borde: '#FFFFFF', color: '#FFE9A8', icono: '/assets/images/regalo.png', etiqueta: 'DÍA DEL MATE' },
+  dia_del_mate: { fondo: 'linear-gradient(135deg, #3E8CC4, #1B4F82)', borde: '#FFFFFF', color: '#FFE9A8', icono: '/assets/images/evento-dia-del-mate.png', etiqueta: 'DÍA DEL MATE' },
 };
 const EVENTO_POR_DEFECTO = { fondo: 'linear-gradient(135deg, #4A3226, #2E1F17)', borde: '#C9A66B', color: '#C9A66B', icono: '/assets/images/icono-misiones.png', etiqueta: 'EVENTO' };
 
