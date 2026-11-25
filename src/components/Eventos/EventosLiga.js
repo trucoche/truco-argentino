@@ -90,7 +90,7 @@ export function EventoCard({ e, indice = 0, onClick }) {
         className="ev-tile-img"
         style={completa ? { inset: 0, width: '100%', height: '100%', animationDelay: `${indice * 0.3}s` } : { left: '14%', top: '14%', width: '72%', height: '56%', animationDelay: `${indice * 0.3}s` }}
       />
-      <span style={estilos.tileChipCaja}><span className="ev-tile-chip" style={estilos.tileChip}>{faltaEvento(e.hasta, e.abierto).replace('Faltan ', '')}</span></span>
+      <span style={estilos.tileChipCaja}><span className="ev-tile-chip" style={estilos.tileChip}>{e.reclamado ? '✓ Reclamado' : faltaEvento(e.hasta, e.abierto).replace('Faltan ', '')}</span></span>   {/* Pase 764: regalo ya cobrado (el backend manda reclamado: true) */}
       {e.abierto && (
         <>
           <span className="ev-destello" aria-hidden="true" style={{ left: '6%', top: '12%', animationDelay: `${d}s` }}>✦</span>
@@ -152,7 +152,7 @@ export function EventoDetalle({ e, rangoMax = 1 }) {
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ ...estilos.eventoCardEtiqueta, color: est.color }}>{est.etiqueta}</div>
           <div style={estilos.eventoHeroeTitulo}>{e.titulo}</div>
-          <div style={estilos.eventoCardChip}>{e.abierto ? `Hasta ${fechaCorta(e.hasta)} · ${faltaEvento(e.hasta, true)}` : 'Evento cerrado'}</div>
+          <div style={estilos.eventoCardChip}>{e.abierto ? `${e.reclamado ? '✓ Reclamado · ' : ''}Hasta ${fechaCorta(e.hasta)} · ${faltaEvento(e.hasta, true)}` : 'Evento cerrado'}</div>
         </div>
         {e.abierto && <span className="ev-destello" aria-hidden="true" style={{ left: '9%', top: '16%' }}>✦</span>}
         {e.abierto && <span className="ev-destello" aria-hidden="true" style={{ left: '88%', top: '30%', fontSize: 14, animationDelay: '1.2s' }}>✦</span>}
