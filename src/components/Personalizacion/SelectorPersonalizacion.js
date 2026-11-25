@@ -119,8 +119,8 @@ export default function SelectorPersonalizacion({ usuario, token, recargarPerfil
             <div style={estilos.aviso}>Mientras tengas un fondo propio, tu perfil usa la Madera clásica. Tu banner elegido vuelve si sacás el fondo.</div>
           )}
           <div style={estilos.fila}>
-            {/* Pase 744: el dorso del Día del Mate solo se muestra a quien lo reclamó (no es un diseño que se pueda conseguir después). */}
-            {cat.items.filter((item) => !item.soloDiaMate || diaMate).map((item) => {
+            {/* Pase 763: solo se muestran los diseños que la cuenta tiene (y el que está puesto); los bloqueados no aparecen. Pase 744: el dorso del Día del Mate solo a quien lo reclamó. */}
+            {cat.items.filter((item) => estaDisponible(item, { kitFundador: kit, esSponsor, primeraCompra, diaMate, rangoId }) || sel[cat.campo] === item.id).map((item) => {
               const libre = estaDisponible(item, { kitFundador: kit, esSponsor, primeraCompra, diaMate, rangoId });
               const activo = sel[cat.campo] === item.id;
               return (

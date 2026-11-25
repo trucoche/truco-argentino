@@ -20,6 +20,7 @@ export const PACKS = {
   'la-pulperia': {
     id: 'la-pulperia', nombre: 'La Pulpería',
     adorno: { nombre: 'Picada', tipo: 'ciclo', estados: 4, brillo: false, sonido: null },
+    dorso: 'pack-la-pulperia',   // Pase 763: public/assets/personalizacion-opt/cartas/pack-la-pulperia/
     anclas: { uno: { der: [718, 514], izq: [120, 516] }, dos: { der: [670, 658], izq: [135, 658] }, tres: { der: [655, 680], izq: [150, 680] } },
     // Pase 752: escritorio por modo (uno = 1v1, dos = 2v2, tres = 3v3): fracciones de la mesa visible; lo que falte usa POS_ADORNO
     escritorio: { tres: { der: [0.85, 0.475], izq: [0.15, 0.475] } },
@@ -30,7 +31,7 @@ export const PACKS = {
     anclas: { uno: { der: [733, 464], izq: [105, 465] }, dos: { der: [660, 648], izq: [138, 648] }, tres: { der: [606, 681], izq: [192, 681] } },
     escritorio: {
       uno: { tam: 0.18, der: [0.83, 0.35], izq: [0.17, 0.35] },
-      dos: { der: [0.76, 0.41], izq: [0.24, 0.41] },
+      dos: { der: [0.75, 0.425], izq: [0.25, 0.425] },
       tres: { der: [0.81, 0.44], izq: [0.19, 0.44] },
     },
     dorso: 'pack-noche-camperal',   // Pase 751: carpeta public/assets/personalizacion-opt/cartas/<dorso>/ (abanicos)

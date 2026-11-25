@@ -4875,7 +4875,7 @@ _aplicarMarcadorEstilo(animar = false) {
     const top = this._L ? Math.max(14, geo.cy + geo.h / 2 - h2) : (geo.cy - geo.h / 2);   // Pase 725: con dos filas (mesa a 30) la placa crece hacia abajo si no entra arriba
     const cy2 = top + h2 / 2;
     const cx2 = this._cxPlacaFosforos(k);
-    this._dibujarPlacaMarcador(bg, cx2, cy2, wF, h2, k === 'rival');
+    this._dibujarPlacaMarcador(bg, cx2, cy2, wF, h2, k === 'rival', false);   // Pase 763: sin el filete del puntaje numérico (cruzaba los cuadritos)
     const py = top + hLabel + 4;
     if (label && label.scene) label.setPosition(cx2, top + hLabel / 2 + 2);
     if (num && num.scene) num.setVisible(false);
@@ -4976,7 +4976,7 @@ _truncarNombre(nombre) {
 // el Graphics de destino (`g`) como primer parámetro, para poder
 // reutilizarla tal cual en la placa del rival (`this.fondoInfoRival`) sin
 // duplicar todo el dibujo.
-_dibujarPlacaMarcador(g, cx, cy, w, h, oscura = false) {
+_dibujarPlacaMarcador(g, cx, cy, w, h, oscura = false, conFilete = true) {
   // Pase 456: marco de madera labrada (veta, bisel y ranura tallada) con inserto de pergamino. Madera clara = mi equipo,
   // madera oscura = rivales. Los remaches viven en el marco (7 px), nunca sobre el pergamino.
   g.clear();
@@ -5033,8 +5033,10 @@ _dibujarPlacaMarcador(g, cx, cy, w, h, oscura = false) {
     g.strokeRoundedRect(ix + k - 1, iy + k - 1, iw - 2 * (k - 1), ih - 2 * (k - 1), 3);
   });
   // filete que separa la etiqueta del puntaje
-  g.lineStyle(1, 0x7a5426, 0.4);
-  g.beginPath(); g.moveTo(ix + 8, cy - 9); g.lineTo(ix + iw - 8, cy - 9); g.strokePath();
+  if (conFilete) {   // Pase 763: la placa de fósforos no lo lleva
+    g.lineStyle(1, 0x7a5426, 0.4);
+    g.beginPath(); g.moveTo(ix + 8, cy - 9); g.lineTo(ix + iw - 8, cy - 9); g.strokePath();
+  }
 
   // remaches en las esquinas del marco
   const margen = 3.6;
