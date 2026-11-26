@@ -110,7 +110,9 @@ export function packParaUsuario(usuario) {
     try { u = JSON.parse(window.localStorage.getItem('truco_usuario') || 'null'); } catch (e) { u = null; }
   }
   if (!u) return null;
-  if (u.rol === 'admin') {
+  // Pase 772: el pack de prueba que un admin elige en la Galería (se guarda en el navegador) vale solo en la mesa simulada (`usuario` vacío).
+  // En una partida de verdad manda lo que cada cuenta compró y armó en "Mi mesa".
+  if (!usuario && u.rol === 'admin') {
     const elegido = packPorId(leerPackMesa());
     if (elegido) return { ...componerPack({ pano: elegido.id, marcador: elegido.id, adorno: elegido.id }), dorso: elegido.dorso, nombre: elegido.nombre };
   }
