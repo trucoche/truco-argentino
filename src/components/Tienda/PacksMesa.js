@@ -131,7 +131,7 @@ const e = {
   minis: { display: 'flex', alignItems: 'center', gap: 10 },
   mini: { height: 42, width: 42, objectFit: 'contain' },
   tuyo: { fontSize: 15, fontWeight: 900, color: '#1f7a3c', marginTop: 4 },
-  boton: { marginTop: 4, padding: '8px 16px', borderRadius: 999, border: '3px solid #1a0f0a', background: '#10B981', color: '#fff', fontWeight: 900, fontSize: 14, cursor: 'pointer' },
+  boton: { marginTop: 4, padding: '8px 12px', borderRadius: 999, border: '3px solid #1a0f0a', background: '#10B981', color: '#fff', fontWeight: 900, fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap', maxWidth: '100%' },
   texto: { fontSize: 13, lineHeight: 1.35, color: '#4A2C2A' },
   pieza: { marginTop: 8 },
   piezaTitulo: { fontSize: 13, fontWeight: 800, color: '#4A2C2A', marginBottom: 4 },
