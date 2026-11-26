@@ -23,6 +23,7 @@ import ConfirmarEliminacionCuenta from './components/Auth/ConfirmarEliminacionCu
 import Perfil from './components/Perfil/Perfil';
 import AnotadorOffline from './components/AnotadorOffline/AnotadorOffline';
 import Tienda from './components/Tienda/Tienda';
+import { cargarTiendaPacks, limpiarTiendaPacks } from './services/tiendaPacks';   // Pase 768
 import ChatGlobal from './components/ChatGlobal/ChatGlobal';
 import MonedaEasterEgg from './components/MonedaEasterEgg';
 import LogroDesbloqueadoPopup from './components/Lobby/LogroDesbloqueadoPopup';
@@ -428,6 +429,12 @@ function AppInterna() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
+  // Pase 768: tienda de packs de mesa. Se consulta al entrar para que la mesa de la partida ya tenga lo que el jugador armó en "Mi mesa";
+  // si el servidor la tiene apagada, no cambia nada.
+  useEffect(() => {
+    if (token && usuario?.id) cargarTiendaPacks(token, usuario.id);
+  }, [token, usuario?.id]);
+
   const [bonusReclamadoEn, setBonusReclamadoEn] = useState(null);
   const bonusDisponible = !bonusYaReclamado(usuario?.ultimo_bonus_diario, bonusReclamadoEn);
 
@@ -543,6 +550,7 @@ function AppInterna() {
   const handleLogout = () => {
     localStorage.removeItem('truco_token');
     localStorage.removeItem('truco_usuario');
+    limpiarTiendaPacks();   // Pase 768
     setUsuario(null);
     setToken(null);
     setPantalla('auth');
@@ -761,7 +769,7 @@ function AppInterna() {
             />
           )}
           {pantalla === 'tienda' && (
-            <Tienda usuario={usuario} token={token} />
+            <Tienda usuario={usuario} token={token} onPerfilActualizado={actualizarPerfil} />
           )}
           {pantalla === 'chat' && (
             <ChatGlobal token={token} usuario={usuario} abrirSolicitudesSenial={senialAbrirSolicitudes} />

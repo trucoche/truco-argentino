@@ -4,7 +4,7 @@ import { ANCHO_MAX_CSS } from '../config/gameConfigOnline';
 import { CARD_RANKS } from '../utils/constants';
 import { RANGOS_UI } from '../../components/Perfil/rangosUi';
 import { MAZOS } from '../../constants/personalizacion';
-import { CARTELES_VICTORIA, cartelVictoriaPorId, CARTELES_DERROTA, cartelDerrotaPorId } from '../../constants/cartelesVictoria';
+import { CARTELES_VICTORIA, cartelVictoriaPorId, CARTELES_DERROTA, cartelDerrotaPorId, cartelFinalDe } from '../../constants/cartelesVictoria';
 import { crearEstadoFoto, getConfigFoto } from '../../constants/modoFoto';
 import { packParaUsuario, rutaPack, POS_ADORNO, leerLadoAdorno, guardarLadoAdorno } from '../../constants/packsMesa';
 
@@ -152,7 +152,7 @@ export default class GameSceneOnline extends Phaser.Scene {
     // Pase 747: pack de la tienda (mesa + marcador + adorno). Por ahora solo admins, elegido en la Galería. Con pack el marcador es siempre de fósforos.
     this._pack = packParaUsuario(this.usuario);
     this._adornoPack = null;
-    if (this._pack) this._marcadorEstilo = 'fosforos';
+    if (this._pack && this._pack.marcadorId) this._marcadorEstilo = 'fosforos';   // Pase 768: solo si el marcador viene de un pack
     this._fosObjs = null;
     this._puntosPrevios = null;
     this._eqMap     = null;
@@ -1804,20 +1804,29 @@ _crearElementosDeTexto() {
 // Pase 747: clave de textura de la mesa: la del pack si hay pack equipado y sus imágenes cargaron; si no, la de siempre.
 _tk(base) {
   if (!this._pack) return base;
+  if (!this._pack.panoId) return base;   // Pase 768: sin paño de pack queda la mesa de siempre
   const m = { mesaEquiposApp: 'mesaVertical', mesa1v1App: 'mesaRedonda', mesaRedonda: 'mesaOval', mesaRedonda3v3: 'mesa3v3' }[base];
-  const clave = m ? `pk_${this._pack.id}_${m}` : null;
+  const clave = m ? `pk_${this._pack.panoId}_${m}` : null;
   return clave && this.textures.exists(clave) ? clave : base;
 }
 
 // Pase 747: carga los archivos del pack (mesas, cuadritos del marcador, estados del adorno y su sonido).
 _cargarAssetsPack() {
   const p = this._pack;
-  const id = p.id;
-  [['mesaVertical', 'mesa-vertical.webp'], ['mesaRedonda', 'mesa-redonda.webp'], ['mesaOval', 'mesa-oval.webp'], ['mesa3v3', 'mesa-3v3.webp']]
-    .forEach(([c, f]) => this.load.image(`pk_${id}_${c}`, conVersion(rutaPack(id, f))));
-  for (let n = 1; n <= 5; n++) this.load.image(`pk_${id}_fos_${n}`, conVersion(rutaPack(id, `marcador-${n}.webp`)));
-  for (let n = 1; n <= p.adorno.estados; n++) this.load.image(`pk_${id}_adorno_${n}`, conVersion(rutaPack(id, `adorno-${n}.webp`)));
-  if (p.adorno.sonido) this.load.audio(`pk_${id}_sonido`, conVersion(rutaPack(id, p.adorno.sonido)));
+  // Pase 768: cada pieza puede venir de un pack distinto (paño de uno, marcador de otro, adorno de un tercero).
+  if (p.panoId) {
+    const id = p.panoId;
+    [['mesaVertical', 'mesa-vertical.webp'], ['mesaRedonda', 'mesa-redonda.webp'], ['mesaOval', 'mesa-oval.webp'], ['mesa3v3', 'mesa-3v3.webp']]
+      .forEach(([c, f]) => this.load.image(`pk_${id}_${c}`, conVersion(rutaPack(id, f))));
+  }
+  if (p.marcadorId) {
+    for (let n = 1; n <= 5; n++) this.load.image(`pk_${p.marcadorId}_fos_${n}`, conVersion(rutaPack(p.marcadorId, `marcador-${n}.webp`)));
+  }
+  if (p.adornoId && p.adorno) {
+    const id = p.adornoId;
+    for (let n = 1; n <= p.adorno.estados; n++) this.load.image(`pk_${id}_adorno_${n}`, conVersion(rutaPack(id, `adorno-${n}.webp`)));
+    if (p.adorno.sonido) this.load.audio(`pk_${id}_sonido`, conVersion(rutaPack(id, p.adorno.sonido)));
+  }
 }
 
 // Pase 747/750: adorno interactivo (picada / farol / mate) sobre el aro de la mesa. `modo` es el de _ajustarMesaSegunAsientos.
@@ -1827,8 +1836,8 @@ _colocarAdornoPack(modo, cantidad) {
   const pack = this._pack;
   if (cantidad !== undefined) this._cantAdorno = cantidad; else cantidad = this._cantAdorno;   // 3 asientos = 2v2, 5 = 3v3
   const img = this.mesaImg;
-  if (!pack || !img || !img.scene) return;
-  const clave = (n) => `pk_${pack.id}_adorno_${n}`;
+  if (!pack || !pack.adorno || !img || !img.scene) return;   // Pase 768: sin adorno de pack no hay nada que apoyar
+  const clave = (n) => `pk_${pack.adornoId}_adorno_${n}`;
   if (!this.textures.exists(clave(1))) return;
   const izquierda = leerLadoAdorno() === 'izquierda';
   const lado = izquierda ? 'izq' : 'der';
@@ -1869,8 +1878,8 @@ _colocarAdornoPack(modo, cantidad) {
       A.estado = ad.tipo === 'alternar' ? (A.estado + 1) % 2 : (A.estado + 1) % ad.estados;
       A.img.setTexture(clave(A.estado + 1));
       if (A.glow) A.glow.setVisible(!!ad.brillo && A.estado === 0 && img.visible);
-      if (ad.sonido && A.estado !== 0 && this.cache.audio.exists(`pk_${pack.id}_sonido`)) {   // Pase 755: al volver al estado inicial (se rellena) no suena
-        try { this.sound.play(`pk_${pack.id}_sonido`, { volume: 0.8 * (this.efectosVolumen ?? 1) }); } catch (e) { /* sin audio */ }
+      if (ad.sonido && A.estado !== 0 && this.cache.audio.exists(`pk_${pack.adornoId}_sonido`)) {   // Pase 755: al volver al estado inicial (se rellena) no suena
+        try { this.sound.play(`pk_${pack.adornoId}_sonido`, { volume: 0.8 * (this.efectosVolumen ?? 1) }); } catch (e) { /* sin audio */ }
       }
       this.tweens.killTweensOf(A.img);
       A.img.setScale(A.base * 0.88);
@@ -3582,7 +3591,7 @@ _mostrarPantallaFinal(titulo, esCampeon = false, esTorneo = false, torneoId = nu
       anchoCartel = Math.round(Math.max(260, Math.min(visW * 0.8, 2 * libreAlto, 420)));
       yCartel = 14 + anchoCartel / 4;
     }
-    let cartel = (modo === 'victoria' || modo === 'derrota') ? this._crearCartelVictoria(this._cartelPrueba || 'base', textoCartel, detalle, { y: yCartel, ancho: anchoCartel, depth: 903, derrota: modo === 'derrota' }) : null;
+    let cartel = (modo === 'victoria' || modo === 'derrota') ? this._crearCartelVictoria(this._cartelPrueba || cartelFinalDe(jugadoresFinal, this.usuario?.username, modo), textoCartel, detalle, { y: yCartel, ancho: anchoCartel, depth: 903, derrota: modo === 'derrota' }) : null;
     const cartelConLuces = !!cartel;
     if (!cartel) {
       this._actualizarBannerEsperaTitulo(textoCartel, null, detalle, {
@@ -4766,7 +4775,7 @@ _dibujarMarcoMaderaConRemaches(g, x, y, w, h, rExterior = 20, rInterior = 14, pa
 // placas se vuelven minitableros con los cuadritos de 5 fosforos (malas y, si la
 // mesa es a 30, buenas). Se puede cambiar en cualquier momento desde Ajustes.
 setMarcadorEstilo(estilo) {
-  this._marcadorEstilo = (estilo === 'fosforos' || this._pack) ? 'fosforos' : 'numeros';   // Pase 747: con pack siempre fósforos
+  this._marcadorEstilo = (estilo === 'fosforos' || (this._pack && this._pack.marcadorId)) ? 'fosforos' : 'numeros';   // Pase 747/768: con marcador de pack siempre fósforos
   this._aplicarMarcadorEstilo(false);
 }
 
@@ -4795,7 +4804,7 @@ _crearFosforosMarcador() {
   const gap = 3 * g.kp;
   const B = Math.floor((this._anchoPlacaFosforos() - 2 * MARGEN_INTERNO_FOS - 2 * gap) / 3);   // Pase 457: 12 px de margen interno a cada lado
   // Pase 747: con pack, los cuadritos son los del pack (fósforos / ramitas / porotos)
-  const pkFos = (this._pack && this.textures.exists(`pk_${this._pack.id}_fos_1`)) ? `pk_${this._pack.id}_` : '';
+  const pkFos = (this._pack && this._pack.marcadorId && this.textures.exists(`pk_${this._pack.marcadorId}_fos_1`)) ? `pk_${this._pack.marcadorId}_` : '';
   const claves = [1, 2, 3, 4, 5].map((n) => {
     const k = `${pkFos}fos_${n}_s`;
     this._crearTexturaEscalada(`${pkFos}fos_${n}`, k, Math.round(B * factor), Math.round(B * factor));

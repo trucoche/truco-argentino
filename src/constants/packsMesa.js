@@ -10,6 +10,8 @@
 // Todavía NO se compran ni se equipan desde la tienda: por ahora el pack se elige en la Galería de la web (solo admin) y se guarda en el navegador.
 // Con 'ninguno' (o sin ser admin) el juego se ve exactamente como siempre.
 
+import { estadoTienda } from '../services/tiendaPacks';
+
 export const IDS_PACK = ['ninguno', 'la-pulperia', 'noche-camperal', 'pampa-y-patria'];
 export const CLAVE_PACK_MESA = 'tc_pack_mesa';
 
@@ -76,13 +78,43 @@ export function guardarPackMesa(id) {
   try { window.localStorage.setItem(CLAVE_PACK_MESA, IDS_PACK.includes(id) ? id : 'ninguno'); } catch (e) { /* sin almacenamiento */ }
 }
 
-// Pack que se dibuja en la mesa de este usuario. Por ahora solo los admins (prueba); más adelante: el pack equipado desde la tienda.
+// Pase 768: "Mi mesa" — cada pieza puede venir de un pack distinto. Devuelve un objeto con:
+//   panoId / marcadorId / adornoId  → de qué pack sale cada pieza (null = la de siempre); las texturas se cargan como pk_<packId>_...
+//   adorno / anclas / escritorio    → del pack del adorno (adorno) y del paño (anclas y posición de escritorio, que dependen de los remaches de ese paño)
+//   id                              → pack "principal" (el del paño, o el del adorno / marcador)
+// Un pack completo (el elegido a mano por un admin) es el caso en que las tres piezas coinciden.
+export function componerPack({ pano, marcador, adorno }) {
+  const pp = packPorId(pano); const pm = packPorId(marcador); const pa = packPorId(adorno);
+  const base = pp || pa || pm;
+  if (!base) return null;
+  const refAnclas = pp || pa || base;
+  return {
+    id: base.id,
+    nombre: 'Mi mesa',
+    panoId: pp ? pp.id : null,
+    marcadorId: pm ? pm.id : null,
+    adornoId: pa ? pa.id : null,
+    adorno: pa ? pa.adorno : null,
+    anclas: refAnclas.anclas,
+    escritorio: refAnclas.escritorio,
+    dorso: undefined,
+  };
+}
+
+// Pack que se dibuja en la mesa de este usuario. Un admin puede elegir un pack completo a mano en la Galería (prueba, se guarda en el navegador) y manda sobre todo;
+// si no, la mesa que el jugador armó con los packs que compró (Pase 768; solo si el servidor tiene la tienda activa para él).
 // En la mesa simulada de la galería (/?preview=...) App.js no restaura la sesión y `usuario` llega vacío: ahí se lee el usuario guardado del navegador.
 export function packParaUsuario(usuario) {
   let u = usuario;
   if (!u) {
     try { u = JSON.parse(window.localStorage.getItem('truco_usuario') || 'null'); } catch (e) { u = null; }
   }
-  if (!u || u.rol !== 'admin') return null;
-  return packPorId(leerPackMesa());
+  if (!u) return null;
+  if (u.rol === 'admin') {
+    const elegido = packPorId(leerPackMesa());
+    if (elegido) return { ...componerPack({ pano: elegido.id, marcador: elegido.id, adorno: elegido.id }), dorso: elegido.dorso, nombre: elegido.nombre };
+  }
+  const t = estadoTienda(u.id);
+  if (!t.activa) return null;
+  return componerPack(t.mesa || {});
 }

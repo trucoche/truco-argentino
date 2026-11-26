@@ -37,3 +37,18 @@ export const CARTELES_DERROTA = [
 ];
 
 export const cartelDerrotaPorId = (id) => CARTELES_DERROTA.find((c) => c.id === id) || CARTELES_DERROTA[0];
+
+// Pase 768: cartel de la pantalla final según lo que cada jugador equipó en "Mi mesa" (el servidor manda `cartel_id` = id del pack en cada jugador de la lista final).
+// Victoria: el cartel del equipo ganador (el mío primero, después el de mis compañeros); derrota: el propio. Sin cartel equipado queda el de siempre ('base').
+const CARTEL_DE_PACK = { 'la-pulperia': 'pulperia' };
+export function cartelFinalDe(jugadores, miUsername, modo) {
+  const lista = Array.isArray(jugadores) ? jugadores : [];
+  const mio = lista.find((j) => j && j.nombre === miUsername);
+  const ids = modo === 'derrota'
+    ? [mio]
+    : [mio, ...lista.filter((j) => j && j.gano && j !== mio)];
+  const hallado = ids.find((j) => j && j.cartel_id);
+  if (!hallado) return 'base';
+  const id = CARTEL_DE_PACK[hallado.cartel_id] || hallado.cartel_id;
+  return CARTELES_VICTORIA.some((c) => c.id === id) ? id : 'base';
+}
