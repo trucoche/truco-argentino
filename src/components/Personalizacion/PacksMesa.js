@@ -11,7 +11,6 @@ const PIEZAS = [
   { clave: 'marcador', titulo: 'Marcador' },
   { clave: 'adorno', titulo: 'Adorno' },
   { clave: 'cartel', titulo: 'Cartel de victoria' },
-  { clave: 'dorso', titulo: 'Dorso de las cartas' },
 ];
 const aviso = (titulo, mensaje, cinta = 'dorada') => mostrarAviso({ titulo, mensaje, cinta, botones: [{ texto: 'Entendido', tipo: 'neutro' }] });
 
@@ -47,20 +46,19 @@ export default function PacksMesa({ usuario, token, onPerfilActualizado }) {
     setOcupado(true);
     const r = await comprarPackTienda(token, usuario.id, p.id);
     setOcupado(false);
-    if (r.ok) { aviso(`¡Ahora tenés ${p.nombre}!`, 'Armá tu mesa más abajo, en "Mi mesa".'); if (onPerfilActualizado) onPerfilActualizado(); }
+    if (r.ok) { aviso(`¡Ahora tenés ${p.nombre}!`, 'Elegí su paño, marcador, adorno y cartel en "Mi mesa" (más abajo) y su dorso en "Dorso de las cartas" (más arriba), todo desde Personalización.'); if (onPerfilActualizado) onPerfilActualizado(); }
     else aviso('No se pudo comprar', r.mensaje, 'roja');
   };
 
   const elegir = async (pieza, valor) => {
     const r = await guardarMesaTienda(token, usuario.id, { [pieza]: valor });
     if (!r.ok) aviso('No se guardó', r.mensaje, 'roja');
-    else if (pieza === 'dorso' && onPerfilActualizado) onPerfilActualizado();   // el dorso también se guarda como mazo del jugador
   };
 
   return (
     <div style={e.contenedor}>
       <div style={e.titulo}>Packs de mesa</div>
-      <div style={e.subtitulo}>{`Paño, marcador, adorno, dorso y carteles. Cada pack sale ${t.precio} mates y tenés ${t.saldo}.`}</div>
+      <div style={e.subtitulo}>{`Paño, marcador, adorno, dorso y carteles. Cada pack sale ${t.precio} mates y tenés ${t.saldo}. Lo que compres lo ponés desde acá: las piezas en "Mi mesa" y el dorso en "Dorso de las cartas".`}</div>
       <div style={e.grilla}>
         {packs.map((p) => {
           const info = PACKS[p.id];
@@ -72,7 +70,7 @@ export default function PacksMesa({ usuario, token, onPerfilActualizado }) {
               <div style={e.minis}>
                 <img src={`/${rutaPack(p.id, 'marcador-5.webp')}`} alt="" style={e.mini} />
                 <img src={`/${rutaPack(p.id, 'adorno-1.webp')}`} alt="" style={e.mini} />
-                <img src={`/assets/personalizacion-opt/cartas/${info.dorso}/abanico-frente-1.png`} alt="" style={{ ...e.mini, width: 'auto', maxWidth: 70 }} />
+                <img src={`/assets/personalizacion-opt/cartas/${info.dorso}/back.png`} alt="" style={{ ...e.mini, width: 'auto', maxWidth: 70 }} />
               </div>
               {p.comprado ? (
                 <div style={e.tuyo}>✓ Ya es tuyo</div>
@@ -92,7 +90,7 @@ export default function PacksMesa({ usuario, token, onPerfilActualizado }) {
           <div style={e.texto}>Cuando tengas un pack vas a poder elegir qué pieza usar en cada partida: el paño de uno, el marcador de otro, el adorno de un tercero.</div>
         ) : (
           <>
-            <div style={e.texto}>Elegí qué pieza usar de cada pack. Tus rivales ven tu dorso y tu cartel de victoria.</div>
+            <div style={e.texto}>Elegí qué pieza usar de cada pack. El dorso de tus packs lo elegís arriba, en "Dorso de las cartas". Tus rivales ven tu dorso y tu cartel de victoria.</div>
             {PIEZAS.map((pz) => {
               const actual = (t.mesa && t.mesa[pz.clave]) || null;
               return (

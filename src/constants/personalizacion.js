@@ -40,6 +40,13 @@ export const MAZOS = [
   { id: 'dia-del-mate', nombre: 'Día del Mate', dorso: BASE + '/cartas/dia-del-mate/back.png', proporcionDorso: 400 / 552, ...DIA_MATE },
 ];
 
+// Pase 770: dorsos de los packs de la tienda (La Pulpería, Noche Camperal, Pampa y Patria). Se ofrecen en "Dorso de las cartas" solo a quien compró el pack (`soloPack` = id del pack).
+export const MAZOS_PACK = [
+  { id: 'pack-la-pulperia', nombre: 'La Pulpería', dorso: BASE + '/cartas/pack-la-pulperia/back.png', proporcionDorso: 400 / 551, soloPack: 'la-pulperia', ...LIBRE },
+  { id: 'pack-noche-camperal', nombre: 'Noche Camperal', dorso: BASE + '/cartas/pack-noche-camperal/back.png', proporcionDorso: 400 / 572, soloPack: 'noche-camperal', ...LIBRE },
+  { id: 'pack-pampa-y-patria', nombre: 'Pampa y Patria', dorso: BASE + '/cartas/pack-pampa-y-patria/back.png', proporcionDorso: 400 / 566, soloPack: 'pampa-y-patria', ...LIBRE },
+];
+
 // Pase 578: marco de madera SIN el tablón del medio (Pase 533 de la app). Con una foto de fondo propia, la foto va atrás de este marco.
 export const BANNER_MARCO_SIN_TABLON = BASE + '/banners/banner_marco.png';
 
@@ -47,7 +54,7 @@ export const PERSONALIZACION_POR_DEFECTO = { anillo_id: 'rango', banner_id: 'bas
 
 export const anilloPorId = (id) => ANILLOS.find(a => a.id === id) || ANILLOS[0];
 export const bannerPorId = (id) => BANNERS.find(b => b.id === id) || BANNERS[0];
-export const mazoPorId = (id) => MAZOS.find(m => m.id === id) || MAZOS[0];
+export const mazoPorId = (id) => MAZOS.find(m => m.id === id) || MAZOS_PACK.find(m => m.id === id) || MAZOS[0];
 
 // Disponible = no es del kit (o la cuenta lo tiene) y no es de sponsors (o la cuenta donó). El backend vuelve a validar.
 export const estaDisponible = (item, ctx) =>

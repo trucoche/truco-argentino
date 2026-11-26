@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { API_URL } from '../../config';
 import { confirmarPopup, mostrarAviso } from '../Popup/PopupMadera';
 import { rangoUi } from '../Perfil/rangosUi';
-import { ANILLOS, BANNERS, MAZOS, PERSONALIZACION_POR_DEFECTO, estaDisponible } from '../../constants/personalizacion';
+import { ANILLOS, BANNERS, MAZOS, MAZOS_PACK, PERSONALIZACION_POR_DEFECTO, estaDisponible } from '../../constants/personalizacion';
+import { estadoTienda, suscribirTienda } from '../../services/tiendaPacks';   // Pase 770
 
 // Pase 578 (paridad con la app, Pases 524/563): selector de anillo, banner y dorso de cartas (Ajustes → Perfil).
 // Guarda en la cuenta con PUT /api/usuarios/personalizacion, así los demás jugadores ven tu anillo y tu banner (y tu dorso en la mesa).
@@ -38,6 +39,12 @@ const NOMBRES_RANGO_SET = { 4: 'Gaucho', 8: 'Caudillo', 10: 'Martín Fierro' };
 
 export default function SelectorPersonalizacion({ usuario, token, recargarPerfil, onApoyar }) {
   const [sel, setSel] = useState({ ...PERSONALIZACION_POR_DEFECTO });
+  // Pase 770: los dorsos de los packs comprados se eligen acá, en "Dorso de las cartas" (solo con la tienda de packs abierta para la cuenta).
+  const [tienda, setTienda] = useState(() => estadoTienda(usuario && usuario.id));
+  useEffect(() => {
+    setTienda(estadoTienda(usuario && usuario.id));
+    return suscribirTienda(setTienda);
+  }, [usuario && usuario.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const rangoAssets = rangoUi(usuario && usuario.rango);
   const kit = !!(usuario && usuario.kit_fundador);
   const esSponsor = !!(usuario && usuario.es_sponsor);
@@ -54,6 +61,12 @@ export default function SelectorPersonalizacion({ usuario, token, recargarPerfil
       mazo_id: usuario.mazo_id || PERSONALIZACION_POR_DEFECTO.mazo_id,
     });
   }, [usuario && usuario.anillo_id, usuario && usuario.banner_id, usuario && usuario.mazo_id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const itemsDe = (cat) => {
+    if (cat.campo !== 'mazo_id') return cat.items;
+    const propios = new Set(tienda && tienda.activa ? (tienda.packs || []).filter((p) => p.comprado).map((p) => p.id) : []);
+    return [...cat.items, ...MAZOS_PACK.filter((m) => propios.has(m.soloPack) || sel.mazo_id === m.id)];
+  };
 
   const elegir = async (campo, item) => {
     if (!estaDisponible(item, { kitFundador: kit, esSponsor, primeraCompra, diaMate, rangoId })) {
@@ -120,7 +133,7 @@ export default function SelectorPersonalizacion({ usuario, token, recargarPerfil
           )}
           <div style={estilos.fila}>
             {/* Pase 763: solo se muestran los diseños que la cuenta tiene (y el que está puesto); los bloqueados no aparecen. Pase 744: el dorso del Día del Mate solo a quien lo reclamó. */}
-            {cat.items.filter((item) => estaDisponible(item, { kitFundador: kit, esSponsor, primeraCompra, diaMate, rangoId }) || sel[cat.campo] === item.id).map((item) => {
+            {itemsDe(cat).filter((item) => estaDisponible(item, { kitFundador: kit, esSponsor, primeraCompra, diaMate, rangoId }) || sel[cat.campo] === item.id).map((item) => {
               const libre = estaDisponible(item, { kitFundador: kit, esSponsor, primeraCompra, diaMate, rangoId });
               const activo = sel[cat.campo] === item.id;
               return (
