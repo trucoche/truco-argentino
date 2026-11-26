@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import PersonajeSelector from '../Lobby/PersonajeSelector';
 import ReportarModal from '../Reportar/ReportarModal';
 import SelectorPersonalizacion from '../Personalizacion/SelectorPersonalizacion';
+import PacksMesa from '../Personalizacion/PacksMesa';   // Pase 769
 import ModoFotoAdmin from './ModoFotoAdmin';
 import GaleriaAdmin from './GaleriaAdmin';
 import { AdminResumen, AdminUsuarios, AdminAcciones, AdminDevoluciones } from './AdminHerramientas';
@@ -979,6 +980,8 @@ export default function Configuracion({ token, usuario, onPersonajeCambiado, mus
           recargarPerfil={onPersonajeCambiado}
           onApoyar={() => setCafecitoAbierto(true)}
         />
+        {/* Pase 769: packs de mesa y "Mi mesa" (solo si el servidor activó la tienda de packs). */}
+        <PacksMesa usuario={usuario} token={token} onPerfilActualizado={onPersonajeCambiado} />
       </PlacaMadera>
 
         </>

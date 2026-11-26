@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { API_URL } from '../../config';
 import { PlacaMadera } from '../Popup/PopupMadera';
-import PacksMesa from './PacksMesa';   // Pase 768
 import { anilloPorId, bannerPorId, mazoPorId } from '../../constants/personalizacion';
 
 const C = {
@@ -140,7 +139,7 @@ function textoRestante(hastaMs, ahora) {
   return `Termina en ${Math.max(m, 1)} min`;
 }
 
-export default function Tienda({ usuario, token, onPerfilActualizado }) {
+export default function Tienda({ usuario, token }) {
   // Pase 219: reemplaza el placeholder "todavía no está conectado el pago"
   // por la integración real con Mercado Pago (Checkout Pro) — el backend
   // arma la preferencia (ver routes/pagos.js) y acá simplemente se manda al
@@ -535,9 +534,6 @@ export default function Tienda({ usuario, token, onPerfilActualizado }) {
         <br />
         No representan dinero real y no se pueden retirar ni transferir.
       </div>
-
-      {/* Pase 768: packs de mesa (solo se dibuja si el servidor activó la tienda de packs). */}
-      <PacksMesa usuario={usuario} token={token} onPerfilActualizado={onPerfilActualizado} />
 
       {/* Pase 654: ayuda con una compra / devoluciones. */}
       <div className="tc-ayuda" style={{ textAlign: 'center' }}>
