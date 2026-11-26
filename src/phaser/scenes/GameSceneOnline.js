@@ -3,7 +3,7 @@ import { getSocket } from '../../services/socket';
 import { ANCHO_MAX_CSS } from '../config/gameConfigOnline';
 import { CARD_RANKS } from '../utils/constants';
 import { RANGOS_UI } from '../../components/Perfil/rangosUi';
-import { MAZOS } from '../../constants/personalizacion';
+import { MAZOS, MAZOS_PACK } from '../../constants/personalizacion';
 import { CARTELES_VICTORIA, cartelVictoriaPorId, CARTELES_DERROTA, cartelDerrotaPorId, cartelFinalDe } from '../../constants/cartelesVictoria';
 import { crearEstadoFoto, getConfigFoto } from '../../constants/modoFoto';
 import { packParaUsuario, rutaPack, POS_ADORNO, leerLadoAdorno, guardarLadoAdorno } from '../../constants/packsMesa';
@@ -3281,7 +3281,11 @@ _conectarSocket() {
       // roster completo de la sala (username/equipo/personaje/avatar) más
       // el modo y la capacidad total — se guardan y se reconstruye toda la
       // fila de avatares de la pantalla de espera (ver _redibujarFilaEspera).
-      if (Array.isArray(data.jugadores)) this._jugadoresSala = data.jugadores;
+      if (Array.isArray(data.jugadores)) {
+        this._jugadoresSala = data.jugadores;
+        // Pase 774: los dorsos de los demás se piden apenas se conoce la sala (antes recién al dibujar la mesa, y en el primer dibujo se veía el base).
+        try { data.jugadores.forEach((j) => { const id = this._mazoIdDe(j && j.username); if (id && id !== 'base') this._cargarAbanicosMazo(id); }); } catch (e) { /* si falla, se pide al dibujar */ }
+      }
       if (data.modo) this._modoSala = data.modo;
       if (data.capacidadTotal) this._capacidadSala = data.capacidadTotal;
       // Pase 374: datos de la mesa (puntos, tipo de sala) para la línea de modo del cartel.
@@ -5858,7 +5862,8 @@ _mazoIdDe(nombre) {
   const info = (this._jugadoresSala || []).find((s) => s.username === nombre);
   if (this._pack && this._pack.dorso) return this._pack.dorso;   // Pase 751: con un pack que trae dorso, todos los mazos de la mesa lo usan
   const id = info && info.mazo_id;
-  return (id && id !== 'base' && MAZOS.some((m) => m.id === id)) ? id : 'base';
+  // Pase 774: también valen los dorsos de los packs de la tienda (antes solo MAZOS: el dorso de La Pulpería de otro jugador se veía como el base).
+  return (id && id !== 'base' && (MAZOS.some((m) => m.id === id) || MAZOS_PACK.some((m) => m.id === id))) ? id : 'base';
 }
 
 _claveAbanicoMazo(mazoId, tipo, n) {
@@ -5884,6 +5889,11 @@ _cargarAbanicosMazo(mazoId) {
   if (!hayAlgo) return;
   this.load.once('complete', () => {
     try {
+      // Pase 774: si el pedido falló (red lenta o cortada) se permite un único reintento en el próximo dibujo.
+      if (!this.textures.exists(`mazoAbanico_${mazoId}_frente_1`)) {
+        if (!this._mazosAbanicoReintento) this._mazosAbanicoReintento = {};
+        if (!this._mazosAbanicoReintento[mazoId]) { this._mazosAbanicoReintento[mazoId] = true; this._mazosAbanicoPedidos[mazoId] = false; }
+      }
       if (this.estado && this.sys && this.sys.isActive()) this._renderizarEstado(false);
     } catch (e) { /* si la escena ya se cerró, no hay nada que redibujar */ }
   });
