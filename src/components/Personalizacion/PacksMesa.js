@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { confirmarPopup, mostrarAviso } from '../Popup/PopupMadera';
+import { PlacaMadera, confirmarPopup, mostrarAviso } from '../Popup/PopupMadera';
 import { PACKS, rutaPack } from '../../constants/packsMesa';
 import { estadoTienda, suscribirTienda, cargarTiendaPacks, comprarPackTienda, guardarMesaTienda } from '../../services/tiendaPacks';
 
@@ -14,7 +14,8 @@ const PIEZAS = [
 ];
 const aviso = (titulo, mensaje, cinta = 'dorada') => mostrarAviso({ titulo, mensaje, cinta, botones: [{ texto: 'Entendido', tipo: 'neutro' }] });
 
-export default function PacksMesa({ usuario, token, onPerfilActualizado }) {
+// Pase 771: `secciones` = 'todo' (Personalización: packs + Mi mesa) o 'packs' (Tienda: solo comprar, dentro de su propia placa; las piezas se ponen desde Personalización).
+export default function PacksMesa({ usuario, token, onPerfilActualizado, secciones = 'todo' }) {
   const [t, setT] = useState(() => estadoTienda(usuario?.id));
   const [ocupado, setOcupado] = useState(false);
 
@@ -55,10 +56,12 @@ export default function PacksMesa({ usuario, token, onPerfilActualizado }) {
     if (!r.ok) aviso('No se guardó', r.mensaje, 'roja');
   };
 
-  return (
-    <div style={e.contenedor}>
+  const contenido = (
+    <div style={secciones === 'packs' ? { ...e.contenedor, marginTop: 0, paddingTop: 0, borderTop: 'none' } : e.contenedor}>
       <div style={e.titulo}>Packs de mesa</div>
-      <div style={e.subtitulo}>{`Paño, marcador, adorno, dorso y carteles. Cada pack sale ${t.precio} mates y tenés ${t.saldo}. Lo que compres lo ponés desde acá: las piezas en "Mi mesa" y el dorso en "Dorso de las cartas".`}</div>
+      <div style={e.subtitulo}>{secciones === 'packs'
+        ? `Paño, marcador, adorno, dorso y carteles. Cada pack sale ${t.precio} mates y tenés ${t.saldo}. Después los ponés desde Ajustes > Personalización: las piezas en "Mi mesa" y el dorso en "Dorso de las cartas".`
+        : `Paño, marcador, adorno, dorso y carteles. Cada pack sale ${t.precio} mates y tenés ${t.saldo}. Lo que compres lo ponés desde acá: las piezas en "Mi mesa" y el dorso en "Dorso de las cartas".`}</div>
       <div style={e.grilla}>
         {packs.map((p) => {
           const info = PACKS[p.id];
@@ -84,6 +87,7 @@ export default function PacksMesa({ usuario, token, onPerfilActualizado }) {
         })}
       </div>
 
+      {secciones === 'todo' && (
       <div style={e.miMesa}>
         <div style={e.titulo}>Mi mesa</div>
         {propios.length === 0 ? (
@@ -108,8 +112,10 @@ export default function PacksMesa({ usuario, token, onPerfilActualizado }) {
           </>
         )}
       </div>
+      )}
     </div>
   );
+  return secciones === 'packs' ? <PlacaMadera style={{ marginTop: 14 }} interiorStyle={{ padding: 12 }}>{contenido}</PlacaMadera> : contenido;
 }
 
 const chip = (activo) => ({

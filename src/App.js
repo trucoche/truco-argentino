@@ -769,7 +769,7 @@ function AppInterna() {
             />
           )}
           {pantalla === 'tienda' && (
-            <Tienda usuario={usuario} token={token} />
+            <Tienda usuario={usuario} token={token} onPerfilActualizado={actualizarPerfil} />
           )}
           {pantalla === 'chat' && (
             <ChatGlobal token={token} usuario={usuario} abrirSolicitudesSenial={senialAbrirSolicitudes} />
