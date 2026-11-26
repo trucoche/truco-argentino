@@ -48,9 +48,13 @@ export function limpiarTiendaPacks() {
 
 const cab = (token) => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${token}` });
 
-export async function cargarTiendaPacks(token, usuarioId) {
+let ultimaCarga = 0;
+// Pase 773: lo que cada cuenta armó puede cambiar desde otro dispositivo, así que se vuelve a preguntar al cambiar de pantalla (máx. una vez cada 10 s salvo `forzar`).
+export async function cargarTiendaPacks(token, usuarioId, forzar = false) {
   if (!token || usuarioId == null) return estado;
   estadoTienda(usuarioId);
+  if (!forzar && Date.now() - ultimaCarga < 10000) return estado;
+  ultimaCarga = Date.now();
   try {
     const res = await fetch(`${API_URL}/api/tienda/packs`, { headers: cab(token) });
     const data = await res.json().catch(() => ({}));
@@ -74,7 +78,7 @@ export async function comprarPackTienda(token, usuarioId, packId) {
     const res = await fetch(`${API_URL}/api/tienda/packs/${encodeURIComponent(packId)}/comprar`, { method: 'POST', headers: cab(token) });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return { ok: false, mensaje: data.error || 'No se pudo comprar el pack. Probá de nuevo.' };
-    await cargarTiendaPacks(token, usuarioId);
+    await cargarTiendaPacks(token, usuarioId, true);
     return { ok: true, mensaje: data.mensaje || 'Pack comprado' };
   } catch (e) {
     return { ok: false, mensaje: 'Sin conexión. Probá de nuevo en un rato.' };

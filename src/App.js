@@ -433,7 +433,7 @@ function AppInterna() {
   // si el servidor la tiene apagada, no cambia nada.
   useEffect(() => {
     if (token && usuario?.id) cargarTiendaPacks(token, usuario.id);
-  }, [token, usuario?.id]);
+  }, [token, usuario?.id, pantalla]);   // Pase 773: también al cambiar de pantalla (la mesa puede haberse cambiado desde otro dispositivo)
 
   const [bonusReclamadoEn, setBonusReclamadoEn] = useState(null);
   const bonusDisponible = !bonusYaReclamado(usuario?.ultimo_bonus_diario, bonusReclamadoEn);
